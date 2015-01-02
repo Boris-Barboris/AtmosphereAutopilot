@@ -16,9 +16,11 @@ namespace AtmosphereAutopilot
         {
             pid = new PIDController();
             pid.KP = 0.1;
-            pid.KI = 0.1;
-            pid.IntegralClamp = 0.05;
-            pid.KD = 0.0001;
+            pid.KI = 1;
+            pid.AccumulatorClamp = 0.005;
+            pid.AccumulDerivClamp = 0.0001;
+            pid.KD = 0.05;
+            pid.IntegralClamp = 0.2;
         }
 
         double time = 0.0;

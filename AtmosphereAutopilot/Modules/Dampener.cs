@@ -49,6 +49,8 @@ namespace AtmosphereAutopilot
                 ki_str = pid.KI.ToString("G8");
                 kd_str = pid.KD.ToString("G8");
                 ic_str = pid.IntegralClamp.ToString("G8");
+                ac_str = pid.AccumulatorClamp.ToString("G8");
+                adc_str = pid.AccumulDerivClamp.ToString("G8");
             }
             else
                 RenderingManager.RemoveFromPostDrawQueue(5, drawGUI);
@@ -56,19 +58,21 @@ namespace AtmosphereAutopilot
 
         protected string damper_name;
         protected int wnd_id;
-        protected Rect window = new Rect(50.0f, 100.0f, 300.0f, 250.0f);
+        protected Rect window = new Rect(50.0f, 100.0f, 250.0f, 250.0f);
 
         void drawGUI()
         {
             if (!gui_shown)
                 return;
-            window = GUILayout.Window(wnd_id, window, _drawGUI, damper_name, GUILayout.Height(0), GUILayout.MinWidth(233));
+            window = GUILayout.Window(wnd_id, window, _drawGUI, damper_name, GUILayout.Height(0), GUILayout.MinWidth(200));
         }
 
         string kp_str = "";
         string ki_str = "";
         string kd_str = "";
         string ic_str = "";
+        string ac_str = "";
+        string adc_str = "";
 
         void _drawGUI(int id)
         {
@@ -108,12 +112,32 @@ namespace AtmosphereAutopilot
             catch { }
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Integral clamp = ");
+            GUILayout.Label("IntegralClamp = ");
             ic_str = GUILayout.TextField(ic_str);
             GUILayout.EndHorizontal();
             try
             {
                 pid.IntegralClamp = double.Parse(ic_str);
+            }
+            catch { }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("AccumulatorClamp = ");
+            ac_str = GUILayout.TextField(ac_str);
+            GUILayout.EndHorizontal();
+            try
+            {
+                pid.AccumulatorClamp = double.Parse(ac_str);
+            }
+            catch { }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("AccumulDerivClamp = ");
+            adc_str = GUILayout.TextField(adc_str);
+            GUILayout.EndHorizontal();
+            try
+            {
+                pid.AccumulDerivClamp = double.Parse(adc_str);
             }
             catch { }
 

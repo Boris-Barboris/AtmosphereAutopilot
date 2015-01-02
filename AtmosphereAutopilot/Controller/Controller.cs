@@ -45,10 +45,22 @@ namespace AtmosphereAutopilot
         protected double kd = 0.0;
 
         /// <summary>
-        /// Maximum magnitude for integral component of controller reaction
+        /// Maximum error, wich lets integral component to raise
         /// </summary>
         public double IntegralClamp { get { return iclamp; } set { iclamp = value; } }
-        protected double iclamp = 0.5;
+        protected double iclamp = 0.0;
+
+        /// <summary>
+        /// Maximum accumulator derivative
+        /// </summary>
+        public double AccumulDerivClamp { get { return adclamp; } set { adclamp = value; } }
+        protected double adclamp = 0.0;
+
+        /// <summary>
+        /// Maximum magnitude for integral component of controller reaction
+        /// </summary>
+        public double AccumulatorClamp { get { return aclamp; } set { aclamp = value; } }
+        protected double aclamp = 0.5;
 
         public double Accumulator { get { return i_accumulator; } set { i_accumulator = value; } }
 
@@ -62,15 +74,11 @@ namespace AtmosphereAutopilot
         public virtual double Control(double input, double desire, double time)
         {
             double error = desire - input;
+            double new_dt = time - last_time;
+
             // proportional component
             double proportional = error * kp;
-            // integral component   
-            double new_dt = time - last_time;
-            if (new_dt == 0.0)
-                return 0.0;
-            double d_integral = new_dt * 0.5 * (error + last_error);
-            i_accumulator = Common.Clamp(i_accumulator + d_integral, iclamp);
-            double integral = i_accumulator * ki;
+            
             // diffirential component
             if (!dt_is_constant(new_dt))
             {
@@ -78,10 +86,18 @@ namespace AtmosphereAutopilot
                 clean_value_stack(input);
                 last_dt = new_dt;
                 last_time = time - new_dt;
+                last_error = error;
             }
             update_value_stack(input);
-            double derivative = (input_stack[0] - 4 * input_stack[1] + 3 * input_stack[2]) / new_dt / new_dt;
+            double derivative = (input_stack[0] - 4 * input_stack[1] + 3 * input_stack[2]) / new_dt * 0.5;
+            double derivative2 = (input_stack[0] - 2 * input_stack[1] + input_stack[2]) / new_dt / new_dt;
             double diffirential = -derivative * kd;
+
+            // integral component             
+            double d_integral = Math.Abs(error) > iclamp ? 0.0 : new_dt * 0.5 * (error + last_error);       // raw diffirential
+            d_integral = Common.Clamp(d_integral, adclamp * new_dt);                                        // clamp it
+            i_accumulator = Common.Clamp(i_accumulator + d_integral, aclamp);                               // accumulate
+            double integral = i_accumulator * ki;
 
             // update previous values
             last_time = time;

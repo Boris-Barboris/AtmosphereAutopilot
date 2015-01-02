@@ -15,10 +15,12 @@ namespace AtmosphereAutopilot
             : base(cur_vessel, "Elevator dampener", 1238216) 
         {
             pid = new PIDController();
-            pid.KP = 1.0;
-            pid.KI = 3.0;
-            pid.IntegralClamp = 0.33;
-            pid.KD = 0.001;
+            pid.KP = 3.0;
+            pid.KI = 100.0;
+            pid.AccumulatorClamp = 0.01;
+            pid.AccumulDerivClamp = 0.0025;
+            pid.KD = 0.3;
+            pid.IntegralClamp = 0.4;
         }
 
         double time = 0.0;
@@ -46,20 +48,17 @@ namespace AtmosphereAutopilot
             {
                 if (Math.Abs(angular_velocity) < 1e-3)                      // if angular velocity is stabilized
                 {
-                    if (!regime)
-                        for (int i = 0; i < 5; i++)
-                            last_output[i] = output;
                     regime = true;
                 }
-                
-                output = pid.Control(angular_velocity, 0.0, time);          // get output from controller
+
+                output = Common.Clamp(pid.Control(angular_velocity, 0.0, time), 1.0);           // get output from controller
                 
                 last_output[output_i] = output;                             // register it
                 output_i = (output_i + 1) % 5;                              // for averaging
-                
-                cntrl.pitch = (float)Common.Clamp(output, 1.0);             // apply output
+
                 if (regime)
-                    FlightInputHandler.state.pitchTrim = (float)last_output.Average();      // trim
+                    FlightInputHandler.state.pitchTrim = (float)last_output.Average();          // trim
+                cntrl.pitch = (float)output;                                // apply output                
             }
             else
             {
