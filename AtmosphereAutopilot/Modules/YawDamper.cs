@@ -15,7 +15,7 @@ namespace AtmosphereAutopilot
             : base(cur_vessel, "Yaw dampener", 752348) 
         {
             pid = new PIDController();
-            pid.KP = 1.0;
+            pid.KP = 5.0;
             pid.KI = 0.0;
             pid.IntegralClamp = 1.0;
             pid.KD = 0.01;
@@ -23,9 +23,8 @@ namespace AtmosphereAutopilot
 
         double time = 0.0;
 
-        protected override void apply_module(FlightCtrlState cntrl)
+        protected override void OnFixedUpdate(FlightCtrlState cntrl)
         {
-            // vector to right wing
             angular_velocity = -currentVessel.angularVelocity.z;
             time = time + TimeWarp.fixedDeltaTime;
             output = pid.Control(angular_velocity, 0.0, time);
@@ -33,14 +32,11 @@ namespace AtmosphereAutopilot
             // check if user is inputing control
             if (cntrl.killRot)                          // when sas works just back off
                 return;
-            if (cntrl.yaw == cntrl.yawTrim)             // when user doesn't use control, pitch is on the same level as trim
+            if (cntrl.yaw == cntrl.yawTrim)             // when user doesn't use control, yaw is on the same level as trim
             {
+                output = pid.Control(angular_velocity, 0.0, time);          // get output from controller
                 cntrl.yaw = (float)Common.Clamp(output, 1.0);
             }
-            else
-                pid.clear();
-            if (currentVessel.checkLanded())
-                pid.clear();
         }
     }
 }

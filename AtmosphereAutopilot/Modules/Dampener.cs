@@ -28,13 +28,13 @@ namespace AtmosphereAutopilot
 
         public void Activate()
         {
-            currentVessel.OnAutopilotUpdate += new FlightInputCallback(apply_module);
+            currentVessel.OnAutopilotUpdate += new FlightInputCallback(OnFixedUpdate);
             enabled = true;
         }
 
         public void Deactivate()
         {
-            currentVessel.OnAutopilotUpdate -= new FlightInputCallback(apply_module);
+            currentVessel.OnAutopilotUpdate -= new FlightInputCallback(OnFixedUpdate);
             enabled = false;
         }
 
@@ -121,6 +121,6 @@ namespace AtmosphereAutopilot
             GUI.DragWindow();
         }
 
-        protected abstract void apply_module(FlightCtrlState cntrl);
+        protected abstract void OnFixedUpdate(FlightCtrlState cntrl);
     }
 }
