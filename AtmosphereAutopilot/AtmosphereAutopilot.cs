@@ -62,10 +62,12 @@ namespace AtmosphereAutopilot
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
 
+            bool mod = GameSettings.MODIFIER_KEY.GetKey();
+
             if (elevatorDamper != null)
                 if (Input.GetKeyDown(KeyCode.P))
                 {
-                    if (GameSettings.MODIFIER_KEY.GetKey())
+                    if (mod)
                         elevatorDamper.toggleGUI();
                     else
                     {
@@ -85,7 +87,7 @@ namespace AtmosphereAutopilot
             if (rollDamper != null)
                 if (Input.GetKeyDown(KeyCode.O))
                 {
-                    if (GameSettings.MODIFIER_KEY.GetKey())
+                    if (mod)
                         rollDamper.toggleGUI();
                     else
                     {
@@ -103,9 +105,9 @@ namespace AtmosphereAutopilot
                 }
 
             if (yawDamper != null)
-                if (Input.GetKeyDown(KeyCode.L))
+                if (Input.GetKeyDown(KeyCode.Slash))
                 {
-                    if (GameSettings.MODIFIER_KEY.GetKey())
+                    if (mod)
                         yawDamper.toggleGUI();
                     else
                     {

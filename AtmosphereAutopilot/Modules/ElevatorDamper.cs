@@ -68,7 +68,7 @@ namespace AtmosphereAutopilot
         {
             if (!gui_shown)
                 return;
-            window = GUILayout.Window(9803294, window, _drawGUI, "Pitch damper", GUILayout.Height(0), GUILayout.MinWidth(233));
+            window = GUILayout.Window(980394, window, _drawGUI, "Pitch damper", GUILayout.Height(0), GUILayout.MinWidth(233));
         }
 
         string kp_str = "";

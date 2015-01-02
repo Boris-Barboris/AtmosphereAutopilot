@@ -22,14 +22,5 @@ namespace AtmosphereAutopilot
         {
             ScreenMessages.PostScreenMessage(message, 3.0f, ScreenMessageStyle.UPPER_CENTER);
         }
-
-        public GUISkin UISkin;
-
-        public GUIStyle label;
-
-        public UI()
-        {
-            
-        }
     }
 }

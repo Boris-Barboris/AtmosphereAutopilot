@@ -7,7 +7,7 @@ using UnityEngine;
 namespace AtmosphereAutopilot
 {
     /// <summary>
-    /// Simple pitch damper on PID
+    /// Simple roll damper on PID
     /// </summary>
     class RollDamper: Dampener
     {
@@ -68,7 +68,7 @@ namespace AtmosphereAutopilot
         {
             if (!gui_shown)
                 return;
-            window = GUILayout.Window(234763, window, _drawGUI, "Roll damper", GUILayout.Height(0), GUILayout.MinWidth(233));
+            window = GUILayout.Window(2363, window, _drawGUI, "Roll damper", GUILayout.Height(0), GUILayout.MinWidth(233));
         }
 
         string kp_str = "";

@@ -7,7 +7,7 @@ using UnityEngine;
 namespace AtmosphereAutopilot
 {
     /// <summary>
-    /// Simple pitch damper on PID
+    /// Simple yaw damper on PID
     /// </summary>
     class YawDamper: Dampener
     {
@@ -68,7 +68,7 @@ namespace AtmosphereAutopilot
         {
             if (!gui_shown)
                 return;
-            window = GUILayout.Window(1215328, window, _drawGUI, "Yaw damper", GUILayout.Height(0), GUILayout.MinWidth(233));
+            window = GUILayout.Window(1488, window, _drawGUI, "Yaw damper", GUILayout.Height(0), GUILayout.MinWidth(233));
         }
 
         string kp_str = "";
