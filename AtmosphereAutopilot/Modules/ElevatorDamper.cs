@@ -30,6 +30,7 @@ namespace AtmosphereAutopilot
         }
 
         double time = 0.0;
+        double regime_start_time = 0.0;
         bool regime = false;
         
         // variablse for trim averaging
@@ -54,15 +55,19 @@ namespace AtmosphereAutopilot
             {
                 if (Math.Abs(angular_velocity) < 1e-3)                      // if angular velocity is stabilized
                 {
+                    if (!regime)
+                        regime_start_time = time;
                     regime = true;
                 }
+                else
+                    regime = false;
 
                 output = Common.Clamp(pid.Control(angular_velocity, 0.0, time), 1.0);           // get output from controller
                 
                 last_output[output_i] = output;                             // register it
                 output_i = (output_i + 1) % 5;                              // for averaging
 
-                if (regime)
+                if (regime && (time - regime_start_time > 1.0))             // if in regime more than 1 second
                     FlightInputHandler.state.pitchTrim = (float)last_output.Average();          // trim
                 cntrl.pitch = (float)output;                                // apply output                
             }
