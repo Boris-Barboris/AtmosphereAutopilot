@@ -9,32 +9,117 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Any autopilot component. For example, roll damper
     /// </summary>
-    abstract class Dampener
+    abstract class PIDAngularVelDampener
     {
         protected Vessel currentVessel = null;
         protected bool enabled = false;
         public bool Enabled { get { return enabled; } }
 
-        public Dampener(Vessel cur_vessel)
+        public PIDAngularVelDampener(Vessel cur_vessel, string damper_name, int wnd_id)
         {
             currentVessel = cur_vessel;
+            this.damper_name = damper_name;
+            this.wnd_id = wnd_id;
         }
 
-        public virtual void Activate()
+        protected PIDController pid;
+        protected double angular_velocity;
+        protected double output;
+
+        public void Activate()
         {
             currentVessel.OnAutopilotUpdate += new FlightInputCallback(apply_module);
             enabled = true;
         }
 
-        public virtual void Deactivate()
+        public void Deactivate()
         {
             currentVessel.OnAutopilotUpdate -= new FlightInputCallback(apply_module);
             enabled = false;
         }
 
-        public abstract void toggleGUI();
+        protected bool gui_shown = false;
+        public void toggleGUI()
+        {
+            gui_shown = !gui_shown;
+            if (gui_shown)
+            {
+                RenderingManager.AddToPostDrawQueue(5, drawGUI);
+                kp_str = pid.KP.ToString("G8");
+                ki_str = pid.KI.ToString("G8");
+                kd_str = pid.KD.ToString("G8");
+                ic_str = pid.IntegralClamp.ToString("G8");
+            }
+            else
+                RenderingManager.RemoveFromPostDrawQueue(5, drawGUI);
+        }
 
-        protected abstract void drawGUI();
+        protected string damper_name;
+        protected int wnd_id;
+        protected Rect window = new Rect(50.0f, 100.0f, 300.0f, 250.0f);
+
+        void drawGUI()
+        {
+            if (!gui_shown)
+                return;
+            window = GUILayout.Window(wnd_id, window, _drawGUI, damper_name, GUILayout.Height(0), GUILayout.MinWidth(233));
+        }
+
+        string kp_str = "";
+        string ki_str = "";
+        string kd_str = "";
+        string ic_str = "";
+
+        void _drawGUI(int id)
+        {
+            GUILayout.BeginVertical();
+            GUILayout.Label("Angular velocity = " + angular_velocity.ToString("G8"));
+            GUILayout.Label("Output = " + output.ToString("G8"));
+            GUILayout.Label("Accumulator = " + pid.Accumulator.ToString("G8"));
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("KP = ");
+            kp_str = GUILayout.TextField(kp_str);
+            GUILayout.EndHorizontal();
+            try
+            {
+                pid.KP = double.Parse(kp_str);
+            }
+            catch { }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("KI = ");
+            ki_str = GUILayout.TextField(ki_str);
+            GUILayout.EndHorizontal();
+            try
+            {
+                pid.KI = double.Parse(ki_str);
+            }
+            catch { }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("KD = ");
+            kd_str = GUILayout.TextField(kd_str);
+            GUILayout.EndHorizontal();
+            try
+            {
+                pid.KD = double.Parse(kd_str);
+            }
+            catch { }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Integral clamp = ");
+            ic_str = GUILayout.TextField(ic_str);
+            GUILayout.EndHorizontal();
+            try
+            {
+                pid.IntegralClamp = double.Parse(ic_str);
+            }
+            catch { }
+
+            GUILayout.EndVertical();
+            GUI.DragWindow();
+        }
 
         protected abstract void apply_module(FlightCtrlState cntrl);
     }

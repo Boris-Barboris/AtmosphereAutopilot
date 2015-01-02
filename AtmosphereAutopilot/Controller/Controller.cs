@@ -50,7 +50,7 @@ namespace AtmosphereAutopilot
         public double IntegralClamp { get { return iclamp; } set { iclamp = value; } }
         protected double iclamp = 0.5;
 
-        public double Accumulator { get { return i_accumulator; } }
+        public double Accumulator { get { return i_accumulator; } set { i_accumulator = value; } }
 
         // Main step variables
         protected double i_accumulator = 0.0;               // current integral accumulator state
