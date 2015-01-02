@@ -91,7 +91,7 @@ namespace AtmosphereAutopilot
             fileNode.Save(filename);
 
             string filename_global = KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/UI.cfg";
-            ConfigNode fileGNode = ConfigNode.Load(filename);
+            ConfigNode fileGNode = ConfigNode.Load(filename_global);
             if (fileGNode == null)
                 fileGNode = new ConfigNode();
             fileGNode.RemoveNode(NodeName);
