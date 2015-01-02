@@ -53,7 +53,7 @@ namespace AtmosphereAutopilot
             }
             if (cntrl.pitch == cntrl.pitchTrim)         // when user doesn't use control, pitch is on the same level as trim
             {
-                if (Math.Abs(angular_velocity) < 1e-3)                      // if angular velocity is stabilized
+                if (Math.Abs(angular_velocity) < 1e-2)                      // if angular velocity is stabilized
                 {
                     if (!regime)
                         regime_start_time = time;
