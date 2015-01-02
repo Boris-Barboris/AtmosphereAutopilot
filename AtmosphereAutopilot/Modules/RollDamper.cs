@@ -9,7 +9,7 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Simple pitch damper on PID
     /// </summary>
-    class RollDamper: Damper
+    class RollDamper: Dampener
     {
         public RollDamper(Vessel cur_vessel)
             : base(cur_vessel) 

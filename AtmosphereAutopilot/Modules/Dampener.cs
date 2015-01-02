@@ -9,13 +9,13 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Any autopilot component. For example, roll damper
     /// </summary>
-    abstract class Damper
+    abstract class Dampener
     {
         protected Vessel currentVessel = null;
         protected bool enabled = false;
         public bool Enabled { get { return enabled; } }
 
-        public Damper(Vessel cur_vessel)
+        public Dampener(Vessel cur_vessel)
         {
             currentVessel = cur_vessel;
         }
