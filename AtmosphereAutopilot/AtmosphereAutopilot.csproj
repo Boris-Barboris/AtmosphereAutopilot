@@ -45,8 +45,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AtmosphereAutopilot.cs" />
-    <Compile Include="Modules\PitchDamper.cs" />
-    <Compile Include="Modules\AutopilotModule.cs" />
+    <Compile Include="Modules\YawDamper.cs" />
+    <Compile Include="Modules\RollDamper.cs" />
+    <Compile Include="Modules\ElevatorDamper.cs" />
+    <Compile Include="Modules\Damper.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Controller\Controller.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -9,37 +9,37 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Simple pitch damper on PID
     /// </summary>
-    class ElevatorDamper: AutopilotModule
+    class RollDamper: Damper
     {
-        public ElevatorDamper(Vessel cur_vessel)
+        public RollDamper(Vessel cur_vessel)
             : base(cur_vessel) 
         {
             pid = new PIDController();
-            pid.KP = 1.0;
+            pid.KP = 0.1;
             pid.KI = 0.0;
             pid.IntegralClamp = 1.0;
-            pid.KD = 0.001;
+            pid.KD = 0.0001;
         }
 
         PIDController pid;
         double time = 0.0;
-        double pitch_angular_velocity;
+        double roll_angular_velocity;
         double output;
 
         protected override void apply_module(FlightCtrlState cntrl)
         {
             // vector to right wing
-            pitch_angular_velocity = -currentVessel.angularVelocity.x;
+            roll_angular_velocity = -currentVessel.angularVelocity.y;
             time = time + TimeWarp.fixedDeltaTime;
-            output = pid.Control(pitch_angular_velocity, 0.0, time);
+            output = pid.Control(roll_angular_velocity, 0.0, time);
             
             // check if user is inputing control
             if (cntrl.killRot)                          // when sas works just back off
                 return;
-            if (cntrl.pitch == cntrl.pitchTrim)         // when user doesn't use control, pitch is on the same level as trim
+            if (cntrl.roll == cntrl.rollTrim)           // when user doesn't use control, pitch is on the same level as trim
             {
-                cntrl.pitch = (float)Common.Clamp(output, 1.0);
-                cntrl.pitchTrim = cntrl.pitch;
+                cntrl.roll = (float)Common.Clamp(output, 1.0);
+                cntrl.rollTrim = cntrl.roll;
             }
             else
                 pid.clear();
@@ -68,7 +68,7 @@ namespace AtmosphereAutopilot
         {
             if (!gui_shown)
                 return;
-            window = GUILayout.Window(9803294, window, _drawGUI, "Pitch damper", GUILayout.Height(0), GUILayout.MinWidth(233));
+            window = GUILayout.Window(234763, window, _drawGUI, "Roll damper", GUILayout.Height(0), GUILayout.MinWidth(233));
         }
 
         string kp_str = "";
@@ -80,9 +80,9 @@ namespace AtmosphereAutopilot
         {
             GUILayout.BeginVertical();
             GUILayout.Label("Angular vel vector = " + currentVessel.angularVelocity.ToString());
-            GUILayout.Label("Angular velocity = " + pitch_angular_velocity.ToString());
-            GUILayout.Label("Output = " + output.ToString());
-            GUILayout.Label("Accumulator = " + pid.Accumulator.ToString());
+            GUILayout.Label("Angular velocity = " + roll_angular_velocity.ToString("G8"));
+            GUILayout.Label("Output = " + output.ToString("G8"));
+            GUILayout.Label("Accumulator = " + pid.Accumulator.ToString("G8"));
 
             GUILayout.Label("KP = ");
             kp_str = GUILayout.TextField(kp_str);
