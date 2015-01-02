@@ -22,6 +22,11 @@ namespace AtmosphereAutopilot
         }
 
         double time = 0.0;
+        bool regime = false;
+        
+        // variablse for trim averaging
+        double[] last_output = new double[5];
+        int output_i = 0;
 
         protected override void OnFixedUpdate(FlightCtrlState cntrl)
         {
@@ -31,22 +36,37 @@ namespace AtmosphereAutopilot
             // check if user is inputing control
             if (cntrl.killRot)                          // when sas works just back off
                 return;
+            if (currentVessel.checkLanded())
+            {
+                pid.clear();
+                regime = false;
+                return;
+            }
             if (cntrl.pitch == cntrl.pitchTrim)         // when user doesn't use control, pitch is on the same level as trim
             {
                 if (Math.Abs(angular_velocity) < 1e-3)                      // if angular velocity is stabilized
                 {
-                    FlightInputHandler.state.pitchTrim = cntrl.pitch;       // trim when necessary
+                    if (!regime)
+                        for (int i = 0; i < 5; i++)
+                            last_output[i] = output;
+                    regime = true;
                 }
+                
                 output = pid.Control(angular_velocity, 0.0, time);          // get output from controller
-                cntrl.pitch = (float)Common.Clamp(output, 1.0);
+                
+                last_output[output_i] = output;                             // register it
+                output_i = (output_i + 1) % 5;                              // for averaging
+                
+                cntrl.pitch = (float)Common.Clamp(output, 1.0);             // apply output
+                if (regime)
+                    FlightInputHandler.state.pitchTrim = (float)last_output.Average();      // trim
             }
             else
             {
+                regime = false;
                 pid.clear();
                 output = 0.0;
             }
-            if (currentVessel.checkLanded())
-                pid.clear();
         }
     }
 }

@@ -31,22 +31,25 @@ namespace AtmosphereAutopilot
             // check if user is inputing control
             if (cntrl.killRot)                          // when sas works just back off
                 return;
+            if (currentVessel.checkLanded())
+            {
+                pid.clear();
+                return;
+            }
             if (cntrl.roll == cntrl.rollTrim)           // when user doesn't use control, roll is on the same level as trim
             {
+                output = pid.Control(angular_velocity, 0.0, time);          // get output from controller
+                cntrl.roll = (float)Common.Clamp(output, 1.0);
                 if (Math.Abs(angular_velocity) < 1e-3)                      // if angular velocity is stabilized
                 {
                     FlightInputHandler.state.rollTrim = cntrl.roll;         // trim when necessary
                 }
-                output = pid.Control(angular_velocity, 0.0, time);          // get output from controller
-                cntrl.roll = (float)Common.Clamp(output, 1.0);
             }
             else
             {
                 pid.clear();
                 output = 0.0;
             }
-            if (currentVessel.checkLanded())
-                pid.clear();
         }
     }
 }
