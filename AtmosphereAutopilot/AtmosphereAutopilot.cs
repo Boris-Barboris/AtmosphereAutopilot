@@ -23,6 +23,25 @@ namespace AtmosphereAutopilot
             DontDestroyOnLoad(this);
             ui_manager = new UI();
             GameEvents.onVesselChange.Add(vesselSwitch);
+            GameEvents.onGameSceneLoadRequested.Add(sceneSwitch);
+        }
+
+        public void OnDestroy()
+        {
+            sceneSwitch(GameScenes.CREDITS);
+        }
+
+        private void sceneSwitch(GameScenes scenes)
+        {
+            if (elevatorDamper != null)
+                elevatorDamper.serialize();
+            if (rollDamper != null)
+                rollDamper.serialize();
+            if (yawDamper != null)
+                yawDamper.serialize();
+            elevatorDamper = null;
+            rollDamper = null;
+            yawDamper = null;
         }
 
         private void vesselSwitch(Vessel v)

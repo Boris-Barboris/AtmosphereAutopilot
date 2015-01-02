@@ -14,13 +14,19 @@ namespace AtmosphereAutopilot
         public RollDamper(Vessel cur_vessel)
             : base(cur_vessel, "Roll dampener", 906577) 
         {
-            pid = new PIDController();
+            if (loadFromPreset("RollDamper"))
+                return;
             pid.KP = 0.2;
             pid.KI = 1;
             pid.AccumulatorClamp = 0.02;
             pid.AccumulDerivClamp = 0.0025;
             pid.KD = 0.05;
             pid.IntegralClamp = 0.2;
+        }
+
+        public override void serialize()
+        {
+            saveToFile("RollDamper");
         }
 
         double time = 0.0;

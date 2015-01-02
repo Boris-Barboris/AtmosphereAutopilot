@@ -14,13 +14,19 @@ namespace AtmosphereAutopilot
         public YawDamper(Vessel cur_vessel)
             : base(cur_vessel, "Yaw dampener", 752348) 
         {
-            pid = new PIDController();
+            if (loadFromPreset("YawDamper"))
+                return;
             pid.KP = 5.0;
             pid.KI = 0.0;
             pid.AccumulatorClamp = 1.0;
             pid.AccumulDerivClamp = 0.25;
             pid.KD = 0.4;
             pid.IntegralClamp = 0.1;
+        }
+
+        public override void serialize()
+        {
+            saveToFile("YawDamper");
         }
 
         double time = 0.0;

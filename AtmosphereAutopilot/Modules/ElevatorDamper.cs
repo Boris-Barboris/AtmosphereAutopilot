@@ -14,13 +14,19 @@ namespace AtmosphereAutopilot
         public ElevatorDamper(Vessel cur_vessel)
             : base(cur_vessel, "Elevator dampener", 1238216) 
         {
-            pid = new PIDController();
+            if (loadFromPreset("ElevatorDampener"))
+                return;
             pid.KP = 3.0;
             pid.KI = 10.0;
             pid.AccumulatorClamp = 0.1;
             pid.AccumulDerivClamp = 0.033;
             pid.KD = 0.25;
             pid.IntegralClamp = 0.4;
+        }
+
+        public override void serialize()
+        {
+            saveToFile("ElevatorDampener");
         }
 
         double time = 0.0;
