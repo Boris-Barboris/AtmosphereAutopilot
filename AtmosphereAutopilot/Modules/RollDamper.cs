@@ -15,10 +15,10 @@ namespace AtmosphereAutopilot
             : base(cur_vessel, "Roll dampener", 906577) 
         {
             pid = new PIDController();
-            pid.KP = 0.1;
+            pid.KP = 0.2;
             pid.KI = 1;
-            pid.AccumulatorClamp = 0.005;
-            pid.AccumulDerivClamp = 0.0001;
+            pid.AccumulatorClamp = 0.02;
+            pid.AccumulDerivClamp = 0.0025;
             pid.KD = 0.05;
             pid.IntegralClamp = 0.2;
         }

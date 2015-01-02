@@ -84,7 +84,7 @@ namespace AtmosphereAutopilot
             {
                 // dt has changed
                 clean_value_stack(input);
-                last_dt = new_dt;
+                new_dt = TimeWarp.fixedDeltaTime;
                 last_time = time - new_dt;
                 last_error = error;
             }
