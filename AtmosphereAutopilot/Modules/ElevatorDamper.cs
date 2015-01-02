@@ -40,6 +40,11 @@ namespace AtmosphereAutopilot
                 output = pid.Control(angular_velocity, 0.0, time);          // get output from controller
                 cntrl.pitch = (float)Common.Clamp(output, 1.0);
             }
+            else
+            {
+                pid.clear();
+                output = 0.0;
+            }
             if (currentVessel.checkLanded())
                 pid.clear();
         }
