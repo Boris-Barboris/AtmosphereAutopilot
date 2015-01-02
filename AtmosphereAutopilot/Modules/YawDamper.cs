@@ -9,7 +9,7 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Simple yaw damper on PID
     /// </summary>
-    class YawDamper: PIDAngularVelDampener
+    class YawDamper: PIDAutoTrimmer
     {
         public YawDamper(Vessel cur_vessel)
             : base(cur_vessel, "Yaw dampener", 752348) 

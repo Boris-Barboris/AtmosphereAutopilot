@@ -9,13 +9,13 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Any autopilot component. For example, roll damper
     /// </summary>
-    abstract class PIDAngularVelDampener
+    abstract class PIDAutoTrimmer
     {
         protected Vessel currentVessel = null;
         protected bool enabled = false;
         public bool Enabled { get { return enabled; } }
 
-        public PIDAngularVelDampener(Vessel cur_vessel, string damper_name, int wnd_id)
+        public PIDAutoTrimmer(Vessel cur_vessel, string damper_name, int wnd_id)
         {
             currentVessel = cur_vessel;
             this.damper_name = damper_name;

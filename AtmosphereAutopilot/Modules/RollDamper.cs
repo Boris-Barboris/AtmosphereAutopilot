@@ -9,7 +9,7 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Simple roll damper on PID
     /// </summary>
-    class RollDamper: PIDAngularVelDampener
+    class RollDamper: PIDAutoTrimmer
     {
         public RollDamper(Vessel cur_vessel)
             : base(cur_vessel, "Roll dampener", 906577) 
