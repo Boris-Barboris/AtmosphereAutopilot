@@ -101,11 +101,12 @@ namespace System.IO
         {
             int realCount = AllowOverflow ? count : Math.Min(count, capacity - size);
             int srcIndex = offset;
-            for (int i = 0; i < realCount; i++, tail++, srcIndex++)
+            for (int i = 0; i < realCount; i++, srcIndex++)
             {
                 if (tail == capacity)
                     tail = 0;
                 buffer[tail] = src[srcIndex];
+                tail = (tail + 1) % capacity;
             }
             size = Math.Min(size + realCount, capacity);
             return realCount;
@@ -114,12 +115,43 @@ namespace System.IO
         public void Put(T item)
         {
             if (!AllowOverflow && size == capacity)
-                throw new InternalBufferOverflowException("Buffer is full.");
+                throw new IndexOutOfRangeException("Buffer is full.");
+            else
+                size++;
 
             buffer[tail] = item;
-            if (tail++ == capacity)
-                tail = 0;
-            size++;
+            tail = (tail + 1) % capacity;
+        }
+
+        public T this[int index]
+        {
+            get
+            {
+                if (index >= size)
+                    throw new IndexOutOfRangeException("index >= size");
+                int i = head;
+                int count = 0;
+                while (count < index)
+                {
+                    i = (i + 1) % capacity;
+                    count++;
+                }
+                return buffer[i];
+            }
+        }
+
+        public T getFromTail(int shift)
+        {
+            if (shift >= size)
+                throw new IndexOutOfRangeException("shift >= size");
+            int i = tail;
+            int count = 0;
+            while (count < shift)
+            {
+                i = i == 0 ? capacity - 1 : (i - 1);
+                count++;
+            }
+            return buffer[i];
         }
 
         public void Skip(int count)

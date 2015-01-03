@@ -92,8 +92,8 @@ namespace AtmosphereAutopilot
                 last_error = error;
             }
             update_value_stack(input);
-            double derivative = (input_stack[0] - 4 * input_stack[1] + 3 * input_stack[2]) / new_dt * 0.5;
-            double derivative2 = (input_stack[0] - 2 * input_stack[1] + input_stack[2]) / new_dt / new_dt;
+            derivative = (input_stack[0] - 4 * input_stack[1] + 3 * input_stack[2]) / new_dt * 0.5;
+            derivative2 = (input_stack[0] - 2 * input_stack[1] + input_stack[2]) / new_dt / new_dt;
             double diffirential = -derivative * kd;
 
             // integral component             

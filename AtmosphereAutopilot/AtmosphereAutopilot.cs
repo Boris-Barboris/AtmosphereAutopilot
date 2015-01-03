@@ -13,9 +13,13 @@ namespace AtmosphereAutopilot
         Dictionary<Vessel, ElevatorDamper> elevator_dampers = new Dictionary<Vessel, ElevatorDamper>();
         Dictionary<Vessel, RollDamper> roll_dampers = new Dictionary<Vessel, RollDamper>();
         Dictionary<Vessel, YawDamper> yaw_dampers = new Dictionary<Vessel, YawDamper>();
+        Dictionary<Vessel, FlightModel> flight_models = new Dictionary<Vessel, FlightModel>();
+        Dictionary<Vessel, ElevatorDamperExperim> elevator_dampers_exper = new Dictionary<Vessel, ElevatorDamperExperim>();
         ElevatorDamper elevatorDamper;
+        ElevatorDamperExperim elevatorDamperEx;
         RollDamper rollDamper;
         YawDamper yawDamper;
+        FlightModel flightModel;
 
         public void Start()
         {
@@ -35,13 +39,17 @@ namespace AtmosphereAutopilot
         {
             if (elevatorDamper != null)
                 elevatorDamper.serialize();
+            if (elevatorDamperEx != null)
+                elevatorDamperEx.serialize();
             if (rollDamper != null)
                 rollDamper.serialize();
             if (yawDamper != null)
                 yawDamper.serialize();
-            elevatorDamper = null;
+            elevatorDamper = null; 
+            elevatorDamperEx = null;
             rollDamper = null;
             yawDamper = null;
+            flightModel = null;
         }
 
         private void vesselSwitch(Vessel v)
@@ -72,6 +80,24 @@ namespace AtmosphereAutopilot
             else
                 Debug.Log("[Autopilot]: YawDamper for vessel " + v.name + " loaded");
             yawDamper = yaw_dampers[v];
+
+            if (!flight_models.ContainsKey(v))
+            {
+                flight_models[v] = new FlightModel(v);
+                Debug.Log("[Autopilot]: FlightModel for vessel " + v.name + " created");
+            }
+            else
+                Debug.Log("[Autopilot]: FlightModel for vessel " + v.name + " loaded");
+            flightModel = flight_models[v];
+
+            if (!elevator_dampers_exper.ContainsKey(v))
+            {
+                elevator_dampers_exper[v] = new ElevatorDamperExperim(v, flightModel);
+                Debug.Log("[Autopilot]: ElevatorDamperExperim for vessel " + v.name + " created");
+            }
+            else
+                Debug.Log("[Autopilot]: ElevatorDamperExperim for vessel " + v.name + " loaded");
+            elevatorDamperEx = elevator_dampers_exper[v];
         }
 
         public void Update()
@@ -139,6 +165,29 @@ namespace AtmosphereAutopilot
                         {
                             yawDamper.Activate();
                             ui_manager.post_status_message("Yaw damper enabled");
+                        }
+                    }
+                }
+
+            if (flightModel != null && elevatorDamperEx != null)
+                if (Input.GetKeyDown(KeyCode.F7))
+                {
+                    if (mod)
+                    {
+                        flightModel.toggleGUI();
+                        elevatorDamperEx.toggleGUI();
+                    }
+                    else
+                    {
+                        if (elevatorDamperEx.Enabled)
+                        {
+                            elevatorDamperEx.Deactivate();
+                            ui_manager.post_status_message("elevatorDamperEx damper disabled");
+                        }
+                        else
+                        {
+                            elevatorDamperEx.Activate();
+                            ui_manager.post_status_message("elevatorDamperEx damper enabled");
                         }
                     }
                 }

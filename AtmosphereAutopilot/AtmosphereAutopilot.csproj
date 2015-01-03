@@ -32,19 +32,24 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\Interstellar_dependencies_0_90\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
-      <HintPath>..\..\Interstellar_dependencies_0_90\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\KSP_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>False</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="CircularBuffer.cs" />
+    <Compile Include="LinearEquationSolver.cs" />
     <Compile Include="Controller\FlightModel.cs" />
+    <Compile Include="Matrix.cs" />
+    <Compile Include="Modules\ElevatorDamperModel.cs" />
     <Compile Include="Modules\YawDamper.cs" />
     <Compile Include="Modules\RollDamper.cs" />
     <Compile Include="Modules\ElevatorDamper.cs" />

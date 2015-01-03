@@ -31,7 +31,12 @@ namespace AtmosphereAutopilot
             ConfigNode fileNode = ConfigNode.Load(filename);
             if (fileNode != null)
             {
-                node = fileNode.GetNodes(NodeName).First();
+                var nodes = fileNode.GetNodes(NodeName);
+                try
+                {
+                    node = nodes != null ? nodes.First() : null;
+                }
+                catch { node = null; }
                 if (node != null)
                 {
                     loadPIDfromNode(node);
@@ -50,7 +55,12 @@ namespace AtmosphereAutopilot
             ConfigNode fileNode = ConfigNode.Load(filename);
             if (fileNode != null)
             {
-                node = fileNode.GetNodes(NodeName).First();
+                var nodes = fileNode.GetNodes(NodeName);
+                try
+                {
+                    node = nodes != null ? nodes.First() : null;
+                }
+                catch { node = null; }
                 if (node != null)
                 {
                     string str;
