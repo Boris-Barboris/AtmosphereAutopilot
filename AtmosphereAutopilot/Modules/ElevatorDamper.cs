@@ -51,6 +51,7 @@ namespace AtmosphereAutopilot
                 regime = false;
                 return;
             }
+			double raw_control = pid.Control(angular_velocity, 0.0, time);	// get raw control from PID
             if (cntrl.pitch == cntrl.pitchTrim)         // when user doesn't use control, pitch is on the same level as trim
             {
                 if (Math.Abs(angular_velocity) < 1e-2)                      // if angular velocity is stabilized
@@ -62,7 +63,7 @@ namespace AtmosphereAutopilot
                 else
                     regime = false;
 
-                output = Common.Clamp(pid.Control(angular_velocity, 0.0, time), 1.0);           // get output from controller
+				output = Common.Clamp(raw_control, 1.0);           // get output from controller
                 
                 last_output[output_i] = output;                             // register it
                 output_i = (output_i + 1) % 5;                              // for averaging
@@ -73,9 +74,11 @@ namespace AtmosphereAutopilot
             }
             else
             {
+				double damper_output = -pid.InputDerivative * pid.KD;
+				cntrl.pitch = (float)Common.Clamp(cntrl.pitch + damper_output, 1.0);	// apply damper
                 regime = false;
                 pid.clear();
-                output = 0.0;
+                output = damper_output;				
             }
         }
     }

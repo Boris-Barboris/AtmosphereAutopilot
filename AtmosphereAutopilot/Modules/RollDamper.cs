@@ -44,9 +44,9 @@ namespace AtmosphereAutopilot
                 pid.clear();
                 return;
             }
+			output = pid.Control(angular_velocity, 0.0, time);				// get output from controller
             if (cntrl.roll == cntrl.rollTrim)           // when user doesn't use control, roll is on the same level as trim
             {
-                output = pid.Control(angular_velocity, 0.0, time);          // get output from controller
                 cntrl.roll = (float)Common.Clamp(output, 1.0);
                 if (Math.Abs(angular_velocity) < 1e-3)                      // if angular velocity is stabilized
                 {
@@ -55,8 +55,10 @@ namespace AtmosphereAutopilot
             }
             else
             {
+				double damper_output = -pid.InputDerivative * pid.KD;
+				cntrl.pitch = (float)Common.Clamp(cntrl.pitch + damper_output, 1.0);	// apply damper
                 pid.clear();
-                output = 0.0;
+                output = damper_output;
             }
         }
     }

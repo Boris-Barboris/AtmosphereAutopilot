@@ -62,6 +62,8 @@ namespace AtmosphereAutopilot
         public double AccumulatorClamp { get { return aclamp; } set { aclamp = value; } }
         protected double aclamp = 0.5;
 
+		public double InputDerivative { get { return derivative; } }
+
         public double Accumulator { get { return i_accumulator; } set { i_accumulator = value; } }
 
         // Main step variables
@@ -70,6 +72,7 @@ namespace AtmosphereAutopilot
         protected double last_dt = 1.0;                     // last delta time
         protected double last_error = 0.0;                  // last delta time
         protected double[] input_stack = new double[3];     // contains last 3 input values, needed for correct integration and differentiation
+		protected double derivative, derivative2;			// input derivatives
 
         public virtual double Control(double input, double desire, double time)
         {
@@ -107,6 +110,9 @@ namespace AtmosphereAutopilot
             return proportional + integral + diffirential;
         }
 
+		/// <summary>
+		/// Clear accumulator
+		/// </summary>
         public void clear()
         {
             i_accumulator = 0.0;
