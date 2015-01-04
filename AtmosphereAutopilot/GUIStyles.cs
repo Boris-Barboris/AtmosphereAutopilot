@@ -15,12 +15,12 @@ namespace AtmosphereAutopilot
         {
             labelStyle = new GUIStyle(GUI.skin.label);
             labelStyle.alignment = TextAnchor.MiddleCenter;
-            labelStyle.fontSize = 10;
+            labelStyle.fontSize = 12;
             labelStyle.margin = new RectOffset(2, 2, 2, 2);
 
             textBoxStyle = new GUIStyle(GUI.skin.textField);
             textBoxStyle.alignment = TextAnchor.MiddleCenter;
-            textBoxStyle.fontSize = 10;
+            textBoxStyle.fontSize = 12;
             textBoxStyle.margin = new RectOffset(2, 2, 2, 2);
         }
     }

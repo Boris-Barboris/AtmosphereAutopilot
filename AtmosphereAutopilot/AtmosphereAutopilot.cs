@@ -26,7 +26,6 @@ namespace AtmosphereAutopilot
         {
             Debug.Log("[Autopilot]: AtmosphereAutopilot starting up!"); 
             DontDestroyOnLoad(this);
-            GUIStyles.Init();
             GameEvents.onVesselChange.Add(vesselSwitch);
             GameEvents.onGameSceneLoadRequested.Add(sceneSwitch);
             Instance = this;
@@ -39,6 +38,8 @@ namespace AtmosphereAutopilot
 
         private void sceneSwitch(GameScenes scenes)
         {
+            if (scenes == GameScenes.SPACECENTER)
+                GUIStyles.Init();
             if (elevatorDamper != null)
                 elevatorDamper.serialize();
             if (elevatorDamperEx != null)
