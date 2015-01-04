@@ -11,35 +11,21 @@ namespace AtmosphereAutopilot
     /// </summary>
     class RollDamper: PIDAutoTrimmer
     {
-        public RollDamper(Vessel cur_vessel)
-            : base(cur_vessel, "Roll dampener", 906577) 
-        {
-            if (loadFromPreset("RollDamper"))
-                return;
-            pid.KP = 0.2;
-            pid.KI = 1;
-            pid.AccumulatorClamp = 0.02;
-            pid.AccumulDerivClamp = 0.0025;
-            pid.KD = 0.05;
-            pid.IntegralClamp = 0.2;
-        }
-
-        public override void serialize()
-        {
-            saveToFile("RollDamper");
-        }
+		public RollDamper(Vessel cur_vessel)
+			: base(cur_vessel, "Roll Dampener", 906577)
+		{ }
 
         double time = 0.0;
 
         protected override void OnFixedUpdate(FlightCtrlState cntrl)
         {
-            angular_velocity = -currentVessel.angularVelocity.y;
+            angular_velocity = -vessel.angularVelocity.y;
             time = time + TimeWarp.fixedDeltaTime;
 
             // check if user is inputing control
             if (cntrl.killRot)                          // when sas works just back off
                 return;
-            if (currentVessel.checkLanded())
+			if (vessel.checkLanded())
             {
                 pid.clear();
                 return;

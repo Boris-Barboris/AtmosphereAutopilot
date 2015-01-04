@@ -36,31 +36,31 @@ namespace AtmosphereAutopilot
         /// Integral gain coefficient
         /// </summary>
         public double KI { get { return ki; } set { ki = value; } }
-        protected double ki = 0.0;
+        protected double ki = 1.0;
 
         /// <summary>
         /// Diffirential gain coefficient
         /// </summary>
         public double KD { get { return kd; } set { kd = value; } }
-        protected double kd = 0.0;
+        protected double kd = 0.01;
 
         /// <summary>
         /// Maximum error, wich lets integral component to raise
         /// </summary>
         public double IntegralClamp { get { return iclamp; } set { iclamp = value; } }
-        protected double iclamp = 0.0;
+        protected double iclamp = 1.0;
 
         /// <summary>
         /// Maximum accumulator derivative
         /// </summary>
         public double AccumulDerivClamp { get { return adclamp; } set { adclamp = value; } }
-        protected double adclamp = 0.0;
+        protected double adclamp = 1.0;
 
         /// <summary>
         /// Maximum magnitude for integral component of controller reaction
         /// </summary>
         public double AccumulatorClamp { get { return aclamp; } set { aclamp = value; } }
-        protected double aclamp = 0.5;
+        protected double aclamp = 0.1;
 
 		public double InputDerivative { get { return derivative; } }
 

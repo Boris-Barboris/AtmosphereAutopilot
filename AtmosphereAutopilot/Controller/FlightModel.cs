@@ -32,7 +32,7 @@ namespace AtmosphereAutopilot
             vessel.OnFlyByWire += new FlightInputCallback(OnFlyByWire);
 		}
 
-		static readonly int BUFFER_SIZE = 50;
+		static readonly int BUFFER_SIZE = 20;
 
 		public CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];	// control input value, forward from others on 1 dt
 		public CircularBuffer<double>[] angular_v = new CircularBuffer<double>[3];	// angular v

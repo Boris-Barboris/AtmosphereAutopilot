@@ -12,22 +12,9 @@ namespace AtmosphereAutopilot
     class ElevatorDamperExperim: PIDAutoTrimmer
     {
         public ElevatorDamperExperim(Vessel cur_vessel, InstantControlModel model)
-            : base(cur_vessel, "Elevator dampener experimental", 97756493) 
+            : base(cur_vessel, "Elevator Dampener Experimental", 97756493) 
         {
             this.model = model;
-            if (loadFromPreset("ElevatorDamperExperim"))
-                return;
-            pid.KP = 3.0;
-            pid.KI = 10.0;
-            pid.AccumulatorClamp = 0.1;
-            pid.AccumulDerivClamp = 0.033;
-            pid.KD = 0.25;
-            pid.IntegralClamp = 0.4;
-        }
-
-        public override void serialize()
-        {
-            saveToFile("ElevatorDamperExperim");
         }
 
 		InstantControlModel model;
@@ -44,13 +31,13 @@ namespace AtmosphereAutopilot
 
         protected override void OnFixedUpdate(FlightCtrlState cntrl)
         {
-            angular_velocity = -currentVessel.angularVelocity.x;
+            angular_velocity = -vessel.angularVelocity.x;
             time = time + TimeWarp.fixedDeltaTime;
 
             // check if user is inputing control
             if (cntrl.killRot)                          // when sas works just back off
                 return;
-            if (currentVessel.checkLanded())
+			if (vessel.checkLanded())
             {
                 pid.clear();
                 regime = false;

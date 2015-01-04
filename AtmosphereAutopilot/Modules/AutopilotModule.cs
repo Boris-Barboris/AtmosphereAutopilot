@@ -38,7 +38,7 @@ namespace AtmosphereAutopilot
             enabled = false;
         }
 
-        protected abstract void OnDeactivate();
+		protected abstract void OnDeactivate();
 
 
 

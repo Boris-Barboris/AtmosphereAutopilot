@@ -11,23 +11,9 @@ namespace AtmosphereAutopilot
     /// </summary>
     class ElevatorDamper: PIDAutoTrimmer
     {
-        public ElevatorDamper(Vessel cur_vessel)
-            : base(cur_vessel, "Elevator dampener", 1238216) 
-        {
-            if (loadFromPreset("ElevatorDampener"))
-                return;
-            pid.KP = 3.0;
-            pid.KI = 10.0;
-            pid.AccumulatorClamp = 0.1;
-            pid.AccumulDerivClamp = 0.033;
-            pid.KD = 0.25;
-            pid.IntegralClamp = 0.4;
-        }
-
-        public override void serialize()
-        {
-            saveToFile("ElevatorDampener");
-        }
+		public ElevatorDamper(Vessel cur_vessel)
+			: base(cur_vessel, "Elevator Dampener", 1238216)
+		{ }
 
         double time = 0.0;
         double regime_start_time = 0.0;
@@ -39,13 +25,13 @@ namespace AtmosphereAutopilot
 
         protected override void OnFixedUpdate(FlightCtrlState cntrl)
         {
-            angular_velocity = -currentVessel.angularVelocity.x;
+            angular_velocity = -vessel.angularVelocity.x;
             time = time + TimeWarp.fixedDeltaTime;
             
             // check if user is inputing control
             if (cntrl.killRot)                          // when sas works just back off
                 return;
-            if (currentVessel.checkLanded())
+			if (vessel.checkLanded())
             {
                 pid.clear();
                 regime = false;

@@ -12,13 +12,11 @@ namespace AtmosphereAutopilot
         public string value_name;
         public bool editable;
         public string format;
-        public Action custom_drawer = null;
-        public AutoGuiAttr(string value_name, bool editable, string format, Action drawFunction = null)
+		public AutoGuiAttr(string value_name, bool editable, string format)
         {
             this.value_name = value_name;
             this.editable = editable;
             this.format = format;
-            this.custom_drawer = drawFunction;
         }
     }
 
@@ -50,11 +48,6 @@ namespace AtmosphereAutopilot
                 var att = attributes.First() as AutoGuiAttr;
                 if (att == null)
                     continue;
-                if (att.custom_drawer != null)
-                {
-                    att.custom_drawer();
-                    continue;
-                }
                 Type prop_type = property.PropertyType;
                 if (prop_type == typeof(bool) && att.editable)
                 {

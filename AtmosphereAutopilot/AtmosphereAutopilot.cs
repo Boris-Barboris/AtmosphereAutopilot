@@ -41,13 +41,13 @@ namespace AtmosphereAutopilot
             if (scenes == GameScenes.SPACECENTER)
                 GUIStyles.Init();
             if (elevatorDamper != null)
-                elevatorDamper.serialize();
+                elevatorDamper.Serialize();
             if (elevatorDamperEx != null)
-                elevatorDamperEx.serialize();
+				elevatorDamperEx.Serialize();
             if (rollDamper != null)
-                rollDamper.serialize();
+				rollDamper.Serialize();
             if (yawDamper != null)
-                yawDamper.serialize();
+				yawDamper.Serialize();
             if (flightModel != null)
                 flightModel.Serialize();
             elevatorDamper = null; 
@@ -108,15 +108,15 @@ namespace AtmosphereAutopilot
         public void OnGUI()
         {
             if (elevatorDamper != null)
-                elevatorDamper.drawGUI();
+                elevatorDamper.OnGUI();
             if (rollDamper != null)
-                rollDamper.drawGUI();
+				rollDamper.OnGUI();
             if (yawDamper != null)
-                yawDamper.drawGUI();
+				yawDamper.OnGUI();
             if (flightModel != null)
                 flightModel.OnGUI();
             if (elevatorDamperEx != null)
-                elevatorDamperEx.drawGUI();
+				elevatorDamperEx.OnGUI();
         }
 
         public void Update()
@@ -132,10 +132,10 @@ namespace AtmosphereAutopilot
                 if (Input.GetKeyDown(KeyCode.P))
                 {
                     if (mod)
-                        elevatorDamper.toggleGUI();
+                        elevatorDamper.ToggleGUI();
                     else
                     {
-                        if (elevatorDamper.Enabled)
+                        if (elevatorDamper.Active)
                         {
                             elevatorDamper.Deactivate();
                             MessageManager.post_status_message("Elevator damper disabled");
@@ -152,10 +152,10 @@ namespace AtmosphereAutopilot
                 if (Input.GetKeyDown(KeyCode.O))
                 {
                     if (mod)
-                        rollDamper.toggleGUI();
+                        rollDamper.ToggleGUI();
                     else
                     {
-                        if (rollDamper.Enabled)
+						if (rollDamper.Active)
                         {
                             rollDamper.Deactivate();
                             MessageManager.post_status_message("Roll damper disabled");
@@ -172,10 +172,10 @@ namespace AtmosphereAutopilot
                 if (Input.GetKeyDown(KeyCode.Slash))
                 {
                     if (mod)
-                        yawDamper.toggleGUI();
+                        yawDamper.ToggleGUI();
                     else
                     {
-                        if (yawDamper.Enabled)
+						if (yawDamper.Active)
                         {
                             yawDamper.Deactivate();
                             MessageManager.post_status_message("Yaw damper disabled");
@@ -194,11 +194,11 @@ namespace AtmosphereAutopilot
                     if (mod)
                     {
                         flightModel.ToggleGUI();
-                        elevatorDamperEx.toggleGUI();
+                        elevatorDamperEx.ToggleGUI();
                     }
                     else
                     {
-                        if (elevatorDamperEx.Enabled)
+						if (elevatorDamperEx.Active)
                         {
                             elevatorDamperEx.Deactivate();
                             MessageManager.post_status_message("elevatorDamperEx damper disabled");
