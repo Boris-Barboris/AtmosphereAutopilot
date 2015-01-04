@@ -8,6 +8,177 @@ using System.IO;
 
 namespace AtmosphereAutopilot
 {
+	/// <summary>
+	/// Class for short-motion model approximation
+	/// </summary>
+	class InstantControlModel
+	{
+		public static readonly int PITCH = 0;
+		public static readonly int ROLL = 1;
+		public static readonly int YAW = 2;
+
+		Vessel vessel;
+
+		public InstantControlModel(Vessel v)
+		{
+			vessel = v;
+			for (int i = 0; i < 3; i++)
+			{
+				input_buf[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
+				angular_v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
+				angular_dv[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
+				angular_d2v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
+			}
+		}
+
+		static readonly int BUFFER_SIZE = 10;
+
+		public CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];	// control input value
+		public CircularBuffer<double>[] angular_v = new CircularBuffer<double>[3];	// angular v
+		public CircularBuffer<double>[] angular_dv = new CircularBuffer<double>[3];	// dv/dt
+		public CircularBuffer<double>[] angular_d2v = new CircularBuffer<double>[3];// d2v/dt2
+
+		double prev_dt = 1.0;		// dt in previous call
+		int stable_dt = 0;			// counts amount of stable dt intervals
+
+		void OnFlyByWire(FlightCtrlState state)
+		{
+			if (vessel.checkLanded())           // ground breaks the model
+			{
+				stable_dt = 0;
+				return;
+			}
+			
+			double dt = TimeWarp.fixedDeltaTime;
+			check_dt(dt);
+			update_buffers(state);
+			update_model();
+
+			prev_dt = dt;
+		}
+
+		void check_dt(double new_dt)
+		{
+			if (Math.Abs(new_dt / prev_dt - 1.0) < 0.1)
+				stable_dt = Math.Min(1000, stable_dt + 1);
+			else
+				stable_dt = 0;
+		}
+
+		void update_buffers(FlightCtrlState state)
+		{
+			for (int i = 0; i < 3; i++)
+			{
+				input_buf[i].Put(getControlFromState(state, i));
+				angular_v[i].Put(vessel.angularVelocity[i]);
+				if (stable_dt >= 2)
+					angular_dv[i].Put(
+						derivative1(
+							angular_v[i].getFromTail(2),
+							angular_v[i].getFromTail(1),
+							angular_v[i].getFromTail(0),
+							prev_dt));
+				if (stable_dt >= 2)
+					angular_d2v[i].Put(
+						derivative2(
+							angular_v[i].getFromTail(2),
+							angular_v[i].getFromTail(1),
+							angular_v[i].getFromTail(0),
+							prev_dt));
+			}
+		}
+
+		double getControlFromState(FlightCtrlState state, int control)
+		{
+			if (control == PITCH)
+				return state.pitch;
+			if (control == ROLL)
+				return state.roll;
+			if (control == YAW)
+				return state.yaw;
+			return 0.0;
+		}
+
+		public static double derivative1(double y0, double y1, double y2, double dt)    // first derivative
+		{
+			return (y0 - 4 * y1 + 3 * y2) / dt * 0.5;
+		}
+
+		public static double derivative2(double y0, double y1, double y2, double dt)    // second derivative
+		{
+			return (y0 - 2 * y1 + y2) / dt / dt;
+		}
+
+		//
+		// Model section
+		//
+
+		// Basic approximation:
+		// angular_dv = k_control * control + c_control
+		public double[] k_control = new double[3];
+		public double[] c_control = new double[3];
+
+		public void update_model()
+		{
+			if (stable_dt < 2)
+				return;
+
+			for (int i = 0; i < 3; i++)
+			{
+				Matrix ang_dv_m = new Matrix(2, 1);				// column of angular v derivatives
+				ang_dv_m[0, 0] = angular_dv[i].getFromTail(1);
+				ang_dv_m[1, 0] = angular_dv[i].getLast();
+				Matrix coeff = new Matrix(2, 2);
+				coeff[0, 0] = input_buf[i].getFromTail(1);
+				coeff[1, 0] = input_buf[i].getLast();
+				coeff[0, 1] = coeff[1, 1] = 1.0;
+				try
+				{
+					Matrix result = coeff.SolveWith(ang_dv_m);
+					k_control[i] = result[0, 0];				// get linear control approximation
+					c_control[i] = result[1, 0];
+				}
+				catch { }
+			}
+		}
+
+		//
+		// GUI section
+		//
+
+		bool gui_shown = false;
+		public void toggleGUI()
+		{
+			gui_shown = !gui_shown;
+		}
+
+		protected Rect window = new Rect(250.0f, 50.0f, 150.0f, 200.0f);
+
+		public void drawGUI()
+		{
+			if (!gui_shown)
+				return;
+			window = GUILayout.Window(65448, window, _drawGUI, "Instant control model");
+		}
+
+		static readonly string[] axis_names = { "pitch", "roll", "yaw" };
+
+		void _drawGUI(int id)
+		{
+			GUILayout.BeginVertical();
+			for (int i = 0; i < 3; i++)
+			{
+				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"));
+				GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"));
+				GUILayout.Label(axis_names[i] + " ang vel d2 = " + angular_d2v[i].getLast().ToString("G8"));
+				GUILayout.Label(axis_names[i] + " K = " + k_control[i].ToString("G8"));
+				GUILayout.Label(axis_names[i] + " C = " + c_control[i].ToString("G8"));
+				GUILayout.Space(10);
+			}
+			GUILayout.EndVertical();
+			GUI.DragWindow();
+		}
+	}
 
 	/// <summary>
 	/// Class for current vessel flight model calculations

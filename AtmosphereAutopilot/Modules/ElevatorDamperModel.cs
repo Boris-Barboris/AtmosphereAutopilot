@@ -11,7 +11,7 @@ namespace AtmosphereAutopilot
     /// </summary>
     class ElevatorDamperExperim: PIDAutoTrimmer
     {
-        public ElevatorDamperExperim(Vessel cur_vessel, FlightModel model)
+        public ElevatorDamperExperim(Vessel cur_vessel, InstantControlModel model)
             : base(cur_vessel, "Elevator dampener experimental", 97756493) 
         {
             this.model = model;
@@ -30,7 +30,7 @@ namespace AtmosphereAutopilot
             saveToFile("ElevatorDamperExperim");
         }
 
-        FlightModel model;
+		InstantControlModel model;
 
         double time = 0.0;
         double regime_start_time = 0.0;
@@ -39,6 +39,8 @@ namespace AtmosphereAutopilot
         // variablse for trim averaging
         double[] last_output = new double[5];
         int output_i = 0;
+
+		public double MAX_CSURF_SPEED = 5.0;			// maximum control surface speed
 
         protected override void OnFixedUpdate(FlightCtrlState cntrl)
         {
@@ -54,7 +56,7 @@ namespace AtmosphereAutopilot
                 regime = false;
                 return;
             }
-            double raw_control = pid.Control(angular_velocity, 0.0, time);	// get raw control from PID
+            pid.Control(angular_velocity, 0.0, time);	// get raw control from PID
             if (cntrl.pitch == cntrl.pitchTrim)         // when user doesn't use control, pitch is on the same level as trim
             {
                 if (Math.Abs(angular_velocity) < 1e-2)                      // if angular velocity is stabilized
@@ -66,15 +68,14 @@ namespace AtmosphereAutopilot
                 else
                     regime = false;
 
-                double angvd = pid.InputDerivative;
+				double angvd = model.angular_dv[0].getLast();
                 double desired_angvd = -angular_velocity * pid.KP;
-                double Kpitch = model.model_linear_k[0][0];
-                double calc_output = (desired_angvd - angvd) / Kpitch * pid.KI + cntrl.pitch;
+				double raw_output = (desired_angvd - model.c_control[0]) / model.k_control[0];
+				double smoothed_output = last_output[output_i] + TimeWarp.fixedDeltaTime *
+					Common.Clamp((raw_output - last_output[output_i]) / TimeWarp.fixedDeltaTime, MAX_CSURF_SPEED);
+				double clamped_output = Common.Clamp(smoothed_output, 1.0);
 
-                output = Common.Clamp(calc_output, 1.0);           // get output from controller
-
-                last_output[output_i] = output;                             // register it
-                output_i = (output_i + 1) % 5;                              // for averaging
+				output = clamped_output;
 
                 if (regime && (time - regime_start_time > 1.0))             // if in regime more than 1 second
                     FlightInputHandler.state.pitchTrim = (float)last_output.Average();          // trim
@@ -88,6 +89,9 @@ namespace AtmosphereAutopilot
                 pid.clear();
                 output = damper_output;
             }
+
+			output_i = (output_i + 1) % 5;					// for averaging
+			last_output[output_i] = cntrl.pitch;            // register output		
         }
     }
 }

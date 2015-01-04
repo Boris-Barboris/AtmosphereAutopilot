@@ -52,7 +52,7 @@
     <Compile Include="Modules\YawDamper.cs" />
     <Compile Include="Modules\RollDamper.cs" />
     <Compile Include="Modules\ElevatorDamper.cs" />
-    <Compile Include="Modules\AutoTrimmer.cs" />
+    <Compile Include="Modules\PIDAutoTrimmer.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Controller\Controller.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

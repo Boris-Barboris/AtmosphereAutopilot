@@ -137,13 +137,13 @@ namespace AtmosphereAutopilot
         protected double angular_velocity;
         protected double output;
 
-        public void Activate()
+        public virtual void Activate()
         {
             currentVessel.OnAutopilotUpdate += new FlightInputCallback(OnFixedUpdate);
             enabled = true;
         }
 
-        public void Deactivate()
+        public virtual void Deactivate()
         {
             currentVessel.OnAutopilotUpdate -= new FlightInputCallback(OnFixedUpdate);
             enabled = false;

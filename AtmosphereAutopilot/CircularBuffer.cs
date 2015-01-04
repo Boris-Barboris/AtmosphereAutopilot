@@ -133,8 +133,6 @@ namespace System.IO
         {
             get
             {
-                //if (index >= size)
-                //    throw new IndexOutOfRangeException("index >= size = " + size.ToString());
                 return buffer[(index + head) % capacity];
             }
         }
@@ -147,6 +145,11 @@ namespace System.IO
                 throw new IndexOutOfRangeException("capacity <= 0");
             return buffer[capacity - 1 - ((capacity - tail + shift) % capacity)];
         }
+
+		public T getLast()
+		{
+			return this[size];
+		}
 
         public void Skip(int count)
         {

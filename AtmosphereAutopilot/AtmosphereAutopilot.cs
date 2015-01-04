@@ -13,13 +13,13 @@ namespace AtmosphereAutopilot
         Dictionary<Vessel, ElevatorDamper> elevator_dampers = new Dictionary<Vessel, ElevatorDamper>();
         Dictionary<Vessel, RollDamper> roll_dampers = new Dictionary<Vessel, RollDamper>();
         Dictionary<Vessel, YawDamper> yaw_dampers = new Dictionary<Vessel, YawDamper>();
-        Dictionary<Vessel, FlightModel> flight_models = new Dictionary<Vessel, FlightModel>();
+		Dictionary<Vessel, InstantControlModel> flight_models = new Dictionary<Vessel, InstantControlModel>();
         Dictionary<Vessel, ElevatorDamperExperim> elevator_dampers_exper = new Dictionary<Vessel, ElevatorDamperExperim>();
         ElevatorDamper elevatorDamper;
         ElevatorDamperExperim elevatorDamperEx;
         RollDamper rollDamper;
         YawDamper yawDamper;
-        FlightModel flightModel;
+        InstantControlModel flightModel;
 
         public void Start()
         {
@@ -83,7 +83,7 @@ namespace AtmosphereAutopilot
 
             if (!flight_models.ContainsKey(v))
             {
-                flight_models[v] = new FlightModel(v);
+				flight_models[v] = new InstantControlModel(v);
                 Debug.Log("[Autopilot]: FlightModel for vessel " + v.name + " created");
             }
             else
