@@ -40,7 +40,7 @@ namespace AtmosphereAutopilot
         double[] last_output = new double[5];
         int output_i = 0;
 
-		public double MAX_CSURF_SPEED = 5.0;			// maximum control surface speed
+		public double MAX_CSURF_SPEED = 10.0;			// maximum control surface speed
 
         protected override void OnFixedUpdate(FlightCtrlState cntrl)
         {
@@ -69,8 +69,10 @@ namespace AtmosphereAutopilot
                     regime = false;
 
 				double angvd = model.angular_dv[0].getLast();
-                double desired_angvd = -angular_velocity * pid.KP;
-				double raw_output = (desired_angvd - model.c_control[0]) / model.k_control[0];
+                double desired_angvd = -model.angular_v[0].getLast() * pid.KP;
+                double raw_output = model.get_input_for_axis(0, desired_angvd, last_output[output_i]);
+                if (double.IsInfinity(raw_output) || double.IsNaN(raw_output))
+                    raw_output = last_output[output_i];
 				double smoothed_output = last_output[output_i] + TimeWarp.fixedDeltaTime *
 					Common.Clamp((raw_output - last_output[output_i]) / TimeWarp.fixedDeltaTime, MAX_CSURF_SPEED);
 				double clamped_output = Common.Clamp(smoothed_output, 1.0);

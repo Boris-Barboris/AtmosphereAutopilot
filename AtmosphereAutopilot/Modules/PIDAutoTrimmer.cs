@@ -166,7 +166,7 @@ namespace AtmosphereAutopilot
 
         protected string damper_name;
         protected int wnd_id;
-        protected Rect window = new Rect(50.0f, 100.0f, 250.0f, 250.0f);
+        protected Rect window = new Rect(50.0f, 100.0f, 230.0f, 250.0f);
 
         public void drawGUI()
         {

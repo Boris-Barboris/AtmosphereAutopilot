@@ -29,6 +29,7 @@ namespace AtmosphereAutopilot
 				angular_dv[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 				angular_d2v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 			}
+            vessel.OnFlyByWire += new FlightInputCallback(OnFlyByWire);
 		}
 
 		static readonly int BUFFER_SIZE = 10;
@@ -71,10 +72,9 @@ namespace AtmosphereAutopilot
 			{
 				input_buf[i].Put(getControlFromState(state, i));
 				angular_v[i].Put(vessel.angularVelocity[i]);
-				if (stable_dt >= 2)
+				if (stable_dt >= 1)
 					angular_dv[i].Put(
-						derivative1(
-							angular_v[i].getFromTail(2),
+						derivative1_short(
 							angular_v[i].getFromTail(1),
 							angular_v[i].getFromTail(0),
 							prev_dt));
@@ -99,6 +99,11 @@ namespace AtmosphereAutopilot
 			return 0.0;
 		}
 
+        public static double derivative1_short(double y0, double y1, double dt)    // first derivative
+        {
+            return (y1 - y0) / dt;
+        }
+
 		public static double derivative1(double y0, double y1, double y2, double dt)    // first derivative
 		{
 			return (y0 - 4 * y1 + 3 * y2) / dt * 0.5;
@@ -114,9 +119,19 @@ namespace AtmosphereAutopilot
 		//
 
 		// Basic approximation:
-		// angular_dv = k_control * control + c_control
+        // angular_dv = k_control_sqr * control^2 + k_control * control + c_control
 		public double[] k_control = new double[3];
+        public double[] k_control_sqr = new double[3];
 		public double[] c_control = new double[3];
+
+        enum ManeuverType
+        {
+            stationary,
+            linear,
+            square
+        };
+
+        ManeuverType maneuver = ManeuverType.stationary;
 
 		public void update_model()
 		{
@@ -125,22 +140,105 @@ namespace AtmosphereAutopilot
 
 			for (int i = 0; i < 3; i++)
 			{
-				Matrix ang_dv_m = new Matrix(2, 1);				// column of angular v derivatives
-				ang_dv_m[0, 0] = angular_dv[i].getFromTail(1);
-				ang_dv_m[1, 0] = angular_dv[i].getLast();
-				Matrix coeff = new Matrix(2, 2);
-				coeff[0, 0] = input_buf[i].getFromTail(1);
-				coeff[1, 0] = input_buf[i].getLast();
-				coeff[0, 1] = coeff[1, 1] = 1.0;
-				try
-				{
-					Matrix result = coeff.SolveWith(ang_dv_m);
-					k_control[i] = result[0, 0];				// get linear control approximation
-					c_control[i] = result[1, 0];
-				}
-				catch { }
+                if (Math.Abs(input_buf[i].getLast() - input_buf[i].getFromTail(1)) < 1e-5)
+                {
+                    // stationary turn
+                    c_control[i] = angular_dv[i].getLast();
+                    maneuver = ManeuverType.stationary;
+                    return;
+                }
+                Matrix ang_dv_m, coeff, result;
+                if (Math.Abs(input_buf[i].getFromTail(1) - input_buf[i].getFromTail(2)) < 1e-5)
+                {
+                    // need linear
+                    ang_dv_m = new Matrix(2, 1);				// column of angular v derivatives
+                    ang_dv_m[0, 0] = angular_dv[i].getFromTail(1);
+                    ang_dv_m[1, 0] = angular_dv[i].getLast();
+                    coeff = new Matrix(2, 2);
+                    coeff[0, 0] = input_buf[i].getFromTail(1);
+                    coeff[1, 0] = input_buf[i].getFromTail(0);
+                    coeff[0, 1] = coeff[1, 1] = 1.0;
+                    try
+                    {
+                        result = coeff.SolveWith(ang_dv_m);
+                        if (!double.IsInfinity(result[0, 0]) && !double.IsNaN(result[0, 0]))
+                            k_control[i] = result[0, 0];
+                        if (!double.IsInfinity(result[1, 0]) && !double.IsNaN(result[1, 0]))
+                            c_control[i] = result[1, 0];
+                        maneuver = ManeuverType.linear;
+                    }
+                    catch { maneuver = ManeuverType.stationary; }
+                    return;
+                }
+				ang_dv_m = new Matrix(3, 1);				// column of angular v derivatives
+				ang_dv_m[0, 0] = angular_dv[i].getFromTail(2);
+                ang_dv_m[1, 0] = angular_dv[i].getFromTail(1);
+                ang_dv_m[2, 0] = angular_dv[i].getLast();
+				coeff = new Matrix(3, 3);
+                coeff[0, 1] = input_buf[i].getFromTail(2);
+                coeff[1, 1] = input_buf[i].getFromTail(1);
+                coeff[2, 1] = input_buf[i].getLast();
+                coeff[0, 0] = coeff[0, 1] * coeff[0, 1];
+                coeff[1, 0] = coeff[1, 1] * coeff[1, 1];
+                coeff[2, 0] = coeff[2, 1] * coeff[2, 1];
+                coeff[0, 2] = coeff[1, 2] = coeff[1, 2] = 1.0;
+                try
+                {
+                    result = coeff.SolveWith(ang_dv_m);
+                    if (!double.IsInfinity(result[0, 0]) && !double.IsNaN(result[0, 0]))
+                        k_control_sqr[i] = result[0, 0];			    // get linear control approximation
+                    if (!double.IsInfinity(result[1, 0]) && !double.IsNaN(result[1, 0]))
+                        k_control[i] = result[1, 0];
+                    if (!double.IsInfinity(result[2, 0]) && !double.IsNaN(result[2, 0]))
+                        c_control[i] = result[2, 0];
+                }
+                catch { maneuver = ManeuverType.stationary; }
+                maneuver = ManeuverType.square;
 			}
 		}
+
+        public double get_input_for_axis(int axis, double desired_angular_dv, double current_input)
+        {
+            if (maneuver == ManeuverType.linear || maneuver == ManeuverType.stationary)
+            {
+                double k = k_control[axis];
+                if (double.IsNaN(k) || double.IsInfinity(k) || Math.Abs(k) < 1e-6)
+                    return double.NaN;
+                double h = desired_angular_dv - c_control[axis];
+                double x = h / k;
+                return x;
+            }
+            if (maneuver == ManeuverType.square)
+            {
+                double a = k_control_sqr[axis];
+                if (double.IsNaN(a) || double.IsInfinity(a) || Math.Abs(a) < 1e-6)
+                    return double.NaN;
+                double b = k_control[axis];
+                if (double.IsNaN(b) || double.IsInfinity(b))
+                    return double.NaN;
+                double c = c_control[axis] - desired_angular_dv;
+                double D = b * b - 4 * a * c;
+                if (D < 0.0)
+                    return double.NaN;
+                if (D == 0.0)
+                    return (-b + Math.Sqrt(D)) / 2.0 / a;
+                if (D > 0.0)
+                {
+                    double x1 = (-b + Math.Sqrt(D)) / 2.0 / a;
+                    double x2 = (-b - Math.Sqrt(D)) / 2.0 / a;
+                    return closest(current_input, x2, x2);
+                }
+                return double.NaN;
+            }
+            return double.NaN;
+        }
+
+        public static double closest(double target, double x1, double x2)
+        {
+            if (Math.Abs(x1 - target) >= Math.Abs(x2 - target))
+                return x2;
+            return x1;
+        }
 
 		//
 		// GUI section
@@ -152,7 +250,7 @@ namespace AtmosphereAutopilot
 			gui_shown = !gui_shown;
 		}
 
-		protected Rect window = new Rect(250.0f, 50.0f, 150.0f, 200.0f);
+		protected Rect window = new Rect(250.0f, 50.0f, 350.0f, 200.0f);
 
 		public void drawGUI()
 		{
@@ -171,7 +269,8 @@ namespace AtmosphereAutopilot
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"));
 				GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"));
 				GUILayout.Label(axis_names[i] + " ang vel d2 = " + angular_d2v[i].getLast().ToString("G8"));
-				GUILayout.Label(axis_names[i] + " K = " + k_control[i].ToString("G8"));
+                GUILayout.Label(axis_names[i] + " K2 = " + k_control_sqr[i].ToString("G8"));
+				GUILayout.Label(axis_names[i] + " K1 = " + k_control[i].ToString("G8"));
 				GUILayout.Label(axis_names[i] + " C = " + c_control[i].ToString("G8"));
 				GUILayout.Space(10);
 			}
