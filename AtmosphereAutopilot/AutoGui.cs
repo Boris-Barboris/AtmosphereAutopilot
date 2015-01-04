@@ -55,9 +55,18 @@ namespace AtmosphereAutopilot
                     att.custom_drawer();
                     continue;
                 }
+                Type prop_type = property.PropertyType;
+                if (prop_type == typeof(bool) && att.editable)
+                {
+                    // it's a button
+                    bool cur_state = (bool)property.GetValue(obj, null);
+                    property.SetValue(obj, cur_state ^ GUILayout.Button(att.value_name + " = " + cur_state.ToString(), 
+                        GUIStyles.toggleButtonStyle), null);
+                    continue;
+                }
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(att.value_name, GUIStyles.labelStyle);
-                var ToStringFormat = type.GetMethod("ToString", new[] { typeof(string) });
+                var ToStringFormat = prop_type.GetMethod("ToString", new[] { typeof(string) });
                 if (!att.editable)
                 {
                     if (ToStringFormat != null)
@@ -76,7 +85,7 @@ namespace AtmosphereAutopilot
                     val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);
                     try
                     {
-                        var ParseMethod = property.GetType().GetMethod("Parse");
+                        var ParseMethod = property.GetType().GetMethod("Parse", new[] { typeof(string) });
                         if (ParseMethod != null)
                             property.SetValue(obj, ParseMethod.Invoke(null, new [] { val_holder }), null);
                     }

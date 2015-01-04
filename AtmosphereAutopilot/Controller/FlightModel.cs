@@ -11,7 +11,7 @@ namespace AtmosphereAutopilot
 	/// <summary>
 	/// Class for short-motion model approximation
 	/// </summary>
-	class InstantControlModel : IAutoGui
+	class InstantControlModel : IAutoGui, IAutoSerializable
 	{
 		public static readonly int PITCH = 0;
 		public static readonly int ROLL = 1;
@@ -27,8 +27,8 @@ namespace AtmosphereAutopilot
 				input_buf[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 				angular_v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 				angular_dv[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
-				angular_d2v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 			}
+            Deserialize();
             vessel.OnFlyByWire += new FlightInputCallback(OnFlyByWire);
 		}
 
@@ -37,7 +37,6 @@ namespace AtmosphereAutopilot
 		public CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];	// control input value, forward from others on 1 dt
 		public CircularBuffer<double>[] angular_v = new CircularBuffer<double>[3];	// angular v
 		public CircularBuffer<double>[] angular_dv = new CircularBuffer<double>[3];	// dv/dt
-		public CircularBuffer<double>[] angular_d2v = new CircularBuffer<double>[3];// d2v/dt2
 
 		double prev_dt = 1.0;		// dt in previous call
 		int stable_dt = 0;			// counts amount of stable dt intervals
@@ -75,13 +74,6 @@ namespace AtmosphereAutopilot
 				if (stable_dt >= 1)
 					angular_dv[i].Put(
                         derivative1_short(
-							angular_v[i].getFromTail(1),
-							angular_v[i].getFromTail(0),
-							prev_dt));
-				if (stable_dt >= 2)
-					angular_d2v[i].Put(
-						derivative2(
-							angular_v[i].getFromTail(2),
 							angular_v[i].getFromTail(1),
 							angular_v[i].getFromTail(0),
 							prev_dt));
@@ -180,12 +172,43 @@ namespace AtmosphereAutopilot
         }
 
 
+        #region Serialization
+
+        [GlobalSerializable("window_x")]
+        public float WindowLeft { get { return window.xMin; } set { window.xMin = value; } }
+
+        [GlobalSerializable("window_y")]
+        public float WindowTop { get { return window.yMin; } set { window.yMin = value; } }
+
+        [GlobalSerializable("window_width")]
+        public float WindowWidth { get { return window.width; } set { window.width = value; } }
+
+        [GlobalSerializable("window_height")]
+        public float WindowHeight { get { return window.height; } set { window.height = value; } }
+
+        public bool Deserialize()
+        {
+            return AutoSerialization.Deserialize(this, "InstantControlModel",
+                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.cfg",
+                typeof(GlobalSerializable));
+        }
+
+        public void Serialize()
+        {
+            AutoSerialization.Serialize(this, "InstantControlModel",
+                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.cfg",
+                typeof(GlobalSerializable));
+        }
+
+        #endregion
+
+
         #region GUI
 
         string module_name = "Instant control model";
         int wnd_id = 34278832;
         protected bool gui_shown = false;
-        protected Rect window = new Rect(50.0f, 80.0f, 300.0f, 150.0f);
+        protected Rect window = new Rect(50.0f, 80.0f, 240.0f, 150.0f);
 
         public bool IsDrawn()
         {
@@ -213,10 +236,9 @@ namespace AtmosphereAutopilot
 			{
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyle);
                 GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"), GUIStyles.labelStyle);
-                GUILayout.Label(axis_names[i] + " ang vel d2 = " + angular_d2v[i].getLast().ToString("G8"), GUIStyles.labelStyle);
                 GUILayout.Label(axis_names[i] + " K1 = " + k_control[i].ToString("G8"), GUIStyles.labelStyle);
                 GUILayout.Label(axis_names[i] + " stable = " + stable_channel[i].ToString(), GUIStyles.labelStyle);
-				GUILayout.Space(10);
+				GUILayout.Space(5);
 			}
 			GUILayout.EndVertical();
 			GUI.DragWindow();

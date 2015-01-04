@@ -48,6 +48,8 @@ namespace AtmosphereAutopilot
                 rollDamper.serialize();
             if (yawDamper != null)
                 yawDamper.serialize();
+            if (flightModel != null)
+                flightModel.Serialize();
             elevatorDamper = null; 
             elevatorDamperEx = null;
             rollDamper = null;

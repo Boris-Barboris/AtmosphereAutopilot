@@ -31,34 +31,66 @@ namespace AtmosphereAutopilot
 
     interface IAutoSerializable
     {
-        bool Deserialize(string node_name, string filename, Type attribute_type);
+        bool Deserialize();
 
-        void OnDeserialize(ConfigNode node, Type attribute_type);
-
-        void Serialize(string node_name, string filename, Type attribute_type);
-
-        void OnSerialize(ConfigNode node, Type attribute_type);
+        void Serialize();
     }
-
 
 
     public static class AutoSerialization
     {
+        public static bool Deserialize(object obj, string node_name, string filename, Type attribute_type, Action<ConfigNode, Type> OnDeserialize = null)
+        {
+            ConfigNode node = null;
+            ConfigNode fileNode = ConfigNode.Load(filename);
+            if (fileNode != null)
+            {
+                var nodes = fileNode.GetNodes(node_name);
+                try
+                {
+                    node = nodes != null ? nodes.First() : null;
+                }
+                catch { node = null; }
+                if (node != null)
+                {
+                    DeserializeFromNode(node, obj, attribute_type);
+                    if (OnDeserialize != null)
+                        OnDeserialize(node, attribute_type);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static void Serialize(object obj, string node_name, string filename, Type attribute_type, Action<ConfigNode, Type> OnSerialize = null)
+        {
+            ConfigNode fileNode = ConfigNode.Load(filename);
+            if (fileNode == null)
+                fileNode = new ConfigNode();
+            fileNode.RemoveNode(node_name);
+            ConfigNode node = new ConfigNode(node_name);
+            SerializeToNode(node, obj, attribute_type);
+            if (OnSerialize != null)
+                OnSerialize(node, attribute_type);
+            fileNode.AddNode(node);
+            fileNode.Save(filename);
+        }
+
         public static void DeserializeFromNode(ConfigNode node, object obj, Type attribute_type)
         {
             Type type = obj.GetType();
             foreach (var field in type.GetFields())
             {
                 var attributes = field.GetCustomAttributes(attribute_type, true);
-                if (attributes == null)
+                if (attributes.Length <= 0)
                     continue;
-                var att = attributes.First() as AutoSerializableAttr;
+                var att = attributes[0] as AutoSerializableAttr;
                 if (att == null)
                     continue;
                 string str = node.GetValue(att.data_name);
                 if (str == null)
                     continue;
-                var parse_method = field.FieldType.GetMethod("Parse");
+                var parse_method = field.FieldType.GetMethod("Parse", new [] { typeof(string) });
                 if (parse_method == null)
                     continue;
                 field.SetValue(obj, parse_method.Invoke(null, new[] { str }));
@@ -66,15 +98,15 @@ namespace AtmosphereAutopilot
             foreach (var property in type.GetProperties())
             {
                 var attributes = property.GetCustomAttributes(attribute_type, true);
-                if (attributes == null)
+                if (attributes.Length <= 0)
                     continue;
-                var att = attributes.First() as AutoSerializableAttr;
+                var att = attributes[0] as AutoSerializableAttr;
                 if (att == null)
                     continue;
                 string str = node.GetValue(att.data_name);
                 if (str == null)
                     continue;
-                var parse_method = property.PropertyType.GetMethod("Parse");
+                var parse_method = property.PropertyType.GetMethod("Parse", new[] { typeof(string) });
                 if (parse_method == null)
                     continue;
                 property.SetValue(obj, parse_method.Invoke(null, new[] { str }), null);
@@ -88,9 +120,9 @@ namespace AtmosphereAutopilot
             foreach (var field in type.GetFields())
             {
                 var attributes = field.GetCustomAttributes(attribute_type, true);
-                if (attributes == null)
+                if (attributes.Length <= 0)
                     continue;
-                var att = attributes.First() as AutoSerializableAttr;
+                var att = attributes[0] as AutoSerializableAttr;
                 if (att == null)
                     continue;
                 string str = field.GetValue(obj).ToString();
@@ -101,9 +133,9 @@ namespace AtmosphereAutopilot
             foreach (var property in type.GetProperties())
             {
                 var attributes = property.GetCustomAttributes(attribute_type, true);
-                if (attributes == null)
+                if (attributes.Length <= 0)
                     continue;
-                var att = attributes.First() as AutoSerializableAttr;
+                var att = attributes[0] as AutoSerializableAttr;
                 if (att == null)
                     continue;
                 string str = property.GetValue(obj, null).ToString();

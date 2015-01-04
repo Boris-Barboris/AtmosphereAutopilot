@@ -46,66 +46,36 @@ namespace AtmosphereAutopilot
 
         public bool DeserializeVesselSpecific()
         {
-            return Deserialize(module_name.Replace(' ', '_'),
+            return AutoSerialization.Deserialize(this, module_name.Replace(' ', '_'),
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/" + vessel.vesselName + ".cfg",
-                typeof(VesselSerializable));
+                typeof(VesselSerializable), OnDeserialize);
         }
 
         public bool DeserializeGlobalSpecific()
         {
-            return Deserialize(module_name.Replace(' ', '_'), 
+            return AutoSerialization.Deserialize(this, module_name.Replace(' ', '_'), 
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.cfg",
-                typeof(GlobalSerializable));
+                typeof(GlobalSerializable), OnDeserialize);
         }
 
-        public void SerializeAll()
+        public void Serialize()
         {
-            Serialize(module_name.Replace(' ', '_'),
+            AutoSerialization.Serialize(this, module_name.Replace(' ', '_'),
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/" + vessel.vesselName + ".cfg",
-                typeof(VesselSerializable));
-            Serialize(module_name.Replace(' ', '_'),
+                typeof(VesselSerializable), OnSerialize);
+            AutoSerialization.Serialize(this, module_name.Replace(' ', '_'),
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.cfg",
-                typeof(GlobalSerializable));
+                typeof(GlobalSerializable), OnSerialize);
         }
 
-        public bool Deserialize(string node_name, string filename, Type attribute_type)
+        public bool Deserialize()
         {
-            ConfigNode node = null;
-            ConfigNode fileNode = ConfigNode.Load(filename);
-            if (fileNode != null)
-            {
-                var nodes = fileNode.GetNodes(node_name);
-                try
-                {
-                    node = nodes != null ? nodes.First() : null;
-                }
-                catch { node = null; }
-                if (node != null)
-                {
-                    AutoSerialization.DeserializeFromNode(node, this, attribute_type);
-                    OnDeserialize(node, attribute_type);
-                    return true;
-                }
-            }
-            return false;
+            return (DeserializeVesselSpecific() & DeserializeGlobalSpecific());
         }
 
-        public virtual void OnDeserialize(ConfigNode node, Type attribute_type) { }
+        protected virtual void OnDeserialize(ConfigNode node, Type attribute_type) { }
 
-        public void Serialize(string node_name, string filename, Type attribute_type)
-        {
-            ConfigNode fileNode = ConfigNode.Load(filename);
-            if (fileNode == null)
-                fileNode = new ConfigNode();
-            fileNode.RemoveNode(node_name);
-            ConfigNode node = new ConfigNode(node_name);
-            AutoSerialization.SerializeToNode(node, this, attribute_type);
-            OnSerialize(node, attribute_type);
-            fileNode.AddNode(node);
-            fileNode.Save(filename);
-        }
-
-        public virtual void OnSerialize(ConfigNode node, Type attribute_type) { }
+        protected virtual void OnSerialize(ConfigNode node, Type attribute_type) { }
 
         #endregion
 

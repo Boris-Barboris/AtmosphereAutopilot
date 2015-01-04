@@ -10,6 +10,7 @@ namespace AtmosphereAutopilot
     {
         public static GUIStyle labelStyle;
         public static GUIStyle textBoxStyle;
+        public static GUIStyle toggleButtonStyle;
 
         public static void Init()
         {
@@ -22,6 +23,12 @@ namespace AtmosphereAutopilot
             textBoxStyle.alignment = TextAnchor.MiddleCenter;
             textBoxStyle.fontSize = 12;
             textBoxStyle.margin = new RectOffset(2, 2, 2, 2);
+
+            toggleButtonStyle = new GUIStyle(GUI.skin.button);
+            toggleButtonStyle.alignment = TextAnchor.MiddleCenter;
+            toggleButtonStyle.margin = new RectOffset(2, 2, 2, 2);
+            toggleButtonStyle.fontSize = 14;
+            toggleButtonStyle.stretchWidth = true;
         }
     }
 }
