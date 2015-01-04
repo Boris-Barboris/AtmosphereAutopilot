@@ -26,6 +26,7 @@ namespace AtmosphereAutopilot
         {
             Debug.Log("[Autopilot]: AtmosphereAutopilot starting up!"); 
             DontDestroyOnLoad(this);
+            GUIStyles.Init();
             GameEvents.onVesselChange.Add(vesselSwitch);
             GameEvents.onGameSceneLoadRequested.Add(sceneSwitch);
             Instance = this;
@@ -110,7 +111,7 @@ namespace AtmosphereAutopilot
             if (yawDamper != null)
                 yawDamper.drawGUI();
             if (flightModel != null)
-                flightModel.drawGUI();
+                flightModel.OnGUI();
             if (elevatorDamperEx != null)
                 elevatorDamperEx.drawGUI();
         }
@@ -189,7 +190,7 @@ namespace AtmosphereAutopilot
                 {
                     if (mod)
                     {
-                        flightModel.toggleGUI();
+                        flightModel.ToggleGUI();
                         elevatorDamperEx.toggleGUI();
                     }
                     else

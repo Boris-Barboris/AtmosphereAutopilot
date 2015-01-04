@@ -11,7 +11,7 @@ namespace AtmosphereAutopilot
 	/// <summary>
 	/// Class for short-motion model approximation
 	/// </summary>
-	class InstantControlModel
+	class InstantControlModel : IAutoGui
 	{
 		public static readonly int PITCH = 0;
 		public static readonly int ROLL = 1;
@@ -179,24 +179,30 @@ namespace AtmosphereAutopilot
             return x1;
         }
 
-		//
-		// GUI section
-		//
 
-		bool gui_shown = false;
-		public void toggleGUI()
-		{
-			gui_shown = !gui_shown;
-		}
+        #region GUI
 
-		protected Rect window = new Rect(250.0f, 50.0f, 350.0f, 200.0f);
+        string module_name = "Instant control model";
+        int wnd_id = 34278832;
+        protected bool gui_shown = false;
+        protected Rect window = new Rect(50.0f, 80.0f, 300.0f, 150.0f);
 
-		public void drawGUI()
-		{
-			if (!gui_shown)
-				return;
-			window = GUILayout.Window(65448, window, _drawGUI, "Instant control model");
-		}
+        public bool IsDrawn()
+        {
+            return gui_shown;
+        }
+
+        public void OnGUI()
+        {
+            if (!gui_shown)
+                return;
+            window = GUILayout.Window(wnd_id, window, _drawGUI, module_name);
+        }
+
+        public bool ToggleGUI()
+        {
+            return gui_shown = !gui_shown;
+        }
 
 		static readonly string[] axis_names = { "pitch", "roll", "yaw" };
 
@@ -205,15 +211,17 @@ namespace AtmosphereAutopilot
 			GUILayout.BeginVertical();
 			for (int i = 0; i < 3; i++)
 			{
-				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"));
-				GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"));
-				GUILayout.Label(axis_names[i] + " ang vel d2 = " + angular_d2v[i].getLast().ToString("G8"));
-				GUILayout.Label(axis_names[i] + " K1 = " + k_control[i].ToString("G8"));
-                GUILayout.Label(axis_names[i] + " stable = " + stable_channel[i].ToString());
+				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyle);
+                GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"), GUIStyles.labelStyle);
+                GUILayout.Label(axis_names[i] + " ang vel d2 = " + angular_d2v[i].getLast().ToString("G8"), GUIStyles.labelStyle);
+                GUILayout.Label(axis_names[i] + " K1 = " + k_control[i].ToString("G8"), GUIStyles.labelStyle);
+                GUILayout.Label(axis_names[i] + " stable = " + stable_channel[i].ToString(), GUIStyles.labelStyle);
 				GUILayout.Space(10);
 			}
 			GUILayout.EndVertical();
 			GUI.DragWindow();
-		}
-	}
+        }
+
+        #endregion
+    }
 }
