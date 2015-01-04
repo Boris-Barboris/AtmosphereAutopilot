@@ -70,7 +70,7 @@ namespace AtmosphereAutopilot
 
 				double angvd = model.angular_dv[0].getLast();
                 double desired_angvd = -model.angular_v[0].getLast() * pid.KP;
-                double raw_output = model.get_short_input_for_axis(0, desired_angvd, last_output[output_i]);
+                double raw_output = 0.0; // model.get_short_input_for_axis(0, desired_angvd, last_output[output_i]);
                 if (double.IsInfinity(raw_output) || double.IsNaN(raw_output))
                     raw_output = last_output[output_i];
                 //double smoothed_output = last_output[output_i] + TimeWarp.fixedDeltaTime *

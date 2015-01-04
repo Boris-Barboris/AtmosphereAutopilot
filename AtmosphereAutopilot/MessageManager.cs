@@ -6,11 +6,11 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-    class UI
+    static class MessageManager
     {
-        Dictionary<string, ScreenMessage> screenMessages = new Dictionary<string, ScreenMessage>();
+        static Dictionary<string, ScreenMessage> screenMessages = new Dictionary<string, ScreenMessage>();
 
-        public void post_status_message(string message)
+        public static void post_status_message(string message)
         {
             ScreenMessage msg = screenMessages.ContainsKey(message) ? 
                 screenMessages[message] : new ScreenMessage(message, 3.0f, ScreenMessageStyle.UPPER_RIGHT);
@@ -18,7 +18,7 @@ namespace AtmosphereAutopilot
             ScreenMessages.PostScreenMessage(msg);
         }
 
-        public void post_quick_message(string message)
+        public static void post_quick_message(string message)
         {
             ScreenMessages.PostScreenMessage(message, 3.0f, ScreenMessageStyle.UPPER_CENTER);
         }

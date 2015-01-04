@@ -45,9 +45,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AtmosphereAutopilot.cs" />
+    <Compile Include="AutoGui.cs" />
+    <Compile Include="AutoSerialization.cs" />
+    <Compile Include="Backup\OldFlightModel.cs" />
     <Compile Include="CircularBuffer.cs" />
     <Compile Include="Controller\FlightModel.cs" />
+    <Compile Include="GUIStyles.cs" />
     <Compile Include="Matrix.cs" />
+    <Compile Include="Modules\AutopilotModule.cs" />
     <Compile Include="Modules\ElevatorDamperModel.cs" />
     <Compile Include="Modules\YawDamper.cs" />
     <Compile Include="Modules\RollDamper.cs" />
@@ -56,7 +61,7 @@
     <Compile Include="Common.cs" />
     <Compile Include="Controller\Controller.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="UI.cs" />
+    <Compile Include="MessageManager.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -9,7 +9,6 @@ namespace AtmosphereAutopilot
     [KSPAddon(KSPAddon.Startup.Instantly, true)]
     public class AtmosphereAutopilot: MonoBehaviour
     {
-        UI ui_manager = null;
         Dictionary<Vessel, ElevatorDamper> elevator_dampers = new Dictionary<Vessel, ElevatorDamper>();
         Dictionary<Vessel, RollDamper> roll_dampers = new Dictionary<Vessel, RollDamper>();
         Dictionary<Vessel, YawDamper> yaw_dampers = new Dictionary<Vessel, YawDamper>();
@@ -21,13 +20,15 @@ namespace AtmosphereAutopilot
         YawDamper yawDamper;
         InstantControlModel flightModel;
 
+        public static AtmosphereAutopilot Instance { get; private set; }
+
         public void Start()
         {
             Debug.Log("[Autopilot]: AtmosphereAutopilot starting up!"); 
             DontDestroyOnLoad(this);
-            ui_manager = new UI();
             GameEvents.onVesselChange.Add(vesselSwitch);
             GameEvents.onGameSceneLoadRequested.Add(sceneSwitch);
+            Instance = this;
         }
 
         public void OnDestroy()
@@ -133,12 +134,12 @@ namespace AtmosphereAutopilot
                         if (elevatorDamper.Enabled)
                         {
                             elevatorDamper.Deactivate();
-                            ui_manager.post_status_message("Elevator damper disabled");
+                            MessageManager.post_status_message("Elevator damper disabled");
                         }
                         else
                         {
                             elevatorDamper.Activate();
-                            ui_manager.post_status_message("Elevator damper enabled");
+                            MessageManager.post_status_message("Elevator damper enabled");
                         }
                     }
                 }
@@ -153,12 +154,12 @@ namespace AtmosphereAutopilot
                         if (rollDamper.Enabled)
                         {
                             rollDamper.Deactivate();
-                            ui_manager.post_status_message("Roll damper disabled");
+                            MessageManager.post_status_message("Roll damper disabled");
                         }
                         else
                         {
                             rollDamper.Activate();
-                            ui_manager.post_status_message("Roll damper enabled");
+                            MessageManager.post_status_message("Roll damper enabled");
                         }
                     }
                 }
@@ -173,12 +174,12 @@ namespace AtmosphereAutopilot
                         if (yawDamper.Enabled)
                         {
                             yawDamper.Deactivate();
-                            ui_manager.post_status_message("Yaw damper disabled");
+                            MessageManager.post_status_message("Yaw damper disabled");
                         }
                         else
                         {
                             yawDamper.Activate();
-                            ui_manager.post_status_message("Yaw damper enabled");
+                            MessageManager.post_status_message("Yaw damper enabled");
                         }
                     }
                 }
@@ -196,12 +197,12 @@ namespace AtmosphereAutopilot
                         if (elevatorDamperEx.Enabled)
                         {
                             elevatorDamperEx.Deactivate();
-                            ui_manager.post_status_message("elevatorDamperEx damper disabled");
+                            MessageManager.post_status_message("elevatorDamperEx damper disabled");
                         }
                         else
                         {
                             elevatorDamperEx.Activate();
-                            ui_manager.post_status_message("elevatorDamperEx damper enabled");
+                            MessageManager.post_status_message("elevatorDamperEx damper enabled");
                         }
                     }
                 }
