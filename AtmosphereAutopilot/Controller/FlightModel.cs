@@ -32,7 +32,7 @@ namespace AtmosphereAutopilot
             vessel.OnFlyByWire += new FlightInputCallback(OnFlyByWire);
 		}
 
-		static readonly int BUFFER_SIZE = 10;
+		static readonly int BUFFER_SIZE = 50;
 
 		public CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];	// control input value
 		public CircularBuffer<double>[] angular_v = new CircularBuffer<double>[3];	// angular v
@@ -42,7 +42,7 @@ namespace AtmosphereAutopilot
 		double prev_dt = 1.0;		// dt in previous call
 		int stable_dt = 0;			// counts amount of stable dt intervals
 
-		void OnFlyByWire(FlightCtrlState state)
+        void OnFlyByWire(FlightCtrlState state)
 		{
 			if (vessel.checkLanded())           // ground breaks the model
 			{
@@ -74,7 +74,7 @@ namespace AtmosphereAutopilot
 				angular_v[i].Put(vessel.angularVelocity[i]);
 				if (stable_dt >= 1)
 					angular_dv[i].Put(
-						derivative1_short(
+                        derivative1_short(
 							angular_v[i].getFromTail(1),
 							angular_v[i].getFromTail(0),
 							prev_dt));
@@ -104,6 +104,11 @@ namespace AtmosphereAutopilot
             return (y1 - y0) / dt;
         }
 
+        public static double derivative1_middle(double y0, double y2, double dt)    // first derivative
+        {
+            return (y2 - y0) / dt * 0.5;
+        }
+
 		public static double derivative1(double y0, double y1, double y2, double dt)    // first derivative
 		{
 			return (y0 - 4 * y1 + 3 * y2) / dt * 0.5;
@@ -115,23 +120,23 @@ namespace AtmosphereAutopilot
 		}
 
 		//
-		// Model section
+		// Short term Model section
 		//
 
 		// Basic approximation:
         // angular_dv = k_control_sqr * control^2 + k_control * control + c_control
 		public double[] k_control = new double[3];
-        public double[] k_control_sqr = new double[3];
 		public double[] c_control = new double[3];
 
-        enum ManeuverType
+        enum TransitionType
         {
             stationary,
-            linear,
-            square
+            linear
         };
 
-        ManeuverType maneuver = ManeuverType.stationary;
+        TransitionType maneuver = TransitionType.stationary;
+
+        class ModelException : Exception { }
 
 		public void update_model()
 		{
@@ -140,97 +145,130 @@ namespace AtmosphereAutopilot
 
 			for (int i = 0; i < 3; i++)
 			{
-                if (Math.Abs(input_buf[i].getLast() - input_buf[i].getFromTail(1)) < 1e-5)
-                {
-                    // stationary turn
-                    c_control[i] = angular_dv[i].getLast();
-                    maneuver = ManeuverType.stationary;
-                    return;
-                }
-                Matrix ang_dv_m, coeff, result;
-                if (Math.Abs(input_buf[i].getFromTail(1) - input_buf[i].getFromTail(2)) < 1e-5)
-                {
-                    // need linear
-                    ang_dv_m = new Matrix(2, 1);				// column of angular v derivatives
-                    ang_dv_m[0, 0] = angular_dv[i].getFromTail(1);
-                    ang_dv_m[1, 0] = angular_dv[i].getLast();
-                    coeff = new Matrix(2, 2);
-                    coeff[0, 0] = input_buf[i].getFromTail(1);
-                    coeff[1, 0] = input_buf[i].getFromTail(0);
-                    coeff[0, 1] = coeff[1, 1] = 1.0;
-                    try
-                    {
-                        result = coeff.SolveWith(ang_dv_m);
-                        if (!double.IsInfinity(result[0, 0]) && !double.IsNaN(result[0, 0]))
-                            k_control[i] = result[0, 0];
-                        if (!double.IsInfinity(result[1, 0]) && !double.IsNaN(result[1, 0]))
-                            c_control[i] = result[1, 0];
-                        maneuver = ManeuverType.linear;
-                    }
-                    catch { maneuver = ManeuverType.stationary; }
-                    return;
-                }
-				ang_dv_m = new Matrix(3, 1);				// column of angular v derivatives
-				ang_dv_m[0, 0] = angular_dv[i].getFromTail(2);
-                ang_dv_m[1, 0] = angular_dv[i].getFromTail(1);
-                ang_dv_m[2, 0] = angular_dv[i].getLast();
-				coeff = new Matrix(3, 3);
-                coeff[0, 1] = input_buf[i].getFromTail(2);
-                coeff[1, 1] = input_buf[i].getFromTail(1);
-                coeff[2, 1] = input_buf[i].getLast();
-                coeff[0, 0] = coeff[0, 1] * coeff[0, 1];
-                coeff[1, 0] = coeff[1, 1] * coeff[1, 1];
-                coeff[2, 0] = coeff[2, 1] * coeff[2, 1];
-                coeff[0, 2] = coeff[1, 2] = coeff[1, 2] = 1.0;
+                //if (Math.Abs(input_buf[i].getLast() - input_buf[i].getFromTail(1)) < 1e-4)
+                //{
+                //    // stationary turn
+                //    c_control[i] = angular_dv[i].getLast() - input_buf[i].getLast() * k_control[i];
+                //    maneuver = TransitionType.stationary;
+                //    return;
+                //}
+                //Matrix ang_dv_m, coeff, result;
+                //// need linear
+                //ang_dv_m = new Matrix(2, 1);				        // column of angular v derivatives
+                //ang_dv_m[0, 0] = angular_dv[i].getFromTail(1) +
+                //    angular_d2v[i].getFromTail(0) * prev_dt;        // account for regime switch. dv2 lags for 1 cycle
+                //ang_dv_m[1, 0] = angular_dv[i].getFromTail(0);
+                //coeff = new Matrix(2, 2);
+                //coeff[0, 0] = input_buf[i].getFromTail(1);
+                //coeff[1, 0] = input_buf[i].getFromTail(0);
+                //coeff[0, 1] = coeff[1, 1] = 1.0;
+                //try
+                //{
+                //    result = coeff.SolveWith(ang_dv_m);
+                //    if (!double.IsInfinity(result[0, 0]) && !double.IsNaN(result[0, 0]))
+                //        k_control[i] = result[0, 0];
+                //    if (!double.IsInfinity(result[1, 0]) && !double.IsNaN(result[1, 0]))
+                //        c_control[i] = result[1, 0];
+                //    maneuver = TransitionType.linear;
+                //}
+                //catch { maneuver = TransitionType.stationary; }
+
+                //
+                // 3D plane method
+                //
+                // Find a plane in angular_dv - time - control space
+                //Vector3d point0 = new Vector3d(0.0, input_buf[i].getFromTail(3), angular_dv[i].getFromTail(2));
+                //Vector3d point1 = new Vector3d(prev_dt, input_buf[i].getFromTail(2), angular_dv[i].getFromTail(1));
+                //Vector3d point2 = new Vector3d(2.0 * prev_dt, input_buf[i].getFromTail(1), angular_dv[i].getFromTail(0));
+                //Vector3d normal = Vector3d.Cross((point1 - point0).normalized, (point2 - point0).normalized);
+                //if (normal.magnitude < 1e-3)
+                //{
+                //    // vectors are too close and plane is badly-defined, assume transition stationary
+                //    c_control[i] = angular_dv[i].getLast() - input_buf[i].getLast() * k_control[i];
+                //    maneuver = TransitionType.stationary;
+                //}
+                //else
+                //{
+                //    // plane is defined, need to get projection to angular_dv - control plane
+                //    normal.x = 0.0;     // zero out time coordinate
+                //    if (normal.z < 0)
+                //        normal = -normal;
+                //    double tangent = -normal.y / normal.z;
+                //    if (!double.IsInfinity(tangent) && !double.IsNaN(tangent) && (tangent > -1e4) && (tangent < 1e4))
+                //    {
+                //        k_control[i] = Common.Clamp(tangent, 1e3);
+                //        c_control[i] = angular_dv[i].getLast() - input_buf[i].getLast() * tangent;
+                //        maneuver = TransitionType.linear;
+                //    }
+                //    else
+                //    {
+                //        c_control[i] = angular_dv[i].getLast() - input_buf[i].getLast() * k_control[i];
+                //        maneuver = TransitionType.stationary;
+                //    }
+                //}
+
+                double dv_control0 = 0, dv_control1 = 0, d2v_control = 0;
+                int i0 = 0, i1 = 0;
                 try
                 {
-                    result = coeff.SolveWith(ang_dv_m);
-                    if (!double.IsInfinity(result[0, 0]) && !double.IsNaN(result[0, 0]))
-                        k_control_sqr[i] = result[0, 0];			    // get linear control approximation
-                    if (!double.IsInfinity(result[1, 0]) && !double.IsNaN(result[1, 0]))
-                        k_control[i] = result[1, 0];
-                    if (!double.IsInfinity(result[2, 0]) && !double.IsNaN(result[2, 0]))
-                        c_control[i] = result[2, 0];
+                    // we need to find variable input
+                    for (i1 = 1; i1 < angular_dv[i].Size; i1++)
+                    {
+                        if (input_buf[i].getFromTail(i1) != input_buf[i].getFromTail(0))
+                            break;
+                    }
+                    for (i0 = i1 + 1; i0 < angular_dv[i].Size; i0++)
+                    {
+                        if (input_buf[i].getFromTail(i1) != input_buf[i].getFromTail(i0))
+                            break;
+                    }
+                    if (i0 >= input_buf[i].Size)
+                        throw new ModelException();
+                    dv_control0 = (angular_dv[i].getFromTail(i1) - angular_dv[i].getFromTail(i0)) /
+                        (input_buf[i].getFromTail(i1) - input_buf[i].getFromTail(i0));
+                    if (double.IsNaN(dv_control0) || double.IsInfinity(dv_control0))
+                        throw new ModelException();
+                    dv_control1 = (angular_dv[i].getFromTail(0) - angular_dv[i].getFromTail(i1)) /
+                        (input_buf[i].getFromTail(0) - input_buf[i].getFromTail(i1));
+                    if (double.IsNaN(dv_control1) || double.IsInfinity(dv_control1))
+                        throw new ModelException();
+                    d2v_control = (dv_control1 - dv_control0) /
+                        (input_buf[i].getFromTail(0) - input_buf[i].getFromTail(i1));
+                    if (double.IsNaN(d2v_control) || double.IsInfinity(d2v_control))
+                        throw new ModelException();
+                    k_control[i] = d2v_control;
                 }
-                catch { maneuver = ManeuverType.stationary; }
-                maneuver = ManeuverType.square;
+                catch (ModelException) 
+                {
+                    Debug.Log("[AUTOPILOT]: " + dv_control0.ToString("G8") + ' ' + dv_control1.ToString("G8") +
+                        ' ' + d2v_control.ToString("G8") + " input = " + input_buf[i].getFromTail(2).ToString("G8") + ' ' +
+                        input_buf[i].getFromTail(1).ToString("G8") + ' ' + input_buf[i].getFromTail(0).ToString("G8"));
+                }
+                finally
+                {
+                    c_control[i] = angular_dv[i].getLast() - input_buf[i].getLast() * k_control[i];
+                }
 			}
 		}
 
-        public double get_input_for_axis(int axis, double desired_angular_dv, double current_input)
+        public double get_short_input_for_axis(int axis, double desired_angular_dv, double current_input)
         {
-            if (maneuver == ManeuverType.linear || maneuver == ManeuverType.stationary)
-            {
-                double k = k_control[axis];
-                if (double.IsNaN(k) || double.IsInfinity(k) || Math.Abs(k) < 1e-6)
-                    return double.NaN;
-                double h = desired_angular_dv - c_control[axis];
-                double x = h / k;
-                return x;
-            }
-            if (maneuver == ManeuverType.square)
-            {
-                double a = k_control_sqr[axis];
-                if (double.IsNaN(a) || double.IsInfinity(a) || Math.Abs(a) < 1e-6)
-                    return double.NaN;
-                double b = k_control[axis];
-                if (double.IsNaN(b) || double.IsInfinity(b))
-                    return double.NaN;
-                double c = c_control[axis] - desired_angular_dv;
-                double D = b * b - 4 * a * c;
-                if (D < 0.0)
-                    return double.NaN;
-                if (D == 0.0)
-                    return (-b + Math.Sqrt(D)) / 2.0 / a;
-                if (D > 0.0)
-                {
-                    double x1 = (-b + Math.Sqrt(D)) / 2.0 / a;
-                    double x2 = (-b - Math.Sqrt(D)) / 2.0 / a;
-                    return closest(current_input, x2, x2);
-                }
-                return double.NaN;
-            }
-            return double.NaN;
+            //if (maneuver == TransitionType.linear || maneuver == TransitionType.stationary)
+            //{
+            //    double k = k_control[axis];
+            //    if (double.IsNaN(k) || double.IsInfinity(k) || Math.Abs(k) < 1e-6)
+            //        return double.NaN;
+            //    double h = desired_angular_dv - c_control[axis];
+            //    double x = h / k;
+            //    return x;
+            //}
+            //return double.NaN;
+            double dv = angular_dv[axis].getLast();
+            double ddv = angular_d2v[axis].getLast() * prev_dt;
+            double dinput = (desired_angular_dv - dv - ddv) / k_control[axis];
+            if (double.IsInfinity(dinput))
+                return current_input;
+            return input_buf[axis].getLast() + dinput;
         }
 
         public static double closest(double target, double x1, double x2)
@@ -269,7 +307,6 @@ namespace AtmosphereAutopilot
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"));
 				GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"));
 				GUILayout.Label(axis_names[i] + " ang vel d2 = " + angular_d2v[i].getLast().ToString("G8"));
-                GUILayout.Label(axis_names[i] + " K2 = " + k_control_sqr[i].ToString("G8"));
 				GUILayout.Label(axis_names[i] + " K1 = " + k_control[i].ToString("G8"));
 				GUILayout.Label(axis_names[i] + " C = " + c_control[i].ToString("G8"));
 				GUILayout.Space(10);
