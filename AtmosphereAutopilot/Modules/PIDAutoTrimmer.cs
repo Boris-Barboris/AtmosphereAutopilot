@@ -43,27 +43,27 @@ namespace AtmosphereAutopilot
 		[AutoGuiAttr("output", false, "G8")]
 		public double Output { get { return output; } }
 
-		[AutoSerializableAttr("KP")]
+        [VesselSerializable("KP")]
 		[AutoGuiAttr("KP", true, "G8")]
 		public double KP { get { return pid.KP; } set { pid.KP = value; } }
 
-		[AutoSerializableAttr("KI")]
+        [VesselSerializable("KI")]
 		[AutoGuiAttr("KI", true, "G8")]
 		public double KI { get { return pid.KI; } set { pid.KI = value; } }
 
-		[AutoSerializableAttr("KD")]
+        [VesselSerializable("KD")]
 		[AutoGuiAttr("KD", true, "G8")]
 		public double KD { get { return pid.KD; } set { pid.KD = value; } }
 
-		[AutoSerializableAttr("AccumulatorClamp")]
+        [VesselSerializable("AccumulatorClamp")]
 		[AutoGuiAttr("AccumulatorClamp", true, "G8")]
 		public double AccumulatorClamp { get { return pid.AccumulatorClamp; } set { pid.AccumulatorClamp = value; } }
 
-		[AutoSerializableAttr("AccumulDerivClamp")]
+        [VesselSerializable("AccumulDerivClamp")]
 		[AutoGuiAttr("AccumulDerivClamp", true, "G8")]
 		public double AccumulDerivClamp { get { return pid.AccumulDerivClamp; } set { pid.AccumulDerivClamp = value; } }
 
-		[AutoSerializableAttr("IntegralClamp")]
+        [VesselSerializable("IntegralClamp")]
 		[AutoGuiAttr("IntegralClamp", true, "G8")]
 		public double IntegralClamp { get { return pid.IntegralClamp; } set { pid.IntegralClamp = value; } }
 

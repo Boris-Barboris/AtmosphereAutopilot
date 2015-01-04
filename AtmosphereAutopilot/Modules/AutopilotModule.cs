@@ -88,6 +88,18 @@ namespace AtmosphereAutopilot
         protected bool gui_shown = false;
         protected Rect window = new Rect(50.0f, 80.0f, 200.0f, 150.0f);
 
+        [GlobalSerializable("window_x")]
+        public float WindowLeft { get { return window.xMin; } set { window.xMin = value; } }
+
+        [GlobalSerializable("window_y")]
+        public float WindowTop { get { return window.yMin; } set { window.yMin = value; } }
+
+        [GlobalSerializable("window_width")]
+        public float WindowWidth { get { return window.width; } set { window.width = value; } }
+
+        [GlobalSerializable("window_height")]
+        public float WindowHeight { get { return window.height; } set { window.height = value; } }
+
         public bool IsDrawn()
         {
             return gui_shown;
@@ -105,6 +117,7 @@ namespace AtmosphereAutopilot
             GUILayout.BeginVertical();
             AutoGUI.AutoDrawObject(this);
             GUILayout.EndVertical();
+            GUI.DragWindow();
         }
 
         public bool ToggleGUI()

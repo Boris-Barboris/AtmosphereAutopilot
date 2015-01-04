@@ -35,7 +35,7 @@ namespace AtmosphereAutopilot
 
     static class AutoGUI
     {
-        static Dictionary<string, string> value_holders = new Dictionary<string, string>();
+        static Dictionary<int, string> value_holders = new Dictionary<int, string>();
 
         public static void AutoDrawObject(object obj)
         {
@@ -43,9 +43,9 @@ namespace AtmosphereAutopilot
             foreach (var property in type.GetProperties())
             {
                 var attributes = property.GetCustomAttributes(typeof(AutoGuiAttr), true);
-                if (attributes == null)
+                if (attributes.Length <= 0)
                     continue;
-                var att = attributes.First() as AutoGuiAttr;
+                var att = attributes[0] as AutoGuiAttr;
                 if (att == null)
                     continue;
                 Type prop_type = property.PropertyType;
@@ -69,21 +69,24 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
-                    string hash_str = obj.GetHashCode().ToString() + property.ToString();
+                    int hash = obj.GetHashCode() + property.Name.GetHashCode();
                     string val_holder;
-                    if (value_holders.ContainsKey(hash_str))
-                        val_holder = value_holders[hash_str];
+                    if (value_holders.ContainsKey(hash))
+                        val_holder = value_holders[hash];
                     else
-                        val_holder = "0.0";
+                        if (ToStringFormat != null)
+                            val_holder = (string)ToStringFormat.Invoke(property.GetValue(obj, null), new[] { att.format });
+                        else
+                            val_holder = property.GetValue(obj, null).ToString();
                     val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);
                     try
                     {
-                        var ParseMethod = property.GetType().GetMethod("Parse", new[] { typeof(string) });
+                        var ParseMethod = prop_type.GetMethod("Parse", new[] { typeof(string) });
                         if (ParseMethod != null)
                             property.SetValue(obj, ParseMethod.Invoke(null, new [] { val_holder }), null);
                     }
                     catch { }
-                    value_holders[hash_str] = val_holder;
+                    value_holders[hash] = val_holder;
                 }
                 GUILayout.EndHorizontal();
             }

@@ -38,8 +38,6 @@ namespace AtmosphereAutopilot
 
         private void sceneSwitch(GameScenes scenes)
         {
-            if (scenes == GameScenes.SPACECENTER)
-                GUIStyles.Init();
             if (elevatorDamper != null)
                 elevatorDamper.Serialize();
             if (elevatorDamperEx != null)
@@ -67,6 +65,7 @@ namespace AtmosphereAutopilot
             else
                 Debug.Log("[Autopilot]: ElevatorDamper for vessel " + v.name + " loaded");
             elevatorDamper = elevator_dampers[v];
+            elevatorDamper.Deserialize();
 
             if (!roll_dampers.ContainsKey(v))
             {
@@ -76,6 +75,7 @@ namespace AtmosphereAutopilot
             else
                 Debug.Log("[Autopilot]: RollDamper for vessel " + v.name + " loaded");
             rollDamper = roll_dampers[v];
+            rollDamper.Deserialize();
 
             if (!yaw_dampers.ContainsKey(v))
             {
@@ -85,6 +85,7 @@ namespace AtmosphereAutopilot
             else
                 Debug.Log("[Autopilot]: YawDamper for vessel " + v.name + " loaded");
             yawDamper = yaw_dampers[v];
+            yawDamper.Deserialize();
 
             if (!flight_models.ContainsKey(v))
             {
@@ -94,6 +95,7 @@ namespace AtmosphereAutopilot
             else
                 Debug.Log("[Autopilot]: FlightModel for vessel " + v.name + " loaded");
             flightModel = flight_models[v];
+            flightModel.Deserialize();
 
             if (!elevator_dampers_exper.ContainsKey(v))
             {
@@ -103,10 +105,18 @@ namespace AtmosphereAutopilot
             else
                 Debug.Log("[Autopilot]: ElevatorDamperExperim for vessel " + v.name + " loaded");
             elevatorDamperEx = elevator_dampers_exper[v];
+            elevatorDamperEx.Deserialize();
         }
+
+        bool styles_init = false;
 
         public void OnGUI()
         {
+            if (!styles_init)
+            {
+                GUIStyles.Init();
+                styles_init = true;
+            }
             if (elevatorDamper != null)
                 elevatorDamper.OnGUI();
             if (rollDamper != null)

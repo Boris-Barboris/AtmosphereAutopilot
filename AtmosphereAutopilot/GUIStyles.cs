@@ -22,12 +22,12 @@ namespace AtmosphereAutopilot
             textBoxStyle = new GUIStyle(GUI.skin.textField);
             textBoxStyle.alignment = TextAnchor.MiddleCenter;
             textBoxStyle.fontSize = 12;
-            textBoxStyle.margin = new RectOffset(2, 2, 2, 2);
+            textBoxStyle.margin = new RectOffset(4, 4, 2, 2);
 
             toggleButtonStyle = new GUIStyle(GUI.skin.button);
             toggleButtonStyle.alignment = TextAnchor.MiddleCenter;
-            toggleButtonStyle.margin = new RectOffset(2, 2, 2, 2);
-            toggleButtonStyle.fontSize = 14;
+            toggleButtonStyle.margin = new RectOffset(4, 4, 2, 2);
+            toggleButtonStyle.fontSize = 12;
             toggleButtonStyle.stretchWidth = true;
         }
     }
