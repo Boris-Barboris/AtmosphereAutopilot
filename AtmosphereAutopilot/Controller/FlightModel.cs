@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using UnityEngine;
 using System.IO;
 
@@ -23,12 +24,13 @@ namespace AtmosphereAutopilot
 			yaw,			// yaw control value
 			aoa_pitch,
 			aoa_slide,
+            aoa_mul_pitch,  // aoa_pitch * pitch
 			com_horiz,		// angle between vessel forward and horizont
 			surf_roll,		// angle between vessel wings and horizont
 			dyn_pressure
 		}
 
-        public const int Param_count = 8;
+        public const int Param_count = 9;
 
         /// <summary>
         /// Enumeration of parameters model is trying to predict
@@ -62,14 +64,17 @@ namespace AtmosphereAutopilot
 
         Vessel vessel;
 		
-		public const int Steps_remembered = 100;        // time slices to remember. Affects performance
+		public const int Steps_remembered = 15;        // time slices to remember. Affects performance
         int dt_stable = 0;
         double last_dt = 1.0;           // last delta_t
 
 		public void OnFlyByWire(FlightCtrlState state)
 		{
             if (vessel.checkLanded())           // ground breaks the model
+            {
+                dt_stable = 0;
                 return;
+            }
 
             // record flight readings
 			telemetry[(int)FCharacter.pitch].Put(state.pitch);
@@ -80,6 +85,8 @@ namespace AtmosphereAutopilot
             double aoa = Math.Asin(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized));
             telemetry[(int)FCharacter.aoa_pitch].Put(aoa);
 
+            telemetry[(int)FCharacter.aoa_mul_pitch].Put(state.pitch * aoa);
+
             telemetry[(int)FCharacter.aoa_slide].Put(0);
 
             double pitch = Math.Abs(Vector3.Cross(vessel.transform.up.normalized, vessel.upAxis).magnitude);
@@ -89,9 +96,9 @@ namespace AtmosphereAutopilot
 
             telemetry[(int)FCharacter.dyn_pressure].Put(vessel.srf_velocity.sqrMagnitude * FlightGlobals.getStaticPressure());
 
-            angular_velocities[(int)FControl.avd_pitch].Put(-vessel.angularVelocity.x);
-            angular_velocities[(int)FControl.avd_roll].Put(-vessel.angularVelocity.y);
-            angular_velocities[(int)FControl.avd_yaw].Put(-vessel.angularVelocity.z);
+            angular_velocities[(int)FControl.avd_pitch].Put(vessel.angularVelocity.x);
+            angular_velocities[(int)FControl.avd_roll].Put(vessel.angularVelocity.y);
+            angular_velocities[(int)FControl.avd_yaw].Put(vessel.angularVelocity.z);
 
             // update
             update_derivatives();
@@ -100,16 +107,16 @@ namespace AtmosphereAutopilot
 		}
 
         // Flight characteristics buffers
-		CircularBuffer<double>[] telemetry = new CircularBuffer<double>[Param_count];
-        CircularBuffer<double>[] angular_velocities = new CircularBuffer<double>[3];
-        CircularBuffer<double>[] angular_derivatives = new CircularBuffer<double>[3];
+		public CircularBuffer<double>[] telemetry = new CircularBuffer<double>[Param_count];
+        public CircularBuffer<double>[] angular_velocities = new CircularBuffer<double>[3];
+        public CircularBuffer<double>[] angular_derivatives = new CircularBuffer<double>[3];
 
         // Model characteristics buffers
         public double[][] model_linear_k = new double[3][];                        // linear gain coeffitients
         double[][] model_parameters_importance = new double[3][];           // importance of flight parameters
         double[] error = new double[3];                                     // errors of angular vel derivatives prediction
         int solve_count = 0;                                                // matrix solve counter. Used for stabilizing model
-        int solve_memory = 20;                                              // how many last solutions will be accounted when building a model
+        int solve_memory = 10;                                               // how many last solutions will be accounted when building a model
 
         void update_derivatives()
         {
@@ -118,7 +125,7 @@ namespace AtmosphereAutopilot
             {
                 // dt is roughly constant
                 dt_stable = Math.Min(dt_stable + 1, 100);       // increase dt stability counter
-                if (dt_stable >= 1)                             // if dt is stable long enough
+                if (dt_stable >= 2)                             // if dt is stable long enough
                     for (int i = 0; i < 3; i++)
                         if (angular_velocities[i].Size >= 3)
                             angular_derivatives[i].Put(derivative1(angular_velocities[i].getFromTail(2),
@@ -135,6 +142,8 @@ namespace AtmosphereAutopilot
 
         void predict()
         {
+            if (dt_stable < 2 || telemetry[0].Size < 1)
+                return;
             double[] prediction = new double[3];
             for (int i = 0; i < 3; i++)
             {
@@ -152,17 +161,76 @@ namespace AtmosphereAutopilot
         {
             importance_str[(int)FCharacter.pitch] = (model_parameters_importance[0][(int)FCharacter.pitch] = 1.0).ToString("G8");
             importance_str[(int)FCharacter.aoa_pitch] = (model_parameters_importance[0][(int)FCharacter.aoa_pitch] = 1.0).ToString("G8");
-            importance_str[(int)FCharacter.com_horiz] = (model_parameters_importance[0][(int)FCharacter.com_horiz] = 1.0).ToString("G8");
-            importance_str[(int)FCharacter.dyn_pressure] = (model_parameters_importance[0][(int)FCharacter.dyn_pressure] = 1.0).ToString("G8");
+            importance_str[(int)FCharacter.aoa_mul_pitch] = (model_parameters_importance[0][(int)FCharacter.aoa_mul_pitch] = 1e3).ToString("G8");
+            importance_str[(int)FCharacter.com_horiz] = (model_parameters_importance[0][(int)FCharacter.com_horiz] = 1e3).ToString("G8");
+            importance_str[(int)FCharacter.dyn_pressure] = (model_parameters_importance[0][(int)FCharacter.dyn_pressure] = 1e6).ToString("G8");
         }
 
         int solve_cycle_counter = 0;
+        Thread least_squares_thread = null;
         void solve()
         {
             solve_cycle_counter = (solve_cycle_counter + 1) % Steps_remembered;
-            if (dt_stable < Param_count + 1 || solve_cycle_counter != 0)
+            if (dt_stable < Steps_remembered + 1 || solve_cycle_counter != 0)
                 return;
 
+            if (least_squares_thread == null)
+            {
+                least_squares_thread = new Thread(new ThreadStart(do_solve));
+                prepare_matrixes();
+                least_squares_thread.Start();
+            }
+            else
+                if (!least_squares_thread.IsAlive && least_squares_thread.ThreadState == ThreadState.Stopped)
+                {
+                    least_squares_thread = new Thread(new ThreadStart(do_solve));
+                    prepare_matrixes();
+                    least_squares_thread.Start();
+                }
+        }
+
+        //
+        // Least squares section
+        //
+        bool[] non_zero;
+        Matrix tel_matrix;
+        Matrix ang_dev_pitch;
+
+        void prepare_matrixes()
+        {
+            non_zero = new bool[Param_count];            // get non-zero parameters for pitch
+            int non_zero_pars = 0;
+            for (int j = 0; j < Param_count; j++)
+                for (int i = 0; i < Steps_remembered; i++)
+                {
+                    if (telemetry[j][i] * model_parameters_importance[0][j] != 0.0)
+                    {
+                        non_zero[j] = true;
+                        non_zero_pars++;
+                        break;
+                    }
+                }
+            if (non_zero_pars == 0)
+                return;
+
+            tel_matrix = new Matrix(Steps_remembered, non_zero_pars);
+            for (int i = 0; i < Steps_remembered; i++)
+            {
+                for (int j = 0, k = 0; j < Param_count; j++)
+                    if (non_zero[j])
+                    {
+                        tel_matrix[i, k] = telemetry[j][i] * model_parameters_importance[0][j];
+                        k++;
+                    }
+            }
+
+            ang_dev_pitch = new Matrix(Steps_remembered, 1);
+            for (int i = 0; i < Steps_remembered; i++)
+                ang_dev_pitch[i, 0] = angular_derivatives[(int)FControl.avd_pitch][i];
+        }
+
+        void do_solve()
+        {
             try
             {
                 // Linear least squares method
@@ -170,37 +238,9 @@ namespace AtmosphereAutopilot
 
                 //
                 // Pitch
-                //
-                bool[] non_zero = new bool[Param_count];            // get non-zero parameters for pitch
-                int non_zero_pars = 0;
-                for (int j = 0; j < Param_count; j++)
-                    for (int i = 0; i < Steps_remembered; i++)
-                    {
-                        if (telemetry[j][i] * model_parameters_importance[0][j] != 0.0)
-                        {
-                            non_zero[j] = true;
-                            non_zero_pars++;
-                            break;
-                        }
-                    }
-                if (non_zero_pars == 0)
-                    return;
-
-                Matrix tel_matrix = new Matrix(Steps_remembered, non_zero_pars);
-                for (int i = 0; i < Steps_remembered; i++)
-                {
-                    for (int j = 0, k = 0; j < Param_count; j++)
-                        if (non_zero[j])
-                        {
-                            tel_matrix[i, k] = telemetry[j][i] * model_parameters_importance[0][j];
-                            k++;
-                        }
-                }
+                //                
                 Matrix tel_m_transposed = Matrix.Transpose(tel_matrix);
-                Matrix inverted = (tel_m_transposed * tel_matrix).Invert();
-                Matrix ang_dev_pitch = new Matrix(Steps_remembered, 1);
-                for (int i = 0; i < Steps_remembered; i++)
-                    ang_dev_pitch[i, 0] = angular_derivatives[(int)FControl.avd_pitch][i];
+                Matrix inverted = (tel_m_transposed * tel_matrix).Invert();                
                 Matrix result_vector = inverted * tel_m_transposed * ang_dev_pitch;
 
                 // Apply results
@@ -210,7 +250,7 @@ namespace AtmosphereAutopilot
                         double new_koef = result_vector[j, 0];
                         j++;
                         if (!double.IsInfinity(new_koef) && !double.IsNaN(new_koef))
-                            model_linear_k[(int)FControl.avd_pitch][i] = 
+                            model_linear_k[(int)FControl.avd_pitch][i] =
                                 (new_koef + model_linear_k[(int)FControl.avd_pitch][i] * solve_count) / (solve_count + 1);
                     }
 
@@ -220,37 +260,6 @@ namespace AtmosphereAutopilot
             {
                 Debug.Log("[Autopilot]: " + e.Message);
             }
-
-            // rows are tme slices
-            // columns are linear coeffitients
-            // free column is angular derivative
-            //double[,] matrix = new double[2 + 1, 2 + 2];
-            //for (int t = 0; t < 2 + 1; t++)
-            //{
-            //    matrix[t, 2 + 1] = angular_derivatives[0].getFromTail(t);
-            //    matrix[t, 2] = 1.0;
-            //    matrix[t, 0] = telemetry[(int)FCharacter.pitch].getFromTail(t);
-            //    matrix[t, 1] = telemetry[(int)FCharacter.aoa_pitch].getFromTail(t);
-            //}
-            //if (LinearEquationSolver.Solve(matrix))
-            //{
-            //    double aoa_k = matrix[0, 3];
-            //    double pitch_k = matrix[1, 3];
-            //    double unknown_k = matrix[2, 3];
-
-            //    // apply changes in model
-            //    if (!double.IsInfinity(aoa_k) && !double.IsNaN(aoa_k))
-            //        model_linear_k[(int)FCharacter.aoa_pitch] = (aoa_k + model_linear_k[(int)FCharacter.aoa_pitch] * solve_count) /
-            //            (solve_count + 1);
-            //    if (!double.IsInfinity(pitch_k) && !double.IsNaN(pitch_k))
-            //        model_linear_k[(int)FCharacter.pitch] = (pitch_k + model_linear_k[(int)FCharacter.pitch] * solve_count) /
-            //            (solve_count + 1);
-            //    if (!double.IsInfinity(unknown_k) && !double.IsNaN(unknown_k))
-            //        model_linear_k[Param_count] = (unknown_k + model_linear_k[Param_count] * solve_count) /
-            //            (solve_count + 1);
-                
-            //    solve_count = Math.Min(solve_count + 1, solve_memory);
-            //}
         }
 
         public static double derivative1(double y0, double y1, double y2, double dt)    // first derivative
@@ -270,19 +279,15 @@ namespace AtmosphereAutopilot
 
         //GUIStyle labelstyle = new GUIStyle(GUI.skin.label);
 
-        protected bool gui_shown = false;
+        public bool gui_shown = false;
         public void toggleGUI()
         {
             gui_shown = !gui_shown;
-            if (gui_shown)
-                RenderingManager.AddToPostDrawQueue(5, drawGUI);
-            else
-                RenderingManager.RemoveFromPostDrawQueue(5, drawGUI);
         }
 
         protected Rect window = new Rect(250.0f, 50.0f, 450.0f, 250.0f);
 
-        void drawGUI()
+        public void drawGUI()
         {
             if (!gui_shown)
                 return;
@@ -296,28 +301,16 @@ namespace AtmosphereAutopilot
             for (int i = 0; i < Param_count; i++)
             {
                 GUILayout.BeginHorizontal();
-                try
-                {
-                    GUILayout.Label(Enum.GetName(typeof(FCharacter), (FCharacter)i) + " = " +
-                        telemetry[i].getFromTail(0).ToString("G8"));
-                }
-                catch { }
-                try
-                {
-                    for (int j = 0; j < 1; j++)
-                        GUILayout.Label("Linear K = " + model_linear_k[0][i].ToString("G8"));
-                }
-                catch { }
+                GUILayout.Label(Enum.GetName(typeof(FCharacter), (FCharacter)i) + " = " +
+                    telemetry[i].getFromTail(0).ToString("G8"));
+                for (int j = 0; j < 1; j++)
+                    GUILayout.Label("Linear K = " + model_linear_k[j][i].ToString("G8"));
                 GUILayout.EndHorizontal();
             }
             for (int i = 0; i < 3; i++)
             {
-                try
-                {
-                    GUILayout.Label(Enum.GetName(typeof(FControl), (FControl)i) + " = " +
-                        angular_derivatives[i].getFromTail(0).ToString("G8") + " error = " + error[i].ToString("G8"));
-                }
-                catch { }
+                GUILayout.Label(Enum.GetName(typeof(FControl), (FControl)i) + " = " +
+                    angular_derivatives[i].getFromTail(0).ToString("G8") + " error = " + error[i].ToString("G8"));
             }
             for (int i = 0; i < Param_count; i++)
             {

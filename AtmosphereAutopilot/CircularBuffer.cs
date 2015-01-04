@@ -114,44 +114,38 @@ namespace System.IO
 
         public void Put(T item)
         {
-            if (!AllowOverflow && size == capacity)
-                throw new IndexOutOfRangeException("Buffer is full.");
-            else
-                size++;
+            bool overflow = false;
+            if (size == capacity)
+                if (!AllowOverflow)
+                    throw new IndexOutOfRangeException("Buffer is full.");
+                else
+                    overflow = true;
 
             buffer[tail] = item;
             tail = (tail + 1) % capacity;
+            if (overflow)
+                head = tail;
+            else
+                size++;
         }
 
         public T this[int index]
         {
             get
             {
-                if (index >= size)
-                    throw new IndexOutOfRangeException("index >= size");
-                int i = head;
-                int count = 0;
-                while (count < index)
-                {
-                    i = (i + 1) % capacity;
-                    count++;
-                }
-                return buffer[i];
+                //if (index >= size)
+                //    throw new IndexOutOfRangeException("index >= size = " + size.ToString());
+                return buffer[(index + head) % capacity];
             }
         }
 
         public T getFromTail(int shift)
         {
             if (shift >= size)
-                throw new IndexOutOfRangeException("shift >= size");
-            int i = tail;
-            int count = 0;
-            while (count < shift)
-            {
-                i = i == 0 ? capacity - 1 : (i - 1);
-                count++;
-            }
-            return buffer[i];
+                throw new IndexOutOfRangeException("shift >= size = " + size.ToString());
+            if (capacity <= 0)
+                throw new IndexOutOfRangeException("capacity <= 0");
+            return buffer[capacity - 1 - ((capacity - tail + shift) % capacity)];
         }
 
         public void Skip(int count)

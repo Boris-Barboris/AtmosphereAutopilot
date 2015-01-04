@@ -100,6 +100,20 @@ namespace AtmosphereAutopilot
             elevatorDamperEx = elevator_dampers_exper[v];
         }
 
+        public void OnGUI()
+        {
+            if (elevatorDamper != null)
+                elevatorDamper.drawGUI();
+            if (rollDamper != null)
+                rollDamper.drawGUI();
+            if (yawDamper != null)
+                yawDamper.drawGUI();
+            if (flightModel != null)
+                flightModel.drawGUI();
+            if (elevatorDamperEx != null)
+                elevatorDamperEx.drawGUI();
+        }
+
         public void Update()
         {
             if (InputLockManager.IsLocked(ControlTypes.ALL_SHIP_CONTROLS))

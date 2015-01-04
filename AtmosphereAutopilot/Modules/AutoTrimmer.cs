@@ -149,13 +149,12 @@ namespace AtmosphereAutopilot
             enabled = false;
         }
 
-        protected bool gui_shown = false;
+        public bool gui_shown = false;
         public void toggleGUI()
         {
             gui_shown = !gui_shown;
             if (gui_shown)
             {
-                RenderingManager.AddToPostDrawQueue(5, drawGUI);
                 kp_str = pid.KP.ToString("G8");
                 ki_str = pid.KI.ToString("G8");
                 kd_str = pid.KD.ToString("G8");
@@ -163,15 +162,13 @@ namespace AtmosphereAutopilot
                 ac_str = pid.AccumulatorClamp.ToString("G8");
                 adc_str = pid.AccumulDerivClamp.ToString("G8");
             }
-            else
-                RenderingManager.RemoveFromPostDrawQueue(5, drawGUI);
         }
 
         protected string damper_name;
         protected int wnd_id;
         protected Rect window = new Rect(50.0f, 100.0f, 250.0f, 250.0f);
 
-        void drawGUI()
+        public void drawGUI()
         {
             if (!gui_shown)
                 return;

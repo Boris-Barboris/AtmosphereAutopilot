@@ -46,7 +46,6 @@
   <ItemGroup>
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="CircularBuffer.cs" />
-    <Compile Include="LinearEquationSolver.cs" />
     <Compile Include="Controller\FlightModel.cs" />
     <Compile Include="Matrix.cs" />
     <Compile Include="Modules\ElevatorDamperModel.cs" />
