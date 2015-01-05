@@ -8,16 +8,28 @@ namespace AtmosphereAutopilot
 {
     static class GUIStyles
     {
-        public static GUIStyle labelStyle;
+        public static GUIStyle labelStyleLeft;
+        public static GUIStyle labelStyleCenter;
+        public static GUIStyle labelStyleRight;
         public static GUIStyle textBoxStyle;
         public static GUIStyle toggleButtonStyle;
 
         public static void Init()
         {
-            labelStyle = new GUIStyle(GUI.skin.label);
-            labelStyle.alignment = TextAnchor.MiddleCenter;
-            labelStyle.fontSize = 11;
-            labelStyle.margin = new RectOffset(2, 2, 1, 1);
+            labelStyleLeft = new GUIStyle(GUI.skin.label);
+            labelStyleLeft.alignment = TextAnchor.MiddleLeft;
+            labelStyleLeft.fontSize = 11;
+            labelStyleLeft.margin = new RectOffset(2, 2, 1, 1);
+
+            labelStyleRight = new GUIStyle(GUI.skin.label);
+            labelStyleRight.alignment = TextAnchor.MiddleRight;
+            labelStyleRight.fontSize = 11;
+            labelStyleRight.margin = new RectOffset(2, 2, 1, 1);
+
+            labelStyleCenter = new GUIStyle(GUI.skin.label);
+            labelStyleCenter.alignment = TextAnchor.MiddleCenter;
+            labelStyleCenter.fontSize = 11;
+            labelStyleCenter.margin = new RectOffset(2, 2, 1, 1);
 
             textBoxStyle = new GUIStyle(GUI.skin.textField);
             textBoxStyle.alignment = TextAnchor.MiddleCenter;

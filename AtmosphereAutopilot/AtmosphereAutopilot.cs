@@ -101,7 +101,7 @@ namespace AtmosphereAutopilot
             if (!elevator_dampers_exper.ContainsKey(v))
             {
 				elevator_dampers_exper[v] = 
-					new AngularVelAdaptiveController(v, "Adaptive tlavator trimmer", 138938, 0, flightModel);
+					new AngularVelAdaptiveController(v, "Adaptive elavator trimmer", 138938, 0, flightModel);
                 Debug.Log("[Autopilot]: ElevatorDamperExperim for vessel " + v.name + " created");
             }
             else
@@ -140,21 +140,21 @@ namespace AtmosphereAutopilot
 
             bool mod = GameSettings.MODIFIER_KEY.GetKey();
 
-            if (elevatorDamper != null)
+            if (elevatorDamperEx != null)
                 if (Input.GetKeyDown(KeyCode.P))
                 {
                     if (mod)
-                        elevatorDamper.ToggleGUI();
+                        elevatorDamperEx.ToggleGUI();
                     else
                     {
-                        if (elevatorDamper.Active)
+                        if (elevatorDamperEx.Active)
                         {
-                            elevatorDamper.Deactivate();
+                            elevatorDamperEx.Deactivate();
                             MessageManager.post_status_message("Elevator damper disabled");
                         }
                         else
                         {
-                            elevatorDamper.Activate();
+                            elevatorDamperEx.Activate();
                             MessageManager.post_status_message("Elevator damper enabled");
                         }
                     }
@@ -200,26 +200,12 @@ namespace AtmosphereAutopilot
                     }
                 }
 
-            if (flightModel != null && elevatorDamperEx != null)
+            if (flightModel != null)
                 if (Input.GetKeyDown(KeyCode.Backslash))
                 {
                     if (mod)
                     {
                         flightModel.ToggleGUI();
-                        elevatorDamperEx.ToggleGUI();
-                    }
-                    else
-                    {
-						if (elevatorDamperEx.Active)
-                        {
-                            elevatorDamperEx.Deactivate();
-                            MessageManager.post_status_message("elevatorDamperEx damper disabled");
-                        }
-                        else
-                        {
-                            elevatorDamperEx.Activate();
-                            MessageManager.post_status_message("elevatorDamperEx damper enabled");
-                        }
                     }
                 }
         }

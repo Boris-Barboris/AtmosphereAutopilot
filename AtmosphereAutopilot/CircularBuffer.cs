@@ -114,27 +114,19 @@ namespace System.IO
 
         public void Put(T item)
         {
-            bool overflow = false;
-            if (size == capacity)
+            if (size >= capacity)
                 if (!AllowOverflow)
                     throw new IndexOutOfRangeException("Buffer is full.");
-                else
-                    overflow = true;
-
+                else 
+                {
+                    buffer[tail] = item;
+                    tail = (tail + 1) % capacity;
+                    head = tail;
+                    return;
+                }
+            size++;
             buffer[tail] = item;
             tail = (tail + 1) % capacity;
-            if (overflow)
-                head = tail;
-            else
-                size++;
-        }
-
-        public T this[int index]
-        {
-            get
-            {
-                return buffer[(index + head) % capacity];
-            }
         }
 
         public T getFromTail(int shift)
@@ -146,9 +138,15 @@ namespace System.IO
             return buffer[capacity - 1 - ((capacity - tail + shift) % capacity)];
         }
 
+        public T this[int index]
+        {
+            get { return buffer[(index + head) % capacity]; }
+            set { buffer[(index + head) % capacity] = value; }
+        }
+
 		public T getLast()
 		{
-			return this[size];
+            return this[size - 1];
 		}
 
         public void Skip(int count)

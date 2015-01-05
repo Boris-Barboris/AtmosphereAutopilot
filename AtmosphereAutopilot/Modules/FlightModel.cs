@@ -30,7 +30,7 @@ namespace AtmosphereAutopilot
 			}
             Deserialize();
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
-            vessel.OnFlyByWire += new FlightInputCallback(OnFlyByWire);
+            vessel.OnPostAutopilotUpdate += new FlightInputCallback(OnPostAutopilot);
 		}
 
 		static readonly int BUFFER_SIZE = 20;
@@ -42,7 +42,7 @@ namespace AtmosphereAutopilot
 		double prev_dt = 1.0;		// dt in previous call
 		int stable_dt = 0;			// counts amount of stable dt intervals
 
-        void OnFlyByWire(FlightCtrlState state)		// update control input
+        void OnPostAutopilot(FlightCtrlState state)		// update control input
 		{
 			if (vessel.checkLanded())           // ground breaks the model
 			{
@@ -80,9 +80,10 @@ namespace AtmosphereAutopilot
 			for (int i = 0; i < 3; i++)
 			{
 				angular_v[i].Put(vessel.angularVelocity[i]);
-				if (stable_dt >= 1)
+				if (stable_dt >= 2)
 					angular_dv[i].Put(
-                        derivative1_short(
+                        derivative1(
+                            angular_v[i].getFromTail(2),
 							angular_v[i].getFromTail(1),
 							angular_v[i].getFromTail(0),
 							prev_dt));
@@ -249,10 +250,10 @@ namespace AtmosphereAutopilot
 			GUILayout.BeginVertical();
 			for (int i = 0; i < 3; i++)
 			{
-				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyle);
-                GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"), GUIStyles.labelStyle);
-                GUILayout.Label(axis_names[i] + " K1 = " + k_control[i].ToString("G8"), GUIStyles.labelStyle);
-                GUILayout.Label(axis_names[i] + " stable = " + stable_channel[i].ToString(), GUIStyles.labelStyle);
+				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " K1 = " + k_control[i].ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " stable = " + stable_channel[i].ToString(), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}
 			GUILayout.EndVertical();

@@ -60,14 +60,14 @@ namespace AtmosphereAutopilot
                     continue;
                 }
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(att.value_name, GUIStyles.labelStyle);
+                GUILayout.Label(att.value_name, GUIStyles.labelStyleLeft);
                 var ToStringFormat = prop_type.GetMethod("ToString", new[] { typeof(string) });
                 if (!att.editable)
                 {
                     if (ToStringFormat != null)
-                        GUILayout.Label((string)ToStringFormat.Invoke(property.GetValue(obj, null), new[] { att.format }), GUIStyles.labelStyle);
+                        GUILayout.Label((string)ToStringFormat.Invoke(property.GetValue(obj, null), new[] { att.format }), GUIStyles.labelStyleRight);
                     else
-                        GUILayout.Label(property.GetValue(obj, null).ToString(), GUIStyles.labelStyle);
+                        GUILayout.Label(property.GetValue(obj, null).ToString(), GUIStyles.labelStyleRight);
                 }
                 else
                 {
@@ -112,14 +112,14 @@ namespace AtmosphereAutopilot
 					continue;
 				}
 				GUILayout.BeginHorizontal();
-				GUILayout.Label(att.value_name, GUIStyles.labelStyle);
+				GUILayout.Label(att.value_name, GUIStyles.labelStyleLeft);
 				var ToStringFormat = prop_type.GetMethod("ToString", new[] { typeof(string) });
 				if (!att.editable)
 				{
 					if (ToStringFormat != null)
-						GUILayout.Label((string)ToStringFormat.Invoke(field.GetValue(obj), new[] { att.format }), GUIStyles.labelStyle);
+                        GUILayout.Label((string)ToStringFormat.Invoke(field.GetValue(obj), new[] { att.format }), GUIStyles.labelStyleRight);
 					else
-						GUILayout.Label(field.GetValue(obj).ToString(), GUIStyles.labelStyle);
+                        GUILayout.Label(field.GetValue(obj).ToString(), GUIStyles.labelStyleRight);
 				}
 				else
 				{

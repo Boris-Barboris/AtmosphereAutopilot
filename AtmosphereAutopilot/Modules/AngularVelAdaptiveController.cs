@@ -87,24 +87,21 @@ namespace AtmosphereAutopilot
 		double max_part_offset_from_com()
 		{
 			double max_offset = 1.0;
-			Vector3 com = vessel.localCoM;
-			Vector3 local_up = vessel.transform.InverseTransformDirection(vessel.transform.up).normalized;
-			Vector3 local_fwd = vessel.transform.InverseTransformDirection(vessel.transform.forward).normalized;
-			Vector3 local_right = vessel.transform.InverseTransformDirection(vessel.transform.right).normalized;
+			Vector3 com = vessel.findWorldCenterOfMass();
 			foreach (var part in vessel.Parts)
 			{
-				Vector3 part_local = part.transform.localPosition - com;
+				Vector3 part_v = part.transform.position - com;
 				double offset = 0.0;
 				switch (axis)
 				{
 					case PITCH:
-						offset = Vector3.Cross(part_local, local_right).magnitude;
+                        offset = Vector3.Cross(part_v, vessel.transform.right).magnitude;
 						break;
 					case ROLL:
-						offset = Vector3.Cross(part_local, local_up).magnitude;
+                        offset = Vector3.Cross(part_v, vessel.transform.up).magnitude;
 						break;
 					case YAW:
-						offset = Vector3.Cross(part_local, local_fwd).magnitude;
+                        offset = Vector3.Cross(part_v, vessel.transform.forward).magnitude;
 						break;
 				}
 				if (offset > max_offset)
@@ -117,6 +114,7 @@ namespace AtmosphereAutopilot
 		{
 			vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
 			cycle_counter = 0;
+            pid.clear();
 		}
 
 		protected override void OnDeactivate()
@@ -141,10 +139,18 @@ namespace AtmosphereAutopilot
 			if (cntrl.killRot)					// skip if ASAS is enabled
 				return;
 
-			input = model.angular_v[axis].getLast();				// get angular velocity
-			double accel = model.angular_dv[axis].getLast();		// get angular acceleration
-			double control_authority = model.k_control[axis];
+			input = -model.angular_v[axis].getLast();				// get angular velocity
+			double accel = -model.angular_dv[axis].getLast();		// get angular acceleration
+			double control_authority = -model.k_control[axis];
 			double raw_output = 0.0;								// raw unclamped and unsmoothed output
+
+            raw_output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
+
+            double error = 0.0 - input;
+            proport = error * pid.KP;
+            integr = pid.Accumulator * pid.KI;
+            deriv = -pid.KD * pid.InputDerivative;
+            derivmodel = -pid.KD * accel;
 
 			if (is_user_handling(cntrl))
 			{
@@ -174,54 +180,71 @@ namespace AtmosphereAutopilot
 			//
 			// Auto-tune PID controller
 			//
-            //if (control_authority < -0.05)			// if control authority is correct
-            //{
-            //    if (Math.Abs(input) > pid.IntegralClamp)
-            //    {
-            //        // if current angular velocity is large
-            //        // we mostly operate with KP here
-            //        double d2_sign = input *
-            //            (model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
-            //        if (d2_sign > 0.0)
-            //        {
-            //            // KP is too small, plane is unstable and error is raising
-            //            pid.KP = apply_with_inertia(pid.KP, pid.KP * pid_coeff_increment * 1.5, pid_coeff_inertia);
-            //        }
-            //        else
-            //        {
-            //            // Plane is stable and error is decreasing. Need to tune KP
-            //            if (accel < min_input_deriv || accel > max_input_deriv)
-            //            {
-            //                // angular acceleration is too large, need to decrease KP
-            //                pid.KP = apply_with_inertia(pid.KP, pid.KP / pid_coeff_increment, pid_coeff_inertia);
-            //            }
-            //        }
-            //    }
+            if (control_authority > 0.05)			// if control authority is correct
+            {
+                if (Math.Abs(input) > pid.IntegralClamp)
+                {
+                    // if current angular velocity is large
+                    // we mostly operate with KP here
+                    double d2_sign = input *
+                        (model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
+                    if (d2_sign > 0.0)
+                    {
+                        // KP is too small, plane is unstable and error is raising
+                        pid.KP = apply_with_inertia(pid.KP, pid.KP * pid_coeff_increment * 1.5, pid_coeff_inertia);
+                    }
+                    else
+                    {
+                        // Plane is stable and error is decreasing. Need to tune KP
+                        if (accel < min_input_deriv || accel > max_input_deriv)
+                        {
+                            // angular acceleration is too large, need to decrease KP
+                            pid.KP = apply_with_inertia(pid.KP, pid.KP / pid_coeff_increment, pid_coeff_inertia);
+                        }
+                    }
+                }
 
-            //    if (accel > max_input_deriv)
-            //    {
-            //        double d2_sign = input *
-            //            (model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
-            //        if (d2_sign > 0.0)
-            //        {
-            //            // Our KD is not enough, system is too unstable
-            //            pid.KD = apply_with_inertia(pid.KD, pid.KD * pid_coeff_increment * 1.5, pid_coeff_inertia);
-            //        }
-            //        else
-            //        {
-            //            // Our PD is too large
-            //            pid.KD = apply_with_inertia(pid.KD, pid.KD / pid_coeff_increment, pid_coeff_inertia);
-            //        }
-            //    }
-            //}
+                if (accel > max_input_deriv)
+                {
+                    double d2_sign = input *
+                        (model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
+                    if (d2_sign > 0.0)
+                    {
+                        // Our KD is not enough, system is too unstable
+                        pid.KD = apply_with_inertia(pid.KD, pid.KD * pid_coeff_increment * 1.5, pid_coeff_inertia);
+                    }
+                    else
+                    {
+                        // Our PD is too large
+                        pid.KD = apply_with_inertia(pid.KD, pid.KD / pid_coeff_increment, pid_coeff_inertia);
+                    }
+                }
+            }
 
-			raw_output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
 			output = smooth_and_clamp(raw_output);
 			set_output(cntrl, output);
 
 			if (time_in_regime >= 1.0)
 				set_trim(output);
 		}
+
+        [AutoGuiAttr("DEBUG proport", false, "G8")]
+        public double proport { get; private set; }
+
+        [AutoGuiAttr("DEBUG integr", false, "G8")]
+        public double integr { get; private set; }
+
+        [AutoGuiAttr("DEBUG deriv", false, "G8")]
+        public double deriv { get; private set; }
+
+        [AutoGuiAttr("DEBUG deriv model", false, "G8")]
+        public double derivmodel { get; private set; }
+
+        [AutoGuiAttr("DEBUG prev_control", false, "G8")]
+        public double prev_control { get { return model.input_buf[axis].getLast(); } }
+
+        [AutoGuiAttr("DEBUG current_raw", false, "G8")]
+        public double current_raw { get; private set; }
 
 		bool is_user_handling(FlightCtrlState state)
 		{
@@ -289,10 +312,11 @@ namespace AtmosphereAutopilot
 		{
 			double prev_output = model.input_buf[axis].getLast();	// get previous control input
 			double smoothed = raw;
+            current_raw = raw;
 			double raw_d = (raw - prev_output) / TimeWarp.fixedDeltaTime;
-			if (smoothed > max_output_deriv)
+            if (raw_d > max_output_deriv)
 				smoothed = prev_output + TimeWarp.fixedDeltaTime * max_output_deriv;
-			if (smoothed < -max_output_deriv)
+            if (raw_d < -max_output_deriv)
 				smoothed = prev_output - TimeWarp.fixedDeltaTime * max_output_deriv;
 			return Common.Clamp(smoothed, 1.0);
 		}

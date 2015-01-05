@@ -50,15 +50,15 @@ namespace AtmosphereAutopilot
         public double Accumulator { get { return pid.Accumulator; } }
 
 		[VesselSerializable("KP")]
-		[AutoGuiAttr("KP", false, "G8")]
+        [AutoGuiAttr("KP", false, "G8")]
 		public double KP { get { return pid.KP; } set { pid.KP = value; } }
 
 		[VesselSerializable("KI")]
-		[AutoGuiAttr("KI", false, "G8")]
+        [AutoGuiAttr("KI", false, "G8")]
 		public double KI { get { return pid.KI; } set { pid.KI = value; } }
 
 		[VesselSerializable("KD")]
-		[AutoGuiAttr("KD", false, "G8")]
+        [AutoGuiAttr("KD", false, "G8")]
 		public double KD { get { return pid.KD; } set { pid.KD = value; } }
 
 		[VesselSerializable("AccumulatorClamp")]
