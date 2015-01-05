@@ -145,12 +145,14 @@ namespace AtmosphereAutopilot
 			{
                 // control diffirential
                 double d_control = input_buf[i].getLast() - input_buf[i].getFromTail(1);
-                if (d_control == 0.0)
-                    return;
-                // get second angular v derivative in previous time slice
-                double simple_d2v = derivative1_short(angular_dv[i].getFromTail(2), angular_dv[i].getFromTail(1), prev_dt);
-                // channel is statically stable if it's going to zero
-                stable_channel[i] = (angular_dv[i].getFromTail(2) * simple_d2v) < 0.0;
+				if (d_control == 0.0)
+				{
+					// get second angular v derivative in previous time slice
+					double simple_d2v = derivative1_short(angular_dv[i].getFromTail(1), angular_dv[i].getFromTail(0), prev_dt);
+					// channel is statically stable if it's angular acceleration going to zero
+					stable_channel[i] = (angular_dv[i].getFromTail(1) * simple_d2v) < 0.0;
+					return;
+				}
                 // extrapolate previous angular_dv values
                 double extrapolate_dv = 0.0;
                 if (stable_channel[i])
@@ -171,11 +173,11 @@ namespace AtmosphereAutopilot
             double extrapolate_dv = 0.0;
             if (stable_channel[axis])
                 extrapolate_dv = angular_dv[axis].getLast() +
-                    prev_dt * derivative1_middle(angular_dv[axis].getFromTail(3), angular_dv[axis].getFromTail(1), prev_dt);
+                    prev_dt * derivative1_middle(angular_dv[axis].getFromTail(2), angular_dv[axis].getFromTail(0), prev_dt);
             else
                 extrapolate_dv = angular_dv[axis].getLast() +
-                    prev_dt * derivative1(angular_dv[axis].getFromTail(3), angular_dv[axis].getFromTail(2),
-                        angular_dv[axis].getFromTail(1), prev_dt);
+                    prev_dt * derivative1(angular_dv[axis].getFromTail(1), angular_dv[axis].getFromTail(1),
+                        angular_dv[axis].getFromTail(0), prev_dt);
             double d_input = (desired_angular_dv - extrapolate_dv) / k_control[axis];
             return d_input;
         }

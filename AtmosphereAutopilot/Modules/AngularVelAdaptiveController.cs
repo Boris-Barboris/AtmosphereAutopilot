@@ -114,6 +114,7 @@ namespace AtmosphereAutopilot
 		{
 			vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
 			cycle_counter = 0;
+			adaptive_kd = pid.KD;
             pid.clear();
 		}
 
@@ -133,7 +134,7 @@ namespace AtmosphereAutopilot
 		public override void ApplyControl(FlightCtrlState cntrl)
 		{
 			cycle_counter++;
-			if (cycle_counter % 500 == 1)		// every 5000 OnFixUpdate's recalculate limits
+			if (cycle_counter % 500 == 1)		// every 500 OnFixUpdate's recalculate limits
 				calculate_limits();
 
 			if (cntrl.killRot)					// skip if ASAS is enabled
@@ -149,8 +150,7 @@ namespace AtmosphereAutopilot
             double error = 0.0 - input;
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
-            deriv = -pid.KD * pid.InputDerivative;
-            derivmodel = -pid.KD * accel;
+            deriv = -pid.KD * accel;
 
 			if (is_user_handling(cntrl))
 			{
@@ -177,49 +177,54 @@ namespace AtmosphereAutopilot
 				time_in_regime = 0.0;
 			}
 
+			if (control_authority > 0.05)
+			{
+				adaptive_kd = apply_with_inertia(adaptive_kd, 0.25 * max_input_deriv / control_authority, 20.0);
+			}
+
 			//
 			// Auto-tune PID controller
 			//
-            if (control_authority > 0.05)			// if control authority is correct
-            {
-                if (Math.Abs(input) > pid.IntegralClamp)
-                {
-                    // if current angular velocity is large
-                    // we mostly operate with KP here
-                    double d2_sign = input *
-                        (model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
-                    if (d2_sign > 0.0)
-                    {
-                        // KP is too small, plane is unstable and error is raising
-                        pid.KP = apply_with_inertia(pid.KP, pid.KP * pid_coeff_increment * 1.5, pid_coeff_inertia);
-                    }
-                    else
-                    {
-                        // Plane is stable and error is decreasing. Need to tune KP
-                        if (accel < min_input_deriv || accel > max_input_deriv)
-                        {
-                            // angular acceleration is too large, need to decrease KP
-                            pid.KP = apply_with_inertia(pid.KP, pid.KP / pid_coeff_increment, pid_coeff_inertia);
-                        }
-                    }
-                }
+			//if (control_authority > 0.05)			// if control authority is correct
+			//{
+			//	if (Math.Abs(input) > pid.IntegralClamp)
+			//	{
+			//		// if current angular velocity is large
+			//		// we mostly operate with KP here
+			//		double d2_sign = input *
+			//			(model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
+			//		if (d2_sign > 0.0)
+			//		{
+			//			// KP is too small, plane is unstable and error is raising
+			//			pid.KP = apply_with_inertia(pid.KP, pid.KP * pid_coeff_increment * 1.5, pid_coeff_inertia);
+			//		}
+			//		else
+			//		{
+			//			// Plane is stable and error is decreasing. Need to tune KP
+			//			if (accel < min_input_deriv || accel > max_input_deriv)
+			//			{
+			//				// angular acceleration is too large, need to decrease KP
+			//				pid.KP = apply_with_inertia(pid.KP, pid.KP / pid_coeff_increment, pid_coeff_inertia);
+			//			}
+			//		}
+			//	}
 
-                if (accel > max_input_deriv)
-                {
-                    double d2_sign = input *
-                        (model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
-                    if (d2_sign > 0.0)
-                    {
-                        // Our KD is not enough, system is too unstable
-                        pid.KD = apply_with_inertia(pid.KD, pid.KD * pid_coeff_increment * 1.5, pid_coeff_inertia);
-                    }
-                    else
-                    {
-                        // Our PD is too large
-                        pid.KD = apply_with_inertia(pid.KD, pid.KD / pid_coeff_increment, pid_coeff_inertia);
-                    }
-                }
-            }
+			//	if (accel > max_input_deriv)
+			//	{
+			//		double d2_sign = input *
+			//			(model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
+			//		if (d2_sign > 0.0)
+			//		{
+			//			// Our KD is not enough, system is too unstable
+			//			pid.KD = apply_with_inertia(pid.KD, pid.KD * pid_coeff_increment * 1.5, pid_coeff_inertia);
+			//		}
+			//		else
+			//		{
+			//			// Our PD is too large
+			//			pid.KD = apply_with_inertia(pid.KD, pid.KD / pid_coeff_increment, pid_coeff_inertia);
+			//		}
+			//	}
+			//}
 
 			output = smooth_and_clamp(raw_output);
 			set_output(cntrl, output);
@@ -237,14 +242,14 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("DEBUG deriv", false, "G8")]
         public double deriv { get; private set; }
 
-        [AutoGuiAttr("DEBUG deriv model", false, "G8")]
-        public double derivmodel { get; private set; }
-
         [AutoGuiAttr("DEBUG prev_control", false, "G8")]
         public double prev_control { get { return model.input_buf[axis].getLast(); } }
 
         [AutoGuiAttr("DEBUG current_raw", false, "G8")]
         public double current_raw { get; private set; }
+
+		[AutoGuiAttr("DEBUG adaptive KD", false, "G8")]
+		public double adaptive_kd { get; private set; }
 
 		bool is_user_handling(FlightCtrlState state)
 		{
