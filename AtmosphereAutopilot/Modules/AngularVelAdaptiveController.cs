@@ -70,10 +70,10 @@ namespace AtmosphereAutopilot
 
 		[GlobalSerializable("max_part_acceleration")]
 		[AutoGuiAttr("max part accel", true, "G8")]
-		double max_part_acceleration = 10.0;			// approx 1g
+		public double max_part_acceleration = 10.0;			// approx 1g
 
 		[AutoGuiAttr("lever arm", false, "G8")]
-		double lever_arm = 1.0;
+		public double lever_arm = 1.0;
 
 		void calculate_limits()
 		{
@@ -135,7 +135,7 @@ namespace AtmosphereAutopilot
 		public override void ApplyControl(FlightCtrlState cntrl)
 		{
 			cycle_counter++;
-			if (cycle_counter % 5000 == 0)		// every 5000 OnFixUpdate's recalculate limits
+			if (cycle_counter % 500 == 1)		// every 5000 OnFixUpdate's recalculate limits
 				calculate_limits();
 
 			if (cntrl.killRot)					// skip if ASAS is enabled
@@ -151,7 +151,7 @@ namespace AtmosphereAutopilot
 				// user is flying
 				raw_output = get_user_input(cntrl);
 				// apply dampener output
-				double dampening = pid.KD * accel;
+				double dampening = -pid.KD * accel;
 				raw_output = raw_output + dampening;
 				output = smooth_and_clamp(raw_output);
 				set_output(cntrl, output);
@@ -174,46 +174,46 @@ namespace AtmosphereAutopilot
 			//
 			// Auto-tune PID controller
 			//
-			if (control_authority < -0.05)			// if control authority is correct
-			{
-				if (Math.Abs(input) > pid.IntegralClamp)
-				{
-					// if current angular velocity is large
-					// we mostly operate with KP here
-					double d2_sign = input *
-						(model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
-					if (d2_sign > 0.0)
-					{
-						// KP is too small, plane is unstable and error is raising
-						pid.KP = apply_with_inertia(pid.KP, pid.KP * pid_coeff_increment * 1.5, pid_coeff_inertia);
-					}
-					else
-					{
-						// Plane is stable and error is decreasing. Need to tune KP
-						if (accel < min_input_deriv || accel > max_input_deriv)
-						{
-							// angular acceleration is too large, need to decrease KP
-							pid.KP = apply_with_inertia(pid.KP, pid.KP / pid_coeff_increment, pid_coeff_inertia);
-						}
-					}
-				}
+            //if (control_authority < -0.05)			// if control authority is correct
+            //{
+            //    if (Math.Abs(input) > pid.IntegralClamp)
+            //    {
+            //        // if current angular velocity is large
+            //        // we mostly operate with KP here
+            //        double d2_sign = input *
+            //            (model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
+            //        if (d2_sign > 0.0)
+            //        {
+            //            // KP is too small, plane is unstable and error is raising
+            //            pid.KP = apply_with_inertia(pid.KP, pid.KP * pid_coeff_increment * 1.5, pid_coeff_inertia);
+            //        }
+            //        else
+            //        {
+            //            // Plane is stable and error is decreasing. Need to tune KP
+            //            if (accel < min_input_deriv || accel > max_input_deriv)
+            //            {
+            //                // angular acceleration is too large, need to decrease KP
+            //                pid.KP = apply_with_inertia(pid.KP, pid.KP / pid_coeff_increment, pid_coeff_inertia);
+            //            }
+            //        }
+            //    }
 
-				if (accel > max_input_deriv)
-				{
-					double d2_sign = input *
-						(model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
-					if (d2_sign > 0.0)
-					{
-						// Our KD is not enough, system is too unstable
-						pid.KD = apply_with_inertia(pid.KD, pid.KD * pid_coeff_increment * 1.5, pid_coeff_inertia);
-					}
-					else
-					{
-						// Our PD is too large
-						pid.KD = apply_with_inertia(pid.KD, pid.KD / pid_coeff_increment, pid_coeff_inertia);
-					}
-				}
-			}
+            //    if (accel > max_input_deriv)
+            //    {
+            //        double d2_sign = input *
+            //            (model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
+            //        if (d2_sign > 0.0)
+            //        {
+            //            // Our KD is not enough, system is too unstable
+            //            pid.KD = apply_with_inertia(pid.KD, pid.KD * pid_coeff_increment * 1.5, pid_coeff_inertia);
+            //        }
+            //        else
+            //        {
+            //            // Our PD is too large
+            //            pid.KD = apply_with_inertia(pid.KD, pid.KD / pid_coeff_increment, pid_coeff_inertia);
+            //        }
+            //    }
+            //}
 
 			raw_output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
 			output = smooth_and_clamp(raw_output);
@@ -304,7 +304,7 @@ namespace AtmosphereAutopilot
 
 		[GlobalSerializable("max_output_deriv")]
 		[AutoGuiAttr("csurface speed", true, "G6")]
-		public double max_output_deriv = 5.0;	// maximum output derivative, simulates control surface reaction speed
+		public double max_output_deriv = 20.0;	// maximum output derivative, simulates control surface reaction speed
 
 		[GlobalSerializable("prop_relax_desire")]
 		[AutoGuiAttr("proport relax t", true, "G6")]

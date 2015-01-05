@@ -57,7 +57,7 @@ namespace AtmosphereAutopilot
         protected double last_dt = 1.0;                     // last delta time
         protected double last_error = 0.0;                  // last delta time
         protected double[] input_stack = new double[3];     // contains last 3 input values, needed for correct integration and differentiation
-		protected double derivative, derivative2;			// input derivatives
+		protected double derivative;			// input derivatives
 
         public virtual double Control(double input, double desire, double dt)
         {
@@ -77,7 +77,6 @@ namespace AtmosphereAutopilot
             }
             update_value_stack(input);
             derivative = (input_stack[0] - 4 * input_stack[1] + 3 * input_stack[2]) / new_dt * 0.5;
-            derivative2 = (input_stack[0] - 2 * input_stack[1] + input_stack[2]) / new_dt / new_dt;
             double diffirential = -derivative * kd;
 
             // integral component             
@@ -102,8 +101,6 @@ namespace AtmosphereAutopilot
 			double proportional = error * kp;
 
 			// diffirential component
-			update_value_stack(input);
-			derivative2 = (input_stack[0] - 2 * input_stack[1] + input_stack[2]) / new_dt / new_dt;
 			double diffirential = -input_d * kd;
 
 			// integral component             

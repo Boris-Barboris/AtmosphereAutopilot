@@ -43,6 +43,9 @@ namespace AtmosphereAutopilot
 		[AutoGuiAttr("output", false, "G8")]
 		public double Output { get { return output; } }
 
+        [AutoGuiAttr("accumulator", false, "G8")]
+        public double Accumulator { get { return pid.Accumulator; } }
+
         [VesselSerializable("KP")]
 		[AutoGuiAttr("KP", true, "G8")]
 		public double KP { get { return pid.KP; } set { pid.KP = value; } }

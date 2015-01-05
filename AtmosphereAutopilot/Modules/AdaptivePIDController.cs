@@ -20,22 +20,22 @@ namespace AtmosphereAutopilot
         protected PIDController pid;			// main PID controller
 
 		[AutoGuiAttr("input", false, "G8")]
-        protected double input;					// current system controlled value
+        public double input;					// current system controlled value
 
 		[AutoGuiAttr("output", false, "G8")]
-        protected double output;				// current controller output
+        public double output;				// current controller output
 
 		[AutoGuiAttr("max_input", false, "G8")]
-		protected double max_input;			    // desired limitation on input value
+        public double max_input;			    // desired limitation on input value
 
 		[AutoGuiAttr("min_input", false, "G8")]
-		protected double min_input;			    // desired limitation on input value
+        public double min_input;			    // desired limitation on input value
 
 		[AutoGuiAttr("max_input_deriv", false, "G8")]
-		protected double max_input_deriv;		// desired limitation on input derivative value
+        public double max_input_deriv;		// desired limitation on input derivative value
 
 		[AutoGuiAttr("min_input_deriv", false, "G8")]
-		protected double min_input_deriv;		// desired limitation on input derivative value
+        public double min_input_deriv;		// desired limitation on input derivative value
 
 		/// <summary>
 		/// Apply algorythm to FlightCntrlState
@@ -45,6 +45,9 @@ namespace AtmosphereAutopilot
 
 
 		#region properties
+
+        [AutoGuiAttr("Accumulator", false, "G8")]
+        public double Accumulator { get { return pid.Accumulator; } }
 
 		[VesselSerializable("KP")]
 		[AutoGuiAttr("KP", false, "G8")]
