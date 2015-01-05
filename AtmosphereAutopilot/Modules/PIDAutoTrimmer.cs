@@ -7,7 +7,7 @@ using UnityEngine;
 namespace AtmosphereAutopilot
 {
     /// <summary>
-    /// Any autopilot component. For example, roll damper
+    /// PID-based auto-trimmer prototype
     /// </summary>
     abstract class PIDAutoTrimmer : AutopilotModule
     {

@@ -30,7 +30,7 @@ namespace AtmosphereAutopilot
                 pid.clear();
                 return;
             }
-			output = pid.Control(angular_velocity, 0.0, time);				// get output from controller
+			output = pid.Control(angular_velocity, 0.0, TimeWarp.fixedDeltaTime);				// get output from controller
             if (cntrl.roll == cntrl.rollTrim)           // when user doesn't use control, roll is on the same level as trim
             {
                 cntrl.roll = (float)Common.Clamp(output, 1.0);

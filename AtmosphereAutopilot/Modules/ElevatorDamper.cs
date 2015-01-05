@@ -37,7 +37,7 @@ namespace AtmosphereAutopilot
                 regime = false;
                 return;
             }
-			double raw_control = pid.Control(angular_velocity, 0.0, time);	// get raw control from PID
+			double raw_control = pid.Control(angular_velocity, 0.0, TimeWarp.fixedDeltaTime);	// get raw control from PID
             if (cntrl.pitch == cntrl.pitchTrim)         // when user doesn't use control, pitch is on the same level as trim
             {
                 if (Math.Abs(angular_velocity) < 1e-2)                      // if angular velocity is stabilized

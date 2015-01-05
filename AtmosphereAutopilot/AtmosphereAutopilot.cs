@@ -13,9 +13,10 @@ namespace AtmosphereAutopilot
         Dictionary<Vessel, RollDamper> roll_dampers = new Dictionary<Vessel, RollDamper>();
         Dictionary<Vessel, YawDamper> yaw_dampers = new Dictionary<Vessel, YawDamper>();
 		Dictionary<Vessel, InstantControlModel> flight_models = new Dictionary<Vessel, InstantControlModel>();
-        Dictionary<Vessel, ElevatorDamperExperim> elevator_dampers_exper = new Dictionary<Vessel, ElevatorDamperExperim>();
+		Dictionary<Vessel, AngularVelAdaptiveController> elevator_dampers_exper = 
+			new Dictionary<Vessel, AngularVelAdaptiveController>();
         ElevatorDamper elevatorDamper;
-        ElevatorDamperExperim elevatorDamperEx;
+		AngularVelAdaptiveController elevatorDamperEx;
         RollDamper rollDamper;
         YawDamper yawDamper;
         InstantControlModel flightModel;
@@ -99,7 +100,8 @@ namespace AtmosphereAutopilot
 
             if (!elevator_dampers_exper.ContainsKey(v))
             {
-                elevator_dampers_exper[v] = new ElevatorDamperExperim(v, flightModel);
+				elevator_dampers_exper[v] = 
+					new AngularVelAdaptiveController(v, "Adaptive tlavator trimmer", 138938, 0, flightModel);
                 Debug.Log("[Autopilot]: ElevatorDamperExperim for vessel " + v.name + " created");
             }
             else
@@ -199,7 +201,7 @@ namespace AtmosphereAutopilot
                 }
 
             if (flightModel != null && elevatorDamperEx != null)
-                if (Input.GetKeyDown(KeyCode.F7))
+                if (Input.GetKeyDown(KeyCode.Backslash))
                 {
                     if (mod)
                     {

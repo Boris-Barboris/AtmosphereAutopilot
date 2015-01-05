@@ -13,9 +13,9 @@ namespace AtmosphereAutopilot
 	/// </summary>
 	class InstantControlModel : IAutoGui, IAutoSerializable
 	{
-		public static readonly int PITCH = 0;
-		public static readonly int ROLL = 1;
-		public static readonly int YAW = 2;
+		public const int PITCH = 0;
+		public const int ROLL = 1;
+		public const int YAW = 2;
 
 		Vessel vessel;
 
@@ -29,31 +29,41 @@ namespace AtmosphereAutopilot
 				angular_dv[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 			}
             Deserialize();
+			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
             vessel.OnFlyByWire += new FlightInputCallback(OnFlyByWire);
 		}
 
 		static readonly int BUFFER_SIZE = 20;
 
-		public CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];	// control input value, forward from others on 1 dt
+		public CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];	// control input value
 		public CircularBuffer<double>[] angular_v = new CircularBuffer<double>[3];	// angular v
 		public CircularBuffer<double>[] angular_dv = new CircularBuffer<double>[3];	// dv/dt
 
 		double prev_dt = 1.0;		// dt in previous call
 		int stable_dt = 0;			// counts amount of stable dt intervals
 
-        void OnFlyByWire(FlightCtrlState state)
+        void OnFlyByWire(FlightCtrlState state)		// update control input
 		{
 			if (vessel.checkLanded())           // ground breaks the model
 			{
 				stable_dt = 0;
 				return;
 			}
-			
+			update_control(state);
+		}
+
+		void OnPreAutopilot(FlightCtrlState state)	// update all flight characteristics
+		{
+			if (vessel.checkLanded())           // ground breaks the model
+			{
+				stable_dt = 0;
+				return;
+			}
+
 			double dt = TimeWarp.fixedDeltaTime;
 			check_dt(dt);
-			update_buffers(state);
+			update_buffers();
 			update_model();
-
 			prev_dt = dt;
 		}
 
@@ -65,11 +75,10 @@ namespace AtmosphereAutopilot
 				stable_dt = 0;
 		}
 
-		void update_buffers(FlightCtrlState state)
+		void update_buffers()
 		{
 			for (int i = 0; i < 3; i++)
 			{
-				input_buf[i].Put(getControlFromState(state, i));
 				angular_v[i].Put(vessel.angularVelocity[i]);
 				if (stable_dt >= 1)
 					angular_dv[i].Put(
@@ -78,6 +87,12 @@ namespace AtmosphereAutopilot
 							angular_v[i].getFromTail(0),
 							prev_dt));
 			}
+		}
+
+		void update_control(FlightCtrlState state)
+		{
+			for (int i = 0; i < 3; i++)
+				input_buf[i].Put(getControlFromState(state, i));
 		}
 
 		double getControlFromState(FlightCtrlState state, int control)
@@ -128,7 +143,7 @@ namespace AtmosphereAutopilot
 			for (int i = 0; i < 3; i++)
 			{
                 // control diffirential
-                double d_control = input_buf[i].getFromTail(1) - input_buf[i].getFromTail(2);
+                double d_control = input_buf[i].getLast() - input_buf[i].getFromTail(1);
                 if (d_control == 0.0)
                     return;
                 // get second angular v derivative in previous time slice

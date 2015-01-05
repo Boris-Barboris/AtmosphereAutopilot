@@ -27,7 +27,7 @@ namespace AtmosphereAutopilot
                 return;
             if (cntrl.yaw == cntrl.yawTrim)             // when user doesn't use control, yaw is on the same level as trim
             {
-                output = pid.Control(angular_velocity, 0.0, time);          // get output from controller
+				output = pid.Control(angular_velocity, 0.0, TimeWarp.fixedDeltaTime);          // get output from controller
                 cntrl.yaw = (float)Common.Clamp(output, 1.0);
             }
             else

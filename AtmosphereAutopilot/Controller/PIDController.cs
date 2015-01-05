@@ -6,25 +6,11 @@ using System.ComponentModel;
 
 namespace AtmosphereAutopilot
 {
-    /// <summary>
-    /// Interface for all controller classes
-    /// </summary>
-    interface IController
-    {
-        /// <summary>
-        /// Get controller reaction based on current input
-        /// </summary>
-        /// <param name="input">Current controlled value</param>
-        /// <param name="desire">Desired controlled value</param>
-        /// <param name="time">Current time</param>
-        /// <returns>Controller reaction</returns>
-        double Control(double input, double desire, double time);
-    }
 
     /// <summary>
     /// PID-based input value controller
     /// </summary>
-    class PIDController: IController
+    class PIDController
     {
         /// <summary>
         /// Proportional gain coefficient
@@ -68,16 +54,15 @@ namespace AtmosphereAutopilot
 
         // Main step variables
         protected double i_accumulator = 0.0;               // current integral accumulator state
-        protected double last_time = 0.0;                   // the time of last input
         protected double last_dt = 1.0;                     // last delta time
         protected double last_error = 0.0;                  // last delta time
         protected double[] input_stack = new double[3];     // contains last 3 input values, needed for correct integration and differentiation
 		protected double derivative, derivative2;			// input derivatives
 
-        public virtual double Control(double input, double desire, double time)
+        public virtual double Control(double input, double desire, double dt)
         {
             double error = desire - input;
-            double new_dt = time - last_time;
+            double new_dt = dt;
 
             // proportional component
             double proportional = error * kp;
@@ -88,7 +73,6 @@ namespace AtmosphereAutopilot
                 // dt has changed
                 clean_value_stack(input);
                 new_dt = TimeWarp.fixedDeltaTime;
-                last_time = time - new_dt;
                 last_error = error;
             }
             update_value_stack(input);
@@ -103,12 +87,37 @@ namespace AtmosphereAutopilot
             double integral = i_accumulator * ki;
 
             // update previous values
-            last_time = time;
             last_dt = new_dt;
             last_error = error;
 
             return proportional + integral + diffirential;
         }
+
+		public virtual double Control(double input, double input_d, double desire, double dt)
+		{
+			double error = desire - input;
+			double new_dt = dt;
+
+			// proportional component
+			double proportional = error * kp;
+
+			// diffirential component
+			update_value_stack(input);
+			derivative2 = (input_stack[0] - 2 * input_stack[1] + input_stack[2]) / new_dt / new_dt;
+			double diffirential = -input_d * kd;
+
+			// integral component             
+			double d_integral = Math.Abs(error) > iclamp ? 0.0 : new_dt * 0.5 * (error + last_error);       // raw diffirential
+			d_integral = Common.Clamp(d_integral, adclamp * new_dt);                                        // clamp it
+			i_accumulator = Common.Clamp(i_accumulator + d_integral, aclamp);                               // accumulate
+			double integral = i_accumulator * ki;
+
+			// update previous values
+			last_dt = new_dt;
+			last_error = error;
+
+			return proportional + integral + diffirential;
+		}
 
 		/// <summary>
 		/// Clear accumulator
