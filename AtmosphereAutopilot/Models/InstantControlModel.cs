@@ -27,6 +27,8 @@ namespace AtmosphereAutopilot
 				input_buf[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 				angular_v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 				angular_dv[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
+                angular_d2v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
+                k_dv_control[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 			}
             Deserialize();
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
@@ -38,6 +40,7 @@ namespace AtmosphereAutopilot
 		public CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];	// control input value
 		public CircularBuffer<double>[] angular_v = new CircularBuffer<double>[3];	// angular v
 		public CircularBuffer<double>[] angular_dv = new CircularBuffer<double>[3];	// dv/dt
+        public CircularBuffer<double>[] angular_d2v = new CircularBuffer<double>[3];	// d2v/d2t
 
 		double prev_dt = 1.0;		// dt in previous call
 		int stable_dt = 0;			// counts amount of stable dt intervals
@@ -64,7 +67,6 @@ namespace AtmosphereAutopilot
 			check_dt(dt);
 			update_buffers();
 			update_dv_model();
-			update_v_model();
 			prev_dt = dt;
 		}
 
@@ -80,7 +82,7 @@ namespace AtmosphereAutopilot
 		{
 			for (int i = 0; i < 3; i++)
 			{
-				angular_v[i].Put(vessel.angularVelocity[i]);
+				angular_v[i].Put(-vessel.angularVelocity[i]);
 				if (stable_dt >= 2)
 					angular_dv[i].Put(
                         derivative1(
@@ -88,6 +90,13 @@ namespace AtmosphereAutopilot
 							angular_v[i].getFromTail(1),
 							angular_v[i].getFromTail(0),
 							prev_dt));
+                if (stable_dt >= 2)
+                    angular_d2v[i].Put(
+                        derivative2(
+                            angular_v[i].getFromTail(2),
+                            angular_v[i].getFromTail(1),
+                            angular_v[i].getFromTail(0),
+                            prev_dt));
 			}
 		}
 
@@ -137,7 +146,7 @@ namespace AtmosphereAutopilot
 		// Short term model for angular acceleration
 		//
 
-		public double[] k_dv_control = new double[3];		// control authority in angular acceleration
+        public CircularBuffer<double>[] k_dv_control = new CircularBuffer<double>[3];		// control authority in angular acceleration
         public bool[] dv_stable_channel = new bool[3];     // true if control channel is statically stable in dv_angular
 
 		public void update_dv_model()
@@ -157,66 +166,34 @@ namespace AtmosphereAutopilot
 					dv_stable_channel[i] = (angular_dv[i].getFromTail(1) * simple_d2v) < 0.0;
 					return;
 				}
-                // extrapolate previous angular_dv values
-                double extrapolate_dv = 0.0;
-                if (dv_stable_channel[i])
-                    extrapolate_dv = angular_dv[i].getFromTail(1) +
-                        prev_dt * derivative1_middle(angular_dv[i].getFromTail(3), angular_dv[i].getFromTail(1), prev_dt);
-                else
-                    extrapolate_dv = angular_dv[i].getFromTail(1) +
-                        prev_dt * derivative1(angular_dv[i].getFromTail(3), angular_dv[i].getFromTail(2),
-                            angular_dv[i].getFromTail(1), prev_dt);
-                // get control authority
-                double control_authority = (angular_dv[i].getLast() - extrapolate_dv) / d_control;
-                k_dv_control[i] = control_authority;
+                if (Math.Abs(d_control) > min_d_control)        // if control change is substantial
+                {
+                    // extrapolate previous angular_dv values
+                    double extrapolate_dv = 0.0;
+                    if (dv_stable_channel[i])
+                        extrapolate_dv = angular_dv[i].getFromTail(1) +
+                            prev_dt * derivative1_middle(angular_dv[i].getFromTail(3), angular_dv[i].getFromTail(1), prev_dt);
+                    else
+                        extrapolate_dv = angular_dv[i].getFromTail(1) +
+                            prev_dt * derivative1(angular_dv[i].getFromTail(3), angular_dv[i].getFromTail(2),
+                                angular_dv[i].getFromTail(1), prev_dt);
+                    // get control authority
+                    double control_authority = (angular_dv[i].getLast() - extrapolate_dv) / d_control;
+                    if (control_authority > min_authority)
+                        k_dv_control[i].Put(control_authority);
+                }
 			}
 		}
 
-		//
-		// Short term model for angular speed
-		//
+        public double min_d_control = 0.05;
+        public double min_authority = 0.05;
 
-		public double[] k_v_control = new double[3];		// control authority in angular speed
-		public bool[] v_stable_channel = new bool[3];		// true if control channel is statically stable in v_angular
-
-		public void update_v_model()
-		{
-			if (stable_dt < 3)
-				return;
-
-			for (int i = 0; i < 3; i++)
-			{
-				// control diffirential
-				double d_control = input_buf[i].getLast() - input_buf[i].getFromTail(1);
-				if (d_control == 0.0)
-				{
-					// channel is statically stable if it's angular acceleration going to zero
-					v_stable_channel[i] = (angular_v[i].getFromTail(1) * angular_dv[i].getFromTail(0)) < 0.0;
-					return;
-				}
-				// extrapolate previous angular_dv values
-				double dv2 = derivative2(angular_v[i].getFromTail(3),
-					angular_v[i].getFromTail(2), angular_v[i].getFromTail(1), prev_dt);
-				double extrapolate_v = angular_v[i].getFromTail(1) + angular_dv[i].getFromTail(1) * prev_dt +
-					0.5 * dv2 * prev_dt * prev_dt;
-				// get control authority
-				double control_authority = (angular_v[i].getLast() - extrapolate_v) / d_control;
-				k_v_control[i] = control_authority;
-			}
-		}
-
-        public double get_short_delta_input_for_axis(int axis, double desired_angular_dv)
+        public double getDvAuthority(int axis)
         {
-            double extrapolate_dv = 0.0;
-            if (dv_stable_channel[axis])
-                extrapolate_dv = angular_dv[axis].getLast() +
-                    prev_dt * derivative1_middle(angular_dv[axis].getFromTail(2), angular_dv[axis].getFromTail(0), prev_dt);
+            if (k_dv_control[axis].Size > 0)
+                return k_dv_control[axis].Average();
             else
-                extrapolate_dv = angular_dv[axis].getLast() +
-                    prev_dt * derivative1(angular_dv[axis].getFromTail(1), angular_dv[axis].getFromTail(1),
-                        angular_dv[axis].getFromTail(0), prev_dt);
-            double d_input = (desired_angular_dv - extrapolate_dv) / k_dv_control[axis];
-            return d_input;
+                return -1.0;
         }
 
         public static double closest(double target, double x1, double x2)
@@ -291,7 +268,7 @@ namespace AtmosphereAutopilot
 			{
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " K1 = " + k_dv_control[i].ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " K1 = " + k_dv_control[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " stable = " + dv_stable_channel[i].ToString(), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}

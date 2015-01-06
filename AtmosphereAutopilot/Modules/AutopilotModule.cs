@@ -13,8 +13,6 @@ namespace AtmosphereAutopilot
         protected Vessel vessel = null;
         protected bool enabled = false;
 
-        public bool Active { get { return enabled; } }
-
         public AutopilotModule(Vessel v, int wnd_id, string module_name)
         {
             vessel = v;
@@ -29,6 +27,8 @@ namespace AtmosphereAutopilot
             enabled = true;
         }
 
+        public string ModuleName { get { return module_name; } }
+
         protected abstract void OnActivate();
 
         public void Deactivate()
@@ -40,7 +40,17 @@ namespace AtmosphereAutopilot
 
 		protected abstract void OnDeactivate();
 
-
+        public bool Active
+        {
+            get { return enabled; }
+            set
+            {
+                if (value)
+                    Activate();
+                else
+                    Deactivate();
+            }
+        }
 
         #region Serialization
 
@@ -60,6 +70,7 @@ namespace AtmosphereAutopilot
 
         public void Serialize()
         {
+            BeforeSerialize();
             AutoSerialization.Serialize(this, module_name.Replace(' ', '_'),
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/" + vessel.vesselName + ".cfg",
                 typeof(VesselSerializable), OnSerialize);
@@ -68,8 +79,13 @@ namespace AtmosphereAutopilot
                 typeof(GlobalSerializable), OnSerialize);
         }
 
+        protected virtual void BeforeSerialize() { }
+
+        protected virtual void BeforeDeserialize() { }
+
         public bool Deserialize()
         {
+            BeforeDeserialize();
             return (DeserializeVesselSpecific() & DeserializeGlobalSpecific());
         }
 
@@ -86,7 +102,7 @@ namespace AtmosphereAutopilot
         string module_name;
         int wnd_id;
         protected bool gui_shown = false;
-        protected Rect window = new Rect(50.0f, 80.0f, 200.0f, 150.0f);
+        protected Rect window = new Rect(50.0f, 80.0f, 220.0f, 150.0f);
 
         [GlobalSerializable("window_x")]
         public float WindowLeft { get { return window.xMin; } set { window.xMin = value; } }
@@ -110,7 +126,10 @@ namespace AtmosphereAutopilot
             if (!gui_shown)
                 return;
             window = GUILayout.Window(wnd_id, window, _drawGUI, module_name);
+            OnGUICustom();
         }
+
+        protected virtual void OnGUICustom() { }
 
         public virtual void _drawGUI(int id)
         {
@@ -123,6 +142,16 @@ namespace AtmosphereAutopilot
         public bool ToggleGUI()
         {
             return gui_shown = !gui_shown;
+        }
+
+        public void ShowGUI()
+        {
+            gui_shown = true;
+        }
+
+        public void HideGUI()
+        {
+            gui_shown = false;
         }
 
         #endregion

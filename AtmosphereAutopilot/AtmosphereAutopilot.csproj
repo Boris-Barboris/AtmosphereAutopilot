@@ -49,7 +49,9 @@
     <Compile Include="AutoSerialization.cs" />
     <Compile Include="Backup\OldFlightModel.cs" />
     <Compile Include="CircularBuffer.cs" />
-    <Compile Include="Modules\FlightModel.cs" />
+    <Compile Include="Models\MediumFlightModel.cs" />
+    <Compile Include="Modules\AngularAccAdaptiveController.cs" />
+    <Compile Include="Models\InstantControlModel.cs" />
     <Compile Include="GUIStyles.cs" />
     <Compile Include="Matrix.cs" />
     <Compile Include="Modules\AngularVelAdaptiveController.cs" />

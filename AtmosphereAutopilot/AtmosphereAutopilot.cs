@@ -9,17 +9,17 @@ namespace AtmosphereAutopilot
     [KSPAddon(KSPAddon.Startup.Instantly, true)]
     public class AtmosphereAutopilot: MonoBehaviour
     {
-        Dictionary<Vessel, ElevatorDamper> elevator_dampers = new Dictionary<Vessel, ElevatorDamper>();
-        Dictionary<Vessel, RollDamper> roll_dampers = new Dictionary<Vessel, RollDamper>();
-        Dictionary<Vessel, YawDamper> yaw_dampers = new Dictionary<Vessel, YawDamper>();
-		Dictionary<Vessel, InstantControlModel> flight_models = new Dictionary<Vessel, InstantControlModel>();
-		Dictionary<Vessel, AngularVelAdaptiveController> elevator_dampers_exper = 
-			new Dictionary<Vessel, AngularVelAdaptiveController>();
-        ElevatorDamper elevatorDamper;
-		AngularVelAdaptiveController elevatorDamperEx;
-        RollDamper rollDamper;
-        YawDamper yawDamper;
-        InstantControlModel flightModel;
+        [AttributeUsage(AttributeTargets.Method)]
+        class ModuleConstructor : Attribute
+        {
+            public Type type;
+            public ModuleConstructor(Type t) { type = t; }
+        }
+
+        List<Type> autopilot_module_types = new List<Type>();
+        Dictionary<Type, Dictionary<Vessel, object>> autopilot_module_lists = new Dictionary<Type, Dictionary<Vessel, object>>();
+        Dictionary<Type, object> active_modules = new Dictionary<Type, object>();
+        Dictionary<Type, KeyCode> module_hotkeys = new Dictionary<Type, KeyCode>();
 
         public static AtmosphereAutopilot Instance { get; private set; }
 
@@ -27,9 +27,48 @@ namespace AtmosphereAutopilot
         {
             Debug.Log("[Autopilot]: AtmosphereAutopilot starting up!"); 
             DontDestroyOnLoad(this);
+            initialize_types();
+            initialize_module_lists();
+            initialize_hotkeys();
             GameEvents.onVesselChange.Add(vesselSwitch);
             GameEvents.onGameSceneLoadRequested.Add(sceneSwitch);
             Instance = this;
+        }
+
+        void initialize_types()
+        {
+            autopilot_module_types.Add(typeof(InstantControlModel));
+            autopilot_module_types.Add(typeof(MediumFlightModel));
+            autopilot_module_types.Add(typeof(PitchAngularAccController));
+            autopilot_module_types.Add(typeof(PitchAngularVelocityController));
+            autopilot_module_types.Add(typeof(RollDamper));
+            autopilot_module_types.Add(typeof(YawDamper));
+        }
+
+        void initialize_hotkeys()
+        {
+            module_hotkeys[typeof(InstantControlModel)] = KeyCode.Alpha8;
+            module_hotkeys[typeof(MediumFlightModel)] = KeyCode.Alpha9;
+            module_hotkeys[typeof(PitchAngularAccController)] = KeyCode.Alpha7;
+            module_hotkeys[typeof(PitchAngularVelocityController)] = KeyCode.P;
+            module_hotkeys[typeof(RollDamper)] = KeyCode.O;
+            module_hotkeys[typeof(YawDamper)] = KeyCode.Slash;
+        }
+
+        void initialize_module_lists()
+        {
+            foreach (Type type in autopilot_module_types)
+                autopilot_module_lists[type] = new Dictionary<Vessel, object>();
+        }
+
+        void serialize_active_modules()
+        {
+            foreach (object module in active_modules)
+            {
+                IAutoSerializable s = module as IAutoSerializable;
+                if (s != null)
+                    s.Serialize();
+            }
         }
 
         public void OnDestroy()
@@ -39,75 +78,107 @@ namespace AtmosphereAutopilot
 
         private void sceneSwitch(GameScenes scenes)
         {
-            if (elevatorDamper != null)
-                elevatorDamper.Serialize();
-            if (elevatorDamperEx != null)
-				elevatorDamperEx.Serialize();
-            if (rollDamper != null)
-				rollDamper.Serialize();
-            if (yawDamper != null)
-				yawDamper.Serialize();
-            if (flightModel != null)
-                flightModel.Serialize();
-            elevatorDamper = null; 
-            elevatorDamperEx = null;
-            rollDamper = null;
-            yawDamper = null;
-            flightModel = null;
+            serialize_active_modules();
+            active_modules.Clear();
         }
+
+        private void load_module(Vessel vessel, Type type, Func<Vessel, object> constructor)
+        {
+            Debug.Log("[Autopilot] load_module");
+            object module;
+            if (!autopilot_module_lists.ContainsKey(type))
+                throw new ArgumentException("[AtmosphereAutopilot]: module type " + type.Name + " is not present in autopilot_module_lists");
+            if (autopilot_module_lists[type].ContainsKey(vessel))
+            {
+                module = autopilot_module_lists[type][vessel];
+                Debug.Log("[Autopilot]: " + type.Name + " for vessel " + vessel.name + " loaded");
+            }
+            else
+            {
+                module = constructor(vessel);
+                Debug.Log("[Autopilot]: " + type.Name + " for vessel " + vessel.name + " created");
+                autopilot_module_lists[type][vessel] = module;
+            }
+            IAutoSerializable s = module as IAutoSerializable;
+            if (s != null) 
+                s.Deserialize();
+            active_modules[type] = module;
+        }
+
+        private void load_all_modules_for_vessel(Vessel v)
+        {
+            Dictionary<Type, System.Reflection.MethodInfo> constructorMap = new Dictionary<Type, System.Reflection.MethodInfo>();
+            var constructors = typeof(AtmosphereAutopilot).
+                GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).
+                        Where(m => m.GetCustomAttributes(typeof(ModuleConstructor), false).Length > 0).ToArray();
+            foreach (var cons in constructors)
+            {
+                var att = cons.GetCustomAttributes(typeof(ModuleConstructor), false).First() as ModuleConstructor;
+                constructorMap.Add(att.type, cons);
+            }
+
+            Debug.Log("[Autopilot] load_all_modules_for_vessel constructors.Length = " + constructors.Length.ToString() +
+                " constructorMap.Count = " + constructorMap.Keys.Count.ToString());
+                
+            foreach (Type type in autopilot_module_types)
+            {
+                if (constructorMap.ContainsKey(type))
+                {
+                    var constructor = constructorMap[type];
+                    load_module(v, type, ve => { return constructor.Invoke(this, new[] { ve }); });
+                }
+            }
+        }
+
+        #region module_constructors
+
+        [ModuleConstructor(typeof(InstantControlModel))]
+        InstantControlModel create_InstantControlModel(Vessel v)
+        {
+            return new InstantControlModel(v);
+        }
+
+        [ModuleConstructor(typeof(MediumFlightModel))]
+        MediumFlightModel create_MediumFlightModel(Vessel v)
+        {
+            return new MediumFlightModel(v);
+        }
+
+        [ModuleConstructor(typeof(PitchAngularAccController))]
+        PitchAngularAccController create_PitchAngularAccController(Vessel v)
+        {
+            InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
+            MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+            return new PitchAngularAccController(v, sfmodel, mfmodel);
+        }
+
+        [ModuleConstructor(typeof(PitchAngularVelocityController))]
+        PitchAngularVelocityController create_PitchAngularVelocityController(Vessel v)
+        {
+            InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
+            MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+            PitchAngularAccController acc = active_modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
+            return new PitchAngularVelocityController(v, sfmodel, mfmodel, acc);
+        }
+
+        [ModuleConstructor(typeof(RollDamper))]
+        RollDamper create_RollDamper(Vessel v)
+        {
+            return new RollDamper(v);
+        }
+
+        [ModuleConstructor(typeof(YawDamper))]
+        YawDamper create_YawDamper(Vessel v)
+        {
+            return new YawDamper(v);
+        }
+
+        #endregion
 
         private void vesselSwitch(Vessel v)
         {
-            if (!elevator_dampers.ContainsKey(v))
-            {
-                elevator_dampers[v] = new ElevatorDamper(v);
-                Debug.Log("[Autopilot]: ElevatorDamper for vessel " + v.name + " created");
-            }
-            else
-                Debug.Log("[Autopilot]: ElevatorDamper for vessel " + v.name + " loaded");
-            elevatorDamper = elevator_dampers[v];
-            elevatorDamper.Deserialize();
-
-            if (!roll_dampers.ContainsKey(v))
-            {
-                roll_dampers[v] = new RollDamper(v);
-                Debug.Log("[Autopilot]: RollDamper for vessel " + v.name + " created");
-            }
-            else
-                Debug.Log("[Autopilot]: RollDamper for vessel " + v.name + " loaded");
-            rollDamper = roll_dampers[v];
-            rollDamper.Deserialize();
-
-            if (!yaw_dampers.ContainsKey(v))
-            {
-                yaw_dampers[v] = new YawDamper(v);
-                Debug.Log("[Autopilot]: YawDamper for vessel " + v.name + " created");
-            }
-            else
-                Debug.Log("[Autopilot]: YawDamper for vessel " + v.name + " loaded");
-            yawDamper = yaw_dampers[v];
-            yawDamper.Deserialize();
-
-            if (!flight_models.ContainsKey(v))
-            {
-				flight_models[v] = new InstantControlModel(v);
-                Debug.Log("[Autopilot]: FlightModel for vessel " + v.name + " created");
-            }
-            else
-                Debug.Log("[Autopilot]: FlightModel for vessel " + v.name + " loaded");
-            flightModel = flight_models[v];
-            flightModel.Deserialize();
-
-            if (!elevator_dampers_exper.ContainsKey(v))
-            {
-				elevator_dampers_exper[v] = 
-					new AngularVelAdaptiveController(v, "Adaptive elavator trimmer", 138938, 0, flightModel);
-                Debug.Log("[Autopilot]: ElevatorDamperExperim for vessel " + v.name + " created");
-            }
-            else
-                Debug.Log("[Autopilot]: ElevatorDamperExperim for vessel " + v.name + " loaded");
-            elevatorDamperEx = elevator_dampers_exper[v];
-            elevatorDamperEx.Deserialize();
+            Debug.Log("[Autopilot] vessel switch");
+            load_all_modules_for_vessel(v);
         }
 
         bool styles_init = false;
@@ -119,17 +190,13 @@ namespace AtmosphereAutopilot
                 GUIStyles.Init();
                 styles_init = true;
             }
-            if (elevatorDamper != null)
-                elevatorDamper.OnGUI();
-            if (rollDamper != null)
-				rollDamper.OnGUI();
-            if (yawDamper != null)
-				yawDamper.OnGUI();
-            if (flightModel != null)
-                flightModel.OnGUI();
-            if (elevatorDamperEx != null)
-				elevatorDamperEx.OnGUI();
-        }
+            foreach (var pair in active_modules)
+            {
+                IAutoGui s = pair.Value as IAutoGui;
+                if (s != null)
+                    s.OnGUI();
+            }
+        }        
 
         public void Update()
         {
@@ -140,74 +207,23 @@ namespace AtmosphereAutopilot
 
             bool mod = GameSettings.MODIFIER_KEY.GetKey();
 
-            if (elevatorDamperEx != null)
-                if (Input.GetKeyDown(KeyCode.P))
-                {
+            foreach (var pair in module_hotkeys)
+                if (Input.GetKeyDown(pair.Value))
                     if (mod)
-                        elevatorDamperEx.ToggleGUI();
+                    {
+                        IAutoGui gui = active_modules[pair.Key] as IAutoGui;
+                        if (gui != null)
+                            gui.ToggleGUI();
+                    }
                     else
                     {
-                        if (elevatorDamperEx.Active)
+                        AutopilotModule module = active_modules[pair.Key] as AutopilotModule;
+                        if (module != null)
                         {
-                            elevatorDamperEx.Deactivate();
-                            MessageManager.post_status_message("Elevator damper disabled");
-                        }
-                        else
-                        {
-                            elevatorDamperEx.Activate();
-                            MessageManager.post_status_message("Elevator damper enabled");
+                            module.Active = !module.Active;
+                            MessageManager.post_status_message(module.ModuleName + (module.Active ? " enabled" : " disabled"));
                         }
                     }
-                }
-
-            if (rollDamper != null)
-                if (Input.GetKeyDown(KeyCode.O))
-                {
-                    if (mod)
-                        rollDamper.ToggleGUI();
-                    else
-                    {
-						if (rollDamper.Active)
-                        {
-                            rollDamper.Deactivate();
-                            MessageManager.post_status_message("Roll damper disabled");
-                        }
-                        else
-                        {
-                            rollDamper.Activate();
-                            MessageManager.post_status_message("Roll damper enabled");
-                        }
-                    }
-                }
-
-            if (yawDamper != null)
-                if (Input.GetKeyDown(KeyCode.Slash))
-                {
-                    if (mod)
-                        yawDamper.ToggleGUI();
-                    else
-                    {
-						if (yawDamper.Active)
-                        {
-                            yawDamper.Deactivate();
-                            MessageManager.post_status_message("Yaw damper disabled");
-                        }
-                        else
-                        {
-                            yawDamper.Activate();
-                            MessageManager.post_status_message("Yaw damper enabled");
-                        }
-                    }
-                }
-
-            if (flightModel != null)
-                if (Input.GetKeyDown(KeyCode.Backslash))
-                {
-                    if (mod)
-                    {
-                        flightModel.ToggleGUI();
-                    }
-                }
         }
     }
 }

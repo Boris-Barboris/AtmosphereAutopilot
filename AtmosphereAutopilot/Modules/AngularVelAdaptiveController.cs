@@ -6,10 +6,11 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
+
 	/// <summary>
 	/// Controls angular velocity
 	/// </summary>
-	class AngularVelAdaptiveController : AdaptivePIDController
+	class AngularVelController : AdaptivePIDController
 	{
 		public const int PITCH = 0;
 		public const int ROLL = 1;
@@ -18,6 +19,8 @@ namespace AtmosphereAutopilot
 		protected int axis;
 
 		InstantControlModel model;
+        MediumFlightModel mmodel;
+        AngularAccAdaptiveController acc_controller;
 
 		/// <summary>
 		/// Create controller instance
@@ -27,13 +30,15 @@ namespace AtmosphereAutopilot
 		/// <param name="wnd_id">unique for types window id</param>
 		/// <param name="axis">Pitch = 0, roll = 1, yaw = 2</param>
 		/// <param name="model">Flight model instance for adaptive control</param>
-		public AngularVelAdaptiveController(Vessel vessel, string module_name,
-			int wnd_id, int axis, InstantControlModel model)
+		public AngularVelController(Vessel vessel, string module_name,
+			int wnd_id, int axis, InstantControlModel model, MediumFlightModel mmodel, AngularAccAdaptiveController acc)
 			: base(vessel, module_name, wnd_id)
 		{
 			this.axis = axis;
 			this.model = model;
+            this.mmodel = mmodel;
 			default_pid_values();
+            acc_controller = acc;
 		}
 
 		void default_pid_values()
@@ -70,7 +75,7 @@ namespace AtmosphereAutopilot
 
 		[GlobalSerializable("max_part_acceleration")]
 		[AutoGuiAttr("max part accel", true, "G8")]
-		public double max_part_acceleration = 10.0;			// approx 1g
+		public double max_part_acceleration = 30.0;			// approx 3g
 
 		[AutoGuiAttr("lever arm", false, "G8")]
 		public double lever_arm = 1.0;
@@ -113,6 +118,7 @@ namespace AtmosphereAutopilot
 		protected override void OnActivate()
 		{
 			vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
+            acc_controller.Activate();
 			cycle_counter = 0;
             pid.clear();
 		}
@@ -120,11 +126,18 @@ namespace AtmosphereAutopilot
 		protected override void OnDeactivate()
 		{
 			vessel.OnAutopilotUpdate -= new FlightInputCallback(ApplyControl);
+            acc_controller.Deactivate();
 		}
 
 		int cycle_counter = -1;
 		bool in_regime = false;
 		double time_in_regime = 0.0;
+        //bool accumulator_preset = false;
+
+        public override double ApplyControl(FlightCtrlState cntrl, double target_value)
+        {
+            throw new NotImplementedException();
+        }
 
 		/// <summary>
 		/// Main control function
@@ -146,65 +159,28 @@ namespace AtmosphereAutopilot
                 return;
             }
 
-			input = -model.angular_v[axis].getLast();				// get angular velocity
-			double accel = -model.angular_dv[axis].getLast();		// get angular acceleration
-			double control_authority = -model.k_dv_control[axis];
-			double raw_output = 0.0;								// raw unclamped and unsmoothed output
+			input = model.angular_v[axis].getLast();				// get angular velocity
+			double accel = model.angular_dv[axis].getLast();		// get angular acceleration
+            current_acc = accel;
 
-            if (control_authority > 0.05)							
-            {
-				// control authority is meaningful number
-				
-				// Adapt KD
-                double new_kd = 0.5 / control_authority;
-				double adaptive_kd = apply_with_inertia(pid.KD, new_kd, pid_coeff_inertia);
-                pid.KD = adaptive_kd;
+            // Adapt KP, so that on small value it produces max_input * kp_acc factor output
+            pid.KP = kp_acc_factor * max_input_deriv / small_value;
+            // Adapt KI
+            pid.IntegralClamp = small_value;
+            pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
+            pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0 / integral_fill_time;
+            pid.KI = ki_koeff * max_input_deriv / pid.AccumulatorClamp;
+            // Adapt KD
+            pid.KD = kd_kp_koeff * pid.KP;
 
-				// Adapt KP
-				if (Math.Abs(input) > small_value && pid.Accumulator == 0.0)
-				{
-					double desired_acc = Math.Sign(input) > 0 ? min_input_deriv : max_input_deriv;
-					desired_acc *= kp_acc_factor;
-					double new_kp = (desired_acc - accel) / input / control_authority;
-					if (new_kp > 0.0)
-						pid.KP = apply_with_inertia(pid.KP, new_kp, pid_coeff_inertia);
-				}
-				
-				// Adapt integral part
-				pid.IntegralClamp = small_value;
-				pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
-				pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0;
-				pid.KI = 1.0 / pid.AccumulatorClamp;
-
-				if (Math.Abs(input) > small_value)
-				{
-					double desired_acc = Math.Sign(input) > 0 ? min_input_deriv : max_input_deriv;
-					desired_acc *= kp_acc_factor;
-					double d_control = model.get_short_delta_input_for_axis(axis, desired_acc);
-					double d_acc = d_control / pid.KI;
-					pid.Accumulator += d_acc;
-				}
-            }
-
-            raw_output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
+            double raw_output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
 
             double error = 0.0 - input;
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
-            deriv = -pid.KD * accel;            
+            deriv = -pid.KD * accel;
 
-			if (is_user_handling(cntrl))
-			{
-				// user is flying
-				raw_output = get_user_input(cntrl);
-				// apply dampener output
-				double dampening = -pid.KD * accel;
-				raw_output = raw_output + dampening;
-				output = smooth_and_clamp(raw_output);
-				set_output(cntrl, output);
-				pid.clear();
-				return;
-			}
+            double child_output = acc_controller.ApplyControl(cntrl, raw_output);
 
 			// check if we're stable on given input value
 			if (Math.Abs(input) < 1e-2)
@@ -218,11 +194,11 @@ namespace AtmosphereAutopilot
 				time_in_regime = 0.0;
 			}
 
-			output = smooth_and_clamp(raw_output);
+            output = child_output;
 			set_output(cntrl, output);
 
 			if (time_in_regime >= 1.0)
-				set_trim(output);
+				set_trim();
 		}
 
         [AutoGuiAttr("DEBUG proport", false, "G8")]
@@ -239,6 +215,21 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("DEBUG current_raw", false, "G8")]
         public double current_raw { get; private set; }
+
+        [AutoGuiAttr("DEBUG child_raw", false, "G8")]
+        public double child_raw { get; private set; }
+
+        [AutoGuiAttr("DEBUG desired_acc", false, "G8")]
+        public double desired_acc { get; private set; }
+
+        [AutoGuiAttr("DEBUG current_acc", false, "G8")]
+        public double current_acc { get; private set; }
+
+        [AutoGuiAttr("DEBUG d_control", false, "G8")]
+        public double d_control { get; private set; }
+
+        [AutoGuiAttr("DEBUG d_accumulator", false, "G8")]
+        public double d_accumulator { get; private set; }
 
 		bool is_user_handling(FlightCtrlState state)
 		{
@@ -286,7 +277,7 @@ namespace AtmosphereAutopilot
 			}
 		}
 
-		void set_trim(double output)
+		void set_trim()
 		{
 			switch (axis)
 			{
@@ -302,27 +293,25 @@ namespace AtmosphereAutopilot
 			}
 		}
 
-		double smooth_and_clamp(double raw)
-		{
-			double prev_output = model.input_buf[axis].getLast();	// get previous control input
-			double smoothed = raw;
-            current_raw = raw;
-			double raw_d = (raw - prev_output) / TimeWarp.fixedDeltaTime;
-            if (raw_d > max_output_deriv)
-				smoothed = prev_output + TimeWarp.fixedDeltaTime * max_output_deriv;
-            if (raw_d < -max_output_deriv)
-				smoothed = prev_output - TimeWarp.fixedDeltaTime * max_output_deriv;
-			return Common.Clamp(smoothed, 1.0);
-		}
+        protected override void OnGUICustom()
+        {
+            acc_controller.ShowGUI();
+            acc_controller.OnGUI();
+        }
 
-		static double apply_with_inertia(double old, double new_one, double inertia)
-		{
-			return (new_one + inertia * old) / (inertia + 1.0);
-		}
+        protected override void BeforeSerialize()
+        {
+            acc_controller.Serialize();
+        }
 
-		[GlobalSerializable("max_output_deriv")]
-		[AutoGuiAttr("csurface speed", true, "G6")]
-		public double max_output_deriv = 20.0;	// maximum output derivative, simulates control surface reaction speed
+        protected override void BeforeDeserialize()
+        {
+            acc_controller.Deserialize();
+        }
+
+        [GlobalSerializable("ki_koeff")]
+        [AutoGuiAttr("ki_koeff", true, "G6")]
+        public double ki_koeff = 0.8;	        // maximum output derivative, simulates control surface reaction speed
 
 		[GlobalSerializable("small_value")]
 		[AutoGuiAttr("small value", true, "G6")]
@@ -330,7 +319,7 @@ namespace AtmosphereAutopilot
 
 		[GlobalSerializable("pid_coeff_inertia")]
 		[AutoGuiAttr("PID inertia", true, "G6")]
-		public double pid_coeff_inertia = 50.0;		// PID coeffitients inertia factor
+		public double pid_coeff_inertia = 30.0;		// PID coeffitients inertia factor
 
 		[GlobalSerializable("kp_acc_factor")]
 		[AutoGuiAttr("KP acceleration factor", true, "G6")]
@@ -339,5 +328,21 @@ namespace AtmosphereAutopilot
 		[GlobalSerializable("integral_fill_time")]
 		[AutoGuiAttr("Integral fill time", true, "G6")]
 		public double integral_fill_time = 1.0;
+
+        [GlobalSerializable("kd_kp_koeff")]
+        [AutoGuiAttr("KD/KP ratio", true, "G6")]
+        public double kd_kp_koeff = 0.33;
 	}
+
+
+
+
+
+    class PitchAngularVelocityController : AngularVelController
+    {
+        public PitchAngularVelocityController(Vessel vessel, InstantControlModel model, MediumFlightModel mmodel, AngularAccAdaptiveController acc)
+            : base(vessel, "Adaptive elavator trimmer", 1234444, 0, model, mmodel, acc)
+        { }
+    }
+
 }

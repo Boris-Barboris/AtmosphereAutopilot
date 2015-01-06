@@ -43,6 +43,23 @@ namespace AtmosphereAutopilot
 		/// <param name="cntrl">current control state</param>
 		public abstract void ApplyControl(FlightCtrlState cntrl);
 
+        /// <summary>
+        /// Main control function
+        /// </summary>
+        /// <param name="cntrl">Control state to change</param>
+        /// <param name="target_value">Desired angular acceleration</param>
+        public abstract double ApplyControl(FlightCtrlState cntrl, double target_value);
+
+        public static double apply_with_inertia(double old, double new_one, double inertia)
+        {
+            return (new_one + inertia * old) / (inertia + 1.0);
+        }
+
+        public void clear_accumulator()
+        {
+            pid.clear();
+        }
+
 
 		#region properties
 
