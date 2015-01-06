@@ -164,10 +164,13 @@ namespace AtmosphereAutopilot
             // Adapt KP, so that on small value it produces max_input * kp_acc factor output
             pid.KP = kp_acc_factor * max_input_deriv / small_value;
             // Adapt KI
-            pid.IntegralClamp = small_value;
-            pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
-            pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0 / integral_fill_time;
-            pid.KI = ki_koeff * max_input_deriv / pid.AccumulatorClamp;
+            if (integral_fill_time > 1e-3)
+            {
+                pid.IntegralClamp = small_value;
+                pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
+                pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0 / integral_fill_time;
+                pid.KI = ki_koeff * max_input_deriv / pid.AccumulatorClamp;
+            }
             // Adapt KD
             pid.KD = kd_kp_koeff * pid.KP;
 

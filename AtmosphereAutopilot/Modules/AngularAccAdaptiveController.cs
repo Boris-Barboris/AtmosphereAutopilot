@@ -79,10 +79,13 @@ namespace AtmosphereAutopilot
                 pid.KD = apply_with_inertia(pid.KD, kp_kd_ratio * pid.KP, pid_coeff_inertia);
             }
 
-            pid.IntegralClamp = small_value;
-            pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
-            pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0 / integral_fill_time;
-            pid.KI = ki_koeff / pid.AccumulatorClamp;
+            if (integral_fill_time > 1e-3)
+            {
+                pid.IntegralClamp = small_value;
+                pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
+                pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0 / integral_fill_time;
+                pid.KI = ki_koeff / pid.AccumulatorClamp;
+            }
 
             if (is_user_handling(cntrl))
             {
