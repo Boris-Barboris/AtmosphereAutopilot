@@ -259,6 +259,16 @@ namespace AtmosphereAutopilot
             return gui_shown = !gui_shown;
         }
 
+        public void HideGUI()
+        {
+            gui_shown = false;
+        }
+
+        public void ShowGUI()
+        {
+            gui_shown = true;
+        }
+
 		static readonly string[] axis_names = { "pitch", "roll", "yaw" };
 
 		void _drawGUI(int id)

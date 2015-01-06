@@ -29,6 +29,10 @@ namespace AtmosphereAutopilot
         bool IsDrawn();
 
         bool ToggleGUI();
+
+        void HideGUI();
+
+        void ShowGUI();
     }
 
 

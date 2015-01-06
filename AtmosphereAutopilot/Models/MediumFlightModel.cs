@@ -136,6 +136,16 @@ namespace AtmosphereAutopilot
 			GUI.DragWindow();
         }
 
+        public void HideGUI()
+        {
+            gui_shown = false;
+        }
+
+        public void ShowGUI()
+        {
+            gui_shown = true;
+        }
+
         #endregion
     }
 }

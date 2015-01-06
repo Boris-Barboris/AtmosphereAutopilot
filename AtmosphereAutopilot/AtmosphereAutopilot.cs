@@ -32,6 +32,8 @@ namespace AtmosphereAutopilot
             initialize_hotkeys();
             GameEvents.onVesselChange.Add(vesselSwitch);
             GameEvents.onGameSceneLoadRequested.Add(sceneSwitch);
+            GameEvents.onHideUI.Add(OnHideUI);
+            GameEvents.onShowUI.Add(OnShowUI);
             Instance = this;
         }
 
@@ -196,7 +198,27 @@ namespace AtmosphereAutopilot
                 if (s != null)
                     s.OnGUI();
             }
-        }        
+        }
+
+        public void OnHideUI()
+        {
+            foreach (var pair in active_modules)
+            {
+                IAutoGui s = pair.Value as IAutoGui;
+                if (s != null)
+                    s.HideGUI();
+            }
+        }
+
+        public void OnShowUI()
+        {
+            foreach (var pair in active_modules)
+            {
+                IAutoGui s = pair.Value as IAutoGui;
+                if (s != null)
+                    s.HideGUI();
+            }
+        }
 
         public void Update()
         {
