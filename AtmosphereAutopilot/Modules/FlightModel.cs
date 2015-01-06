@@ -63,7 +63,8 @@ namespace AtmosphereAutopilot
 			double dt = TimeWarp.fixedDeltaTime;
 			check_dt(dt);
 			update_buffers();
-			update_model();
+			update_dv_model();
+			update_v_model();
 			prev_dt = dt;
 		}
 
@@ -127,16 +128,19 @@ namespace AtmosphereAutopilot
 			return (y0 - 2 * y1 + y2) / dt / dt;
 		}
 
+		public static double derivative2_long(double y0, double y1, double y2, double y3, double dt)
+		{
+			return (-y0 + 4 * y1 - 5 * y2 + 2 * y3) / dt / dt;
+		}
+
 		//
-		// Short term Model section
+		// Short term model for angular acceleration
 		//
 
-		public double[] k_control = new double[3];
-        public bool[] stable_channel = new bool[3];     // true if control channel is statically stable in dv_angular
+		public double[] k_dv_control = new double[3];		// control authority in angular acceleration
+        public bool[] dv_stable_channel = new bool[3];     // true if control channel is statically stable in dv_angular
 
-        class ModelException : Exception { }
-
-		public void update_model()
+		public void update_dv_model()
 		{
 			if (stable_dt < 3)
 				return;
@@ -150,12 +154,12 @@ namespace AtmosphereAutopilot
 					// get second angular v derivative in previous time slice
 					double simple_d2v = derivative1_short(angular_dv[i].getFromTail(1), angular_dv[i].getFromTail(0), prev_dt);
 					// channel is statically stable if it's angular acceleration going to zero
-					stable_channel[i] = (angular_dv[i].getFromTail(1) * simple_d2v) < 0.0;
+					dv_stable_channel[i] = (angular_dv[i].getFromTail(1) * simple_d2v) < 0.0;
 					return;
 				}
                 // extrapolate previous angular_dv values
                 double extrapolate_dv = 0.0;
-                if (stable_channel[i])
+                if (dv_stable_channel[i])
                     extrapolate_dv = angular_dv[i].getFromTail(1) +
                         prev_dt * derivative1_middle(angular_dv[i].getFromTail(3), angular_dv[i].getFromTail(1), prev_dt);
                 else
@@ -164,21 +168,54 @@ namespace AtmosphereAutopilot
                             angular_dv[i].getFromTail(1), prev_dt);
                 // get control authority
                 double control_authority = (angular_dv[i].getLast() - extrapolate_dv) / d_control;
-                k_control[i] = control_authority;
+                k_dv_control[i] = control_authority;
+			}
+		}
+
+		//
+		// Short term model for angular speed
+		//
+
+		public double[] k_v_control = new double[3];		// control authority in angular speed
+		public bool[] v_stable_channel = new bool[3];		// true if control channel is statically stable in v_angular
+
+		public void update_v_model()
+		{
+			if (stable_dt < 3)
+				return;
+
+			for (int i = 0; i < 3; i++)
+			{
+				// control diffirential
+				double d_control = input_buf[i].getLast() - input_buf[i].getFromTail(1);
+				if (d_control == 0.0)
+				{
+					// channel is statically stable if it's angular acceleration going to zero
+					v_stable_channel[i] = (angular_v[i].getFromTail(1) * angular_dv[i].getFromTail(0)) < 0.0;
+					return;
+				}
+				// extrapolate previous angular_dv values
+				double dv2 = derivative2(angular_v[i].getFromTail(3),
+					angular_v[i].getFromTail(2), angular_v[i].getFromTail(1), prev_dt);
+				double extrapolate_v = angular_v[i].getFromTail(1) + angular_dv[i].getFromTail(1) * prev_dt +
+					0.5 * dv2 * prev_dt * prev_dt;
+				// get control authority
+				double control_authority = (angular_v[i].getLast() - extrapolate_v) / d_control;
+				k_v_control[i] = control_authority;
 			}
 		}
 
         public double get_short_delta_input_for_axis(int axis, double desired_angular_dv)
         {
             double extrapolate_dv = 0.0;
-            if (stable_channel[axis])
+            if (dv_stable_channel[axis])
                 extrapolate_dv = angular_dv[axis].getLast() +
                     prev_dt * derivative1_middle(angular_dv[axis].getFromTail(2), angular_dv[axis].getFromTail(0), prev_dt);
             else
                 extrapolate_dv = angular_dv[axis].getLast() +
                     prev_dt * derivative1(angular_dv[axis].getFromTail(1), angular_dv[axis].getFromTail(1),
                         angular_dv[axis].getFromTail(0), prev_dt);
-            double d_input = (desired_angular_dv - extrapolate_dv) / k_control[axis];
+            double d_input = (desired_angular_dv - extrapolate_dv) / k_dv_control[axis];
             return d_input;
         }
 
@@ -254,8 +291,8 @@ namespace AtmosphereAutopilot
 			{
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " K1 = " + k_control[i].ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " stable = " + stable_channel[i].ToString(), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " K1 = " + k_dv_control[i].ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " stable = " + dv_stable_channel[i].ToString(), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}
 			GUILayout.EndVertical();

@@ -149,7 +149,7 @@ namespace AtmosphereAutopilot
 
 			input = -model.angular_v[axis].getLast();				// get angular velocity
 			double accel = -model.angular_dv[axis].getLast();		// get angular acceleration
-			double control_authority = -model.k_control[axis];
+			double control_authority = -model.k_dv_control[axis];
 			double raw_output = 0.0;								// raw unclamped and unsmoothed output
 
             if (control_authority > 0.05)
