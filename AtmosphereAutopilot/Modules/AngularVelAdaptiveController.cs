@@ -118,7 +118,6 @@ namespace AtmosphereAutopilot
 		protected override void OnActivate()
 		{
 			vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
-            acc_controller.Activate();
 			cycle_counter = 0;
             pid.clear();
 		}
@@ -126,7 +125,6 @@ namespace AtmosphereAutopilot
 		protected override void OnDeactivate()
 		{
 			vessel.OnAutopilotUpdate -= new FlightInputCallback(ApplyControl);
-            acc_controller.Deactivate();
 		}
 
 		int cycle_counter = -1;
@@ -292,22 +290,6 @@ namespace AtmosphereAutopilot
 					break;
 			}
 		}
-
-        protected override void OnGUICustom()
-        {
-            acc_controller.ShowGUI();
-            acc_controller.OnGUI();
-        }
-
-        protected override void BeforeSerialize()
-        {
-            acc_controller.Serialize();
-        }
-
-        protected override void BeforeDeserialize()
-        {
-            acc_controller.Deserialize();
-        }
 
         [GlobalSerializable("ki_koeff")]
         [AutoGuiAttr("ki_koeff", true, "G6")]

@@ -146,7 +146,10 @@ namespace System.IO
 
 		public T getLast()
 		{
-            return this[size - 1];
+            if (size <= 0)
+                return buffer[0];
+            else
+                return this[size - 1];
 		}
 
         public void Skip(int count)
