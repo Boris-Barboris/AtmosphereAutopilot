@@ -65,9 +65,9 @@ namespace AtmosphereAutopilot
 
         void serialize_active_modules()
         {
-            foreach (object module in active_modules)
+            foreach (var pair in active_modules)
             {
-                IAutoSerializable s = module as IAutoSerializable;
+                IAutoSerializable s = pair.Value as IAutoSerializable;
                 if (s != null)
                     s.Serialize();
             }
