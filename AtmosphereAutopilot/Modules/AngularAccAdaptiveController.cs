@@ -215,12 +215,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("DEBUG authority", false, "G8")]
         public double k_auth { get { return model.getDvAuthority(axis); } }
 
-        [AutoGuiAttr("min_d_control", true, "G6")]
-        public double min_d_control { get { return model.min_d_control; } set { model.min_d_control = value; } }
-
-        [AutoGuiAttr("min_authority", true, "G6")]
-        public double min_authority { get { return model.min_authority; } set { model.min_authority = value; } }
-
         [GlobalSerializable("max_output_deriv")]
         [AutoGuiAttr("csurface speed", true, "G6")]
         public double max_output_deriv = 10.0;	// maximum output derivative, simulates control surface reaction speed

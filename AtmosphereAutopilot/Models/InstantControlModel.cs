@@ -185,8 +185,13 @@ namespace AtmosphereAutopilot
 			}
 		}
 
-        public double min_d_control = 0.05;
-        public double min_authority = 0.05;
+        [AutoGuiAttr("min_d_control", true, "G6")]
+        [GlobalSerializable("min_d_control")]
+        public double min_d_control = 0.1;
+
+        [AutoGuiAttr("min_authority", true, "G6")]
+        [GlobalSerializable("min_authority")]
+        public double min_authority = 0.1;
 
         public double getDvAuthority(int axis)
         {
