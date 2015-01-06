@@ -7,7 +7,7 @@ namespace AtmosphereAutopilot
 {
     class VesselIDComparator : IEqualityComparer<Vessel>
     {
-        public int GetHashCode(Vessel foo) { return foo.id.GetHashCode().GetHashCode(); }
+        public int GetHashCode(Vessel foo) { return foo.id.GetHashCode(); }
         public bool Equals(Vessel foo1, Vessel foo2) { return foo1.id == foo2.id; }
     }
 
