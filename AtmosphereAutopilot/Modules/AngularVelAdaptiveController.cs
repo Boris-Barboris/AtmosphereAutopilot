@@ -114,7 +114,6 @@ namespace AtmosphereAutopilot
 		{
 			vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
 			cycle_counter = 0;
-			adaptive_kd = pid.KD;
             pid.clear();
 		}
 
@@ -152,11 +151,39 @@ namespace AtmosphereAutopilot
 			double control_authority = -model.k_dv_control[axis];
 			double raw_output = 0.0;								// raw unclamped and unsmoothed output
 
-            if (control_authority > 0.05)
+            if (control_authority > 0.05)							
             {
+				// control authority is meaningful number
+				
+				// Adapt KD
                 double new_kd = 0.5 / control_authority;
-                adaptive_kd = apply_with_inertia(adaptive_kd, new_kd, 50.0);
+				double adaptive_kd = apply_with_inertia(pid.KD, new_kd, pid_coeff_inertia);
                 pid.KD = adaptive_kd;
+
+				// Adapt KP
+				if (Math.Abs(input) > small_value && pid.Accumulator == 0.0)
+				{
+					double desired_acc = Math.Sign(input) > 0 ? min_input_deriv : max_input_deriv;
+					desired_acc *= kp_acc_factor;
+					double new_kp = (desired_acc - accel) / input / control_authority;
+					if (new_kp > 0.0)
+						pid.KP = apply_with_inertia(pid.KP, new_kp, pid_coeff_inertia);
+				}
+				
+				// Adapt integral part
+				pid.IntegralClamp = small_value;
+				pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
+				pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0;
+				pid.KI = 1.0 / pid.AccumulatorClamp;
+
+				if (Math.Abs(input) > small_value)
+				{
+					double desired_acc = Math.Sign(input) > 0 ? min_input_deriv : max_input_deriv;
+					desired_acc *= kp_acc_factor;
+					double d_control = model.get_short_delta_input_for_axis(axis, desired_acc);
+					double d_acc = d_control / pid.KI;
+					pid.Accumulator += d_acc;
+				}
             }
 
             raw_output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
@@ -191,50 +218,6 @@ namespace AtmosphereAutopilot
 				time_in_regime = 0.0;
 			}
 
-			//
-			// Auto-tune PID controller
-			//
-			//if (control_authority > 0.05)			// if control authority is correct
-			//{
-			//	if (Math.Abs(input) > pid.IntegralClamp)
-			//	{
-			//		// if current angular velocity is large
-			//		// we mostly operate with KP here
-			//		double d2_sign = input *
-			//			(model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
-			//		if (d2_sign > 0.0)
-			//		{
-			//			// KP is too small, plane is unstable and error is raising
-			//			pid.KP = apply_with_inertia(pid.KP, pid.KP * pid_coeff_increment * 1.5, pid_coeff_inertia);
-			//		}
-			//		else
-			//		{
-			//			// Plane is stable and error is decreasing. Need to tune KP
-			//			if (accel < min_input_deriv || accel > max_input_deriv)
-			//			{
-			//				// angular acceleration is too large, need to decrease KP
-			//				pid.KP = apply_with_inertia(pid.KP, pid.KP / pid_coeff_increment, pid_coeff_inertia);
-			//			}
-			//		}
-			//	}
-
-			//	if (accel > max_input_deriv)
-			//	{
-			//		double d2_sign = input *
-			//			(model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1));
-			//		if (d2_sign > 0.0)
-			//		{
-			//			// Our KD is not enough, system is too unstable
-			//			pid.KD = apply_with_inertia(pid.KD, pid.KD * pid_coeff_increment * 1.5, pid_coeff_inertia);
-			//		}
-			//		else
-			//		{
-			//			// Our PD is too large
-			//			pid.KD = apply_with_inertia(pid.KD, pid.KD / pid_coeff_increment, pid_coeff_inertia);
-			//		}
-			//	}
-			//}
-
 			output = smooth_and_clamp(raw_output);
 			set_output(cntrl, output);
 
@@ -256,9 +239,6 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("DEBUG current_raw", false, "G8")]
         public double current_raw { get; private set; }
-
-		[AutoGuiAttr("DEBUG adaptive KD", false, "G8")]
-		public double adaptive_kd { get; private set; }
 
 		bool is_user_handling(FlightCtrlState state)
 		{
@@ -344,18 +324,20 @@ namespace AtmosphereAutopilot
 		[AutoGuiAttr("csurface speed", true, "G6")]
 		public double max_output_deriv = 20.0;	// maximum output derivative, simulates control surface reaction speed
 
-		[GlobalSerializable("prop_relax_desire")]
-		[AutoGuiAttr("proport relax t", true, "G6")]
-		public double prop_relax_desire = 2.0;		// desired time of proportional relaxation
-
-		public double small_value = 0.05;			// arbitrary small input value. Purely intuitive
+		[GlobalSerializable("small_value")]
+		[AutoGuiAttr("small value", true, "G6")]
+		public double small_value = 0.1;		// arbitrary small input value. Purely intuitive
 
 		[GlobalSerializable("pid_coeff_inertia")]
 		[AutoGuiAttr("PID inertia", true, "G6")]
-		public double pid_coeff_inertia = 20.0;		// PID coeffitients inertia factor
+		public double pid_coeff_inertia = 50.0;		// PID coeffitients inertia factor
 
-		[GlobalSerializable("pid_coeff_increment")]
-		[AutoGuiAttr("PID increment", true, "G6")]
-		public double pid_coeff_increment = 1.05;	// PID coeffitients increment factor
+		[GlobalSerializable("kp_acc_factor")]
+		[AutoGuiAttr("KP acceleration factor", true, "G6")]
+		public double kp_acc_factor = 0.5;
+
+		[GlobalSerializable("integral_fill_time")]
+		[AutoGuiAttr("Integral fill time", true, "G6")]
+		public double integral_fill_time = 1.0;
 	}
 }
