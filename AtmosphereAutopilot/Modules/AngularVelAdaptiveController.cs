@@ -41,25 +41,25 @@ namespace AtmosphereAutopilot
 			switch (axis)
 			{
 				case PITCH:
-					pid.KP = -3.0;
-					pid.KI = -10.0;
-					pid.KD = -0.1;
+					pid.KP = 3.0;
+					pid.KI = 10.0;
+					pid.KD = 0.1;
 					pid.IntegralClamp = 0.3;
 					pid.AccumulatorClamp = 0.01;
 					pid.AccumulDerivClamp = 0.033;
 					break;
 				case ROLL:
-					pid.KP = -3.0;
-					pid.KI = -10.0;
-					pid.KD = -0.1;
+					pid.KP = 3.0;
+					pid.KI = 10.0;
+					pid.KD = 0.1;
 					pid.IntegralClamp = 0.3;
 					pid.AccumulatorClamp = 0.01;
 					pid.AccumulDerivClamp = 0.033;
 					break;
 				case YAW:
-					pid.KP = -5.0;
-					pid.KI = -0.5;
-					pid.KD = -0.1;
+					pid.KP = 5.0;
+					pid.KI = 0.5;
+					pid.KD = 0.1;
 					pid.IntegralClamp = 0.3;
 					pid.AccumulatorClamp = 0.01;
 					pid.AccumulDerivClamp = 0.033;
@@ -140,17 +140,31 @@ namespace AtmosphereAutopilot
 			if (cntrl.killRot)					// skip if ASAS is enabled
 				return;
 
+            if (vessel.checkLanded() && axis != YAW)           // ground breaks the model
+            {
+                in_regime = false;
+                time_in_regime = 0.0;
+                return;
+            }
+
 			input = -model.angular_v[axis].getLast();				// get angular velocity
 			double accel = -model.angular_dv[axis].getLast();		// get angular acceleration
 			double control_authority = -model.k_control[axis];
 			double raw_output = 0.0;								// raw unclamped and unsmoothed output
+
+            if (control_authority > 0.05)
+            {
+                double new_kd = 0.5 / control_authority;
+                adaptive_kd = apply_with_inertia(adaptive_kd, new_kd, 50.0);
+                pid.KD = adaptive_kd;
+            }
 
             raw_output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
 
             double error = 0.0 - input;
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
-            deriv = -pid.KD * accel;
+            deriv = -pid.KD * accel;            
 
 			if (is_user_handling(cntrl))
 			{
@@ -175,11 +189,6 @@ namespace AtmosphereAutopilot
 			{
 				in_regime = false;
 				time_in_regime = 0.0;
-			}
-
-			if (control_authority > 0.05)
-			{
-				adaptive_kd = apply_with_inertia(adaptive_kd, 0.25 * max_input_deriv / control_authority, 20.0);
 			}
 
 			//
@@ -302,13 +311,13 @@ namespace AtmosphereAutopilot
 			switch (axis)
 			{
 				case PITCH:
-					FlightInputHandler.state.pitchTrim = (float)output;
+					FlightInputHandler.state.pitchTrim = (float)model.input_buf[axis].Average();
 					break;
 				case ROLL:
-					FlightInputHandler.state.rollTrim = (float)output;
+                    FlightInputHandler.state.rollTrim = (float)model.input_buf[axis].Average();
 					break;
 				case YAW:
-					FlightInputHandler.state.yawTrim = (float)output;
+                    FlightInputHandler.state.yawTrim = (float)model.input_buf[axis].Average();
 					break;
 			}
 		}
