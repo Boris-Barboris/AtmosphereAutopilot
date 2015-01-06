@@ -216,7 +216,7 @@ namespace AtmosphereAutopilot
             {
                 IAutoGui s = pair.Value as IAutoGui;
                 if (s != null)
-                    s.HideGUI();
+                    s.ShowGUI();
             }
         }
 

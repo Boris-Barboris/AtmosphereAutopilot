@@ -107,6 +107,7 @@ namespace AtmosphereAutopilot
         string module_name = "Medium-term flight model";
         int wnd_id = 8459383;
         protected bool gui_shown = false;
+        bool gui_hidden = false;
         protected Rect window = new Rect(50.0f, 80.0f, 220.0f, 50.0f);
 
         public bool IsDrawn()
@@ -116,7 +117,7 @@ namespace AtmosphereAutopilot
 
         public void OnGUI()
         {
-            if (!gui_shown)
+            if (!gui_shown || gui_hidden)
                 return;
             window = GUILayout.Window(wnd_id, window, _drawGUI, module_name);
         }
@@ -138,12 +139,12 @@ namespace AtmosphereAutopilot
 
         public void HideGUI()
         {
-            gui_shown = false;
+            gui_hidden = true;
         }
 
         public void ShowGUI()
         {
-            gui_shown = true;
+            gui_hidden = false;
         }
 
         #endregion
