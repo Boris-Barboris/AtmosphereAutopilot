@@ -58,7 +58,7 @@ namespace AtmosphereAutopilot
 			module_hotkeys[typeof(RollAngularAccController)] = KeyCode.O;
 			module_hotkeys[typeof(RollAngularVelocityController)] = KeyCode.O;
 			module_hotkeys[typeof(YawAngularAccController)] = KeyCode.Slash;
-			module_hotkeys[typeof(YawAngularVelocityController)] = KeyCode.O;
+			module_hotkeys[typeof(YawAngularVelocityController)] = KeyCode.Slash;
         }
 
         void initialize_module_lists()

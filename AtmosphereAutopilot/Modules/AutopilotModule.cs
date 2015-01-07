@@ -46,9 +46,12 @@ namespace AtmosphereAutopilot
             set
             {
                 if (value)
-                    Activate();
+                    if (!enabled)
+                        Activate();
+                    else {}
                 else
-                    Deactivate();
+                    if (enabled)
+                        Deactivate();
             }
         }
 
@@ -113,9 +116,6 @@ namespace AtmosphereAutopilot
 
         [GlobalSerializable("window_width")]
         public float WindowWidth { get { return window.width; } set { window.width = value; } }
-
-        [GlobalSerializable("window_height")]
-        public float WindowHeight { get { return window.height; } set { window.height = value; } }
 
         public bool IsDrawn()
         {

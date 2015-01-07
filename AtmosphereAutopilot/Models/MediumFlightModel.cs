@@ -75,9 +75,6 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("window_width")]
         public float WindowWidth { get { return window.width; } set { window.width = value; } }
 
-        [GlobalSerializable("window_height")]
-        public float WindowHeight { get { return window.height; } set { window.height = value; } }
-
         public bool Deserialize()
         {
             return AutoSerialization.Deserialize(this, "MediumFlightModel",

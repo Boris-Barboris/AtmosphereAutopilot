@@ -48,6 +48,12 @@ namespace AtmosphereAutopilot
         public double AccumulatorClamp { get { return aclamp; } set { aclamp = value; } }
         protected double aclamp = 0.1;
 
+        /// <summary>
+        /// Diffirential gain, is multiplied on error * dt to get accumulator change
+        /// </summary>
+        public double IntegralGain { get { return igain; } set { igain = value; } }
+        protected double igain = 1.0;
+
 		public double InputDerivative { get { return derivative; } }
 
         public double Accumulator { get { return i_accumulator; } set { i_accumulator = value; } }
@@ -81,7 +87,7 @@ namespace AtmosphereAutopilot
 
             // integral component             
             double d_integral = Math.Abs(error) > iclamp ? 0.0 : new_dt * 0.5 * (error + last_error);       // raw diffirential
-            d_integral = Common.Clamp(d_integral, adclamp * new_dt);                                        // clamp it
+            d_integral = Common.Clamp(igain * d_integral, adclamp * new_dt);                                // clamp it
             i_accumulator = Common.Clamp(i_accumulator + d_integral, aclamp);                               // accumulate
             double integral = i_accumulator * ki;
 
@@ -106,7 +112,7 @@ namespace AtmosphereAutopilot
 
 			// integral component             
 			double d_integral = Math.Abs(error) > iclamp ? 0.0 : new_dt * 0.5 * (error + last_error);       // raw diffirential
-			d_integral = Common.Clamp(d_integral, adclamp * new_dt);                                        // clamp it
+            d_integral = Common.Clamp(igain * d_integral, adclamp * new_dt);                                // clamp it
 			i_accumulator = Common.Clamp(i_accumulator + d_integral, aclamp);                               // accumulate
 			double integral = i_accumulator * ki;
 

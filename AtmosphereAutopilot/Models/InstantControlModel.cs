@@ -34,7 +34,7 @@ namespace AtmosphereAutopilot
             vessel.OnPostAutopilotUpdate += new FlightInputCallback(OnPostAutopilot);
 		}
 
-		static readonly int BUFFER_SIZE = 20;
+		static readonly int BUFFER_SIZE = 30;
 
 		public CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];	// control input value
 		public CircularBuffer<double>[] angular_v = new CircularBuffer<double>[3];	// angular v
@@ -135,7 +135,8 @@ namespace AtmosphereAutopilot
 		//
 
         public CircularBuffer<double>[] k_dv_control = new CircularBuffer<double>[3];		// control authority in angular acceleration
-        public bool[] dv_stable_channel = new bool[3];     // true if control channel is statically stable in dv_angular
+        public bool[] dv_stable_channel = new bool[3];      // true if control channel is statically stable in dv_angular
+        public bool[] dv_ocsilating = new bool[3];          // true if dv is oscilating
 
 		public void update_dv_model()
 		{
@@ -154,15 +155,18 @@ namespace AtmosphereAutopilot
 					dv_stable_channel[i] = (angular_dv[i].getFromTail(1) * simple_d2v) < 0.0;
 					return;
 				}
+                // Function is oscillating if it's second derivative is changing sign on each step
                 if (Math.Abs(d_control) > min_d_control)        // if control change is substantial
                 {
                     // extrapolate previous angular_dv values
                     double extrapolate_dv = 0.0;
                     if (dv_stable_channel[i])
-                        extrapolate_dv = angular_dv[i].getFromTail(1);
+                        extrapolate_dv = angular_dv[i].getFromTail(1) +
+                            prev_dt * derivative1_middle(angular_dv[i].getFromTail(3),
+                                angular_dv[i].getFromTail(1), prev_dt);
                     else
                         extrapolate_dv = angular_dv[i].getFromTail(1) +
-                            prev_dt * derivative1_middle(angular_dv[i].getFromTail(3), 
+                            prev_dt * derivative1(angular_dv[i].getFromTail(3), angular_dv[i].getFromTail(2),
                                 angular_dv[i].getFromTail(1), prev_dt);
                     // get control authority
                     double control_authority = (angular_dv[i].getLast() - extrapolate_dv) / d_control;
@@ -206,9 +210,6 @@ namespace AtmosphereAutopilot
 
         [GlobalSerializable("window_width")]
         public float WindowWidth { get { return window.width; } set { window.width = value; } }
-
-        [GlobalSerializable("window_height")]
-        public float WindowHeight { get { return window.height; } set { window.height = value; } }
 
         public bool Deserialize()
         {
@@ -275,6 +276,7 @@ namespace AtmosphereAutopilot
                 GUILayout.Label(axis_names[i] + " stable = " + dv_stable_channel[i].ToString(), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}
+            AutoGUI.AutoDrawObject(this);
 			GUILayout.EndVertical();
 			GUI.DragWindow();
         }

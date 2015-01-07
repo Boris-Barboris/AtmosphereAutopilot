@@ -84,6 +84,10 @@ namespace AtmosphereAutopilot
 		[AutoGuiAttr("IntegralClamp", false, "G8")]
 		public double IntegralClamp { get { return pid.IntegralClamp; } set { pid.IntegralClamp = value; } }
 
+        [VesselSerializable("IntegralGain")]
+        [AutoGuiAttr("IntegralGain", false, "G8")]
+        public double IntegralGain { get { return pid.IntegralGain; } set { pid.IntegralGain = value; } }
+
 		#endregion
 	}
 }

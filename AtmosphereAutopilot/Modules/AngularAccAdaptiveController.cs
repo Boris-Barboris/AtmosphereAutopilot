@@ -63,6 +63,7 @@ namespace AtmosphereAutopilot
 		public override double ApplyControl(FlightCtrlState cntrl, double target_value)
 		{
             input = model.angular_dv[axis].getLast();
+            error = target_value - input;
             current_d2v = InstantControlModel.derivative1_short(
                 model.angular_dv[axis].getFromTail(1),
                 model.angular_dv[axis].getFromTail(0),
@@ -85,6 +86,15 @@ namespace AtmosphereAutopilot
                 pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
                 pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0 / integral_fill_time;
                 pid.KI = ki_koeff / pid.AccumulatorClamp;
+                // clamp gain on small errors
+                pid.IntegralGain = Common.Clamp(i_gain + Math.Abs(error) / small_value, 1.0);
+                if (current_d2v * error > 0.0)
+                {
+                    // clamp gain to prevent integral overshooting
+                    double reaction_deriv = small_value / integral_fill_time;
+                    pid.IntegralGain = 
+                        Common.Clamp(pid.IntegralGain * (1 - i_overshoot_gain * Math.Abs(current_d2v) / reaction_deriv), 0.0, 1.0);
+                }
             }
 
             if (is_user_handling(cntrl))
@@ -124,12 +134,13 @@ namespace AtmosphereAutopilot
                 }
 
             current_raw = pid.Control(input, current_d2v, target_value, TimeWarp.fixedDeltaTime);
-            error = target_value - input;
+
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
             deriv = -pid.KD * current_d2v;
 
             output = smooth_and_clamp(current_raw);
+            set_output(cntrl, output);
             return output;
 		}
 
@@ -247,6 +258,14 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("integral_fill_time")]
         [AutoGuiAttr("Integral fill time", true, "G6")]
         public double integral_fill_time = 0.1;
+
+        [GlobalSerializable("i_gain")]
+        [AutoGuiAttr("Equilibrium i_gain", true, "G6")]
+        public double i_gain = 1.0;
+
+        [GlobalSerializable("i_overshoot_gain")]
+        [AutoGuiAttr("Integral overshoot gain", true, "G6")]
+        public double i_overshoot_gain = 1.0;
 	}
 
     class PitchAngularAccController : AngularAccAdaptiveController
