@@ -27,7 +27,6 @@ namespace AtmosphereAutopilot
 				input_buf[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 				angular_v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 				angular_dv[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
-                angular_d2v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
                 k_dv_control[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 			}
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
@@ -39,7 +38,6 @@ namespace AtmosphereAutopilot
 		public CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];	// control input value
 		public CircularBuffer<double>[] angular_v = new CircularBuffer<double>[3];	// angular v
 		public CircularBuffer<double>[] angular_dv = new CircularBuffer<double>[3];	// dv/dt
-        public CircularBuffer<double>[] angular_d2v = new CircularBuffer<double>[3];	// d2v/d2t
 
 		double prev_dt = 1.0;		// dt in previous call
 		int stable_dt = 0;			// counts amount of stable dt intervals
@@ -78,13 +76,6 @@ namespace AtmosphereAutopilot
 							angular_v[i].getFromTail(1),
 							angular_v[i].getFromTail(0),
 							prev_dt));
-                if (stable_dt >= 2)
-                    angular_d2v[i].Put(
-                        derivative2(
-                            angular_v[i].getFromTail(2),
-                            angular_v[i].getFromTail(1),
-                            angular_v[i].getFromTail(0),
-                            prev_dt));
 			}
 		}
 
@@ -136,7 +127,7 @@ namespace AtmosphereAutopilot
 
         public CircularBuffer<double>[] k_dv_control = new CircularBuffer<double>[3];		// control authority in angular acceleration
         public bool[] dv_stable_channel = new bool[3];      // true if control channel is statically stable in dv_angular
-        public bool[] dv_ocsilating = new bool[3];          // true if dv is oscilating
+        public bool[] dv_ocsillating = new bool[3];          // true if dv is oscilating
 
 		public void update_dv_model()
 		{
@@ -156,6 +147,18 @@ namespace AtmosphereAutopilot
 					return;
 				}
                 // Function is oscillating if it's second derivative is changing sign on each step
+				double prev_d3v =
+					derivative2(angular_dv[i].getFromTail(3),
+						angular_dv[i].getFromTail(2),
+						angular_dv[i].getFromTail(1), prev_dt);
+				double cur_d3v =
+					derivative2(angular_dv[i].getFromTail(2),
+						angular_dv[i].getFromTail(1),
+						angular_dv[i].getFromTail(0), prev_dt);
+				if (prev_d3v < cur_d3v)
+					dv_ocsillating[i] = true;
+				else
+					dv_ocsillating[i] = false;
                 if (Math.Abs(d_control) > min_d_control)        // if control change is substantial
                 {
                     // extrapolate previous angular_dv values
