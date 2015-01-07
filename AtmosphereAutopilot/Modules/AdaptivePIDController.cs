@@ -38,7 +38,7 @@ namespace AtmosphereAutopilot
         public double min_input_deriv;		// desired limitation on input derivative value
 
 		/// <summary>
-		/// Apply algorythm to FlightCntrlState
+		/// Main control function
 		/// </summary>
 		/// <param name="cntrl">current control state</param>
 		public abstract void ApplyControl(FlightCtrlState cntrl);
@@ -54,12 +54,6 @@ namespace AtmosphereAutopilot
         {
             return (new_one + inertia * old) / (inertia + 1.0);
         }
-
-        public void clear_accumulator()
-        {
-            pid.clear();
-        }
-
 
 		#region properties
 

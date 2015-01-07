@@ -37,41 +37,8 @@ namespace AtmosphereAutopilot
 			this.axis = axis;
 			this.model = model;
             this.mmodel = mmodel;
-			default_pid_values();
             acc_controller = acc;
 		}
-
-		void default_pid_values()
-		{
-			switch (axis)
-			{
-				case PITCH:
-					pid.KP = 3.0;
-					pid.KI = 10.0;
-					pid.KD = 0.1;
-					pid.IntegralClamp = 0.3;
-					pid.AccumulatorClamp = 0.01;
-					pid.AccumulDerivClamp = 0.033;
-					break;
-				case ROLL:
-					pid.KP = 3.0;
-					pid.KI = 10.0;
-					pid.KD = 0.1;
-					pid.IntegralClamp = 0.3;
-					pid.AccumulatorClamp = 0.01;
-					pid.AccumulDerivClamp = 0.033;
-					break;
-				case YAW:
-					pid.KP = 5.0;
-					pid.KI = 0.5;
-					pid.KD = 0.1;
-					pid.IntegralClamp = 0.3;
-					pid.AccumulatorClamp = 0.01;
-					pid.AccumulDerivClamp = 0.033;
-					break;
-			}
-		}
-
 
 		[GlobalSerializable("max_part_acceleration")]
 		[AutoGuiAttr("max part accel", true, "G8")]
@@ -195,8 +162,7 @@ namespace AtmosphereAutopilot
 				time_in_regime = 0.0;
 			}
 
-            output = child_output;
-			set_output(cntrl, output);
+			output = raw_output;
 
 			if (time_in_regime >= 1.0)
 				set_trim();
@@ -211,56 +177,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("DEBUG deriv", false, "G8")]
         public double deriv { get; private set; }
 
-        [AutoGuiAttr("DEBUG prev_control", false, "G8")]
-        public double prev_control { get { return model.input_buf[axis].getLast(); } }
-
-        [AutoGuiAttr("DEBUG current_raw", false, "G8")]
-        public double current_raw { get; private set; }
-
-        [AutoGuiAttr("DEBUG child_raw", false, "G8")]
-        public double child_raw { get; private set; }
-
-        [AutoGuiAttr("DEBUG desired_acc", false, "G8")]
-        public double desired_acc { get; private set; }
-
         [AutoGuiAttr("DEBUG current_acc", false, "G8")]
         public double current_acc { get; private set; }
-
-        [AutoGuiAttr("DEBUG d_control", false, "G8")]
-        public double d_control { get; private set; }
-
-        [AutoGuiAttr("DEBUG d_accumulator", false, "G8")]
-        public double d_accumulator { get; private set; }
-
-		bool is_user_handling(FlightCtrlState state)
-		{
-			switch (axis)
-			{
-				case PITCH:
-					return !(state.pitch == state.pitchTrim);
-				case ROLL:
-					return !(state.roll == state.rollTrim);
-				case YAW:
-					return !(state.yaw == state.yawTrim);
-				default:
-					return false;
-			}
-		}
-
-		double get_user_input(FlightCtrlState state)
-		{
-			switch (axis)
-			{
-				case PITCH:
-					return state.pitch;
-				case ROLL:
-					return state.roll;
-				case YAW:
-					return state.yaw;
-				default:
-					return 0.0;
-			}
-		}
 
 		void set_output(FlightCtrlState state, double output)
 		{
@@ -296,7 +214,7 @@ namespace AtmosphereAutopilot
 
         [GlobalSerializable("ki_koeff")]
         [AutoGuiAttr("ki_koeff", true, "G6")]
-        public double ki_koeff = 0.8;	        // maximum output derivative, simulates control surface reaction speed
+        public double ki_koeff = 0.8;	        // maximum integral authority
 
 		[GlobalSerializable("small_value")]
 		[AutoGuiAttr("small value", true, "G6")]
@@ -329,5 +247,19 @@ namespace AtmosphereAutopilot
             : base(vessel, "Adaptive elavator trimmer", 1234444, 0, model, mmodel, acc)
         { }
     }
+
+	class RollAngularVelocityController : AngularVelController
+	{
+		public RollAngularVelocityController(Vessel vessel, InstantControlModel model, MediumFlightModel mmodel, AngularAccAdaptiveController acc)
+			: base(vessel, "Adaptive roll trimmer", 1234445, 1, model, mmodel, acc)
+		{ }
+	}
+
+	class YawAngularVelocityController : AngularVelController
+	{
+		public YawAngularVelocityController(Vessel vessel, InstantControlModel model, MediumFlightModel mmodel, AngularAccAdaptiveController acc)
+			: base(vessel, "Adaptive yaw trimmer", 1234446, 2, model, mmodel, acc)
+		{ }
+	}
 
 }

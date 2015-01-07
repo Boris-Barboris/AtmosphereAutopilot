@@ -22,7 +22,6 @@ namespace AtmosphereAutopilot
         public MediumFlightModel(Vessel v)
 		{
 			vessel = v;
-            Deserialize();
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
 		}
 
@@ -37,12 +36,6 @@ namespace AtmosphereAutopilot
 
 		void OnPreAutopilot(FlightCtrlState state)	// update all flight characteristics
 		{
-			if (vessel.checkLanded())           // ground breaks the model
-			{
-				stable_dt = 0;
-				return;
-			}
-
 			double dt = TimeWarp.fixedDeltaTime;
 			check_dt(dt);
 			update_buffers();

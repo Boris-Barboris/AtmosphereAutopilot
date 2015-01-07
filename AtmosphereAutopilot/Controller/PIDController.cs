@@ -55,7 +55,7 @@ namespace AtmosphereAutopilot
         // Main step variables
         protected double i_accumulator = 0.0;               // current integral accumulator state
         protected double last_dt = 1.0;                     // last delta time
-        protected double last_error = 0.0;                  // last delta time
+        protected double last_error = 0.0;                  // last error
         protected double[] input_stack = new double[3];     // contains last 3 input values, needed for correct integration and differentiation
 		protected double derivative;			// input derivatives
 
@@ -101,6 +101,7 @@ namespace AtmosphereAutopilot
 			double proportional = error * kp;
 
 			// diffirential component
+			derivative = input_d;
 			double diffirential = -input_d * kd;
 
 			// integral component             

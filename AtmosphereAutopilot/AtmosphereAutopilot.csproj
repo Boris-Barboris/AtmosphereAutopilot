@@ -56,11 +56,11 @@
     <Compile Include="Matrix.cs" />
     <Compile Include="Modules\AngularVelAdaptiveController.cs" />
     <Compile Include="Modules\AutopilotModule.cs" />
-    <Compile Include="Modules\ElevatorDamperModel.cs" />
+    <Compile Include="Backup\ElevatorDamperModel.cs" />
     <Compile Include="Modules\AdaptivePIDController.cs" />
     <Compile Include="Modules\YawDamper.cs" />
     <Compile Include="Modules\RollDamper.cs" />
-    <Compile Include="Modules\ElevatorDamper.cs" />
+    <Compile Include="Backup\ElevatorDamper.cs" />
     <Compile Include="Modules\PIDAutoTrimmer.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Controller\PIDController.cs" />

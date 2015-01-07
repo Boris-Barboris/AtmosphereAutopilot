@@ -30,7 +30,6 @@ namespace AtmosphereAutopilot
                 angular_d2v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
                 k_dv_control[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 			}
-            Deserialize();
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
             vessel.OnPostAutopilotUpdate += new FlightInputCallback(OnPostAutopilot);
 		}
@@ -47,22 +46,11 @@ namespace AtmosphereAutopilot
 
         void OnPostAutopilot(FlightCtrlState state)		// update control input
 		{
-			if (vessel.checkLanded())           // ground breaks the model
-			{
-				stable_dt = 0;
-				return;
-			}
 			update_control(state);
 		}
 
 		void OnPreAutopilot(FlightCtrlState state)	// update all flight characteristics
 		{
-			if (vessel.checkLanded())           // ground breaks the model
-			{
-				stable_dt = 0;
-				return;
-			}
-
 			double dt = TimeWarp.fixedDeltaTime;
 			check_dt(dt);
 			update_buffers();
@@ -171,11 +159,10 @@ namespace AtmosphereAutopilot
                     // extrapolate previous angular_dv values
                     double extrapolate_dv = 0.0;
                     if (dv_stable_channel[i])
-                        extrapolate_dv = angular_dv[i].getFromTail(1) +
-                            prev_dt * derivative1_middle(angular_dv[i].getFromTail(3), angular_dv[i].getFromTail(1), prev_dt);
+                        extrapolate_dv = angular_dv[i].getFromTail(1);
                     else
                         extrapolate_dv = angular_dv[i].getFromTail(1) +
-                            prev_dt * derivative1(angular_dv[i].getFromTail(3), angular_dv[i].getFromTail(2),
+                            prev_dt * derivative1_middle(angular_dv[i].getFromTail(3), 
                                 angular_dv[i].getFromTail(1), prev_dt);
                     // get control authority
                     double control_authority = (angular_dv[i].getLast() - extrapolate_dv) / d_control;

@@ -43,18 +43,22 @@ namespace AtmosphereAutopilot
             autopilot_module_types.Add(typeof(MediumFlightModel));
             autopilot_module_types.Add(typeof(PitchAngularAccController));
             autopilot_module_types.Add(typeof(PitchAngularVelocityController));
-            autopilot_module_types.Add(typeof(RollDamper));
-            autopilot_module_types.Add(typeof(YawDamper));
+            autopilot_module_types.Add(typeof(RollAngularAccController));
+			autopilot_module_types.Add(typeof(RollAngularVelocityController));
+			autopilot_module_types.Add(typeof(YawAngularAccController));
+			autopilot_module_types.Add(typeof(YawAngularVelocityController));
         }
 
         void initialize_hotkeys()
         {
             module_hotkeys[typeof(InstantControlModel)] = KeyCode.Alpha8;
             module_hotkeys[typeof(MediumFlightModel)] = KeyCode.Alpha9;
-            module_hotkeys[typeof(PitchAngularAccController)] = KeyCode.Alpha7;
+            module_hotkeys[typeof(PitchAngularAccController)] = KeyCode.P;
             module_hotkeys[typeof(PitchAngularVelocityController)] = KeyCode.P;
-            module_hotkeys[typeof(RollDamper)] = KeyCode.O;
-            module_hotkeys[typeof(YawDamper)] = KeyCode.Slash;
+			module_hotkeys[typeof(RollAngularAccController)] = KeyCode.O;
+			module_hotkeys[typeof(RollAngularVelocityController)] = KeyCode.O;
+			module_hotkeys[typeof(YawAngularAccController)] = KeyCode.Slash;
+			module_hotkeys[typeof(YawAngularVelocityController)] = KeyCode.O;
         }
 
         void initialize_module_lists()
@@ -162,6 +166,40 @@ namespace AtmosphereAutopilot
             PitchAngularAccController acc = active_modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
             return new PitchAngularVelocityController(v, sfmodel, mfmodel, acc);
         }
+
+		[ModuleConstructor(typeof(RollAngularAccController))]
+		RollAngularAccController create_RollAngularAccController(Vessel v)
+		{
+			InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
+			MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+			return new RollAngularAccController(v, sfmodel, mfmodel);
+		}
+
+		[ModuleConstructor(typeof(RollAngularVelocityController))]
+		RollAngularVelocityController create_RollAngularVelocityController(Vessel v)
+		{
+			InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
+			MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+			RollAngularAccController acc = active_modules[typeof(RollAngularAccController)] as RollAngularAccController;
+			return new RollAngularVelocityController(v, sfmodel, mfmodel, acc);
+		}
+
+		[ModuleConstructor(typeof(YawAngularAccController))]
+		YawAngularAccController create_YawAngularAccController(Vessel v)
+		{
+			InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
+			MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+			return new YawAngularAccController(v, sfmodel, mfmodel);
+		}
+
+		[ModuleConstructor(typeof(YawAngularVelocityController))]
+		YawAngularVelocityController create_YawAngularVelocityController(Vessel v)
+		{
+			InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
+			MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+			YawAngularAccController acc = active_modules[typeof(YawAngularAccController)] as YawAngularAccController;
+			return new YawAngularVelocityController(v, sfmodel, mfmodel, acc);
+		}
 
         [ModuleConstructor(typeof(RollDamper))]
         RollDamper create_RollDamper(Vessel v)

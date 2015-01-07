@@ -97,18 +97,19 @@ namespace AtmosphereAutopilot
                 output = smooth_and_clamp(raw_output);
                 set_output(cntrl, output);
                 if (!user_is_controlling)
-                {
-                    if (axis == PITCH)
-                        last_aoa = m_model.aoa_pitch.getLast();
-                    if (axis == YAW)
-                        last_aoa = m_model.aoa_yaw.getLast();
-                    last_speed = vessel.srfSpeed;
-                    user_is_controlling = true;
-                }
+				{
+					// save macro parameters for accumulator conservance
+					if (axis == PITCH)
+						last_aoa = m_model.aoa_pitch.getLast();
+					if (axis == YAW)
+						last_aoa = m_model.aoa_yaw.getLast();
+					last_speed = vessel.srfSpeed;
+					user_is_controlling = true;
+				};
                 return output;
             }
             else
-                if (user_is_controlling)
+                if (user_is_controlling)	// return part of accumulator
                 {
                     user_is_controlling = false;
                     double accumul_persistance_k = 1.0;
@@ -254,5 +255,19 @@ namespace AtmosphereAutopilot
             : base(vessel, "Adaptive elavator trimmer accel", 77821329, 0, model, mmodel)
         { }
     }
+
+	class RollAngularAccController : AngularAccAdaptiveController
+	{
+		public RollAngularAccController(Vessel vessel, InstantControlModel model, MediumFlightModel mmodel)
+			: base(vessel, "Adaptive roll trimmer accel", 77821330, 1, model, mmodel)
+		{ }
+	}
+
+	class YawAngularAccController : AngularAccAdaptiveController
+	{
+		public YawAngularAccController(Vessel vessel, InstantControlModel model, MediumFlightModel mmodel)
+			: base(vessel, "Adaptive yaw trimmer accel", 77821331, 2, model, mmodel)
+		{ }
+	}
 
 }
