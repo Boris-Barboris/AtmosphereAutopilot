@@ -102,7 +102,7 @@ namespace AtmosphereAutopilot
      
         #region GUI
 
-        string module_name;
+        protected string module_name;
         int wnd_id;
         protected bool gui_shown = false;
         bool gui_hidden = false;

@@ -67,12 +67,25 @@ namespace AtmosphereAutopilot
 
         public virtual double Control(double input, double desire, double dt)
         {
+            return ControlDelayedP(input, 0, desire, dt);
+        }
+
+        public virtual double ControlDelayedP(double input, int p_delay, double desire, double dt)
+        {
             double error = desire - input;
+            double perror = 0.0;
+            switch (p_delay)
+            {
+                case 0: perror = error;
+                    break;
+                case 1: perror = desire - input_stack[2];;
+                    break;
+            };
             double new_dt = dt;
 
             // proportional component
-            double proportional = error * kp;
-            
+            double proportional = perror * kp;
+
             // diffirential component
             if (!dt_is_constant(new_dt))
             {

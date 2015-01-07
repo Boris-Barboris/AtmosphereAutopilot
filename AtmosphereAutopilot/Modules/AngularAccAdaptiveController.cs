@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using System.IO;
 
 namespace AtmosphereAutopilot
 {
@@ -19,6 +20,8 @@ namespace AtmosphereAutopilot
 
 		InstantControlModel model;
         MediumFlightModel m_model;
+
+        StreamWriter errorWriter, controlWriter, v_writer, dv_writer;
 
 		/// <summary>
 		/// Create controller instance.
@@ -41,9 +44,19 @@ namespace AtmosphereAutopilot
 		protected override void OnActivate()
 		{
             pid.clear();
+            errorWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" + module_name + "_telemetry_error.csv");
+            controlWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" + module_name + "_telemetry_control.csv");
+            v_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" + module_name + "_telemetry_v.csv");
+            dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" + module_name + "_telemetry_dv.csv");
 		}
 
-        protected override void OnDeactivate() { }
+        protected override void OnDeactivate()
+        {
+            errorWriter.Close();
+            controlWriter.Close();
+            v_writer.Close();
+            dv_writer.Close();
+        }
 
         public override void ApplyControl(FlightCtrlState cntrl)
         {
@@ -70,6 +83,10 @@ namespace AtmosphereAutopilot
                 TimeWarp.fixedDeltaTime);
             desired_acc = target_value;
 
+            errorWriter.Write(error.ToString("G8") + ',');
+            v_writer.Write(model.angular_v[axis].getLast().ToString("G8") + ',');
+            dv_writer.Write(model.angular_dv[axis].getLast().ToString("G8") + ',');
+
             double auth = k_auth;
             if (auth > 0.05)
             {
@@ -80,7 +97,7 @@ namespace AtmosphereAutopilot
                 pid.KD = apply_with_inertia(pid.KD, kp_kd_ratio * pid.KP, pid_coeff_inertia);
             }
 
-            if (integral_fill_time > 1e-3)
+            if (integral_fill_time > 1e-3 && small_value > 1e-3)
             {
                 pid.IntegralClamp = small_value;
                 pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
@@ -116,6 +133,7 @@ namespace AtmosphereAutopilot
 					last_speed = vessel.srfSpeed;
 					user_is_controlling = true;
 				};
+                controlWriter.Write(output.ToString("G8") + ',');
                 return output;
             }
             else
@@ -133,13 +151,17 @@ namespace AtmosphereAutopilot
                     pid.Accumulator *= accumul_persistance_k;
                 }
 
-            current_raw = pid.Control(input, current_d2v, target_value, TimeWarp.fixedDeltaTime);
+            //if (model.dv_ocsillating[axis])
+                //current_raw = pid.ControlDelayedP(input, 1, target_value, TimeWarp.fixedDeltaTime);
+            //else
+                current_raw = pid.Control(input, target_value, TimeWarp.fixedDeltaTime);
 
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
-            deriv = -pid.KD * current_d2v;
+            deriv = -pid.KD * pid.InputDerivative;
 
             output = smooth_and_clamp(current_raw);
+            controlWriter.Write(output.ToString("G8") + ',');
             set_output(cntrl, output);
             return output;
 		}
@@ -202,6 +224,9 @@ namespace AtmosphereAutopilot
                 smoothed = prev_output - TimeWarp.fixedDeltaTime * max_output_deriv;
             return Common.Clamp(smoothed, 1.0);
         }
+
+        [AutoGuiAttr("Writing", true, null)]
+        public bool writing = false;
 
         [AutoGuiAttr("DEBUG error", false, "G8")]
         public double error { get; private set; }

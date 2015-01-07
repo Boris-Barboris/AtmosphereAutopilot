@@ -127,7 +127,9 @@ namespace AtmosphereAutopilot
 
         public CircularBuffer<double>[] k_dv_control = new CircularBuffer<double>[3];		// control authority in angular acceleration
         public bool[] dv_stable_channel = new bool[3];      // true if control channel is statically stable in dv_angular
-        public bool[] dv_ocsillating = new bool[3];          // true if dv is oscilating
+        public bool[] dv_ocsillating = new bool[3];         // true if dv is oscilating
+        double[] d_control_acc = new double[3];             // d_control accumulator
+        int[] d_control_intervals = new int[3];             // how long it's been accumulated    
 
 		public void update_dv_model()
 		{
@@ -136,52 +138,108 @@ namespace AtmosphereAutopilot
 
 			for (int i = 0; i < 3; i++)
 			{
+                bool d_control_fixated = false;             // true when input change is finished
+
                 // control diffirential
                 double d_control = input_buf[i].getLast() - input_buf[i].getFromTail(1);
-				if (d_control == 0.0)
-				{
-					// get second angular v derivative in previous time slice
-					double simple_d2v = derivative1_short(angular_dv[i].getFromTail(1), angular_dv[i].getFromTail(0), prev_dt);
-					// channel is statically stable if it's angular acceleration going to zero
-					dv_stable_channel[i] = (angular_dv[i].getFromTail(1) * simple_d2v) < 0.0;
-					return;
-				}
-                // Function is oscillating if it's second derivative is changing sign on each step
-				double prev_d3v =
-					derivative2(angular_dv[i].getFromTail(3),
-						angular_dv[i].getFromTail(2),
-						angular_dv[i].getFromTail(1), prev_dt);
-				double cur_d3v =
-					derivative2(angular_dv[i].getFromTail(2),
-						angular_dv[i].getFromTail(1),
-						angular_dv[i].getFromTail(0), prev_dt);
-				if (prev_d3v < cur_d3v)
-					dv_ocsillating[i] = true;
-				else
-					dv_ocsillating[i] = false;
-                if (Math.Abs(d_control) > min_d_control)        // if control change is substantial
+                if (d_control == 0.0)
                 {
-                    // extrapolate previous angular_dv values
-                    double extrapolate_dv = 0.0;
-                    if (dv_stable_channel[i])
-                        extrapolate_dv = angular_dv[i].getFromTail(1) +
-                            prev_dt * derivative1_middle(angular_dv[i].getFromTail(3),
-                                angular_dv[i].getFromTail(1), prev_dt);
+                    // get second angular v derivative in previous time slice
+                    double simple_d2v = derivative1_short(angular_dv[i].getFromTail(1), angular_dv[i].getFromTail(0), prev_dt);
+                    // channel is dynamically stable if it's angular acceleration going to zero
+                    dv_stable_channel[i] = (angular_dv[i].getFromTail(1) * simple_d2v) < 0.0;
+                    return;
+                }
+                else
+                {
+                    if (d_control * d_control_acc[i] >= 0.0 && Math.Abs(d_control) > min_d_short_control &&
+                        d_control_intervals[i] < max_d_control_intervals)
+                    {
+                        // d_control should be accumulated
+                        d_control_acc[i] += d_control;
+                        d_control_intervals[i]++;
+                    }
                     else
-                        extrapolate_dv = angular_dv[i].getFromTail(1) +
-                            prev_dt * derivative1(angular_dv[i].getFromTail(3), angular_dv[i].getFromTail(2),
-                                angular_dv[i].getFromTail(1), prev_dt);
-                    // get control authority
-                    double control_authority = (angular_dv[i].getLast() - extrapolate_dv) / d_control;
-                    if (control_authority > min_authority)
-                        k_dv_control[i].Put(control_authority);
+                    {
+                        d_control_fixated = true;
+                    }
+                }
+
+                if (d_control_intervals[i] == 1)    // we'll soon need to ckeck dv for oscillation
+                {
+                    // Function is oscillating if it's second derivative is changing sign on each step
+				    double prev_d3v =
+					    derivative2(angular_dv[i].getFromTail(4),
+						    angular_dv[i].getFromTail(3),
+						    angular_dv[i].getFromTail(2), prev_dt);
+				    double cur_d3v =
+					    derivative2(angular_dv[i].getFromTail(3),
+						    angular_dv[i].getFromTail(2),
+						    angular_dv[i].getFromTail(1), prev_dt);
+				    if (prev_d3v * cur_d3v < 0.0)
+					    dv_ocsillating[i] = true;
+				    else
+					    dv_ocsillating[i] = false;
+                }
+
+                if (d_control_fixated)        // if control change is fixated
+                {
+                    if (Math.Abs(d_control_acc[i]) > min_d_long_control)        // if it's substantial
+                    {
+                        // extrapolate previous angular_dv values
+                        double extrapolate_dv = 0.0;
+                        double control_authority = 0.0;
+                        if (!dv_ocsillating[i])
+                        {
+                            // if acceleratoin is not oscilating, we can use standard derivative approximation
+                            int shift = d_control_intervals[i];
+                            extrapolate_dv = angular_dv[i].getFromTail(shift) +
+                                prev_dt * shift * 
+                                derivative1(angular_dv[i].getFromTail(2 + shift),
+                                    angular_dv[i].getFromTail(1 + shift), angular_dv[i].getFromTail(0 + shift), prev_dt);
+                            // get control authority
+                            control_authority = (angular_dv[i].getLast() - extrapolate_dv) / d_control_acc[i];
+                        }
+                        else
+                        {
+                            // if it is, wee need to take middles of intervals
+                            int shift = d_control_intervals[i];
+                            int interval = 0;
+                            double dv2 = 0.5 * 
+                                (angular_dv[i].getFromTail(shift + interval * 2) + angular_dv[i].getFromTail(shift + interval * 2 + 1));
+                            interval++;
+                            double dv1 = 0.5 *
+                                (angular_dv[i].getFromTail(shift + interval * 2) + angular_dv[i].getFromTail(shift + interval * 2 + 1));
+                            interval++;
+                            double dv0 = 0.5 *
+                                (angular_dv[i].getFromTail(shift + interval * 2) + angular_dv[i].getFromTail(shift + interval * 2 + 1));
+                            double d2v_smoothed = derivative1(dv0, dv1, dv2, prev_dt * 2);
+                            extrapolate_dv = dv2 + d2v_smoothed * prev_dt * shift;
+                            // get control authority
+                            control_authority = 
+                                (0.5 * (angular_dv[i].getLast() + angular_dv[i].getFromTail(1)) - extrapolate_dv) / d_control_acc[i];
+                        }                        
+                        if (control_authority > min_authority)
+                            k_dv_control[i].Put(control_authority);
+                    }
+
+                    d_control_acc[i] = 0.0;         // zero out control change
+                    d_control_intervals[i] = 0;
                 }
 			}
 		}
 
-        [AutoGuiAttr("min_d_control", true, "G6")]
-        [GlobalSerializable("min_d_control")]
-        public double min_d_control = 0.1;
+        [AutoGuiAttr("max_d_control_intervals", true, "G6")]
+        [GlobalSerializable("max_d_control_intervals")]
+        public int max_d_control_intervals = 3;
+
+        [AutoGuiAttr("min_d_long_control", true, "G6")]
+        [GlobalSerializable("min_d_long_control")]
+        public double min_d_long_control = 0.01;
+
+        [AutoGuiAttr("min_d_short_control", true, "G6")]
+        [GlobalSerializable("min_d_short_control")]
+        public double min_d_short_control = 0.005;
 
         [AutoGuiAttr("min_authority", true, "G6")]
         [GlobalSerializable("min_authority")]
@@ -277,6 +335,7 @@ namespace AtmosphereAutopilot
                 GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " K1 = " + k_dv_control[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " stable = " + dv_stable_channel[i].ToString(), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " oscillating = " + dv_ocsillating[i].ToString(), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}
             AutoGUI.AutoDrawObject(this);
