@@ -47,10 +47,16 @@ namespace AtmosphereAutopilot
 		protected override void OnActivate()
 		{
             pid.clear();
-            errorWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" + module_name + "_telemetry_error.csv");
-            controlWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" + module_name + "_telemetry_control.csv");
-            v_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" + module_name + "_telemetry_v.csv");
-            dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" + module_name + "_telemetry_dv.csv");
+            pidacc.clear_avg();
+            user_is_controlling = false;
+            errorWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+                vessel.name + '_' + module_name + "_telemetry_error.csv");
+            controlWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+                vessel.name + '_' + module_name + "_telemetry_control.csv");
+            v_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+                vessel.name + '_' + module_name + "_telemetry_v.csv");
+            dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+                vessel.name + '_' + module_name + "_telemetry_dv.csv");
 		}
 
         protected override void OnDeactivate()
@@ -82,18 +88,22 @@ namespace AtmosphereAutopilot
             error = target_value - input;
             desired_acc = target_value;
 
-            errorWriter.Write(error.ToString("G8") + ',');
-            v_writer.Write(model.angular_v[axis].getLast().ToString("G8") + ',');
-            dv_writer.Write(model.angular_dv[axis].getLast().ToString("G8") + ',');
+            if (write_telemetry)
+            {
+                errorWriter.Write(error.ToString("G8") + ',');
+                v_writer.Write(model.angular_v[axis].getLast().ToString("G8") + ',');
+                dv_writer.Write(model.angular_dv[axis].getLast().ToString("G8") + ',');
+            }
 
+            current_d2v = (model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1)) / TimeWarp.fixedDeltaTime;
             double auth = k_auth;
             if (auth > 0.05)
             {
                 // authority is meaningfull value
                 // adapt KP
-                pid.KP = apply_with_inertia(pid.KP, kp_koeff / auth + kp_offset, pid_coeff_inertia);
+                pid.KP = apply_with_inertia(pid.KP, kp_koeff / auth / proport_relax_time + kp_offset, pid_coeff_inertia);
                 // adapt KD
-                pid.KD = apply_with_inertia(pid.KD, kp_kd_ratio * pid.KP + kd_offset, pid_coeff_inertia);
+                pid.KD = kp_kd_ratio / auth + kd_offset;
             }
 
             if (integral_fill_time > 1e-3 && small_value > 1e-3)
@@ -103,15 +113,14 @@ namespace AtmosphereAutopilot
                 pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0 / integral_fill_time;
                 pid.KI = ki_koeff / pid.AccumulatorClamp;
                 // clamp gain on small errors
-                pid.IntegralGain = Common.Clamp(i_gain + Math.Abs(error) / (small_value - i_gain), 1.0);
-                // deriv
-                current_d2v = pid.InputDerivative;
-                if (current_d2v * error > 0.0)
+                pid.IntegralGain = Common.Clamp(i_gain + Math.Abs(error) * (1.0 - i_gain) / small_value, 1.0);
+                if (pidacc.InputDerivative * error < 0.0)
                 {
                     // clamp gain to prevent integral overshooting
                     double reaction_deriv = small_value / integral_fill_time;
-                    pid.IntegralGain = 
-                        Common.Clamp(pid.IntegralGain * (1 - i_overshoot_gain * Math.Abs(current_d2v) / reaction_deriv), 0.0, 1.0);
+                    pid.IntegralGain =
+                        Common.Clamp(pid.IntegralGain *
+                            (1 - i_overshoot_gain * Math.Abs(pidacc.InputDerivative) / reaction_deriv), 0.0, 1.0);
                 }
             }
 
@@ -133,8 +142,11 @@ namespace AtmosphereAutopilot
 						last_aoa = m_model.aoa_yaw.getLast();
 					last_speed = vessel.srfSpeed;
 					user_is_controlling = true;
+                    // clear averaging controller
+                    pidacc.clear_avg();
 				};
-                controlWriter.Write(output.ToString("G8") + ',');
+                if (write_telemetry)
+                    controlWriter.Write(output.ToString("G8") + ',');
                 return output;
             }
             else
@@ -152,14 +164,15 @@ namespace AtmosphereAutopilot
                     pid.Accumulator *= accumul_persistance_k;
                 }
 
-            current_raw = pid.Control(input, target_value, TimeWarp.fixedDeltaTime);
+            current_raw = pidacc.Control(input, target_value, TimeWarp.fixedDeltaTime);
 
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
-            deriv = -pid.KD * pid.InputDerivative;
+            deriv = pid.KD * pid.InputDerivative;
 
             output = smooth_and_clamp(current_raw);
-            controlWriter.Write(output.ToString("G8") + ',');
+            if (write_telemetry)
+                controlWriter.Write(output.ToString("G8") + ',');
             set_output(cntrl, output);
             return output;
 		}
@@ -222,6 +235,9 @@ namespace AtmosphereAutopilot
                 smoothed = prev_output - TimeWarp.fixedDeltaTime * max_output_deriv;
             return Common.Clamp(smoothed, 1.0);
         }
+
+        [AutoGuiAttr("Write telemetry", true, "G8")]
+        public bool write_telemetry { get; set; }
 
         [AutoGuiAttr("DEBUG error", false, "G8")]
         public double error { get; private set; }
@@ -290,6 +306,10 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("small_value")]
         [AutoGuiAttr("small value", true, "G6")]
         public double small_value = 10.0;		    // arbitrary small input value. Purely intuitive
+
+        [GlobalSerializable("proport_relax_time")]
+        [AutoGuiAttr("Proport relax time", true, "G6")]
+        public double proport_relax_time = 0.05;
 
         [GlobalSerializable("integral_fill_time")]
         [AutoGuiAttr("Integral fill time", true, "G6")]
