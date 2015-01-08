@@ -21,6 +21,8 @@ namespace AtmosphereAutopilot
 		InstantControlModel model;
         MediumFlightModel m_model;
 
+        PIDAccumulating pidacc;
+
         StreamWriter errorWriter, controlWriter, v_writer, dv_writer;
 
 		/// <summary>
@@ -34,11 +36,12 @@ namespace AtmosphereAutopilot
         /// <param name="parent">AngularVelAdaptiveController wich uses this instance as a child</param>
         public AngularAccAdaptiveController(Vessel vessel, string module_name,
             int wnd_id, int axis, InstantControlModel model, MediumFlightModel m_model)
-			: base(vessel, module_name, wnd_id)
+			: base(vessel, module_name, wnd_id, new PIDAccumulating())
 		{
 			this.axis = axis;
 			this.model = model;
             this.m_model = m_model;
+            pidacc = (pid as PIDAccumulating);
 		}
 
 		protected override void OnActivate()
@@ -77,10 +80,6 @@ namespace AtmosphereAutopilot
 		{
             input = model.angular_dv[axis].getLast();
             error = target_value - input;
-            current_d2v = InstantControlModel.derivative1_short(
-                model.angular_dv[axis].getFromTail(1),
-                model.angular_dv[axis].getFromTail(0),
-                TimeWarp.fixedDeltaTime);
             desired_acc = target_value;
 
             errorWriter.Write(error.ToString("G8") + ',');
@@ -92,9 +91,9 @@ namespace AtmosphereAutopilot
             {
                 // authority is meaningfull value
                 // adapt KP
-                pid.KP = apply_with_inertia(pid.KP, kp_koeff / auth, pid_coeff_inertia);
+                pid.KP = apply_with_inertia(pid.KP, kp_koeff / auth + kp_offset, pid_coeff_inertia);
                 // adapt KD
-                pid.KD = apply_with_inertia(pid.KD, kp_kd_ratio * pid.KP, pid_coeff_inertia);
+                pid.KD = apply_with_inertia(pid.KD, kp_kd_ratio * pid.KP + kd_offset, pid_coeff_inertia);
             }
 
             if (integral_fill_time > 1e-3 && small_value > 1e-3)
@@ -104,7 +103,9 @@ namespace AtmosphereAutopilot
                 pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0 / integral_fill_time;
                 pid.KI = ki_koeff / pid.AccumulatorClamp;
                 // clamp gain on small errors
-                pid.IntegralGain = Common.Clamp(i_gain + Math.Abs(error) / small_value, 1.0);
+                pid.IntegralGain = Common.Clamp(i_gain + Math.Abs(error) / (small_value - i_gain), 1.0);
+                // deriv
+                current_d2v = pid.InputDerivative;
                 if (current_d2v * error > 0.0)
                 {
                     // clamp gain to prevent integral overshooting
@@ -151,10 +152,7 @@ namespace AtmosphereAutopilot
                     pid.Accumulator *= accumul_persistance_k;
                 }
 
-            //if (model.dv_ocsillating[axis])
-                //current_raw = pid.ControlDelayedP(input, 1, target_value, TimeWarp.fixedDeltaTime);
-            //else
-                current_raw = pid.Control(input, target_value, TimeWarp.fixedDeltaTime);
+            current_raw = pid.Control(input, target_value, TimeWarp.fixedDeltaTime);
 
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
@@ -225,9 +223,6 @@ namespace AtmosphereAutopilot
             return Common.Clamp(smoothed, 1.0);
         }
 
-        [AutoGuiAttr("Writing", true, null)]
-        public bool writing = false;
-
         [AutoGuiAttr("DEBUG error", false, "G8")]
         public double error { get; private set; }
 
@@ -256,6 +251,14 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("csurface speed", true, "G6")]
         public double max_output_deriv = 10.0;	// maximum output derivative, simulates control surface reaction speed
 
+        [GlobalSerializable("acc_val")]
+        [AutoGuiAttr("Steps to accumulate", true, "G6")]
+        public int acc_val
+        {
+            get { return pidacc.StepsToAccumulate; }
+            set { pidacc.StepsToAccumulate = value; }
+        }
+
         [GlobalSerializable("user_dampening")]
         [AutoGuiAttr("user_dampening", true, "G6")]
         public double user_dampening = 1.0;
@@ -272,9 +275,17 @@ namespace AtmosphereAutopilot
 		[AutoGuiAttr("KD/KP ratio", true, "G6")]
 		public double kp_kd_ratio = 0.33;
 
+        [GlobalSerializable("kp_offset")]
+        [AutoGuiAttr("KD offset", true, "G6")]
+        public double kd_offset = 0.0;
+
         [GlobalSerializable("kp_koeff")]
         [AutoGuiAttr("KP/Authority ratio", true, "G6")]
         public double kp_koeff = 0.75;
+
+        [GlobalSerializable("kp_offset")]
+        [AutoGuiAttr("KP offset", true, "G6")]
+        public double kp_offset = 0.0;
 
         [GlobalSerializable("small_value")]
         [AutoGuiAttr("small value", true, "G6")]

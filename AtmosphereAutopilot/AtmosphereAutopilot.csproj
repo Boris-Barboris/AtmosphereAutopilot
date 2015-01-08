@@ -49,6 +49,7 @@
     <Compile Include="AutoSerialization.cs" />
     <Compile Include="Backup\OldFlightModel.cs" />
     <Compile Include="CircularBuffer.cs" />
+    <Compile Include="Controller\PIDAccumulating.cs" />
     <Compile Include="Models\MediumFlightModel.cs" />
     <Compile Include="Modules\AngularAccAdaptiveController.cs" />
     <Compile Include="Models\InstantControlModel.cs" />

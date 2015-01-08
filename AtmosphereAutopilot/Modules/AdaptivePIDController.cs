@@ -17,6 +17,12 @@ namespace AtmosphereAutopilot
             pid = new PIDController();
         }
 
+        public AdaptivePIDController(Vessel cur_vessel, string module_name, int wnd_id, PIDController controller)
+            : base(cur_vessel, wnd_id, module_name)
+        {
+            pid = controller;
+        }
+
         protected PIDController pid;			// main PID controller
 
 		[AutoGuiAttr("input", false, "G8")]

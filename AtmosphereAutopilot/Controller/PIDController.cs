@@ -55,6 +55,7 @@ namespace AtmosphereAutopilot
         protected double igain = 1.0;
 
 		public double InputDerivative { get { return derivative; } }
+        protected double derivative;			            // input derivative value
 
         public double Accumulator { get { return i_accumulator; } set { i_accumulator = value; } }
 
@@ -63,28 +64,14 @@ namespace AtmosphereAutopilot
         protected double last_dt = 1.0;                     // last delta time
         protected double last_error = 0.0;                  // last error
         protected double[] input_stack = new double[3];     // contains last 3 input values, needed for correct integration and differentiation
-		protected double derivative;			// input derivatives
 
         public virtual double Control(double input, double desire, double dt)
         {
-            return ControlDelayedP(input, 0, desire, dt);
-        }
-
-        public virtual double ControlDelayedP(double input, int p_delay, double desire, double dt)
-        {
             double error = desire - input;
-            double perror = 0.0;
-            switch (p_delay)
-            {
-                case 0: perror = error;
-                    break;
-                case 1: perror = desire - input_stack[2];;
-                    break;
-            };
             double new_dt = dt;
 
             // proportional component
-            double proportional = perror * kp;
+            double proportional = error * kp;
 
             // diffirential component
             if (!dt_is_constant(new_dt))
@@ -111,6 +98,7 @@ namespace AtmosphereAutopilot
             return proportional + integral + diffirential;
         }
 
+        // Manually provide derivative
 		public virtual double Control(double input, double input_d, double desire, double dt)
 		{
 			double error = desire - input;
