@@ -49,22 +49,11 @@ namespace AtmosphereAutopilot
             pid.clear();
             pidacc.clear_avg();
             user_is_controlling = false;
-            errorWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-                vessel.name + '_' + module_name + "_telemetry_error.csv");
-            controlWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-                vessel.name + '_' + module_name + "_telemetry_control.csv");
-            v_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-                vessel.name + '_' + module_name + "_telemetry_v.csv");
-            dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-                vessel.name + '_' + module_name + "_telemetry_dv.csv");
 		}
 
         protected override void OnDeactivate()
         {
-            errorWriter.Close();
-            controlWriter.Close();
-            v_writer.Close();
-            dv_writer.Close();
+			write_telemetry = false;
         }
 
         public override void ApplyControl(FlightCtrlState cntrl)
@@ -101,23 +90,26 @@ namespace AtmosphereAutopilot
             {
                 // authority is meaningfull value
                 // adapt KP
-                pidacc.KP = apply_with_inertia(pid.KP, kp_koeff / auth / proport_relax_time, pid_coeff_inertia);
+				if (Math.Abs(error) >= small_value)
+					pidacc.KP = apply_with_inertia(pid.KP, kp_koeff / auth / proport_relax_time, pid_coeff_inertia);
+				else
+					pidacc.KP = 0.0;
                 // and KD
                 pidacc.KD = kp_kd_ratio / auth;
             }
 
-            if (integral_fill_time > 1e-3 && small_value > 1e-3)
+            if (integral_fill_time > 1e-3 && large_value > 1e-3)
             {
-                pid.IntegralClamp = small_value;
+                pid.IntegralClamp = large_value;
                 pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
-                pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0 / integral_fill_time;
+                pid.AccumulDerivClamp = pid.AccumulatorClamp / integral_fill_time;
                 pid.KI = ki_koeff / pid.AccumulatorClamp;
                 // clamp gain on small errors
-                pid.IntegralGain = Common.Clamp(i_gain + Math.Abs(error) * (1.0 - i_gain) / small_value, 1.0);
+                pid.IntegralGain = Common.Clamp(i_gain + Math.Abs(error) * (1.0 - i_gain) / large_value, 1.0);
                 if (pidacc.InputDerivative * error < 0.0)
                 {
                     // clamp gain to prevent integral overshooting
-                    double reaction_deriv = small_value / integral_fill_time;
+                    double reaction_deriv = large_value / integral_fill_time;
                     pid.IntegralGain =
                         Common.Clamp(pid.IntegralGain *
                             (1 - i_overshoot_gain * Math.Abs(pidacc.InputDerivative) / reaction_deriv), 0.0, 1.0);
@@ -229,7 +221,34 @@ namespace AtmosphereAutopilot
         }
 
         [AutoGuiAttr("Write telemetry", true, "G8")]
-        public bool write_telemetry { get; set; }
+        public bool write_telemetry 
+		{
+			get { return _write_telemetry; }
+			set
+			{
+				if (value)
+				{
+					errorWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+						vessel.name + '_' + module_name + "_telemetry_error.csv");
+					controlWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+						vessel.name + '_' + module_name + "_telemetry_control.csv");
+					v_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+						vessel.name + '_' + module_name + "_telemetry_v.csv");
+					dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+						vessel.name + '_' + module_name + "_telemetry_dv.csv");
+					_write_telemetry = value;
+				}
+				else
+				{
+					errorWriter.Close();
+					controlWriter.Close();
+					v_writer.Close();
+					dv_writer.Close();
+					_write_telemetry = value;
+				}
+			}
+		}
+		bool _write_telemetry = false;
 
         [AutoGuiAttr("DEBUG error", false, "G8")]
         public double error { get; private set; }
@@ -271,9 +290,9 @@ namespace AtmosphereAutopilot
 		[AutoGuiAttr("PID inertia", true, "G6")]
 		public double pid_coeff_inertia = 15.0;		// PID coeffitients inertia factor
 
-        [GlobalSerializable("ki_koeff")]
-        [AutoGuiAttr("ki_koeff", true, "G6")]
-        public double ki_koeff = 0.8;	        // maximum output derivative, simulates control surface reaction speed
+		[GlobalSerializable("ki_koeff")]
+		[AutoGuiAttr("ki_koeff", true, "G6")]
+		public double ki_koeff = 0.8;
 
         [GlobalSerializable("kp_kd_ratio")]
 		[AutoGuiAttr("KD/Authority ratio", true, "G6")]
@@ -283,9 +302,13 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("KP/Authority ratio", true, "G6")]
         public double kp_koeff = 0.75;
 
-        [GlobalSerializable("small_value")]
-        [AutoGuiAttr("small value", true, "G6")]
-        public double small_value = 10.0;		    // arbitrary small input value. Purely intuitive
+		[GlobalSerializable("large_value")]
+		[AutoGuiAttr("large value", true, "G6")]
+		public double large_value = 10.0;
+
+		[GlobalSerializable("small_value")]
+		[AutoGuiAttr("small value", true, "G6")]
+		public double small_value = 0.1;
 
         [GlobalSerializable("proport_relax_time")]
         [AutoGuiAttr("Proport relax time", true, "G6")]
