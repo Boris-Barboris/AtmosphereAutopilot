@@ -141,14 +141,37 @@ namespace AtmosphereAutopilot
             // Adapt KD
             pid.KD = kd_kp_koeff * pid.KP;
 
-            double raw_output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
+            if (FlyByWire)
+            {
+                double user_input = get_neutralized_user_input(cntrl);
+                relative_input = fbw_v_k * user_input * max_input;
+                if (axis == PITCH)
+                {
+                    // limit it due to g-force limitations
+                    double cur_g = mmodel.g_force.getLast();
+                    if (relative_input * mmodel.aoa_pitch.getLast() > 0.0)
+                    {
+                        // user is trying to increase AoA
+                        max_g = fbw_g_k * 45.0 / (lever_arm - 2.0);
+                        if (max_g > 1e-3 && cur_g >= 0.0)
+                        {
+                            double g_relation = Common.Clamp(cur_g / max_g, 0.0, 1.0);
+                            modifier = Common.Clamp(1.0 - g_relation, 0.0, 1.0);
+                            relative_input *= modifier;
+                        }
+                    }
+                }
+                output = pid.Control(input, accel, relative_input, TimeWarp.fixedDeltaTime);
+            }
+            else
+                output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
 
             double error = 0.0 - input;
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
             deriv = -pid.KD * accel;
 
-            double child_output = acc_controller.ApplyControl(cntrl, raw_output);
+            double child_output = acc_controller.ApplyControl(cntrl, output);
 
 			// check if we're stable on given input value
 			if (Math.Abs(input) < 1e-2)
@@ -162,14 +185,33 @@ namespace AtmosphereAutopilot
 				time_in_regime = 0.0;
 			}
 
-			output = raw_output;
-
 			if (time_in_regime >= 1.0)
 				set_trim();
 		}
 
+        [GlobalSerializable("FlyByWire")]
+        [AutoGuiAttr("Fly-By-Wire", true, "G6")]
+        public bool FlyByWire = false;
+
+        [GlobalSerializable("fbw_v_k")]
+        [AutoGuiAttr("moderation k", true, "G6")]
+        public double fbw_v_k = 0.5;
+
+        [GlobalSerializable("fbw_g_k")]
+        [AutoGuiAttr("max g-force k", true, "G6")]
+        public double fbw_g_k = 1.0;
+
         [AutoGuiAttr("DEBUG proport", false, "G8")]
         public double proport { get; private set; }
+
+        [AutoGuiAttr("DEBUG relative_input", false, "G8")]
+        public double relative_input;
+
+        [AutoGuiAttr("DEBUG g_fwb_modifier", false, "G8")]
+        public double modifier;
+
+        [AutoGuiAttr("DEBUG max_g", false, "G8")]
+        public double max_g;
 
         [AutoGuiAttr("DEBUG integr", false, "G8")]
         public double integr { get; private set; }
@@ -179,6 +221,40 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("DEBUG current_acc", false, "G8")]
         public double current_acc { get; private set; }
+
+        double get_neutralized_user_input(FlightCtrlState state)
+        {
+            double result;
+            switch (axis)
+            {
+                case PITCH:
+                    result = state.pitch == state.pitchTrim ?
+                        0.0 :
+                        state.pitch > state.pitchTrim ?
+                            (state.pitch - state.pitchTrim) / (1.0 - state.pitchTrim) :
+                            (state.pitch - state.pitchTrim) / (1.0 + state.pitchTrim);
+                    state.pitch = state.pitchTrim;
+                    return result;
+                case ROLL:
+                    result = state.roll == state.rollTrim ?
+                        0.0 :
+                        state.roll > state.rollTrim ?
+                            (state.roll - state.rollTrim) / (1.0 - state.rollTrim) :
+                            (state.roll - state.rollTrim) / (1.0 + state.rollTrim);
+                    state.roll = state.rollTrim;
+                    return result;
+                case YAW:
+                    result = state.yaw == state.yawTrim ?
+                        0.0 :
+                        state.yaw > state.yawTrim ?
+                            (state.yaw - state.yawTrim) / (1.0 - state.yawTrim) :
+                            (state.yaw - state.yawTrim) / (1.0 + state.yawTrim);
+                    state.yaw = state.yawTrim;
+                    return result;
+                default:
+                    return 0.0;
+            }
+        }
 
 		void set_output(FlightCtrlState state, double output)
 		{

@@ -31,7 +31,7 @@ namespace AtmosphereAutopilot
         protected int cur_step = 0;
         
         protected double prev_integral = 0.0;
-        protected CircularBuffer<double> error_buf;
+        internal CircularBuffer<double> error_buf;
 
         public double AverageInputDerivative { get { return avg_derivative; } }
         protected double avg_derivative;			            // input derivative value
@@ -61,6 +61,8 @@ namespace AtmosphereAutopilot
             error_buf.Put(error);
 
             // error derivative component
+            if (error_buf.Size <= 1)
+                error_buf.Put(error);
             derivative = (error - error_buf.getFromTail(1)) / dt;
             double diffirential = derivative * kd;
 

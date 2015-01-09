@@ -101,9 +101,12 @@ namespace AtmosphereAutopilot
             {
                 // authority is meaningfull value
                 // adapt KP
-                pid.KP = apply_with_inertia(pid.KP, kp_koeff / auth / proport_relax_time + kp_offset, pid_coeff_inertia);
-                // adapt KD
-                pid.KD = kp_kd_ratio / auth + kd_offset;
+                pidacc.KP = apply_with_inertia(pid.KP, kp_koeff / auth / proport_relax_time, pid_coeff_inertia);
+                // adapt KD for oscillation dampening
+                if ((error - pidacc.error_buf.getLast()) * error < 0.0)
+                    pidacc.KD = kp_kd_ratio / auth;
+                else
+                    pidacc.KD = 0.0;
             }
 
             if (integral_fill_time > 1e-3 && small_value > 1e-3)
@@ -225,15 +228,7 @@ namespace AtmosphereAutopilot
 
         double smooth_and_clamp(double raw)
         {
-            double prev_output = model.input_buf[axis].getLast();	// get previous control input
-            double smoothed = raw;
-            current_raw = raw;
-            double raw_d = (raw - prev_output) / TimeWarp.fixedDeltaTime;
-            if (raw_d > max_output_deriv)
-                smoothed = prev_output + TimeWarp.fixedDeltaTime * max_output_deriv;
-            if (raw_d < -max_output_deriv)
-                smoothed = prev_output - TimeWarp.fixedDeltaTime * max_output_deriv;
-            return Common.Clamp(smoothed, 1.0);
+            return Common.Clamp(raw, 1.0);
         }
 
         [AutoGuiAttr("Write telemetry", true, "G8")]
@@ -263,10 +258,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("DEBUG authority", false, "G8")]
         public double k_auth { get { return model.getDvAuthority(axis); } }
 
-        [GlobalSerializable("max_output_deriv")]
-        [AutoGuiAttr("csurface speed", true, "G6")]
-        public double max_output_deriv = 10.0;	// maximum output derivative, simulates control surface reaction speed
-
         [GlobalSerializable("acc_val")]
         [AutoGuiAttr("Steps to accumulate", true, "G6")]
         public int acc_val
@@ -288,20 +279,12 @@ namespace AtmosphereAutopilot
         public double ki_koeff = 0.8;	        // maximum output derivative, simulates control surface reaction speed
 
         [GlobalSerializable("kp_kd_ratio")]
-		[AutoGuiAttr("KD/KP ratio", true, "G6")]
+		[AutoGuiAttr("KD/Authority ratio", true, "G6")]
 		public double kp_kd_ratio = 0.33;
-
-        [GlobalSerializable("kp_offset")]
-        [AutoGuiAttr("KD offset", true, "G6")]
-        public double kd_offset = 0.0;
 
         [GlobalSerializable("kp_koeff")]
         [AutoGuiAttr("KP/Authority ratio", true, "G6")]
         public double kp_koeff = 0.75;
-
-        [GlobalSerializable("kp_offset")]
-        [AutoGuiAttr("KP offset", true, "G6")]
-        public double kp_offset = 0.0;
 
         [GlobalSerializable("small_value")]
         [AutoGuiAttr("small value", true, "G6")]
