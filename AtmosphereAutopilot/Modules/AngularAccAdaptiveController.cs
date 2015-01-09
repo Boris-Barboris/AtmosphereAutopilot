@@ -84,18 +84,22 @@ namespace AtmosphereAutopilot
                 dv_writer.Write(model.angular_dv[axis].getLast().ToString("G8") + ',');
             }
 
-            current_d2v = (model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1)) / TimeWarp.fixedDeltaTime;
             double auth = k_auth;
             if (auth > 0.05 && proport_relax_time > 1e-3)
             {
                 // authority is meaningfull value
                 // adapt KP
-				if (Math.Abs(error) >= small_value)
-					pidacc.KP = apply_with_inertia(pid.KP, kp_koeff / auth / proport_relax_time, pid_coeff_inertia);
-				else
-					pidacc.KP = 0.0;
+                //if (Math.Abs(error) >= small_value)
+                    pidacc.KP = kp_koeff / auth / proport_relax_time;
+                //else
+                //    pidacc.KP = 0.0;
                 // and KD
-                pidacc.KD = kp_kd_ratio / auth;
+                //if (Math.Abs(error) >= small_value)
+                //{
+                    pidacc.KD = kp_kd_ratio / auth;
+                //}
+                //else
+                //    pidacc.KD = 0.0;
             }
 
             if (integral_fill_time > 1e-3 && large_value > 1e-3)
@@ -110,9 +114,10 @@ namespace AtmosphereAutopilot
                 {
                     // clamp gain to prevent integral overshooting
                     double reaction_deriv = large_value / integral_fill_time;
-                    pid.IntegralGain =
-                        Common.Clamp(pid.IntegralGain *
-                            (1 - i_overshoot_gain * Math.Abs(pidacc.InputDerivative) / reaction_deriv), 0.0, 1.0);
+                    if (reaction_deriv > 1e-3)
+                        pid.IntegralGain =
+                            Common.Clamp(pid.IntegralGain *
+                                (1 - i_overshoot_gain * Math.Abs(pidacc.InputDerivative) / reaction_deriv), 0.0, 1.0);
                 }
             }
 
@@ -228,23 +233,29 @@ namespace AtmosphereAutopilot
 			{
 				if (value)
 				{
-					errorWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-						vessel.name + '_' + module_name + "_telemetry_error.csv");
-					controlWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-						vessel.name + '_' + module_name + "_telemetry_control.csv");
-					v_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-						vessel.name + '_' + module_name + "_telemetry_v.csv");
-					dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-						vessel.name + '_' + module_name + "_telemetry_dv.csv");
-					_write_telemetry = value;
+                    if (!_write_telemetry)
+                    {
+                        errorWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+                            vessel.name + '_' + module_name + "_telemetry_error.csv");
+                        controlWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+                            vessel.name + '_' + module_name + "_telemetry_control.csv");
+                        v_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+                            vessel.name + '_' + module_name + "_telemetry_v.csv");
+                        dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+                            vessel.name + '_' + module_name + "_telemetry_dv.csv");
+                        _write_telemetry = value;
+                    }
 				}
 				else
 				{
-					errorWriter.Close();
-					controlWriter.Close();
-					v_writer.Close();
-					dv_writer.Close();
-					_write_telemetry = value;
+                    if (_write_telemetry)
+                    {
+                        errorWriter.Close();
+                        controlWriter.Close();
+                        v_writer.Close();
+                        dv_writer.Close();
+                        _write_telemetry = value;
+                    }					
 				}
 			}
 		}

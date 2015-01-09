@@ -153,12 +153,18 @@ namespace AtmosphereAutopilot
                     {
                         // user is trying to increase AoA
                         max_g = fbw_g_k * 45.0 / (lever_arm - 2.0);
+                        fbw_modifier = 1.0;
                         if (max_g > 1e-3 && cur_g >= 0.0)
                         {
                             double g_relation = Common.Clamp(cur_g / max_g, 0.0, 1.0);
-                            modifier = Common.Clamp(1.0 - g_relation, 0.0, 1.0);
-                            relative_input *= modifier;
+                            fbw_modifier *= Common.Clamp(1.0 - g_relation, 0.0, 1.0);
                         }
+                        if (fbw_max_aoa > 2.0)
+                        {
+                            double aoa_relation = Common.Clamp(mmodel.aoa_pitch.getLast() / (fbw_max_aoa / 180.0 * Math.PI), 0.0, 1.0);
+                            fbw_modifier *= Common.Clamp(1.0 - aoa_relation * aoa_relation * aoa_relation, 0.0, 1.0);
+                        }
+                        relative_input *= fbw_modifier;
                     }
                 }
                 output = pid.Control(input, accel, relative_input, TimeWarp.fixedDeltaTime);
@@ -193,13 +199,17 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Fly-By-Wire", true, "G6")]
         public bool FlyByWire = false;
 
-        [GlobalSerializable("fbw_v_k")]
+        [VesselSerializable("fbw_v_k")]
         [AutoGuiAttr("moderation k", true, "G6")]
-        public double fbw_v_k = 0.5;
+        public double fbw_v_k = 1.0;
 
-        [GlobalSerializable("fbw_g_k")]
+        [VesselSerializable("fbw_g_k")]
         [AutoGuiAttr("max g-force k", true, "G6")]
-        public double fbw_g_k = 1.0;
+        public double fbw_g_k = 1.5;
+
+        [VesselSerializable("fbw_max_aoa")]
+        [AutoGuiAttr("max AoA degrees", true, "G6")]
+        public double fbw_max_aoa = 20.0;
 
         [AutoGuiAttr("DEBUG proport", false, "G8")]
         public double proport { get; private set; }
@@ -208,7 +218,7 @@ namespace AtmosphereAutopilot
         public double relative_input;
 
         [AutoGuiAttr("DEBUG g_fwb_modifier", false, "G8")]
-        public double modifier;
+        public double fbw_modifier;
 
         [AutoGuiAttr("DEBUG max_g", false, "G8")]
         public double max_g;

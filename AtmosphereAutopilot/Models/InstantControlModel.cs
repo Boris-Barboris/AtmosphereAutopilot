@@ -147,12 +147,13 @@ namespace AtmosphereAutopilot
 
                 if (d_control > min_d_short_control)        // if d_control is substantial
                 {
-                    // get control authority
+                    // get control authority in acceleration
                     double prev_d2v = derivative1_short(angular_dv[i].getFromTail(2), angular_dv[i].getFromTail(1), prev_dt);
                     double cur_d2v = derivative1_short(angular_dv[i].getFromTail(1), angular_dv[i].getFromTail(0), prev_dt);
-                    double control_authority = (cur_d2v - prev_d2v) / d_control;
-                    if (control_authority > min_authority)
-                        k_dv_control[i].Put(control_authority);
+                    double control_authority_dv = (cur_d2v - prev_d2v) / d_control;
+                    if (control_authority_dv > min_authority_dv)
+                        k_dv_control[i].Put(control_authority_dv);
+                    // get control authotiry in angular velocity
                 }
 			}
 		}
@@ -161,9 +162,9 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("min_d_short_control")]
         public double min_d_short_control = 0.05;
 
-        [AutoGuiAttr("min_authority", true, "G6")]
-        [GlobalSerializable("min_authority")]
-        public double min_authority = 0.1;
+        [AutoGuiAttr("min_authority_dv", true, "G6")]
+        [GlobalSerializable("min_authority_dv")]
+        public double min_authority_dv = 0.1;
 
         public double getDvAuthority(int axis)
         {
@@ -171,6 +172,11 @@ namespace AtmosphereAutopilot
                 return k_dv_control[axis].Average();
             else
                 return -1.0;
+        }
+
+        public double getDvAuthorityInstant(int axis)
+        {
+            return k_dv_control[axis].getLast();
         }
 
         public static double closest(double target, double x1, double x2)
@@ -253,8 +259,8 @@ namespace AtmosphereAutopilot
 			{
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " K1 = " + k_dv_control[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " stable = " + dv_stable_channel[i].ToString(), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " K dv = " + k_dv_control[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " stable dv = " + dv_stable_channel[i].ToString(), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}
             AutoGUI.AutoDrawObject(this);
