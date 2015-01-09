@@ -97,16 +97,13 @@ namespace AtmosphereAutopilot
 
             current_d2v = (model.angular_dv[axis].getLast() - model.angular_dv[axis].getFromTail(1)) / TimeWarp.fixedDeltaTime;
             double auth = k_auth;
-            if (auth > 0.05)
+            if (auth > 0.05 && proport_relax_time > 1e-3)
             {
                 // authority is meaningfull value
                 // adapt KP
                 pidacc.KP = apply_with_inertia(pid.KP, kp_koeff / auth / proport_relax_time, pid_coeff_inertia);
-                // adapt KD for oscillation dampening
-                if ((error - pidacc.error_buf.getLast()) * error < 0.0)
-                    pidacc.KD = kp_kd_ratio / auth;
-                else
-                    pidacc.KD = 0.0;
+                // and KD
+                pidacc.KD = kp_kd_ratio / auth;
             }
 
             if (integral_fill_time > 1e-3 && small_value > 1e-3)
