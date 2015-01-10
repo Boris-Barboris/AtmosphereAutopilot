@@ -67,6 +67,9 @@ namespace AtmosphereAutopilot
 			// proportional component
 			double proportional = avg_error * kp;
 
+			// update previous values   
+			if (double.IsNaN(last_error))
+				last_error = error_buf[0];
 			derivative = (avg_error - last_error) / dt;
 			double diffirential = derivative * kd;
 
@@ -79,9 +82,6 @@ namespace AtmosphereAutopilot
             i_accumulator = Common.Clamp(i_accumulator + d_integral, aclamp);               // accumulate
             double integral = i_accumulator * ki;
 
-            // update previous values   
-            if (double.IsNaN(last_error))
-                last_error = error_buf[0];
             last_error = avg_error;
 
             prev_output = proportional + diffirential + integral;
