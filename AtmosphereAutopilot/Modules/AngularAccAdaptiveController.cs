@@ -87,8 +87,16 @@ namespace AtmosphereAutopilot
             double auth = k_auth;
             if (auth > 0.05 && proport_relax_time > 1e-3)
             {
-                pidacc.KP = kp_koeff / auth / proport_relax_time;
-                pidacc.KD = kp_kd_ratio / auth;
+                if (Math.Abs(error) > small_value)
+                {
+                    pidacc.KP = kp_koeff / auth / proport_relax_time;
+                    pidacc.KD = kp_kd_ratio / auth;
+                }
+                else
+                {
+                    pidacc.KP = 0.0;
+                    pidacc.KD = 0.0;
+                }
             }
 
             if (integral_fill_time > 1e-3 && large_value > 1e-3)

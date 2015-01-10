@@ -201,18 +201,6 @@ namespace AtmosphereAutopilot
 			return new YawAngularVelocityController(v, sfmodel, mfmodel, acc);
 		}
 
-        [ModuleConstructor(typeof(RollDamper))]
-        RollDamper create_RollDamper(Vessel v)
-        {
-            return new RollDamper(v);
-        }
-
-        [ModuleConstructor(typeof(YawDamper))]
-        YawDamper create_YawDamper(Vessel v)
-        {
-            return new YawDamper(v);
-        }
-
         #endregion
 
         private void vesselSwitch(Vessel v)
