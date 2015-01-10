@@ -47,7 +47,6 @@
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="AutoGui.cs" />
     <Compile Include="AutoSerialization.cs" />
-    <Compile Include="Backup\OldFlightModel.cs" />
     <Compile Include="CircularBuffer.cs" />
     <Compile Include="Controller\PIDAccumulating.cs" />
     <Compile Include="Models\MediumFlightModel.cs" />
@@ -58,9 +57,6 @@
     <Compile Include="Modules\AngularVelAdaptiveController.cs" />
     <Compile Include="Modules\AutopilotModule.cs" />
     <Compile Include="Modules\AdaptivePIDController.cs" />
-    <Compile Include="Modules\YawDamper.cs" />
-    <Compile Include="Modules\RollDamper.cs" />
-    <Compile Include="Modules\PIDAutoTrimmer.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Controller\PIDController.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
