@@ -87,19 +87,8 @@ namespace AtmosphereAutopilot
             double auth = k_auth;
             if (auth > 0.05 && proport_relax_time > 1e-3)
             {
-                // authority is meaningfull value
-                // adapt KP
-                //if (Math.Abs(error) >= small_value)
-                    pidacc.KP = kp_koeff / auth / proport_relax_time;
-                //else
-                //    pidacc.KP = 0.0;
-                // and KD
-                //if (Math.Abs(error) >= small_value)
-                //{
-                    pidacc.KD = kp_kd_ratio / auth;
-                //}
-                //else
-                //    pidacc.KD = 0.0;
+                pidacc.KP = kp_koeff / auth / proport_relax_time;
+                pidacc.KD = kp_kd_ratio / auth;
             }
 
             if (integral_fill_time > 1e-3 && large_value > 1e-3)
@@ -110,7 +99,7 @@ namespace AtmosphereAutopilot
                 pid.KI = ki_koeff / pid.AccumulatorClamp;
                 // clamp gain on small errors
                 pid.IntegralGain = Common.Clamp(i_gain + Math.Abs(error) * (1.0 - i_gain) / large_value, 1.0);
-                if (pidacc.InputDerivative * error < 0.0)
+                if (pidacc.InputDerivative * pidacc.last_error < 0.0)
                 {
                     // clamp gain to prevent integral overshooting
                     double reaction_deriv = large_value / integral_fill_time;

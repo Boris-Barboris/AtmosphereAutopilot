@@ -7,7 +7,7 @@ using System.IO;
 namespace AtmosphereAutopilot
 {
     /// <summary>
-    /// PID with decreased frequency, for saw-like stiff functions like angular acceleration. Recalculates accumulator more seldom
+    /// PID with decreased frequency, for saw-like stiff functions like angular acceleration.
     /// </summary>
     class PIDAccumulating : PIDController
     {
@@ -27,16 +27,13 @@ namespace AtmosphereAutopilot
                 }
             } 
         }
-        protected int steps_to_sum = 4;
+        protected int steps_to_sum = 2;
         protected int cur_step = 0;
         
-        protected double prev_integral = 0.0;
+        internal double prev_output = 0.0;
         internal CircularBuffer<double> error_buf;
 
-        public double AverageInputDerivative { get { return avg_derivative; } }
-        protected double avg_derivative;			            // input derivative value
-
-        public PIDAccumulating(int steps = 4)
+        public PIDAccumulating(int steps = 2)
         {
             steps_to_sum = steps;
             error_buf = new CircularBuffer<double>(steps_to_sum, true);
@@ -54,26 +51,24 @@ namespace AtmosphereAutopilot
             last_dt = dt;
 
             double error = desire - input;
-            // proportional component
-            double proportional = error * kp;
 
             // simply accumulate input
             error_buf.Put(error);
 
-            // error derivative component
-            if (error_buf.Size <= 1)
-                error_buf.Put(error);
-            derivative = (error - error_buf.getFromTail(1)) / dt;
-            double diffirential = derivative * kd;
-
             cur_step++;
             if (cur_step < steps_to_sum)
-                return prev_integral + proportional + diffirential;
+                return prev_output;
             else
                 cur_step = 0;
             
             // perform integral output calculation
             double avg_error = error_buf.Average();
+
+			// proportional component
+			double proportional = avg_error * kp;
+
+			derivative = (avg_error - last_error) / dt;
+			double diffirential = derivative * kd;
 
             // integral component             
             double d_integral = 
@@ -87,11 +82,10 @@ namespace AtmosphereAutopilot
             // update previous values   
             if (double.IsNaN(last_error))
                 last_error = error_buf[0];
-            avg_derivative = (avg_error - last_error) / dt / steps_to_sum;
             last_error = avg_error;
 
-            prev_integral = integral;
-            return prev_integral + proportional + diffirential;
+            prev_output = proportional + diffirential + integral;
+			return prev_output;
         }
 
         public void clear_avg()

@@ -71,8 +71,9 @@ namespace AtmosphereAutopilot
 				angular_v[i].Put(-vessel.angularVelocity[i]);
 				if (stable_dt >= 2)
 					angular_dv[i].Put(
-                        derivative1_middle(
+                        derivative1(
 							angular_v[i].getFromTail(2),
+							angular_v[i].getFromTail(1),
 							angular_v[i].getFromTail(0),
 							prev_dt));
 			}
