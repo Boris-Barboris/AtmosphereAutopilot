@@ -130,13 +130,13 @@ namespace AtmosphereAutopilot
 
 		public void update_dv_model()
 		{
-			if (stable_dt < 3)
+			if (stable_dt < 5)
 				return;
 
 			for (int i = 0; i < 3; i++)
 			{
                 // control diffirential (remember, last control will be applied in next physics step, so we need previous one)
-                double d_control = input_buf[i].getFromTail(1) - input_buf[i].getFromTail(2);
+                double d_control = input_buf[i].getFromTail(2) - input_buf[i].getFromTail(4);
                 if (d_control == 0.0)
                 {
                     // get second angular v derivative in previous time slice
@@ -148,13 +148,16 @@ namespace AtmosphereAutopilot
 
                 if (d_control > min_d_short_control)        // if d_control is substantial
                 {
+                    // get paired summs
+                    double preprev_2sum = 0.5 * (angular_dv[i].getFromTail(4) + angular_dv[i].getFromTail(5));
+                    double prev_2sum = 0.5 * (angular_dv[i].getFromTail(2) + angular_dv[i].getFromTail(3));
+                    double cur_2sum = 0.5 * (angular_dv[i].getFromTail(1) + angular_dv[i].getFromTail(0));
                     // get control authority in acceleration
-                    double prev_d2v = derivative1_short(angular_dv[i].getFromTail(2), angular_dv[i].getFromTail(1), prev_dt);
-                    double cur_d2v = derivative1_short(angular_dv[i].getFromTail(1), angular_dv[i].getFromTail(0), prev_dt);
+                    double prev_d2v = derivative1_short(preprev_2sum, prev_2sum, 2 * prev_dt);
+                    double cur_d2v = derivative1_short(prev_2sum, cur_2sum, 2 * prev_dt);
                     double control_authority_dv = (cur_d2v - prev_d2v) / d_control;
                     if (control_authority_dv > min_authority_dv)
                         k_dv_control[i].Put(control_authority_dv);
-                    // get control authotiry in angular velocity
                 }
 			}
 		}
