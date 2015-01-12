@@ -94,8 +94,9 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
-                    pidacc.KP = 0.0;
-                    pidacc.KD = 0.0;
+                    double k = Common.Clamp((Math.Abs(error) - small_value * 0.5) / 0.5 / small_value, 0.0, 1.0);
+                    pidacc.KP = k * kp_koeff / auth / proport_relax_time;
+                    pidacc.KD = k * kp_kd_ratio / auth;
                 }
             }
 

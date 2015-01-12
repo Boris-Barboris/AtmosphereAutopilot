@@ -136,7 +136,9 @@ namespace AtmosphereAutopilot
 			for (int i = 0; i < 3; i++)
 			{
                 // control diffirential (remember, last control will be applied in next physics step, so we need previous one)
-                double d_control = input_buf[i].getFromTail(2) - input_buf[i].getFromTail(4);
+                double d_control = 0.5 *
+                    (input_buf[i].getFromTail(4) + input_buf[i].getFromTail(3) -
+                    input_buf[i].getFromTail(5) + input_buf[i].getFromTail(6));
                 if (d_control == 0.0)
                 {
                     // get second angular v derivative in previous time slice
