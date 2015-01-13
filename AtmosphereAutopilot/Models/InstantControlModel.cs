@@ -33,7 +33,7 @@ namespace AtmosphereAutopilot
             vessel.OnPostAutopilotUpdate += new FlightInputCallback(OnPostAutopilot);
 		}
 
-		static readonly int BUFFER_SIZE = 30;
+		static readonly int BUFFER_SIZE = 15;
 
 		public CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];	// control input value
 		public CircularBuffer<double>[] angular_v = new CircularBuffer<double>[3];	// angular v
@@ -130,15 +130,15 @@ namespace AtmosphereAutopilot
 
 		public void update_dv_model()
 		{
-			if (stable_dt < 5)
+			if (stable_dt < 6)
 				return;
 
 			for (int i = 0; i < 3; i++)
 			{
                 // control diffirential (remember, last control will be applied in next physics step, so we need previous one)
                 double d_control = 0.5 *
-                    (input_buf[i].getFromTail(4) + input_buf[i].getFromTail(3) -
-                    input_buf[i].getFromTail(5) + input_buf[i].getFromTail(6));
+                    (input_buf[i].getFromTail(2) + input_buf[i].getFromTail(3) -
+                    input_buf[i].getFromTail(4) - input_buf[i].getFromTail(5));
                 if (d_control == 0.0)
                 {
                     // get second angular v derivative in previous time slice
