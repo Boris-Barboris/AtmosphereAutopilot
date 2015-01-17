@@ -21,8 +21,6 @@ namespace AtmosphereAutopilot
 		InstantControlModel model;
         MediumFlightModel m_model;
 
-        PIDAccumulating pidacc;
-
         StreamWriter errorWriter, controlWriter, v_writer, dv_writer;
 
 		/// <summary>
@@ -36,18 +34,16 @@ namespace AtmosphereAutopilot
         /// <param name="parent">AngularVelAdaptiveController wich uses this instance as a child</param>
         public AngularAccAdaptiveController(Vessel vessel, string module_name,
             int wnd_id, int axis, InstantControlModel model, MediumFlightModel m_model)
-			: base(vessel, module_name, wnd_id, new PIDAccumulating())
+			: base(vessel, module_name, wnd_id)
 		{
 			this.axis = axis;
 			this.model = model;
             this.m_model = m_model;
-            pidacc = (pid as PIDAccumulating);
 		}
 
 		protected override void OnActivate()
 		{
             pid.clear();
-            pidacc.clear_avg();
             user_is_controlling = false;
 		}
 
@@ -83,12 +79,12 @@ namespace AtmosphereAutopilot
             {
                 //errorWriter.Write(error.ToString("G8") + ',');
                 if (write_cycle >= 3)
-                    errorWriter.Write(model.angular_dv_central[axis].getLast().ToString("G8") + ',');
+                    dv_writer.Write(model.angular_dv_central[axis].getLast().ToString("G8") + ',');
                 else
                     write_cycle++;
                 v_writer.Write(model.angular_v[axis].getLast().ToString("G8") + ',');
-                dv_writer.Write(model.angular_dv[axis].getLast().ToString("G8") + ',');
                 controlWriter.Write(model.input_buf[axis].getLast().ToString("G8") + ',');
+                errorWriter.Write(error.ToString("G8") + ',');
             }
             else
                 write_cycle = 0;
@@ -97,16 +93,13 @@ namespace AtmosphereAutopilot
             if (auth > 0.05 && proport_relax_time > 1e-3)
             {
                 if (Math.Abs(error) > small_value)
-                {
-                    pidacc.KP = kp_koeff / auth / proport_relax_time;
-                    pidacc.KD = kp_kd_ratio / auth;
-                }
+                    pid.KP = kp_koeff / auth / proport_relax_time;
                 else
-                {
-                    double k = Common.Clamp((Math.Abs(error) - small_value * 0.5) / 0.5 / small_value, 0.0, 1.0);
-                    pidacc.KP = k * kp_koeff / auth / proport_relax_time;
-                    pidacc.KD = k * kp_kd_ratio / auth;
-                }
+                    pid.KP = 0.0;
+                if (pid.InputDerivative * pid.last_error < 0.0)
+                    pid.KD = kp_kd_ratio / auth;
+                else
+                    pid.KD = 0.0;
             }
 
             if (integral_fill_time > 1e-3 && large_value > 1e-3)
@@ -117,14 +110,14 @@ namespace AtmosphereAutopilot
                 pid.KI = ki_koeff / pid.AccumulatorClamp;
                 // clamp gain on small errors
                 pid.IntegralGain = Common.Clamp(i_gain + Math.Abs(error) * (1.0 - i_gain) / large_value, 1.0);
-                if (pidacc.InputDerivative * pidacc.last_error < 0.0)
+                if (pid.InputDerivative * pid.last_error < 0.0)
                 {
                     // clamp gain to prevent integral overshooting
                     double reaction_deriv = large_value / integral_fill_time;
                     if (reaction_deriv > 1e-3)
                         pid.IntegralGain =
                             Common.Clamp(pid.IntegralGain *
-                                (1 - i_overshoot_gain * Math.Abs(pidacc.InputDerivative) / reaction_deriv), 0.0, 1.0);
+                                (1 - i_overshoot_gain * Math.Abs(pid.InputDerivative) / reaction_deriv), 0.0, 1.0);
                 }
             }
 
@@ -146,8 +139,6 @@ namespace AtmosphereAutopilot
 						last_aoa = m_model.aoa_yaw.getLast();
 					last_speed = vessel.srfSpeed;
 					user_is_controlling = true;
-                    // clear averaging controller
-                    pidacc.clear_avg();
 				};
                 return output;
             }
@@ -166,7 +157,7 @@ namespace AtmosphereAutopilot
                     pid.Accumulator *= accumul_persistance_k;
                 }
 
-            current_raw = pidacc.Control(input, target_value, TimeWarp.fixedDeltaTime);
+            current_raw = pid.Control(input, target_value, TimeWarp.fixedDeltaTime);
 
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
@@ -287,14 +278,6 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("DEBUG authority", false, "G8")]
         public double k_auth { get { return model.getDvAuthority(axis); } }
-
-        [GlobalSerializable("acc_val")]
-        [AutoGuiAttr("Steps to accumulate", true, "G6")]
-        public int acc_val
-        {
-            get { return pidacc.StepsToAccumulate; }
-            set { pidacc.StepsToAccumulate = value; }
-        }
 
         [GlobalSerializable("user_dampening")]
         [AutoGuiAttr("user_dampening", true, "G6")]
