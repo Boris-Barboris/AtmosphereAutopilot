@@ -66,6 +66,8 @@ namespace AtmosphereAutopilot
         double last_aoa = 0.0;
         double last_speed = 0.0;
 
+        int write_cycle = 0;
+
 		/// <summary>
 		/// Main control function
 		/// </summary>
@@ -79,11 +81,17 @@ namespace AtmosphereAutopilot
 
             if (write_telemetry)
             {
-                errorWriter.Write(error.ToString("G8") + ',');
+                //errorWriter.Write(error.ToString("G8") + ',');
+                if (write_cycle >= 3)
+                    errorWriter.Write(model.angular_dv_central[axis].getLast().ToString("G8") + ',');
+                else
+                    write_cycle++;
                 v_writer.Write(model.angular_v[axis].getLast().ToString("G8") + ',');
                 dv_writer.Write(model.angular_dv[axis].getLast().ToString("G8") + ',');
-				controlWriter.Write(model.input_buf[axis].getLast().ToString("G8") + ',');
+                controlWriter.Write(model.input_buf[axis].getLast().ToString("G8") + ',');
             }
+            else
+                write_cycle = 0;
 
             double auth = k_auth;
             if (auth > 0.05 && proport_relax_time > 1e-3)
@@ -141,8 +149,6 @@ namespace AtmosphereAutopilot
                     // clear averaging controller
                     pidacc.clear_avg();
 				};
-                if (write_telemetry)
-                    controlWriter.Write(output.ToString("G8") + ',');
                 return output;
             }
             else

@@ -27,6 +27,7 @@ namespace AtmosphereAutopilot
 				input_buf[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 				angular_v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 				angular_dv[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
+                angular_dv_central[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
                 k_dv_control[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 			}
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
@@ -38,6 +39,7 @@ namespace AtmosphereAutopilot
 		public CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];	// control input value
 		public CircularBuffer<double>[] angular_v = new CircularBuffer<double>[3];	// angular v
 		public CircularBuffer<double>[] angular_dv = new CircularBuffer<double>[3];	// dv/dt
+        public CircularBuffer<double>[] angular_dv_central = new CircularBuffer<double>[3];	// dv/dt
 
 		double prev_dt = 1.0;		// dt in previous call
 		int stable_dt = 0;			// counts amount of stable dt intervals
@@ -69,13 +71,11 @@ namespace AtmosphereAutopilot
 			for (int i = 0; i < 3; i++)
 			{
 				angular_v[i].Put(-vessel.angularVelocity[i]);
-				if (stable_dt >= 2)
-					angular_dv[i].Put(
-                        derivative1(
-							angular_v[i].getFromTail(2),
-							angular_v[i].getFromTail(1),
-							angular_v[i].getFromTail(0),
-							prev_dt));
+                if (stable_dt >= 7)
+                {
+                    angular_dv[i].Put(smooth_derivative_hybrid(prev_dt, i));
+                    angular_dv_central[i].Put(smooth_derivative_central(prev_dt, i));
+                }
 			}
 		}
 
@@ -121,12 +121,46 @@ namespace AtmosphereAutopilot
 			return (-y0 + 4 * y1 - 5 * y2 + 2 * y3) / dt / dt;
 		}
 
+        /// <summary>
+        /// Smooth noise-robust differentiator, author - Pavel Holoborodko. 
+        /// http://www.holoborodko.com/pavel/wp-content/uploads/OneSidedNoiseRobustDifferentiators.pdf
+        /// </summary>
+        double smooth_derivative_hybrid(double dt, int axis)
+        {
+            double result =
+                6.0 * angular_v[axis].getFromTail(6) +
+                1.0 * angular_v[axis].getFromTail(5) +
+                -10.0 * angular_v[axis].getFromTail(4) +
+                -6.0 * angular_v[axis].getFromTail(3) +
+                -8.0 * angular_v[axis].getFromTail(2) +
+                5.0 * angular_v[axis].getFromTail(1) +
+                12.0 * angular_v[axis].getFromTail(0);
+            result /= 28.0 * dt;
+            return result;
+        }
+
+        /// <summary>
+        /// Smooth noise-robust differentiator, author - Pavel Holoborodko. 
+        /// http://www.holoborodko.com/pavel/wp-content/uploads/OneSidedNoiseRobustDifferentiators.pdf
+        /// </summary>
+        double smooth_derivative_central(double dt, int axis)
+        {
+            double result =
+                -1.0 * angular_v[axis].getFromTail(6) +
+                -4.0 * angular_v[axis].getFromTail(5) +
+                -5.0 * angular_v[axis].getFromTail(4) +
+                5.0 * angular_v[axis].getFromTail(2) +
+                4.0 * angular_v[axis].getFromTail(1) +
+                1.0 * angular_v[axis].getFromTail(0);
+            result /= 32.0 * dt;
+            return result;
+        }
+
 		//
 		// Short term model for angular acceleration
 		//
 
         public CircularBuffer<double>[] k_dv_control = new CircularBuffer<double>[3];		// control authority in angular acceleration
-        public bool[] dv_stable_channel = new bool[3];      // true if control channel is statically stable in dv_angular
 
 		public void update_dv_model()
 		{
@@ -135,28 +169,17 @@ namespace AtmosphereAutopilot
 
 			for (int i = 0; i < 3; i++)
 			{
-                // control diffirential (remember, last control will be applied in next physics step, so we need previous one)
-                double d_control = 0.5 *
-                    (input_buf[i].getFromTail(2) + input_buf[i].getFromTail(3) -
-                    input_buf[i].getFromTail(4) - input_buf[i].getFromTail(5));
-                if (d_control == 0.0)
-                {
-                    // get second angular v derivative in previous time slice
-                    double simple_d2v = derivative1_short(angular_dv[i].getFromTail(1), angular_dv[i].getFromTail(0), prev_dt);
-                    // channel is dynamically stable if it's angular acceleration going to zero
-                    dv_stable_channel[i] = (angular_dv[i].getFromTail(1) * simple_d2v) < 0.0;
-                    return;
-                }
+                // We'll be working with central derivative, wich is lagging 3 time intervals behind
+                // Also we need space for second derivative calculations, so we're 4 steps behind total
+                double d_control = 0.5 * (input_buf[i].getFromTail(4) - input_buf[i].getFromTail(5));
 
-                if (d_control > min_d_short_control)        // if d_control is substantial
+                if (Math.Abs(d_control) > min_d_short_control)        // if d_control is substantial
                 {
-                    // get paired summs
-                    double preprev_2sum = 0.5 * (angular_dv[i].getFromTail(4) + angular_dv[i].getFromTail(5));
-                    double prev_2sum = 0.5 * (angular_dv[i].getFromTail(2) + angular_dv[i].getFromTail(3));
-                    double cur_2sum = 0.5 * (angular_dv[i].getFromTail(1) + angular_dv[i].getFromTail(0));
                     // get control authority in acceleration
-                    double prev_d2v = derivative1_short(preprev_2sum, prev_2sum, 2 * prev_dt);
-                    double cur_d2v = derivative1_short(prev_2sum, cur_2sum, 2 * prev_dt);
+                    double prev_d2v = derivative1_middle(angular_dv_central[i].getFromTail(3), 
+                        angular_dv_central[i].getFromTail(1), prev_dt);
+                    double cur_d2v = derivative1_middle(angular_dv_central[i].getFromTail(2),
+                        angular_dv_central[i].getFromTail(0), prev_dt);
                     double control_authority_dv = (cur_d2v - prev_d2v) / d_control;
                     if (control_authority_dv > min_authority_dv)
                         k_dv_control[i].Put(control_authority_dv);
@@ -177,7 +200,7 @@ namespace AtmosphereAutopilot
             if (k_dv_control[axis].Size > 0)
                 return k_dv_control[axis].Average();
             else
-                return -1.0;
+                return 1.0;
         }
 
         public double getDvAuthorityInstant(int axis)
@@ -266,7 +289,6 @@ namespace AtmosphereAutopilot
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " K dv = " + k_dv_control[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " stable dv = " + dv_stable_channel[i].ToString(), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}
             AutoGUI.AutoDrawObject(this);
