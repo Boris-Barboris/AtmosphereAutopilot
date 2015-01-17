@@ -82,6 +82,7 @@ namespace AtmosphereAutopilot
                 errorWriter.Write(error.ToString("G8") + ',');
                 v_writer.Write(model.angular_v[axis].getLast().ToString("G8") + ',');
                 dv_writer.Write(model.angular_dv[axis].getLast().ToString("G8") + ',');
+				controlWriter.Write(model.input_buf[axis].getLast().ToString("G8") + ',');
             }
 
             double auth = k_auth;
@@ -166,8 +167,6 @@ namespace AtmosphereAutopilot
             deriv = pid.KD * pid.InputDerivative;
 
             output = smooth_and_clamp(current_raw);
-            if (write_telemetry)
-                controlWriter.Write(output.ToString("G8") + ',');
             set_output(cntrl, output);
             return output;
 		}
