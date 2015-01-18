@@ -75,6 +75,13 @@ namespace AtmosphereAutopilot
             error = target_value - input;
             desired_acc = target_value;
 
+			double predicted_input = input + predict_k * TimeWarp.fixedDeltaTime *
+				InstantControlModel.derivative1(
+					model.angular_dv[axis].getFromTail(2),
+					model.angular_dv[axis].getFromTail(1),
+					model.angular_dv[axis].getFromTail(0),
+					TimeWarp.fixedDeltaTime);
+
             if (write_telemetry)
             {
                 //errorWriter.Write(error.ToString("G8") + ',');
@@ -160,7 +167,7 @@ namespace AtmosphereAutopilot
                     pid.Accumulator *= accumul_persistance_k;
                 }
 
-            current_raw = pid.Control(input, target_value, TimeWarp.fixedDeltaTime);
+			current_raw = pid.Control(predicted_input, target_value, TimeWarp.fixedDeltaTime);
 
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
@@ -313,6 +320,10 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("proport_relax_time")]
         [AutoGuiAttr("Proport relax time", true, "G6")]
         public double proport_relax_time = 0.05;
+
+		[GlobalSerializable("predict_k")]
+		[AutoGuiAttr("input prediction", true, "G6")]
+		public double predict_k = 1.0;
 
         [GlobalSerializable("integral_fill_time")]
         [AutoGuiAttr("Integral fill time", true, "G6")]
