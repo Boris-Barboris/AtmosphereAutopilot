@@ -125,11 +125,13 @@ namespace AtmosphereAutopilot
             }
 
 			input = model.angular_v[axis].getLast();				// get angular velocity
+            double extrapolated_input = model.extrapolate_v(axis, extrapolation_order);
 			double accel = model.angular_dv[axis].getLast();		// get angular acceleration
             current_acc = accel;
 
             // Adapt KP, so that on small value it produces max_input * kp_acc factor output
-            pid.KP = kp_acc_factor * max_input_deriv / small_value;
+            if (small_value != 0.0)
+                pid.KP = kp_acc_factor * max_input_deriv / small_value;
             // Adapt KI
             if (integral_fill_time > 1e-3)
             {
@@ -167,10 +169,10 @@ namespace AtmosphereAutopilot
                         relative_input *= fbw_modifier;
                     }
                 }
-                output = pid.Control(input, accel, relative_input, TimeWarp.fixedDeltaTime);
+                output = pid.Control(extrapolated_input, accel, relative_input, TimeWarp.fixedDeltaTime);
             }
             else
-                output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
+                output = pid.Control(extrapolated_input, accel, 0.0, TimeWarp.fixedDeltaTime);
 
             double error = 0.0 - input;
             proport = error * pid.KP;
@@ -198,6 +200,10 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("FlyByWire")]
         [AutoGuiAttr("Fly-By-Wire", true, "G6")]
         public bool FlyByWire = false;
+
+        [GlobalSerializable("extrapolation_order")]
+        [AutoGuiAttr("extr order", true, "G3")]
+        public int extrapolation_order = 5;
 
         [VesselSerializable("fbw_v_k")]
         [AutoGuiAttr("moderation k", true, "G6")]
@@ -305,10 +311,6 @@ namespace AtmosphereAutopilot
 		[GlobalSerializable("small_value")]
 		[AutoGuiAttr("small value", true, "G6")]
 		public double small_value = 0.1;		// arbitrary small input value. Purely intuitive
-
-		[GlobalSerializable("pid_coeff_inertia")]
-		[AutoGuiAttr("PID inertia", true, "G6")]
-		public double pid_coeff_inertia = 30.0;		// PID coeffitients inertia factor
 
 		[GlobalSerializable("kp_acc_factor")]
 		[AutoGuiAttr("KP acceleration factor", true, "G6")]

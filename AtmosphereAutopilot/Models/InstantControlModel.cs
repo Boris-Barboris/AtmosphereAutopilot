@@ -73,7 +73,12 @@ namespace AtmosphereAutopilot
 				angular_v[i].Put(-vessel.angularVelocity[i]);
                 if (stable_dt >= 7)
                 {
-                    angular_dv[i].Put(smooth_derivative_hybrid(prev_dt, i));
+                    //angular_dv[i].Put(smooth_derivative_hybrid(prev_dt, i));
+                    angular_dv[i].Put(
+                        derivative1_short(
+                            angular_v[i].getFromTail(1),
+                            angular_v[i].getFromTail(0),
+                            prev_dt));
                     angular_dv_central[i].Put(smooth_derivative_central(prev_dt, i));
                 }
 			}
@@ -120,6 +125,77 @@ namespace AtmosphereAutopilot
 		{
 			return (-y0 + 4 * y1 - 5 * y2 + 2 * y3) / dt / dt;
 		}
+
+        public static double extrapolate(double v, double dv, double d2v, double dt)
+        {
+            return v + dv * dt + 0.5 * d2v * dt * dt;
+        }
+
+        public double extrapolate_v(int axis, int order)
+        {
+            if (stable_dt > order)
+                return extrapolate_sequence(angular_v[axis], order);
+            else
+                return double.NaN;
+        }
+
+        public double extrapolate_dv(int axis, int order)
+        {
+            if (stable_dt > order)
+                return extrapolate_sequence(angular_dv[axis], order);
+            else
+                return double.NaN;
+        }
+
+        public double extrapolate_sequence(CircularBuffer<double> buf, int order)
+        {
+            int points_needed = order + 1;
+            if (points_needed < 1)
+                throw new ArgumentException("order is wrong");
+            if (points_needed == 1)
+                return buf.getLast();
+            double[] derivatives = new double[order];
+            derivative_cascade(derivatives, buf, 1, order);
+            double result = buf.getLast();
+            for (int i = 0; i < order; i++)
+                result += derivatives[i] * Math.Pow(prev_dt, i + 1) / Factorial(i + 1);
+            return result;
+        }
+
+        static int Factorial(int x)
+        {
+            return (x == 0) ? 1 : x * Factorial(x - 1);
+        }
+
+        void derivative_cascade(double[] ders, CircularBuffer<double> buf, int cur_order, int order)
+        {
+            if (cur_order != 1)
+                throw new InvalidOperationException("cur_order must be 1");
+            if (cur_order == order)
+            {
+                ders[0] = derivative1_short(buf.getFromTail(1), buf.getLast(), prev_dt);
+                return;
+            }
+            double[] order1ders = new double[order];
+            for (int i = 0; i < order; i++)
+                order1ders[order - i - 1] = derivative1_short(buf.getFromTail(i + 1), buf.getFromTail(i), prev_dt);
+            ders[0] = order1ders[order - 1];
+            _derivative_cascade(ders, order1ders, cur_order + 1, order);
+        }
+
+        void _derivative_cascade(double[] ders, double[] prev_order, int cur_order, int order)
+        {
+            if (cur_order == order)
+            {
+                ders[cur_order - 1] = derivative1_short(prev_order[0], prev_order[1], prev_dt);
+                return;
+            }
+            double[] orderders = new double[order - cur_order + 1];
+            for (int i = order - cur_order; i >= 0; i--)
+                orderders[i] = derivative1_short(prev_order[i], prev_order[i + 1], prev_dt);
+            ders[cur_order - 1] = orderders[order - cur_order];
+            _derivative_cascade(ders, orderders, cur_order + 1, order);
+        }
 
         /// <summary>
         /// Smooth noise-robust differentiator, author - Pavel Holoborodko. 
@@ -176,9 +252,9 @@ namespace AtmosphereAutopilot
                 if (Math.Abs(d_control) > min_d_short_control)        // if d_control is substantial
                 {
                     // get control authority in acceleration
-                    double prev_d2v = derivative1_middle(angular_dv_central[i].getFromTail(3), 
+                    double prev_d2v = derivative1_short(angular_dv_central[i].getFromTail(2), 
                         angular_dv_central[i].getFromTail(1), prev_dt);
-                    double cur_d2v = derivative1_middle(angular_dv_central[i].getFromTail(2),
+                    double cur_d2v = derivative1_short(angular_dv_central[i].getFromTail(1),
                         angular_dv_central[i].getFromTail(0), prev_dt);
                     double control_authority_dv = (cur_d2v - prev_d2v) / d_control;
                     if (control_authority_dv > min_authority_dv)

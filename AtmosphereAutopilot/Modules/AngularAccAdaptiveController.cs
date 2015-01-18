@@ -21,7 +21,7 @@ namespace AtmosphereAutopilot
 		InstantControlModel model;
         MediumFlightModel m_model;
 
-        StreamWriter errorWriter, controlWriter, v_writer, dv_writer;
+        StreamWriter errorWriter, controlWriter, v_writer, dv_writer, smooth_dv_writer, desire_dv_writer, extr_dv_writer;
 
 		/// <summary>
 		/// Create controller instance.
@@ -72,26 +72,23 @@ namespace AtmosphereAutopilot
 		public override double ApplyControl(FlightCtrlState cntrl, double target_value)
 		{
             input = model.angular_dv[axis].getLast();
-            error = target_value - input;
             desired_acc = target_value;
 
-			double predicted_input = input + predict_k * TimeWarp.fixedDeltaTime *
-				InstantControlModel.derivative1(
-					model.angular_dv[axis].getFromTail(2),
-					model.angular_dv[axis].getFromTail(1),
-					model.angular_dv[axis].getFromTail(0),
-					TimeWarp.fixedDeltaTime);
+            double predicted_input = model.extrapolate_dv(axis, extrapolation_order);
+            error = target_value - predicted_input;
 
             if (write_telemetry)
             {
-                //errorWriter.Write(error.ToString("G8") + ',');
+                errorWriter.Write(error.ToString("G8") + ',');
                 if (write_cycle >= 3)
-                    dv_writer.Write(model.angular_dv_central[axis].getLast().ToString("G8") + ',');
+                    smooth_dv_writer.Write(model.angular_dv_central[axis].getLast().ToString("G8") + ',');
                 else
                     write_cycle++;
+                desire_dv_writer.Write(target_value.ToString("G8") + ',');
+                dv_writer.Write(model.angular_dv[axis].getLast().ToString("G8") + ',');
+                extr_dv_writer.Write(predicted_input.ToString("G8") + ',');
                 v_writer.Write(model.angular_v[axis].getLast().ToString("G8") + ',');
                 controlWriter.Write(model.input_buf[axis].getLast().ToString("G8") + ',');
-                errorWriter.Write(error.ToString("G8") + ',');
             }
             else
                 write_cycle = 0;
@@ -99,12 +96,11 @@ namespace AtmosphereAutopilot
             double auth = k_auth;
             if (auth > 0.05 && proport_relax_time > 1e-3)
             {
-                if (pid.InputDerivative * pid.last_error < 0.0)
-                    pid.KD = kp_kd_ratio / auth;
-                else
-                    pid.KD = 0.0;
-                if (Math.Abs(error) > small_value)
+                if (Math.Abs(target_value) > small_value)
+                {
                     pid.KP = kp_koeff / auth / proport_relax_time;
+                    pid.KD = kp_kd_ratio / auth;
+                }
                 else
                 {
                     pid.KP = 0.0;
@@ -247,6 +243,15 @@ namespace AtmosphereAutopilot
                             vessel.name + '_' + module_name + "_telemetry_v.csv");
                         dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
                             vessel.name + '_' + module_name + "_telemetry_dv.csv");
+                        desire_dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+                            vessel.name + '_' + module_name + "_telemetry_desire.csv");
+                        extr_dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+                            vessel.name + '_' + module_name + "_telemetry_extrdv.csv");
+                        smooth_dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
+                            vessel.name + '_' + module_name + "_telemetry_smoothdv.csv");
+                        desire_dv_writer.Write("0.0,");
+                        errorWriter.Write(error.ToString("G8") + ',');
+                        extr_dv_writer.Write("0.0,");
                         _write_telemetry = value;
                     }
 				}
@@ -258,6 +263,9 @@ namespace AtmosphereAutopilot
                         controlWriter.Close();
                         v_writer.Close();
                         dv_writer.Close();
+                        desire_dv_writer.Close();
+                        extr_dv_writer.Close();
+                        smooth_dv_writer.Close();
                         _write_telemetry = value;
                     }					
 				}
@@ -321,9 +329,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Proport relax time", true, "G6")]
         public double proport_relax_time = 0.05;
 
-		[GlobalSerializable("predict_k")]
-		[AutoGuiAttr("input prediction", true, "G6")]
-		public double predict_k = 1.0;
+        [GlobalSerializable("extrapolation_order")]
+        [AutoGuiAttr("extr order", true, "G3")]
+        public int extrapolation_order = 7;
 
         [GlobalSerializable("integral_fill_time")]
         [AutoGuiAttr("Integral fill time", true, "G6")]
