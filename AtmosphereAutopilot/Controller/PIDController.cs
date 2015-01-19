@@ -82,13 +82,17 @@ namespace AtmosphereAutopilot
                 last_error = error;
             }
             update_value_stack(input);
-            derivative = (input_stack[0] - 4 * input_stack[1] + 3 * input_stack[2]) / new_dt * 0.5;
+            if (kd != 0.0)
+                derivative = (input_stack[0] - 4 * input_stack[1] + 3 * input_stack[2]) / new_dt * 0.5;
             double diffirential = -derivative * kd;
 
             // integral component             
-            double d_integral = Math.Abs(error) > iclamp ? 0.0 : new_dt * 0.5 * (error + last_error);       // raw diffirential
-            d_integral = Common.Clamp(igain * d_integral, adclamp * new_dt);                                // clamp it
-            i_accumulator = Common.Clamp(i_accumulator + d_integral, aclamp);                               // accumulate
+            if (ki != 0.0)
+            {
+                double d_integral = Math.Abs(error) > iclamp ? 0.0 : new_dt * 0.5 * (error + last_error);       // raw diffirential
+                d_integral = Common.Clamp(igain * d_integral, adclamp * new_dt);                                // clamp it
+                i_accumulator = Common.Clamp(i_accumulator + d_integral, aclamp);                               // accumulate
+            }
             double integral = i_accumulator * ki;
 
             // update previous values
@@ -111,10 +115,13 @@ namespace AtmosphereAutopilot
 			derivative = input_d;
 			double diffirential = -input_d * kd;
 
-			// integral component             
-			double d_integral = Math.Abs(error) > iclamp ? 0.0 : new_dt * 0.5 * (error + last_error);       // raw diffirential
-            d_integral = Common.Clamp(igain * d_integral, adclamp * new_dt);                                // clamp it
-			i_accumulator = Common.Clamp(i_accumulator + d_integral, aclamp);                               // accumulate
+			// integral component       
+            if (ki != 0.0)
+            {
+                double d_integral = Math.Abs(error) > iclamp ? 0.0 : new_dt * 0.5 * (error + last_error);       // raw diffirential
+                d_integral = Common.Clamp(igain * d_integral, adclamp * new_dt);                                // clamp it
+                i_accumulator = Common.Clamp(i_accumulator + d_integral, aclamp);                               // accumulate
+            }
 			double integral = i_accumulator * ki;
 
 			// update previous values

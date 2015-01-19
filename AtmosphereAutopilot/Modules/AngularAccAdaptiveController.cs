@@ -74,8 +74,8 @@ namespace AtmosphereAutopilot
             input = model.angular_dv[axis].getLast();
             desired_acc = target_value;
 
-            double predicted_input = model.extrapolate_dv(axis, extrapolation_order);
-            error = target_value - predicted_input;
+            //double predicted_input = model.extrapolate_dv(axis, extrapolation_order);
+            error = target_value - input;
 
             if (write_telemetry)
             {
@@ -86,7 +86,7 @@ namespace AtmosphereAutopilot
                     write_cycle++;
                 desire_dv_writer.Write(target_value.ToString("G8") + ',');
                 dv_writer.Write(model.angular_dv[axis].getLast().ToString("G8") + ',');
-                extr_dv_writer.Write(predicted_input.ToString("G8") + ',');
+                extr_dv_writer.Write(input.ToString("G8") + ',');
                 v_writer.Write(model.angular_v[axis].getLast().ToString("G8") + ',');
                 controlWriter.Write(model.input_buf[axis].getLast().ToString("G8") + ',');
             }
@@ -94,6 +94,7 @@ namespace AtmosphereAutopilot
                 write_cycle = 0;
 
             double auth = k_auth;
+            small_value = auth * small_value_k;
             if (auth > 0.05 && proport_relax_time > 1e-3)
             {
                 if (Math.Abs(target_value) > small_value)
@@ -108,9 +109,10 @@ namespace AtmosphereAutopilot
                 }
             }
 
+            large_value = m_model.max_angular_dv[axis];
             if (integral_fill_time > 1e-3 && large_value > 1e-3)
             {
-                pid.IntegralClamp = large_value;
+                pid.IntegralClamp = large_value * large_value_k;
                 pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
                 pid.AccumulDerivClamp = pid.AccumulatorClamp / integral_fill_time;
                 pid.KI = ki_koeff / pid.AccumulatorClamp;
@@ -163,7 +165,7 @@ namespace AtmosphereAutopilot
                     pid.Accumulator *= accumul_persistance_k;
                 }
 
-			current_raw = pid.Control(predicted_input, target_value, TimeWarp.fixedDeltaTime);
+            current_raw = pid.Control(input, target_value, TimeWarp.fixedDeltaTime);
 
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
@@ -317,21 +319,27 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("KP/Authority ratio", true, "G6")]
         public double kp_koeff = 0.75;
 
-		[GlobalSerializable("large_value")]
-		[AutoGuiAttr("large value", true, "G6")]
+		[AutoGuiAttr("large value", false, "G6")]
 		public double large_value = 10.0;
 
-		[GlobalSerializable("small_value")]
-		[AutoGuiAttr("small value", true, "G6")]
+        [GlobalSerializable("large_value_k")]
+        [AutoGuiAttr("large value k", true, "G6")]
+        public double large_value_k = 5.0;
+
+		[AutoGuiAttr("small value", false, "G6")]
 		public double small_value = 0.1;
+
+        [GlobalSerializable("small_value_k")]
+        [AutoGuiAttr("small value k", true, "G6")]
+        public double small_value_k = 0.01;
 
         [GlobalSerializable("proport_relax_time")]
         [AutoGuiAttr("Proport relax time", true, "G6")]
         public double proport_relax_time = 0.05;
 
-        [GlobalSerializable("extrapolation_order")]
-        [AutoGuiAttr("extr order", true, "G3")]
-        public int extrapolation_order = 7;
+        //[GlobalSerializable("extrapolation_order")]
+        //[AutoGuiAttr("extr order", true, "G3")]
+        //public int extrapolation_order = 7;
 
         [GlobalSerializable("integral_fill_time")]
         [AutoGuiAttr("Integral fill time", true, "G6")]

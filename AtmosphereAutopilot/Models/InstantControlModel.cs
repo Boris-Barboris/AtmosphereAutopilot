@@ -198,7 +198,7 @@ namespace AtmosphereAutopilot
         }
 
         /// <summary>
-        /// Smooth noise-robust differentiator, author - Pavel Holoborodko. 
+        /// Smooth hybrid noise-robust differentiator, author - Pavel Holoborodko. 
         /// http://www.holoborodko.com/pavel/wp-content/uploads/OneSidedNoiseRobustDifferentiators.pdf
         /// </summary>
         double smooth_derivative_hybrid(double dt, int axis)
@@ -216,7 +216,7 @@ namespace AtmosphereAutopilot
         }
 
         /// <summary>
-        /// Smooth noise-robust differentiator, author - Pavel Holoborodko. 
+        /// Smooth central noise-robust differentiator, author - Pavel Holoborodko. 
         /// http://www.holoborodko.com/pavel/wp-content/uploads/OneSidedNoiseRobustDifferentiators.pdf
         /// </summary>
         double smooth_derivative_central(double dt, int axis)

@@ -31,6 +31,9 @@ namespace AtmosphereAutopilot
         public CircularBuffer<double> aoa_yaw = new CircularBuffer<double>(BUFFER_SIZE, true);
         public CircularBuffer<double> g_force = new CircularBuffer<double>(BUFFER_SIZE, true);
 
+        public double[] max_angular_v = new double[3];
+        public double[] max_angular_dv = new double[3];
+
 		double prev_dt = 1.0;		// dt in previous call
 		int stable_dt = 0;			// counts amount of stable dt intervals
 

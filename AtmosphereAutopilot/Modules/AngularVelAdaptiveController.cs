@@ -10,7 +10,7 @@ namespace AtmosphereAutopilot
 	/// <summary>
 	/// Controls angular velocity
 	/// </summary>
-	class AngularVelController : AdaptivePIDController
+	class AngularVelAdaptiveController : AdaptivePIDController
 	{
 		public const int PITCH = 0;
 		public const int ROLL = 1;
@@ -30,7 +30,7 @@ namespace AtmosphereAutopilot
 		/// <param name="wnd_id">unique for types window id</param>
 		/// <param name="axis">Pitch = 0, roll = 1, yaw = 2</param>
 		/// <param name="model">Flight model instance for adaptive control</param>
-		public AngularVelController(Vessel vessel, string module_name,
+		public AngularVelAdaptiveController(Vessel vessel, string module_name,
 			int wnd_id, int axis, InstantControlModel model, MediumFlightModel mmodel, AngularAccAdaptiveController acc)
 			: base(vessel, module_name, wnd_id)
 		{
@@ -54,6 +54,8 @@ namespace AtmosphereAutopilot
 			min_input = -max_input;
 			max_input_deriv = max_part_acceleration / lever_arm;
 			min_input_deriv = -max_input_deriv;
+            mmodel.max_angular_v[axis] = max_input;
+            mmodel.max_angular_dv[axis] = max_input_deriv;
 		}
 
 		double max_part_offset_from_com()
@@ -125,17 +127,17 @@ namespace AtmosphereAutopilot
             }
 
 			input = model.angular_v[axis].getLast();				// get angular velocity
-            double extrapolated_input = model.extrapolate_v(axis, extrapolation_order);
+            //double extrapolated_input = model.extrapolate_v(axis, extrapolation_order);
 			double accel = model.angular_dv[axis].getLast();		// get angular acceleration
             current_acc = accel;
 
-            // Adapt KP, so that on small value it produces max_input * kp_acc factor output
-            if (small_value != 0.0)
-                pid.KP = kp_acc_factor * max_input_deriv / small_value;
+            // Adapt KP, so that on max_input it produces max_input_deriv * kp_acc factor output
+            if (max_input != 0.0)
+                pid.KP = kp_acc_factor * max_input_deriv / max_input;
             // Adapt KI
             if (integral_fill_time > 1e-3)
             {
-                pid.IntegralClamp = small_value;
+                pid.IntegralClamp = max_input;
                 pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
                 pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0 / integral_fill_time;
                 pid.KI = ki_koeff * max_input_deriv / pid.AccumulatorClamp;
@@ -169,10 +171,10 @@ namespace AtmosphereAutopilot
                         relative_input *= fbw_modifier;
                     }
                 }
-                output = pid.Control(extrapolated_input, accel, relative_input, TimeWarp.fixedDeltaTime);
+                output = pid.Control(input, accel, relative_input, TimeWarp.fixedDeltaTime);
             }
             else
-                output = pid.Control(extrapolated_input, accel, 0.0, TimeWarp.fixedDeltaTime);
+                output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
 
             double error = 0.0 - input;
             proport = error * pid.KP;
@@ -201,9 +203,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Fly-By-Wire", true, "G6")]
         public bool FlyByWire = false;
 
-        [GlobalSerializable("extrapolation_order")]
-        [AutoGuiAttr("extr order", true, "G3")]
-        public int extrapolation_order = 5;
+        //[GlobalSerializable("extrapolation_order")]
+        //[AutoGuiAttr("extr order", true, "G3")]
+        //public int extrapolation_order = 5;
 
         [VesselSerializable("fbw_v_k")]
         [AutoGuiAttr("moderation k", true, "G6")]
@@ -306,11 +308,7 @@ namespace AtmosphereAutopilot
 
         [GlobalSerializable("ki_koeff")]
         [AutoGuiAttr("ki_koeff", true, "G6")]
-        public double ki_koeff = 0.8;	        // maximum integral authority
-
-		[GlobalSerializable("small_value")]
-		[AutoGuiAttr("small value", true, "G6")]
-		public double small_value = 0.1;		// arbitrary small input value. Purely intuitive
+        public double ki_koeff = 0.0;	        // maximum integral authority
 
 		[GlobalSerializable("kp_acc_factor")]
 		[AutoGuiAttr("KP acceleration factor", true, "G6")]
@@ -322,28 +320,28 @@ namespace AtmosphereAutopilot
 
         [GlobalSerializable("kd_kp_koeff")]
         [AutoGuiAttr("KD/KP ratio", true, "G6")]
-        public double kd_kp_koeff = 0.33;
+        public double kd_kp_koeff = 0.0;
 	}
 
 
 
 
 
-    class PitchAngularVelocityController : AngularVelController
+    class PitchAngularVelocityController : AngularVelAdaptiveController
     {
         public PitchAngularVelocityController(Vessel vessel, InstantControlModel model, MediumFlightModel mmodel, AngularAccAdaptiveController acc)
             : base(vessel, "Adaptive elavator trimmer", 1234444, 0, model, mmodel, acc)
         { }
     }
 
-	class RollAngularVelocityController : AngularVelController
+	class RollAngularVelocityController : AngularVelAdaptiveController
 	{
 		public RollAngularVelocityController(Vessel vessel, InstantControlModel model, MediumFlightModel mmodel, AngularAccAdaptiveController acc)
 			: base(vessel, "Adaptive roll trimmer", 1234445, 1, model, mmodel, acc)
 		{ }
 	}
 
-	class YawAngularVelocityController : AngularVelController
+	class YawAngularVelocityController : AngularVelAdaptiveController
 	{
 		public YawAngularVelocityController(Vessel vessel, InstantControlModel model, MediumFlightModel mmodel, AngularAccAdaptiveController acc)
 			: base(vessel, "Adaptive yaw trimmer", 1234446, 2, model, mmodel, acc)
