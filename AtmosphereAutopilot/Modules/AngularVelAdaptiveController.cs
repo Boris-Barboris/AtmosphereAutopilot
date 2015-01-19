@@ -116,10 +116,7 @@ namespace AtmosphereAutopilot
 			if (cycle_counter % 500 == 1)		// every 500 OnFixUpdate's recalculate limits
 				calculate_limits();
 
-			if (cntrl.killRot)					// skip if ASAS is enabled
-				return;
-
-            if (vessel.checkLanded() && axis != YAW)           // ground breaks the model
+            if (vessel.checkLanded())           // ground breaks the model
             {
                 in_regime = false;
                 time_in_regime = 0.0;
