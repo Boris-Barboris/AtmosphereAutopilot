@@ -29,6 +29,7 @@ namespace AtmosphereAutopilot
 				angular_dv[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
                 angular_dv_central[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
                 k_dv_control[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
+                dv_mistake[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 			}
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
             vessel.OnPostAutopilotUpdate += new FlightInputCallback(OnPostAutopilot);
@@ -126,77 +127,6 @@ namespace AtmosphereAutopilot
 			return (-y0 + 4 * y1 - 5 * y2 + 2 * y3) / dt / dt;
 		}
 
-        public static double extrapolate(double v, double dv, double d2v, double dt)
-        {
-            return v + dv * dt + 0.5 * d2v * dt * dt;
-        }
-
-        public double extrapolate_v(int axis, int order)
-        {
-            if (stable_dt > order)
-                return extrapolate_sequence(angular_v[axis], order);
-            else
-                return double.NaN;
-        }
-
-        public double extrapolate_dv(int axis, int order)
-        {
-            if (stable_dt > order)
-                return extrapolate_sequence(angular_dv[axis], order);
-            else
-                return double.NaN;
-        }
-
-        public double extrapolate_sequence(CircularBuffer<double> buf, int order)
-        {
-            int points_needed = order + 1;
-            if (points_needed < 1)
-                throw new ArgumentException("order is wrong");
-            if (points_needed == 1)
-                return buf.getLast();
-            double[] derivatives = new double[order];
-            derivative_cascade(derivatives, buf, 1, order);
-            double result = buf.getLast();
-            for (int i = 0; i < order; i++)
-                result += derivatives[i] * Math.Pow(prev_dt, i + 1) / Factorial(i + 1);
-            return result;
-        }
-
-        static int Factorial(int x)
-        {
-            return (x == 0) ? 1 : x * Factorial(x - 1);
-        }
-
-        void derivative_cascade(double[] ders, CircularBuffer<double> buf, int cur_order, int order)
-        {
-            if (cur_order != 1)
-                throw new InvalidOperationException("cur_order must be 1");
-            if (cur_order == order)
-            {
-                ders[0] = derivative1_short(buf.getFromTail(1), buf.getLast(), prev_dt);
-                return;
-            }
-            double[] order1ders = new double[order];
-            for (int i = 0; i < order; i++)
-                order1ders[order - i - 1] = derivative1_short(buf.getFromTail(i + 1), buf.getFromTail(i), prev_dt);
-            ders[0] = order1ders[order - 1];
-            _derivative_cascade(ders, order1ders, cur_order + 1, order);
-        }
-
-        void _derivative_cascade(double[] ders, double[] prev_order, int cur_order, int order)
-        {
-            if (cur_order == order)
-            {
-                ders[cur_order - 1] = derivative1_short(prev_order[0], prev_order[1], prev_dt);
-                return;
-            }
-            double[] orderders = new double[order - cur_order + 1];
-            for (int i = order - cur_order; i >= 0; i--)
-                orderders[i] = derivative1_short(prev_order[i], prev_order[i + 1], prev_dt);
-            ders[cur_order - 1] = orderders[order - cur_order];
-            _derivative_cascade(ders, orderders, cur_order + 1, order);
-        }
-
         /// <summary>
         /// Smooth hybrid noise-robust differentiator, author - Pavel Holoborodko. 
         /// http://www.holoborodko.com/pavel/wp-content/uploads/OneSidedNoiseRobustDifferentiators.pdf
@@ -237,6 +167,7 @@ namespace AtmosphereAutopilot
 		//
 
         public CircularBuffer<double>[] k_dv_control = new CircularBuffer<double>[3];		// control authority in angular acceleration
+        public CircularBuffer<double>[] dv_mistake = new CircularBuffer<double>[3];         // difference between |dv| and |smooth_dv|
 
 		public void update_dv_model()
 		{
@@ -260,6 +191,8 @@ namespace AtmosphereAutopilot
                     if (control_authority_dv > min_authority_dv)
                         k_dv_control[i].Put(control_authority_dv);
                 }
+
+                dv_mistake[i].Put(Math.Abs(angular_dv_central[i].getLast() - angular_dv[i].getFromTail(3)));
 			}
 		}
 

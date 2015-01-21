@@ -153,22 +153,19 @@ namespace AtmosphereAutopilot
                     if (relative_input * mmodel.aoa_pitch.getLast() > 0.0)
                     {
                         // user is trying to increase AoA
-                        max_g = fbw_g_k * 45.0 / (lever_arm - 2.0);
+                        max_g = fbw_g_k * 100.0 / (lever_arm + 1.0);
                         fbw_modifier = 1.0;
+                        double g_relation = 1.0;
+                        double aoa_relation = 1.0;
                         if (max_g > 1e-3 && cur_g >= 0.0)
-                        {
-                            double g_relation = Common.Clamp(cur_g / max_g, 0.0, 1.0);
-                            fbw_modifier *= Common.Clamp(1.0 - g_relation, 0.0, 1.0);
-                        }
+                            g_relation = Common.Clamp(cur_g / max_g, 0.0, 1.0);
                         if (fbw_max_aoa > 2.0)
-                        {
-                            double aoa_relation = Common.Clamp(mmodel.aoa_pitch.getLast() / (fbw_max_aoa / 180.0 * Math.PI), 0.0, 1.0);
-                            fbw_modifier *= Common.Clamp(1.0 - aoa_relation * aoa_relation * aoa_relation, 0.0, 1.0);
-                        }
+                            aoa_relation = Common.Clamp(Math.Abs(mmodel.aoa_pitch.getLast()) / (fbw_max_aoa / 180.0 * Math.PI), 0.0, 1.0);
+                        fbw_modifier *= Common.Clamp(1.0 - Math.Max(aoa_relation, g_relation), 0.0, 1.0);
                         relative_input *= fbw_modifier;
                     }
                 }
-                output = pid.Control(input, accel, relative_input, TimeWarp.fixedDeltaTime);
+                output = Common.Clamp(pid.Control(input, accel, relative_input, TimeWarp.fixedDeltaTime), max_input_deriv);
             }
             else
                 output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);

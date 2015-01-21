@@ -94,10 +94,10 @@ namespace AtmosphereAutopilot
                 write_cycle = 0;
 
             double auth = k_auth;
-            small_value = auth * small_value_k;
+            small_value = small_value_k * model.dv_mistake[axis].Average();
             if (auth > 0.05 && proport_relax_time > 1e-3)
             {
-                if (Math.Abs(target_value) > small_value)
+                if (Math.Abs(input) > small_value)
                 {
                     pid.KP = kp_koeff / auth / proport_relax_time;
                     pid.KD = kp_kd_ratio / auth;
@@ -331,7 +331,7 @@ namespace AtmosphereAutopilot
 
         [GlobalSerializable("small_value_k")]
         [AutoGuiAttr("small value k", true, "G6")]
-        public double small_value_k = 0.01;
+        public double small_value_k = 1.5;
 
         [GlobalSerializable("proport_relax_time")]
         [AutoGuiAttr("Proport relax time", true, "G6")]
