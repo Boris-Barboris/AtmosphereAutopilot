@@ -11,7 +11,7 @@ namespace AtmosphereAutopilot
 	/// <summary>
 	/// Class for short-motion model approximation
 	/// </summary>
-	class InstantControlModel : IAutoGui, IAutoSerializable
+    class InstantControlModel : GUIWindow, IAutoSerializable
 	{
 		public const int PITCH = 0;
 		public const int ROLL = 1;
@@ -19,7 +19,8 @@ namespace AtmosphereAutopilot
 
 		Vessel vessel;
 
-		public InstantControlModel(Vessel v)
+		public InstantControlModel(Vessel v):
+            base("Instant control model", 34278832, new Rect(50.0f, 80.0f, 240.0f, 150.0f))
 		{
 			vessel = v;
 			for (int i = 0; i < 3; i++)
@@ -255,42 +256,9 @@ namespace AtmosphereAutopilot
 
         #region GUI
 
-        string module_name = "Instant control model";
-        int wnd_id = 34278832;
-        protected bool gui_shown = false;
-        bool gui_hidden = false;
-        protected Rect window = new Rect(50.0f, 80.0f, 240.0f, 150.0f);
-
-        public bool IsDrawn()
-        {
-            return gui_shown;
-        }
-
-        public void OnGUI()
-        {
-            if (!gui_shown || gui_hidden)
-                return;
-            window = GUILayout.Window(wnd_id, window, _drawGUI, module_name);
-        }
-
-        public bool ToggleGUI()
-        {
-            return gui_shown = !gui_shown;
-        }
-
-        public void HideGUI()
-        {
-            gui_hidden = true;
-        }
-
-        public void ShowGUI()
-        {
-            gui_hidden = false;
-        }
-
 		static readonly string[] axis_names = { "pitch", "roll", "yaw" };
 
-		void _drawGUI(int id)
+		protected override void _drawGUI(int id)
 		{
 			GUILayout.BeginVertical();
 			for (int i = 0; i < 3; i++)

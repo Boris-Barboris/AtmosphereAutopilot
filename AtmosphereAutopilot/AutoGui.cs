@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using System.Reflection;
 
 namespace AtmosphereAutopilot
 {
@@ -36,7 +37,9 @@ namespace AtmosphereAutopilot
     }
 
 
-
+    /// <summary>
+    /// Basic window, derived class needs to implement _drawGUI method.
+    /// </summary>
     abstract class GUIWindow : IAutoGui
     {
         protected string wndname;
@@ -72,7 +75,7 @@ namespace AtmosphereAutopilot
             return gui_shown = !gui_shown;
         }
 
-        abstract void _drawGUI(int id);
+        protected abstract void _drawGUI(int id);
 
         public void HideGUI()
         {
@@ -97,107 +100,106 @@ namespace AtmosphereAutopilot
 			
 			// properties
             foreach (var property in type.GetProperties())
-            {
-                var attributes = property.GetCustomAttributes(typeof(AutoGuiAttr), true);
-                if (attributes.Length <= 0)
-                    continue;
-                var att = attributes[0] as AutoGuiAttr;
-                if (att == null)
-                    continue;
-                Type prop_type = property.PropertyType;
-                if (prop_type == typeof(bool) && att.editable)
-                {
-                    // it's a button
-                    bool cur_state = (bool)property.GetValue(obj, null);
-                    property.SetValue(obj, GUILayout.Toggle(cur_state, att.value_name + " = " + cur_state.ToString(), 
-                        GUIStyles.toggleButtonStyle), null);
-                    continue;
-                }
-                GUILayout.BeginHorizontal();
-                GUILayout.Label(att.value_name, GUIStyles.labelStyleLeft);
-                var ToStringFormat = prop_type.GetMethod("ToString", new[] { typeof(string) });
-                if (!att.editable)
-                {
-                    if (ToStringFormat != null)
-                        GUILayout.Label((string)ToStringFormat.Invoke(property.GetValue(obj, null), new[] { att.format }), GUIStyles.labelStyleRight);
-                    else
-                        GUILayout.Label(property.GetValue(obj, null).ToString(), GUIStyles.labelStyleRight);
-                }
-                else
-                {
-                    int hash = obj.GetHashCode() + property.Name.GetHashCode();
-                    string val_holder;
-                    if (value_holders.ContainsKey(hash))
-                        val_holder = value_holders[hash];
-                    else
-                        if (ToStringFormat != null)
-                            val_holder = (string)ToStringFormat.Invoke(property.GetValue(obj, null), new[] { att.format });
-                        else
-                            val_holder = property.GetValue(obj, null).ToString();
-                    val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);
-                    try
-                    {
-                        var ParseMethod = prop_type.GetMethod("Parse", new[] { typeof(string) });
-                        if (ParseMethod != null)
-                            property.SetValue(obj, ParseMethod.Invoke(null, new [] { val_holder }), null);
-                    }
-                    catch { }
-                    value_holders[hash] = val_holder;
-                }
-                GUILayout.EndHorizontal();
-            }
+                draw_element(property, obj);
 
 			// fields
 			foreach (var field in type.GetFields())
-			{
-				var attributes = field.GetCustomAttributes(typeof(AutoGuiAttr), true);
-				if (attributes.Length <= 0)
-					continue;
-				var att = attributes[0] as AutoGuiAttr;
-				if (att == null)
-					continue;
-				Type prop_type = field.FieldType;
-				if (prop_type == typeof(bool) && att.editable)
-				{
-					// it's a button
-					bool cur_state = (bool)field.GetValue(obj);
-					field.SetValue(obj, GUILayout.Toggle(cur_state, att.value_name + " = " + cur_state.ToString(),
-						GUIStyles.toggleButtonStyle));
-					continue;
-				}
-				GUILayout.BeginHorizontal();
-				GUILayout.Label(att.value_name, GUIStyles.labelStyleLeft);
-				var ToStringFormat = prop_type.GetMethod("ToString", new[] { typeof(string) });
-				if (!att.editable)
-				{
-					if (ToStringFormat != null)
-                        GUILayout.Label((string)ToStringFormat.Invoke(field.GetValue(obj), new[] { att.format }), GUIStyles.labelStyleRight);
-					else
-                        GUILayout.Label(field.GetValue(obj).ToString(), GUIStyles.labelStyleRight);
-				}
-				else
-				{
-					int hash = obj.GetHashCode() + field.Name.GetHashCode();
-					string val_holder;
-					if (value_holders.ContainsKey(hash))
-						val_holder = value_holders[hash];
-					else
-						if (ToStringFormat != null)
-							val_holder = (string)ToStringFormat.Invoke(field.GetValue(obj), new[] { att.format });
-						else
-							val_holder = field.GetValue(obj).ToString();
-					val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);
-					try
-					{
-						var ParseMethod = prop_type.GetMethod("Parse", new[] { typeof(string) });
-						if (ParseMethod != null)
-							field.SetValue(obj, ParseMethod.Invoke(null, new[] { val_holder }));
-					}
-					catch { }
-					value_holders[hash] = val_holder;
-				}
-				GUILayout.EndHorizontal();
-			}
+                draw_element(field, obj);
+        }
+
+        static object[] GetCustomAttributes(object obj, Type atttype, bool inherit)
+        {
+            if (obj.GetType() == typeof(PropertyInfo))
+                return (obj as PropertyInfo).GetCustomAttributes(atttype, inherit);
+            if (obj.GetType() == typeof(FieldInfo))
+                return (obj as FieldInfo).GetCustomAttributes(atttype, inherit);
+            return null;
+        }
+
+        static Type ElementType(object element)
+        {
+            if (element.GetType() == typeof(PropertyInfo))
+                return (element as PropertyInfo).PropertyType;
+            if (element.GetType() == typeof(FieldInfo))
+                return (element as FieldInfo).FieldType;
+            return null;
+        }
+
+        static object GetValue(object element, object obj)
+        {
+            if (element.GetType() == typeof(PropertyInfo))
+                return (element as PropertyInfo).GetValue(obj, null);
+            if (element.GetType() == typeof(FieldInfo))
+                return (element as FieldInfo).GetValue(obj);
+            return null;
+        }
+
+        static void SetValue(object element, object obj, object value)
+        {
+            if (element.GetType() == typeof(PropertyInfo))
+                (element as PropertyInfo).SetValue(obj, value, null);
+            if (element.GetType() == typeof(FieldInfo))
+                (element as FieldInfo).SetValue(obj, value);
+        }
+
+        static string Name(object element)
+        {
+            if (element.GetType() == typeof(PropertyInfo))
+                return (element as PropertyInfo).Name;
+            if (element.GetType() == typeof(FieldInfo))
+                return (element as FieldInfo).Name;
+            return null;
+        }
+
+        static void draw_element(object element, object obj)
+        {
+            var attributes = GetCustomAttributes(element, typeof(AutoGuiAttr), true);
+            if (attributes.Length <= 0)
+                return;
+            var att = attributes[0] as AutoGuiAttr;
+            if (att == null)
+                return;
+            Type element_type = ElementType(element);
+            if (element_type == typeof(bool) && att.editable)
+            {
+                // it's a button
+                bool cur_state = (bool)GetValue(element, obj);
+                SetValue(element, obj, GUILayout.Toggle(cur_state, att.value_name + " = " + cur_state.ToString(),
+                        GUIStyles.toggleButtonStyle));
+                return;
+            }
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(att.value_name, GUIStyles.labelStyleLeft);
+            var ToStringFormat = element_type.GetMethod("ToString", new[] { typeof(string) });
+            if (!att.editable)
+            {
+                if (ToStringFormat != null)
+                    GUILayout.Label((string)ToStringFormat.Invoke(GetValue(element, obj), new[] { att.format }), GUIStyles.labelStyleRight);
+                else
+                    GUILayout.Label(GetValue(element, obj).ToString(), GUIStyles.labelStyleRight);
+            }
+            else
+            {
+                int hash = obj.GetHashCode() + Name(element).GetHashCode();
+                string val_holder;
+                if (value_holders.ContainsKey(hash))
+                    val_holder = value_holders[hash];
+                else
+                    if (ToStringFormat != null)
+                        val_holder = (string)ToStringFormat.Invoke(GetValue(element, obj), new[] { att.format });
+                    else
+                        val_holder = GetValue(obj, null).ToString();
+                val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);
+                try
+                {
+                    var ParseMethod = element_type.GetMethod("Parse", new[] { typeof(string) });
+                    if (ParseMethod != null)
+                        SetValue(element, obj, ParseMethod.Invoke(null, new[] { val_holder }));
+                }
+                catch { }
+                value_holders[hash] = val_holder;
+            }
+            GUILayout.EndHorizontal();
         }
     }
 }

@@ -112,7 +112,7 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("window_width")]
         public float WindowWidth { get { return window.width; } set { window.width = value; } }
 
-        public override void _drawGUI(int id)
+        protected override void _drawGUI(int id)
         {
             GUILayout.BeginVertical();
             AutoGUI.AutoDrawObject(this);

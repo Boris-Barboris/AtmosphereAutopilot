@@ -11,7 +11,7 @@ namespace AtmosphereAutopilot
 	/// <summary>
 	/// Class for medium-term model approximation
 	/// </summary>
-	class MediumFlightModel : IAutoGui, IAutoSerializable
+	class MediumFlightModel : GUIWindow, IAutoSerializable
 	{
 		public const int PITCH = 0;
 		public const int ROLL = 1;
@@ -19,7 +19,8 @@ namespace AtmosphereAutopilot
 
 		Vessel vessel;
 
-        public MediumFlightModel(Vessel v)
+        public MediumFlightModel(Vessel v):
+            base("Medium-term flight model", 8459383, new Rect(50.0f, 80.0f, 220.0f, 50.0f))
 		{
 			vessel = v;
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
@@ -97,30 +98,7 @@ namespace AtmosphereAutopilot
 
         #region GUI
 
-        string module_name = "Medium-term flight model";
-        int wnd_id = 8459383;
-        protected bool gui_shown = false;
-        bool gui_hidden = false;
-        protected Rect window = new Rect(50.0f, 80.0f, 220.0f, 50.0f);
-
-        public bool IsDrawn()
-        {
-            return gui_shown;
-        }
-
-        public void OnGUI()
-        {
-            if (!gui_shown || gui_hidden)
-                return;
-            window = GUILayout.Window(wnd_id, window, _drawGUI, module_name);
-        }
-
-        public bool ToggleGUI()
-        {
-            return gui_shown = !gui_shown;
-        }
-
-		void _drawGUI(int id)
+		protected override void _drawGUI(int id)
 		{
 			GUILayout.BeginVertical();
 			GUILayout.Label("AOA pitch = " + aoa_pitch.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
@@ -128,16 +106,6 @@ namespace AtmosphereAutopilot
             GUILayout.Label("G-force = " + g_force.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
 			GUILayout.EndVertical();
 			GUI.DragWindow();
-        }
-
-        public void HideGUI()
-        {
-            gui_hidden = true;
-        }
-
-        public void ShowGUI()
-        {
-            gui_hidden = false;
         }
 
         #endregion
