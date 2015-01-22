@@ -18,7 +18,7 @@ namespace AtmosphereAutopilot
 
         List<Type> autopilot_module_types = new List<Type>();
         Dictionary<Type, Dictionary<Vessel, object>> autopilot_module_lists = new Dictionary<Type, Dictionary<Vessel, object>>();
-        Dictionary<Type, object> active_modules = new Dictionary<Type, object>();
+        Dictionary<Type, object> cur_ves_modules = new Dictionary<Type, object>();
         Dictionary<Type, KeyCode> module_hotkeys = new Dictionary<Type, KeyCode>();
 
         public static AtmosphereAutopilot Instance { get; private set; }
@@ -69,7 +69,7 @@ namespace AtmosphereAutopilot
 
         void serialize_active_modules()
         {
-            foreach (var pair in active_modules)
+            foreach (var pair in cur_ves_modules)
             {
                 IAutoSerializable s = pair.Value as IAutoSerializable;
                 if (s != null)
@@ -85,7 +85,7 @@ namespace AtmosphereAutopilot
         private void sceneSwitch(GameScenes scenes)
         {
             serialize_active_modules();
-            active_modules.Clear();
+            cur_ves_modules.Clear();
         }
 
         private void load_module(Vessel vessel, Type type, Func<Vessel, object> constructor)
@@ -108,7 +108,7 @@ namespace AtmosphereAutopilot
             IAutoSerializable s = module as IAutoSerializable;
             if (s != null) 
                 s.Deserialize();
-            active_modules[type] = module;
+            cur_ves_modules[type] = module;
         }
 
         private void load_all_modules_for_vessel(Vessel v)
@@ -153,51 +153,51 @@ namespace AtmosphereAutopilot
         [ModuleConstructor(typeof(PitchAngularAccController))]
         PitchAngularAccController create_PitchAngularAccController(Vessel v)
         {
-            InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
-            MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+            InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
+            MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
             return new PitchAngularAccController(v, sfmodel, mfmodel);
         }
 
         [ModuleConstructor(typeof(PitchAngularVelocityController))]
         PitchAngularVelocityController create_PitchAngularVelocityController(Vessel v)
         {
-            InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
-            MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
-            PitchAngularAccController acc = active_modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
+            InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
+            MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+            PitchAngularAccController acc = cur_ves_modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
             return new PitchAngularVelocityController(v, sfmodel, mfmodel, acc);
         }
 
 		[ModuleConstructor(typeof(RollAngularAccController))]
 		RollAngularAccController create_RollAngularAccController(Vessel v)
 		{
-			InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
-			MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+			InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
+			MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
 			return new RollAngularAccController(v, sfmodel, mfmodel);
 		}
 
 		[ModuleConstructor(typeof(RollAngularVelocityController))]
 		RollAngularVelocityController create_RollAngularVelocityController(Vessel v)
 		{
-			InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
-			MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
-			RollAngularAccController acc = active_modules[typeof(RollAngularAccController)] as RollAngularAccController;
+			InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
+			MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+			RollAngularAccController acc = cur_ves_modules[typeof(RollAngularAccController)] as RollAngularAccController;
 			return new RollAngularVelocityController(v, sfmodel, mfmodel, acc);
 		}
 
 		[ModuleConstructor(typeof(YawAngularAccController))]
 		YawAngularAccController create_YawAngularAccController(Vessel v)
 		{
-			InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
-			MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+			InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
+			MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
 			return new YawAngularAccController(v, sfmodel, mfmodel);
 		}
 
 		[ModuleConstructor(typeof(YawAngularVelocityController))]
 		YawAngularVelocityController create_YawAngularVelocityController(Vessel v)
 		{
-			InstantControlModel sfmodel = active_modules[typeof(InstantControlModel)] as InstantControlModel;
-			MediumFlightModel mfmodel = active_modules[typeof(MediumFlightModel)] as MediumFlightModel;
-			YawAngularAccController acc = active_modules[typeof(YawAngularAccController)] as YawAngularAccController;
+			InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
+			MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+			YawAngularAccController acc = cur_ves_modules[typeof(YawAngularAccController)] as YawAngularAccController;
 			return new YawAngularVelocityController(v, sfmodel, mfmodel, acc);
 		}
 
@@ -218,7 +218,8 @@ namespace AtmosphereAutopilot
                 GUIStyles.Init();
                 styles_init = true;
             }
-            foreach (var pair in active_modules)
+            GUI.skin = GUIStyles.skin;
+            foreach (var pair in cur_ves_modules)
             {
                 IAutoGui s = pair.Value as IAutoGui;
                 if (s != null)
@@ -228,7 +229,7 @@ namespace AtmosphereAutopilot
 
         public void OnHideUI()
         {
-            foreach (var pair in active_modules)
+            foreach (var pair in cur_ves_modules)
             {
                 IAutoGui s = pair.Value as IAutoGui;
                 if (s != null)
@@ -238,7 +239,7 @@ namespace AtmosphereAutopilot
 
         public void OnShowUI()
         {
-            foreach (var pair in active_modules)
+            foreach (var pair in cur_ves_modules)
             {
                 IAutoGui s = pair.Value as IAutoGui;
                 if (s != null)
@@ -259,13 +260,13 @@ namespace AtmosphereAutopilot
                 if (Input.GetKeyDown(pair.Value))
                     if (mod)
                     {
-                        IAutoGui gui = active_modules[pair.Key] as IAutoGui;
+                        IAutoGui gui = cur_ves_modules[pair.Key] as IAutoGui;
                         if (gui != null)
                             gui.ToggleGUI();
                     }
                     else
                     {
-                        AutopilotModule module = active_modules[pair.Key] as AutopilotModule;
+                        AutopilotModule module = cur_ves_modules[pair.Key] as AutopilotModule;
                         if (module != null)
                         {
                             module.Active = !module.Active;

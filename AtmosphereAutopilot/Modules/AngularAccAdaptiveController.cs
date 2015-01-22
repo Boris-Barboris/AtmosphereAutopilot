@@ -337,10 +337,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Proport relax time", true, "G6")]
         public double proport_relax_time = 0.05;
 
-        //[GlobalSerializable("extrapolation_order")]
-        //[AutoGuiAttr("extr order", true, "G3")]
-        //public int extrapolation_order = 7;
-
         [GlobalSerializable("integral_fill_time")]
         [AutoGuiAttr("Integral fill time", true, "G6")]
         public double integral_fill_time = 0.1;

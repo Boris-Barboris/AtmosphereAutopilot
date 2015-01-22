@@ -8,16 +8,17 @@ using UnityEngine;
 namespace AtmosphereAutopilot
 {
 
-    abstract class AutopilotModule : IAutoSerializable, IAutoGui
+    abstract class AutopilotModule : GUIWindow, IAutoSerializable
     {
         protected Vessel vessel = null;
         protected bool enabled = false;
+        protected string module_name;
 
-        public AutopilotModule(Vessel v, int wnd_id, string module_name)
+        public AutopilotModule(Vessel v, int wnd_id, string module_name):
+            base(module_name, wnd_id, new Rect(50.0f, 80.0f, 220.0f, 150.0f))
         {
             vessel = v;
             this.module_name = module_name;
-            this.wnd_id = wnd_id;
         }
 
         public void Activate()
@@ -102,12 +103,6 @@ namespace AtmosphereAutopilot
      
         #region GUI
 
-        protected string module_name;
-        int wnd_id;
-        protected bool gui_shown = false;
-        bool gui_hidden = false;
-        protected Rect window = new Rect(50.0f, 80.0f, 220.0f, 150.0f);
-
         [GlobalSerializable("window_x")]
         public float WindowLeft { get { return window.xMin; } set { window.xMin = value; } }
 
@@ -117,42 +112,12 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("window_width")]
         public float WindowWidth { get { return window.width; } set { window.width = value; } }
 
-        public bool IsDrawn()
-        {
-            return gui_shown;
-        }
-
-        public void OnGUI()
-        {
-            if (!gui_shown || gui_hidden)
-                return;
-            window = GUILayout.Window(wnd_id, window, _drawGUI, module_name);
-            OnGUICustom();
-        }
-
-        protected virtual void OnGUICustom() { }
-
-        public virtual void _drawGUI(int id)
+        public override void _drawGUI(int id)
         {
             GUILayout.BeginVertical();
             AutoGUI.AutoDrawObject(this);
             GUILayout.EndVertical();
             GUI.DragWindow();
-        }
-
-        public bool ToggleGUI()
-        {
-            return gui_shown = !gui_shown;
-        }
-
-        public void ShowGUI()
-        {
-            gui_hidden = false;
-        }
-
-        public void HideGUI()
-        {
-            gui_hidden = true;
         }
 
         #endregion

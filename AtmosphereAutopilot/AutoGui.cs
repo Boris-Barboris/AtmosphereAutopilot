@@ -37,6 +37,56 @@ namespace AtmosphereAutopilot
 
 
 
+    abstract class GUIWindow : IAutoGui
+    {
+        protected string wndname;
+        protected int wnd_id;
+        protected bool gui_shown = false;
+        protected bool gui_hidden = false;
+        protected Rect window;
+
+        public GUIWindow(string wndname, int wnd_id, Rect window)
+        {
+            this.wndname = wndname;
+            this.wnd_id = wnd_id;
+            this.window = window;
+        }
+
+        public bool IsDrawn()
+        {
+            return gui_shown;
+        }
+
+        public void OnGUI()
+        {
+            if (!gui_shown || gui_hidden)
+                return;
+            window = GUILayout.Window(wnd_id, window, _drawGUI, wndname);
+            OnGUICustom();
+        }
+
+        protected virtual void OnGUICustom() { }
+
+        public bool ToggleGUI()
+        {
+            return gui_shown = !gui_shown;
+        }
+
+        abstract void _drawGUI(int id);
+
+        public void HideGUI()
+        {
+            gui_hidden = true;
+        }
+
+        public void ShowGUI()
+        {
+            gui_hidden = false;
+        }
+    }
+
+
+
     static class AutoGUI
     {
         static Dictionary<int, string> value_holders = new Dictionary<int, string>();
@@ -59,7 +109,7 @@ namespace AtmosphereAutopilot
                 {
                     // it's a button
                     bool cur_state = (bool)property.GetValue(obj, null);
-                    property.SetValue(obj, cur_state ^ GUILayout.Button(att.value_name + " = " + cur_state.ToString(), 
+                    property.SetValue(obj, GUILayout.Toggle(cur_state, att.value_name + " = " + cur_state.ToString(), 
                         GUIStyles.toggleButtonStyle), null);
                     continue;
                 }
@@ -111,7 +161,7 @@ namespace AtmosphereAutopilot
 				{
 					// it's a button
 					bool cur_state = (bool)field.GetValue(obj);
-					field.SetValue(obj, cur_state ^ GUILayout.Button(att.value_name + " = " + cur_state.ToString(),
+					field.SetValue(obj, GUILayout.Toggle(cur_state, att.value_name + " = " + cur_state.ToString(),
 						GUIStyles.toggleButtonStyle));
 					continue;
 				}
