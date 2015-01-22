@@ -74,7 +74,6 @@ namespace AtmosphereAutopilot
             input = model.angular_dv[axis].getLast();
             desired_acc = target_value;
 
-            //double predicted_input = model.extrapolate_dv(axis, extrapolation_order);
             error = target_value - input;
 
             if (write_telemetry)

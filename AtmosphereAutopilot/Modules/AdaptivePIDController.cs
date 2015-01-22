@@ -29,7 +29,7 @@ namespace AtmosphereAutopilot
         public double input;					// current system controlled value
 
 		[AutoGuiAttr("output", false, "G8")]
-        public double output;				// current controller output
+        public double output;					// current controller output
 
 		[AutoGuiAttr("max_input", false, "G8")]
         public double max_input;			    // desired limitation on input value
@@ -38,10 +38,10 @@ namespace AtmosphereAutopilot
         public double min_input;			    // desired limitation on input value
 
 		[AutoGuiAttr("max_input_deriv", false, "G8")]
-        public double max_input_deriv;		// desired limitation on input derivative value
+        public double max_input_deriv;			// desired limitation on input derivative value
 
 		[AutoGuiAttr("min_input_deriv", false, "G8")]
-        public double min_input_deriv;		// desired limitation on input derivative value
+        public double min_input_deriv;			// desired limitation on input derivative value
 
 		/// <summary>
 		/// Main control function
@@ -55,11 +55,6 @@ namespace AtmosphereAutopilot
         /// <param name="cntrl">Control state to change</param>
         /// <param name="target_value">Desired angular acceleration</param>
         public abstract double ApplyControl(FlightCtrlState cntrl, double target_value);
-
-        public static double apply_with_inertia(double old, double new_one, double inertia)
-        {
-            return (new_one + inertia * old) / (inertia + 1.0);
-        }
 
 		#region properties
 
