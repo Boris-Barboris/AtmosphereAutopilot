@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -27,13 +28,17 @@ namespace AtmosphereAutopilot
     {
         void OnGUI();
 
-        bool IsDrawn();
+        bool IsShown();
 
         bool ToggleGUI();
 
         void HideGUI();
 
+        void UnHideGUI();
+
         void ShowGUI();
+
+        void UnShowGUI();
     }
 
 
@@ -55,7 +60,9 @@ namespace AtmosphereAutopilot
             this.window = window;
         }
 
-        public bool IsDrawn()
+        public string WindowName { get { return wndname; } }
+
+        public bool IsShown()
         {
             return gui_shown;
         }
@@ -82,9 +89,19 @@ namespace AtmosphereAutopilot
             gui_hidden = true;
         }
 
-        public void ShowGUI()
+        public void UnHideGUI()
         {
             gui_hidden = false;
+        }
+
+        public void ShowGUI()
+        {
+            gui_shown = true;
+        }
+
+        public void UnShowGUI()
+        {
+            gui_shown = false;
         }
     }
 
@@ -107,59 +124,83 @@ namespace AtmosphereAutopilot
                 draw_element(field, obj);
         }
 
-        static object[] GetCustomAttributes(object obj, Type atttype, bool inherit)
+        static object[] GetCustomAttributes(object element, Type atttype, bool inherit)
         {
-            if (obj.GetType() == typeof(PropertyInfo))
-                return (obj as PropertyInfo).GetCustomAttributes(atttype, inherit);
-            if (obj.GetType() == typeof(FieldInfo))
-                return (obj as FieldInfo).GetCustomAttributes(atttype, inherit);
+            PropertyInfo p = element as PropertyInfo;
+            if (p != null)
+                return p.GetCustomAttributes(atttype, inherit);
+            FieldInfo f = element as FieldInfo;
+            if (f != null)
+                return f.GetCustomAttributes(atttype, inherit);
             return null;
         }
 
         static Type ElementType(object element)
         {
-            if (element.GetType() == typeof(PropertyInfo))
-                return (element as PropertyInfo).PropertyType;
-            if (element.GetType() == typeof(FieldInfo))
-                return (element as FieldInfo).FieldType;
+            PropertyInfo p = element as PropertyInfo;
+            if (p != null)
+                return p.PropertyType;
+            FieldInfo f = element as FieldInfo;
+            if (f != null)
+                return f.FieldType;
             return null;
         }
 
         static object GetValue(object element, object obj)
         {
-            if (element.GetType() == typeof(PropertyInfo))
-                return (element as PropertyInfo).GetValue(obj, null);
-            if (element.GetType() == typeof(FieldInfo))
-                return (element as FieldInfo).GetValue(obj);
+            PropertyInfo p = element as PropertyInfo;
+            if (p != null)
+                return p.GetValue(obj, null);
+            FieldInfo f = element as FieldInfo;
+            if (f != null)
+                return f.GetValue(obj);
             return null;
         }
 
         static void SetValue(object element, object obj, object value)
         {
-            if (element.GetType() == typeof(PropertyInfo))
-                (element as PropertyInfo).SetValue(obj, value, null);
-            if (element.GetType() == typeof(FieldInfo))
-                (element as FieldInfo).SetValue(obj, value);
+            PropertyInfo p = element as PropertyInfo;
+            if (p != null)
+                p.SetValue(obj, value, null);
+            FieldInfo f = element as FieldInfo;
+            if (f != null)
+                f.SetValue(obj, value);
         }
 
         static string Name(object element)
         {
-            if (element.GetType() == typeof(PropertyInfo))
-                return (element as PropertyInfo).Name;
-            if (element.GetType() == typeof(FieldInfo))
-                return (element as FieldInfo).Name;
+            PropertyInfo p = element as PropertyInfo;
+            if (p != null)
+                return p.Name;
+            FieldInfo f = element as FieldInfo;
+            if (f != null)
+                return f.Name;
             return null;
         }
 
         static void draw_element(object element, object obj)
         {
             var attributes = GetCustomAttributes(element, typeof(AutoGuiAttr), true);
-            if (attributes.Length <= 0)
+            if (attributes == null || attributes.Length <= 0)
                 return;
             var att = attributes[0] as AutoGuiAttr;
             if (att == null)
                 return;
             Type element_type = ElementType(element);
+            if (element_type == null)
+                return;
+            if (element_type.GetInterface("IEnumarable") != null)
+            {
+                IEnumerable list = GetValue(element, obj) as IEnumerable;
+                if (list != null)
+                {
+                    GUILayout.Space(5.0f);
+                    foreach (object lel in list)
+                        AutoDrawObject(lel);
+                    GUILayout.Space(5.0f);
+                }
+                return;
+            }
             if (element_type == typeof(bool) && att.editable)
             {
                 // it's a button
@@ -173,7 +214,7 @@ namespace AtmosphereAutopilot
             var ToStringFormat = element_type.GetMethod("ToString", new[] { typeof(string) });
             if (!att.editable)
             {
-                if (ToStringFormat != null)
+                if (ToStringFormat != null && att.format != null)
                     GUILayout.Label((string)ToStringFormat.Invoke(GetValue(element, obj), new[] { att.format }), GUIStyles.labelStyleRight);
                 else
                     GUILayout.Label(GetValue(element, obj).ToString(), GUIStyles.labelStyleRight);
@@ -185,10 +226,10 @@ namespace AtmosphereAutopilot
                 if (value_holders.ContainsKey(hash))
                     val_holder = value_holders[hash];
                 else
-                    if (ToStringFormat != null)
+                    if (ToStringFormat != null && att.format != null)
                         val_holder = (string)ToStringFormat.Invoke(GetValue(element, obj), new[] { att.format });
                     else
-                        val_holder = GetValue(obj, null).ToString();
+                        val_holder = GetValue(element, obj).ToString();
                 val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);
                 try
                 {

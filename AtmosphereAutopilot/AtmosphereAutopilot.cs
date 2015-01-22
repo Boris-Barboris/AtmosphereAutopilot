@@ -19,7 +19,9 @@ namespace AtmosphereAutopilot
         List<Type> autopilot_module_types = new List<Type>();
         Dictionary<Type, Dictionary<Vessel, object>> autopilot_module_lists = new Dictionary<Type, Dictionary<Vessel, object>>();
         Dictionary<Type, object> cur_ves_modules = new Dictionary<Type, object>();
-        Dictionary<Type, KeyCode> module_hotkeys = new Dictionary<Type, KeyCode>();
+        Dictionary<Type, KeyCode> module_hotkeys = new Dictionary<Type, KeyCode>(); 
+        
+        AppLauncherWindow applauncher;
 
         public static AtmosphereAutopilot Instance { get; private set; }
 
@@ -30,10 +32,12 @@ namespace AtmosphereAutopilot
             initialize_types();
             initialize_module_lists();
             initialize_hotkeys();
+            applauncher = new AppLauncherWindow(cur_ves_modules);
             GameEvents.onVesselChange.Add(vesselSwitch);
             GameEvents.onGameSceneLoadRequested.Add(sceneSwitch);
             GameEvents.onHideUI.Add(OnHideUI);
             GameEvents.onShowUI.Add(OnShowUI);
+            GameEvents.onGUIApplicationLauncherReady.Add(onAppLauncherLoad);
             Instance = this;
         }
 
@@ -209,6 +213,33 @@ namespace AtmosphereAutopilot
             load_all_modules_for_vessel(v);
         }
 
+        ApplicationLauncherButton launcher_btn;
+
+        void onAppLauncherLoad()
+        {
+            GameEvents.onGUIApplicationLauncherReady.Remove(onAppLauncherLoad);
+            launcher_btn = ApplicationLauncher.Instance.AddModApplication(
+                OnALTrue, OnALFalse, OnALTrue, OnALUnHover, null, null, ApplicationLauncher.AppScenes.FLIGHT,
+                GameDatabase.Instance.GetTexture("AtmosphereAutopilot/icon", false));
+        }
+
+        void OnALTrue()
+        {
+            applauncher.ShowGUI();
+            applauncher.show_while_hover = false;
+        }
+
+        void OnALFalse()
+        {
+            applauncher.UnShowGUI();
+        }
+
+        void OnALUnHover()
+        {
+            if (!launcher_btn.toggleButton.Value)
+                applauncher.show_while_hover = true;
+        }
+
         bool styles_init = false;
 
         public void OnGUI()
@@ -219,6 +250,7 @@ namespace AtmosphereAutopilot
                 styles_init = true;
             }
             GUI.skin = GUIStyles.skin;
+            applauncher.OnGUI();
             foreach (var pair in cur_ves_modules)
             {
                 IAutoGui s = pair.Value as IAutoGui;
@@ -229,6 +261,7 @@ namespace AtmosphereAutopilot
 
         public void OnHideUI()
         {
+            applauncher.HideGUI();
             foreach (var pair in cur_ves_modules)
             {
                 IAutoGui s = pair.Value as IAutoGui;
@@ -239,11 +272,12 @@ namespace AtmosphereAutopilot
 
         public void OnShowUI()
         {
+            applauncher.UnHideGUI();
             foreach (var pair in cur_ves_modules)
             {
                 IAutoGui s = pair.Value as IAutoGui;
                 if (s != null)
-                    s.ShowGUI();
+                    s.UnHideGUI();
             }
         }
 
@@ -258,21 +292,14 @@ namespace AtmosphereAutopilot
 
             foreach (var pair in module_hotkeys)
                 if (Input.GetKeyDown(pair.Value))
-                    if (mod)
+                {
+                    AutopilotModule module = cur_ves_modules[pair.Key] as AutopilotModule;
+                    if (module != null)
                     {
-                        IAutoGui gui = cur_ves_modules[pair.Key] as IAutoGui;
-                        if (gui != null)
-                            gui.ToggleGUI();
+                        module.Active = !module.Active;
+                        MessageManager.post_status_message(module.ModuleName + (module.Active ? " enabled" : " disabled"));
                     }
-                    else
-                    {
-                        AutopilotModule module = cur_ves_modules[pair.Key] as AutopilotModule;
-                        if (module != null)
-                        {
-                            module.Active = !module.Active;
-                            MessageManager.post_status_message(module.ModuleName + (module.Active ? " enabled" : " disabled"));
-                        }
-                    }
+                }
         }
     }
 }

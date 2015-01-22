@@ -97,7 +97,6 @@ namespace AtmosphereAutopilot
 		}
 
 		int cycle_counter = -1;
-		bool in_regime = false;
 		double time_in_regime = 0.0;
 
         public override double ApplyControl(FlightCtrlState cntrl, double target_value)
@@ -117,7 +116,6 @@ namespace AtmosphereAutopilot
 
             if (vessel.checkLanded())           // ground breaks the model
             {
-                in_regime = false;
                 time_in_regime = 0.0;
                 return;
             }
@@ -178,12 +176,10 @@ namespace AtmosphereAutopilot
 			// check if we're stable on given input value
 			if (Math.Abs(input) < 1e-2)
 			{
-				in_regime = true;
 				time_in_regime += TimeWarp.fixedDeltaTime;
 			}
 			else
 			{
-				in_regime = false;
 				time_in_regime = 0.0;
 			}
 

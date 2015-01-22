@@ -44,6 +44,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AppLauncher.cs" />
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="AutoGui.cs" />
     <Compile Include="AutoSerialization.cs" />
