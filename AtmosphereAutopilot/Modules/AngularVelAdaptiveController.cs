@@ -165,7 +165,7 @@ namespace AtmosphereAutopilot
                         relative_input *= fbw_modifier;
                     }
                 }
-                output = Common.Clamp(pid.Control(input, accel, relative_input, TimeWarp.fixedDeltaTime), max_input_deriv);
+                output = Common.Clamp(pid.Control(input, accel, relative_input, TimeWarp.fixedDeltaTime), fbw_dv_k * max_input_deriv);
             }
             else
                 output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
@@ -202,8 +202,12 @@ namespace AtmosphereAutopilot
         //public int extrapolation_order = 5;
 
         [VesselSerializable("fbw_v_k")]
-        [AutoGuiAttr("moderation k", true, "G6")]
+        [AutoGuiAttr("moderation v k", true, "G6")]
         public double fbw_v_k = 1.0;
+
+        [VesselSerializable("fbw_dv_k")]
+        [AutoGuiAttr("moderation dv k", true, "G6")]
+        public double fbw_dv_k = 1.0;
 
         [VesselSerializable("fbw_g_k")]
         [AutoGuiAttr("max g-force k", true, "G6")]
