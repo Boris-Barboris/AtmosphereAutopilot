@@ -74,7 +74,6 @@ namespace AtmosphereAutopilot
             input = model.angular_dv[axis].getLast();
             desired_acc = target_value;
 
-            //double predicted_input = model.extrapolate_dv(axis, extrapolation_order);
             error = target_value - input;
 
             if (write_telemetry)
@@ -336,10 +335,6 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("proport_relax_time")]
         [AutoGuiAttr("Proport relax time", true, "G6")]
         public double proport_relax_time = 0.05;
-
-        //[GlobalSerializable("extrapolation_order")]
-        //[AutoGuiAttr("extr order", true, "G3")]
-        //public int extrapolation_order = 7;
 
         [GlobalSerializable("integral_fill_time")]
         [AutoGuiAttr("Integral fill time", true, "G6")]

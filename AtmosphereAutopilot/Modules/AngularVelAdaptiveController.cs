@@ -99,7 +99,6 @@ namespace AtmosphereAutopilot
 		int cycle_counter = -1;
 		bool in_regime = false;
 		double time_in_regime = 0.0;
-        //bool accumulator_preset = false;
 
         public override double ApplyControl(FlightCtrlState cntrl, double target_value)
         {
@@ -124,7 +123,6 @@ namespace AtmosphereAutopilot
             }
 
 			input = model.angular_v[axis].getLast();				// get angular velocity
-            //double extrapolated_input = model.extrapolate_v(axis, extrapolation_order);
 			double accel = model.angular_dv[axis].getLast();		// get angular acceleration
             current_acc = accel;
 
@@ -197,10 +195,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Fly-By-Wire", true, "G6")]
         public bool FlyByWire = false;
 
-        //[GlobalSerializable("extrapolation_order")]
-        //[AutoGuiAttr("extr order", true, "G3")]
-        //public int extrapolation_order = 5;
-
         [VesselSerializable("fbw_v_k")]
         [AutoGuiAttr("moderation v k", true, "G6")]
         public double fbw_v_k = 1.0;
@@ -215,7 +209,7 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("fbw_max_aoa")]
         [AutoGuiAttr("max AoA degrees", true, "G6")]
-        public double fbw_max_aoa = 20.0;
+        public double fbw_max_aoa = 15.0;
 
         [AutoGuiAttr("DEBUG proport", false, "G8")]
         public double proport { get; private set; }
