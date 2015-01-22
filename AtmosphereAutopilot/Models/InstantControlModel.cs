@@ -77,7 +77,7 @@ namespace AtmosphereAutopilot
                 {
                     //angular_dv[i].Put(smooth_derivative_hybrid(prev_dt, i));
                     angular_dv[i].Put(
-                        derivative1_short(
+                        Common.derivative1_short(
                             angular_v[i].getFromTail(1),
                             angular_v[i].getFromTail(0),
                             prev_dt));
@@ -101,31 +101,6 @@ namespace AtmosphereAutopilot
 			if (control == YAW)
 				return state.yaw;
 			return 0.0;
-		}
-
-        public static double derivative1_short(double y0, double y1, double dt)    // first derivative
-        {
-            return (y1 - y0) / dt;
-        }
-
-        public static double derivative1_middle(double y0, double y2, double dt)    // first derivative
-        {
-            return (y2 - y0) / dt * 0.5;
-        }
-
-		public static double derivative1(double y0, double y1, double y2, double dt)    // first derivative
-		{
-			return (y0 - 4 * y1 + 3 * y2) / dt * 0.5;
-		}
-
-		public static double derivative2(double y0, double y1, double y2, double dt)    // second derivative
-		{
-			return (y0 - 2 * y1 + y2) / dt / dt;
-		}
-
-		public static double derivative2_long(double y0, double y1, double y2, double y3, double dt)
-		{
-			return (-y0 + 4 * y1 - 5 * y2 + 2 * y3) / dt / dt;
 		}
 
         /// <summary>
@@ -184,9 +159,9 @@ namespace AtmosphereAutopilot
                 if (Math.Abs(d_control) > min_d_short_control)        // if d_control is substantial
                 {
                     // get control authority in acceleration
-                    double prev_d2v = derivative1_short(angular_dv_central[i].getFromTail(2), 
+                    double prev_d2v = Common.derivative1_short(angular_dv_central[i].getFromTail(2), 
                         angular_dv_central[i].getFromTail(1), prev_dt);
-                    double cur_d2v = derivative1_short(angular_dv_central[i].getFromTail(1),
+                    double cur_d2v = Common.derivative1_short(angular_dv_central[i].getFromTail(1),
                         angular_dv_central[i].getFromTail(0), prev_dt);
                     double control_authority_dv = (cur_d2v - prev_d2v) / d_control;
                     if (control_authority_dv > min_authority_dv)

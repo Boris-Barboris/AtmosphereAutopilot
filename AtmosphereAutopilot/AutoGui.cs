@@ -114,6 +114,12 @@ namespace AtmosphereAutopilot
         public static void AutoDrawObject(object obj)
         {
             Type type = obj.GetType();
+
+            if (type.IsPrimitive)
+            {
+                draw_primitive(obj);
+                return;
+            }
 			
 			// properties
             foreach (var property in type.GetProperties())
@@ -178,6 +184,11 @@ namespace AtmosphereAutopilot
             return null;
         }
 
+        static void draw_primitive(object obj)
+        {
+            GUILayout.Label(obj.ToString(), GUIStyles.labelStyleRight);
+        }
+
         static void draw_element(object element, object obj)
         {
             var attributes = GetCustomAttributes(element, typeof(AutoGuiAttr), true);
@@ -189,23 +200,26 @@ namespace AtmosphereAutopilot
             Type element_type = ElementType(element);
             if (element_type == null)
                 return;
-            if (element_type.GetInterface("IEnumarable") != null)
+            if (typeof(IEnumerable).IsAssignableFrom(element_type))
             {
                 IEnumerable list = GetValue(element, obj) as IEnumerable;
                 if (list != null)
                 {
-                    GUILayout.Space(5.0f);
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(att.value_name + ':', GUIStyles.labelStyleLeft);
+                    GUILayout.BeginVertical();
                     foreach (object lel in list)
                         AutoDrawObject(lel);
-                    GUILayout.Space(5.0f);
+                    GUILayout.EndVertical();
+                    GUILayout.EndHorizontal();
+                    return;
                 }
-                return;
             }
             if (element_type == typeof(bool) && att.editable)
             {
                 // it's a button
                 bool cur_state = (bool)GetValue(element, obj);
-                SetValue(element, obj, GUILayout.Toggle(cur_state, att.value_name + " = " + cur_state.ToString(),
+                SetValue(element, obj, GUILayout.Toggle(cur_state, att.value_name,
                         GUIStyles.toggleButtonStyle));
                 return;
             }

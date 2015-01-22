@@ -28,7 +28,6 @@ namespace AtmosphereAutopilot
     }
 
 
-
     interface IAutoSerializable
     {
         bool Deserialize();

@@ -67,7 +67,7 @@ namespace AtmosphereAutopilot
 
         public bool DeserializeGlobalSpecific()
         {
-            return AutoSerialization.Deserialize(this, module_name.Replace(' ', '_'), 
+            return AutoSerialization.Deserialize(this, module_name.Replace(' ', '_'),
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.cfg",
                 typeof(GlobalSerializable), OnDeserialize);
         }
@@ -90,7 +90,7 @@ namespace AtmosphereAutopilot
         public bool Deserialize()
         {
             BeforeDeserialize();
-            return (DeserializeVesselSpecific() & DeserializeGlobalSpecific());
+            return (DeserializeGlobalSpecific() & DeserializeVesselSpecific());
         }
 
         protected virtual void OnDeserialize(ConfigNode node, Type attribute_type) { }

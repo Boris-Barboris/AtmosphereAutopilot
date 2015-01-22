@@ -32,18 +32,35 @@ namespace AtmosphereAutopilot
         public CircularBuffer<double> aoa_yaw = new CircularBuffer<double>(BUFFER_SIZE, true);
         public CircularBuffer<double> g_force = new CircularBuffer<double>(BUFFER_SIZE, true);
 
+        [AutoGuiAttr("global angles", false, null)]
+        public double[] global_angle = new double[3];
+
+        [AutoGuiAttr("surface angles", false, null)]
+        public double[] surface_angle = new double[3];
+
+        [AutoGuiAttr("max angular v", false, null)]
         public double[] max_angular_v = new double[3];
+
+        [AutoGuiAttr("max angular acc", false, null)]
         public double[] max_angular_dv = new double[3];
+
+        [AutoGuiAttr("lever arms", false, null)]
+        public double[] lever_arm = new double[3];
 
 		double prev_dt = 1.0;		// dt in previous call
 		int stable_dt = 0;			// counts amount of stable dt intervals
+        int cycle_counter = 0;
 
 		void OnPreAutopilot(FlightCtrlState state)	// update all flight characteristics
 		{
 			double dt = TimeWarp.fixedDeltaTime;
 			check_dt(dt);
 			update_buffers();
+            update_angles();
 			prev_dt = dt;
+            if (cycle_counter == 0)
+                calculate_limits();
+            cycle_counter = (cycle_counter + 1) % 500;
 		}
 
 		void check_dt(double new_dt)
@@ -67,6 +84,55 @@ namespace AtmosphereAutopilot
             aoa_yaw.Put(aoa_y);
             g_force.Put(vessel.geeForce_immediate);
 		}
+
+        void update_angles()
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                global_angle[i] = vessel.transform.rotation.eulerAngles[i];
+                surface_angle[i] = vessel.transform.localRotation.eulerAngles[i];
+            }
+        }
+
+        [GlobalSerializable("max_part_acceleration")]
+        [AutoGuiAttr("max part accel", true, "G8")]
+        public double max_part_acceleration = 30.0;			// approx 3g
+
+        void calculate_limits()
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                lever_arm[i] = max_part_offset_from_com(i);
+                max_angular_v[i] = Math.Sqrt(Math.Abs(max_part_acceleration) / lever_arm[i]);
+                max_angular_dv[i] = max_part_acceleration / lever_arm[i];
+            }
+        }
+
+        double max_part_offset_from_com(int axis)
+        {
+            double max_offset = 1.0;
+            Vector3 com = vessel.findWorldCenterOfMass();
+            foreach (var part in vessel.Parts)
+            {
+                Vector3 part_v = part.transform.position - com;
+                double offset = 0.0;
+                switch (axis)
+                {
+                    case PITCH:
+                        offset = Vector3.Cross(part_v, vessel.transform.right).magnitude;
+                        break;
+                    case ROLL:
+                        offset = Vector3.Cross(part_v, vessel.transform.up).magnitude;
+                        break;
+                    case YAW:
+                        offset = Vector3.Cross(part_v, vessel.transform.forward).magnitude;
+                        break;
+                }
+                if (offset > max_offset)
+                    max_offset = offset;
+            }
+            return max_offset;
+        }
 
         #region Serialization
 
@@ -104,6 +170,7 @@ namespace AtmosphereAutopilot
 			GUILayout.Label("AOA pitch = " + aoa_pitch.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
             GUILayout.Label("AOA yaw = " + aoa_yaw.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
             GUILayout.Label("G-force = " + g_force.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+            AutoGUI.AutoDrawObject(this);
 			GUILayout.EndVertical();
 			GUI.DragWindow();
         }

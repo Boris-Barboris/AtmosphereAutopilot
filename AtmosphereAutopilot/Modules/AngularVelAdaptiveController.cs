@@ -40,54 +40,9 @@ namespace AtmosphereAutopilot
             acc_controller = acc;
 		}
 
-		[GlobalSerializable("max_part_acceleration")]
-		[AutoGuiAttr("max part accel", true, "G8")]
-		public double max_part_acceleration = 30.0;			// approx 3g
-
-		[AutoGuiAttr("lever arm", false, "G8")]
-		public double lever_arm = 1.0;
-
-		void calculate_limits()
-		{
-			lever_arm = max_part_offset_from_com();
-			max_input = Math.Sqrt(Math.Abs(max_part_acceleration) / lever_arm);
-			min_input = -max_input;
-			max_input_deriv = max_part_acceleration / lever_arm;
-			min_input_deriv = -max_input_deriv;
-            mmodel.max_angular_v[axis] = max_input;
-            mmodel.max_angular_dv[axis] = max_input_deriv;
-		}
-
-		double max_part_offset_from_com()
-		{
-			double max_offset = 1.0;
-			Vector3 com = vessel.findWorldCenterOfMass();
-			foreach (var part in vessel.Parts)
-			{
-				Vector3 part_v = part.transform.position - com;
-				double offset = 0.0;
-				switch (axis)
-				{
-					case PITCH:
-                        offset = Vector3.Cross(part_v, vessel.transform.right).magnitude;
-						break;
-					case ROLL:
-                        offset = Vector3.Cross(part_v, vessel.transform.up).magnitude;
-						break;
-					case YAW:
-                        offset = Vector3.Cross(part_v, vessel.transform.forward).magnitude;
-						break;
-				}
-				if (offset > max_offset)
-					max_offset = offset;
-			}
-			return max_offset;
-		}
-
 		protected override void OnActivate()
 		{
 			vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
-			cycle_counter = 0;
             pid.clear();
 		}
 
@@ -96,7 +51,6 @@ namespace AtmosphereAutopilot
 			vessel.OnAutopilotUpdate -= new FlightInputCallback(ApplyControl);
 		}
 
-		int cycle_counter = -1;
 		double time_in_regime = 0.0;
 
         public override double ApplyControl(FlightCtrlState cntrl, double target_value)
@@ -110,10 +64,6 @@ namespace AtmosphereAutopilot
 		/// <param name="cntrl">Control state to change</param>
 		public override void ApplyControl(FlightCtrlState cntrl)
 		{
-			cycle_counter++;
-			if (cycle_counter % 500 == 1)		// every 500 OnFixUpdate's recalculate limits
-				calculate_limits();
-
             if (vessel.checkLanded())           // ground breaks the model
             {
                 time_in_regime = 0.0;
@@ -124,16 +74,16 @@ namespace AtmosphereAutopilot
 			double accel = model.angular_dv[axis].getLast();		// get angular acceleration
             current_acc = accel;
 
-            // Adapt KP, so that on max_input it produces max_input_deriv * kp_acc factor output
-            if (max_input != 0.0)
-                pid.KP = kp_acc_factor * max_input_deriv / max_input;
+            // Adapt KP, so that on max_angular_v it produces max_angular_dv * kp_acc factor output
+            if (mmodel.max_angular_v[axis] != 0.0)
+                pid.KP = kp_acc_factor * mmodel.max_angular_dv[axis] / mmodel.max_angular_v[axis];
             // Adapt KI
             if (integral_fill_time > 1e-3)
             {
-                pid.IntegralClamp = max_input;
+                pid.IntegralClamp = mmodel.max_angular_v[axis];
                 pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
                 pid.AccumulDerivClamp = pid.AccumulatorClamp / 3.0 / integral_fill_time;
-                pid.KI = ki_koeff * max_input_deriv / pid.AccumulatorClamp;
+                pid.KI = ki_koeff * mmodel.max_angular_dv[axis] / pid.AccumulatorClamp;
             }
             // Adapt KD
             pid.KD = kd_kp_koeff * pid.KP;
@@ -141,7 +91,7 @@ namespace AtmosphereAutopilot
             if (FlyByWire)
             {
                 double user_input = get_neutralized_user_input(cntrl);
-                relative_input = fbw_v_k * user_input * max_input;
+                relative_input = fbw_v_k * user_input * mmodel.max_angular_v[axis];
                 if (axis == PITCH)
                 {
                     // limit it due to g-force limitations
@@ -149,24 +99,28 @@ namespace AtmosphereAutopilot
                     if (relative_input * mmodel.aoa_pitch.getLast() > 0.0)
                     {
                         // user is trying to increase AoA
-                        max_g = fbw_g_k * 100.0 / (lever_arm + 1.0);
+                        max_g = fbw_g_k * 100.0 / (mmodel.lever_arm[axis] + 1.0);
                         fbw_modifier = 1.0;
                         double g_relation = 1.0;
                         double aoa_relation = 1.0;
                         if (max_g > 1e-3 && cur_g >= 0.0)
                             g_relation = Common.Clamp(cur_g / max_g, 0.0, 1.0);
                         if (fbw_max_aoa > 2.0)
-                            aoa_relation = Common.Clamp(Math.Abs(mmodel.aoa_pitch.getLast()) / (fbw_max_aoa / 180.0 * Math.PI), 0.0, 1.0);
+                            aoa_relation = Common.Clamp(Math.Abs(mmodel.aoa_pitch.getLast()) / (fbw_max_aoa / 180.0 * Math.PI), 0.0, 1.0) +
+                            Common.Clamp(
+                                fbw_daoa_k / fbw_max_aoa * Math.Sign(mmodel.aoa_pitch.getLast()) *
+                                Common.derivative1_short(mmodel.aoa_pitch.getFromTail(1), mmodel.aoa_pitch.getLast(), TimeWarp.fixedDeltaTime),
+                                0.0, 1.0);
                         fbw_modifier *= Common.Clamp(1.0 - Math.Max(aoa_relation, g_relation), 0.0, 1.0);
                         relative_input *= fbw_modifier;
                     }
                 }
-                output = Common.Clamp(pid.Control(input, accel, relative_input, TimeWarp.fixedDeltaTime), fbw_dv_k * max_input_deriv);
+                output = Common.Clamp(pid.Control(input, accel, relative_input, TimeWarp.fixedDeltaTime), fbw_dv_k * mmodel.max_angular_dv[axis]);
             }
             else
                 output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
 
-            double error = 0.0 - input;
+            error = 0.0 - input;
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
             deriv = -pid.KD * accel;
@@ -191,18 +145,26 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Fly-By-Wire", true, "G6")]
         public bool FlyByWire = false;
 
+        [GlobalSerializable("fbw_v_k")]
         [VesselSerializable("fbw_v_k")]
         [AutoGuiAttr("moderation v k", true, "G6")]
         public double fbw_v_k = 1.0;
 
+        [GlobalSerializable("fbw_dv_k")]
         [VesselSerializable("fbw_dv_k")]
         [AutoGuiAttr("moderation dv k", true, "G6")]
         public double fbw_dv_k = 1.0;
 
+        [GlobalSerializable("fbw_g_k")]
         [VesselSerializable("fbw_g_k")]
         [AutoGuiAttr("max g-force k", true, "G6")]
-        public double fbw_g_k = 1.5;
+        public double fbw_g_k = 1.0;
 
+        [GlobalSerializable("fbw_daoa_k")]
+        [AutoGuiAttr("aoa deriv moderation k", true, "G6")]
+        public double fbw_daoa_k = 1.0;
+
+        [GlobalSerializable("fbw_max_aoa")]
         [VesselSerializable("fbw_max_aoa")]
         [AutoGuiAttr("max AoA degrees", true, "G6")]
         public double fbw_max_aoa = 15.0;
@@ -310,6 +272,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("KD/KP ratio", true, "G6")]
         public double kd_kp_koeff = 0.0;
 	}
+
 
 
 

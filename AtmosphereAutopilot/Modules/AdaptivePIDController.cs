@@ -28,20 +28,11 @@ namespace AtmosphereAutopilot
 		[AutoGuiAttr("input", false, "G8")]
         public double input;					// current system controlled value
 
+        [AutoGuiAttr("error", false, "G8")]
+        public double error;					// desired - current
+
 		[AutoGuiAttr("output", false, "G8")]
         public double output;					// current controller output
-
-		[AutoGuiAttr("max_input", false, "G8")]
-        public double max_input;			    // desired limitation on input value
-
-		[AutoGuiAttr("min_input", false, "G8")]
-        public double min_input;			    // desired limitation on input value
-
-		[AutoGuiAttr("max_input_deriv", false, "G8")]
-        public double max_input_deriv;			// desired limitation on input derivative value
-
-		[AutoGuiAttr("min_input_deriv", false, "G8")]
-        public double min_input_deriv;			// desired limitation on input derivative value
 
 		/// <summary>
 		/// Main control function
