@@ -99,7 +99,7 @@ namespace AtmosphereAutopilot
                 if (Math.Abs(input) > small_value)
                 {
                     double cutoff_smoothing = Common.Clamp((Math.Abs(input) - small_value) / small_value, 0.0, 1.0);
-                    pid.KP = cutoff_smoothing * kp_koeff / auth / proport_relax_time;
+                    pid.KP = cutoff_smoothing * kp_koeff / auth;
                     pid.KD = cutoff_smoothing * kp_kd_ratio / auth;
                 }
                 else

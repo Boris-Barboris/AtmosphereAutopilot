@@ -142,7 +142,7 @@ namespace AtmosphereAutopilot
 		// Short term model for angular acceleration
 		//
 
-        // let dv' = k_dv * d_kontrol + C
+        // let dv' = k_dv * d_kontrol + C_dv
 
         public CircularBuffer<double>[] k_dv_control = new CircularBuffer<double>[3];		// control authority in angular acceleration
         public CircularBuffer<double>[] dv_mistake = new CircularBuffer<double>[3];         // difference between |dv| and |smooth_dv|
@@ -154,18 +154,18 @@ namespace AtmosphereAutopilot
 
 			for (int i = 0; i < 3; i++)
 			{
-                // We'll be working with central derivative, wich is lagging 3 time intervals behind
-                // Also we need space for second derivative calculations, so we're 4 steps behind total
-                double d_control = 0.5 * (input_buf[i].getFromTail(4) - input_buf[i].getFromTail(5));
+                double d_control = input_buf[i].getFromTail(3) - input_buf[i].getFromTail(4);
 
                 if (Math.Abs(d_control) > min_d_short_control)        // if d_control is substantial
                 {
                     // get control authority in acceleration
-                    double prev_d2v = Common.derivative1_short(angular_dv_central[i].getFromTail(2), 
+                    double d1dv = Common.derivative1_short(angular_dv_central[i].getFromTail(2),
                         angular_dv_central[i].getFromTail(1), prev_dt);
-                    double cur_d2v = Common.derivative1_short(angular_dv_central[i].getFromTail(1),
-                        angular_dv_central[i].getFromTail(0), prev_dt);
-                    double control_authority_dv = (cur_d2v - prev_d2v) / d_control;
+                    double d2dv = Common.derivative2(angular_dv_central[i].getFromTail(3),
+                        angular_dv_central[i].getFromTail(2),  angular_dv_central[i].getFromTail(1), prev_dt);
+                    double extrapolated_dv = Common.extrapolate(angular_dv_central[i].getFromTail(1),
+                        d1dv, d2dv, prev_dt);
+                    double control_authority_dv = (angular_dv_central[i].getLast() - extrapolated_dv) / d_control;
                     if (control_authority_dv > min_authority_dv)
                         k_dv_control[i].Put(control_authority_dv);
                 }
