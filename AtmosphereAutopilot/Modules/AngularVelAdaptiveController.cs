@@ -97,7 +97,11 @@ namespace AtmosphereAutopilot
                         double g_relation = 1.0;
                         double aoa_relation = 1.0;
                         if (max_g > 1e-3 && cur_g >= 0.0)
-                            g_relation = Common.Clamp(cur_g / max_g, 0.0, 1.0);
+                            g_relation = Common.Clamp(cur_g / max_g, 0.0, 1.0) +
+                            Common.Clamp(
+                                fbw_daoa_k / max_g * Math.Sign(mmodel.aoa_pitch.getLast()) *
+                                Common.derivative1_short(mmodel.g_force.getFromTail(1), mmodel.g_force.getLast(), TimeWarp.fixedDeltaTime),
+                                0.0, 1.0);
                         if (fbw_max_aoa > 2.0)
                             aoa_relation = Math.Abs(mmodel.aoa_pitch.getLast()) / (fbw_max_aoa / 180.0 * Math.PI) +
                             Common.Clamp(
