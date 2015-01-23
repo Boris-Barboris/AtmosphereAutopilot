@@ -142,6 +142,8 @@ namespace AtmosphereAutopilot
 		// Short term model for angular acceleration
 		//
 
+        // let dv' = k_dv * d_kontrol + C
+
         public CircularBuffer<double>[] k_dv_control = new CircularBuffer<double>[3];		// control authority in angular acceleration
         public CircularBuffer<double>[] dv_mistake = new CircularBuffer<double>[3];         // difference between |dv| and |smooth_dv|
 

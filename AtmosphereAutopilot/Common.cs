@@ -52,5 +52,10 @@ namespace AtmosphereAutopilot
         {
             return (-y0 + 4 * y1 - 5 * y2 + 2 * y3) / dt / dt;
         }
+
+        public static double extrapolate(double y0, double dy1, double dy2, double dt)
+        {
+            return y0 + dy1 * dt + 0.5 * dy2 * dt * dt;
+        }
     }
 }

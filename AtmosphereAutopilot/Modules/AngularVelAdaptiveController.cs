@@ -99,7 +99,7 @@ namespace AtmosphereAutopilot
                         if (max_g > 1e-3 && cur_g >= 0.0)
                             g_relation = Common.Clamp(cur_g / max_g, 0.0, 1.0);
                         if (fbw_max_aoa > 2.0)
-                            aoa_relation = Common.Clamp(Math.Abs(mmodel.aoa_pitch.getLast()) / (fbw_max_aoa / 180.0 * Math.PI), 0.0, 1.0) +
+                            aoa_relation = Math.Abs(mmodel.aoa_pitch.getLast()) / (fbw_max_aoa / 180.0 * Math.PI) +
                             Common.Clamp(
                                 fbw_daoa_k / fbw_max_aoa * Math.Sign(mmodel.aoa_pitch.getLast()) *
                                 Common.derivative1_short(mmodel.aoa_pitch.getFromTail(1), mmodel.aoa_pitch.getLast(), TimeWarp.fixedDeltaTime),
@@ -126,7 +126,7 @@ namespace AtmosphereAutopilot
             acc_controller.ApplyControl(cntrl, output);
 
 			// check if we're stable on given input value
-            if (Math.Abs(error) < 5e-3)
+            if (Math.Abs(input) < 5e-3)
 			{
 				time_in_regime += TimeWarp.fixedDeltaTime;
 			}
