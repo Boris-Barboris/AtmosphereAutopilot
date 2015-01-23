@@ -42,18 +42,14 @@ namespace AtmosphereAutopilot
 
 		protected override void OnActivate()
 		{
-			vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
             pid.clear();
 		}
 
-		protected override void OnDeactivate()
-		{
-			vessel.OnAutopilotUpdate -= new FlightInputCallback(ApplyControl);
-		}
+        protected override void OnDeactivate() { }
 
 		double time_in_regime = 0.0;
 
-        public override double ApplyControl(FlightCtrlState cntrl, double target_value)
+        public override void ApplyControl(FlightCtrlState cntrl)
         {
             throw new NotImplementedException();
         }
@@ -62,14 +58,8 @@ namespace AtmosphereAutopilot
 		/// Main control function
 		/// </summary>
 		/// <param name="cntrl">Control state to change</param>
-		public override void ApplyControl(FlightCtrlState cntrl)
+        public override double ApplyControl(FlightCtrlState cntrl, double target_value)
 		{
-            if (vessel.checkLanded())           // ground breaks the model
-            {
-                time_in_regime = 0.0;
-                return;
-            }
-
 			input = model.angular_v[axis].getLast();				// get angular velocity
 			double accel = model.angular_dv[axis].getLast();		// get angular acceleration
             current_acc = accel;
@@ -91,12 +81,15 @@ namespace AtmosphereAutopilot
             if (FlyByWire)
             {
                 double user_input = get_neutralized_user_input(cntrl);
-                relative_input = fbw_v_k * user_input * mmodel.max_angular_v[axis];
+                if (user_input != 0.0)
+                    desired_v = fbw_v_k * user_input * mmodel.max_angular_v[axis];      // user is interfering with control
+                else
+                    desired_v = target_value;                                           // control from above
                 if (axis == PITCH)
                 {
                     // limit it due to g-force limitations
                     double cur_g = mmodel.g_force.getLast();
-                    if (relative_input * mmodel.aoa_pitch.getLast() > 0.0)
+                    if (desired_v * mmodel.aoa_pitch.getLast() > 0.0)
                     {
                         // user is trying to increase AoA
                         max_g = fbw_g_k * 100.0 / (mmodel.lever_arm[axis] + 1.0);
@@ -112,23 +105,28 @@ namespace AtmosphereAutopilot
                                 Common.derivative1_short(mmodel.aoa_pitch.getFromTail(1), mmodel.aoa_pitch.getLast(), TimeWarp.fixedDeltaTime),
                                 0.0, 1.0);
                         fbw_modifier *= Common.Clamp(1.0 - Math.Max(aoa_relation, g_relation), 0.0, 1.0);
-                        relative_input *= fbw_modifier;
+                        desired_v *= fbw_modifier;
                     }
                 }
-                output = Common.Clamp(pid.Control(input, accel, relative_input, TimeWarp.fixedDeltaTime), fbw_dv_k * mmodel.max_angular_dv[axis]);
+                output = Common.Clamp(pid.Control(input, accel, desired_v, TimeWarp.fixedDeltaTime), fbw_dv_k * mmodel.max_angular_dv[axis]);
             }
             else
-                output = pid.Control(input, accel, 0.0, TimeWarp.fixedDeltaTime);
+            {
+                desired_v = 0.0;
+                output = pid.Control(input, accel, desired_v, TimeWarp.fixedDeltaTime);
+            }
 
-            error = 0.0 - input;
+            acc_controller.FlyByWire = FlyByWire;
+
+            error = desired_v - input;
             proport = error * pid.KP;
             integr = pid.Accumulator * pid.KI;
             deriv = -pid.KD * accel;
 
-            double child_output = acc_controller.ApplyControl(cntrl, output);
+            acc_controller.ApplyControl(cntrl, output);
 
 			// check if we're stable on given input value
-			if (Math.Abs(input) < 1e-2)
+            if (Math.Abs(error) < 5e-3)
 			{
 				time_in_regime += TimeWarp.fixedDeltaTime;
 			}
@@ -137,8 +135,10 @@ namespace AtmosphereAutopilot
 				time_in_regime = 0.0;
 			}
 
-			if (time_in_regime >= 1.0)
+			if (time_in_regime >= 1.0 && axis != YAW)
 				set_trim();
+
+            return output;
 		}
 
         [GlobalSerializable("FlyByWire")]
@@ -173,7 +173,7 @@ namespace AtmosphereAutopilot
         public double proport { get; private set; }
 
         [AutoGuiAttr("DEBUG relative_input", false, "G8")]
-        public double relative_input;
+        public double desired_v;
 
         [AutoGuiAttr("DEBUG g_fwb_modifier", false, "G8")]
         public double fbw_modifier;
@@ -201,7 +201,6 @@ namespace AtmosphereAutopilot
                         state.pitch > state.pitchTrim ?
                             (state.pitch - state.pitchTrim) / (1.0 - state.pitchTrim) :
                             (state.pitch - state.pitchTrim) / (1.0 + state.pitchTrim);
-                    state.pitch = state.pitchTrim;
                     return result;
                 case ROLL:
                     result = state.roll == state.rollTrim ?
@@ -209,7 +208,6 @@ namespace AtmosphereAutopilot
                         state.roll > state.rollTrim ?
                             (state.roll - state.rollTrim) / (1.0 - state.rollTrim) :
                             (state.roll - state.rollTrim) / (1.0 + state.rollTrim);
-                    state.roll = state.rollTrim;
                     return result;
                 case YAW:
                     result = state.yaw == state.yawTrim ?
@@ -217,7 +215,6 @@ namespace AtmosphereAutopilot
                         state.yaw > state.yawTrim ?
                             (state.yaw - state.yawTrim) / (1.0 - state.yawTrim) :
                             (state.yaw - state.yawTrim) / (1.0 + state.yawTrim);
-                    state.yaw = state.yawTrim;
                     return result;
                 default:
                     return 0.0;

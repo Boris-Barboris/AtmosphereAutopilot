@@ -59,6 +59,7 @@
     <Compile Include="Modules\AdaptivePIDController.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Controller\PIDController.cs" />
+    <Compile Include="Modules\TopModuleManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MessageManager.cs" />
   </ItemGroup>

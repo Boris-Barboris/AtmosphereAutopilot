@@ -32,12 +32,6 @@ namespace AtmosphereAutopilot
         public CircularBuffer<double> aoa_yaw = new CircularBuffer<double>(BUFFER_SIZE, true);
         public CircularBuffer<double> g_force = new CircularBuffer<double>(BUFFER_SIZE, true);
 
-        [AutoGuiAttr("global angles", false, null)]
-        public double[] global_angle = new double[3];
-
-        [AutoGuiAttr("surface angles", false, null)]
-        public double[] surface_angle = new double[3];
-
         [AutoGuiAttr("max angular v", false, null)]
         public double[] max_angular_v = new double[3];
 
@@ -56,7 +50,7 @@ namespace AtmosphereAutopilot
 			double dt = TimeWarp.fixedDeltaTime;
 			check_dt(dt);
 			update_buffers();
-            update_angles();
+            update_frames();
 			prev_dt = dt;
             if (cycle_counter == 0)
                 calculate_limits();
@@ -85,13 +79,38 @@ namespace AtmosphereAutopilot
             g_force.Put(vessel.geeForce_immediate);
 		}
 
-        void update_angles()
+        public Vector3d surf_ref_up, surf_ref_right, surf_ref_fwd;
+        public Vector3d surf_up, surf_right, surf_fwd;
+
+        void update_frames()
         {
+            // Surface reference frame basis vectors
+            surf_ref_fwd = -(vessel.mainBody.transform.position - vessel.transform.position).normalized;
+            surf_ref_up = vessel.mainBody.getRFrmVel(vessel.transform.position).normalized;
+            surf_ref_right = Vector3d.Cross(surf_ref_up, -surf_ref_fwd).normalized;
+
+            // Plane reference frame basis vectors in surface reference frame
+            surf_up = shiftFrame(vessel.transform.up, surf_ref_right, surf_ref_up, surf_ref_fwd);
+            surf_right = shiftFrame(vessel.transform.right, surf_ref_right, surf_ref_up, surf_ref_fwd);
+            surf_fwd = shiftFrame(vessel.transform.forward, surf_ref_right, surf_ref_up, surf_ref_fwd);
+        }
+
+        Matrix rotateFrame(Vector3[] frame0, Vector3[] frame1)
+        {
+            Matrix result = new Matrix(3, 3);
             for (int i = 0; i < 3; i++)
-            {
-                global_angle[i] = vessel.transform.rotation.eulerAngles[i];
-                surface_angle[i] = vessel.transform.localRotation.eulerAngles[i];
-            }
+                for (int j = 0; j < 3; j++)
+                    result[i, j] = Vector3.Dot(frame1[i], frame0[j]);
+            return result;
+        }
+
+        Vector3 shiftFrame(Vector3 vector, Vector3 frame_x, Vector3 frame_y, Vector3 frame_z)
+        {
+            Vector3 result = new Vector3(
+                Vector3.Dot(vector, frame_x),
+                Vector3.Dot(vector, frame_y),
+                Vector3.Dot(vector, frame_z));
+            return result;
         }
 
         [GlobalSerializable("max_part_acceleration")]

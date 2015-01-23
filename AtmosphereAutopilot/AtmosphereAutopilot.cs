@@ -51,18 +51,18 @@ namespace AtmosphereAutopilot
 			autopilot_module_types.Add(typeof(RollAngularVelocityController));
 			autopilot_module_types.Add(typeof(YawAngularAccController));
 			autopilot_module_types.Add(typeof(YawAngularVelocityController));
+            autopilot_module_types.Add(typeof(TopModuleManager));
         }
 
         void initialize_hotkeys()
         {
-            module_hotkeys[typeof(InstantControlModel)] = KeyCode.Alpha8;
-            module_hotkeys[typeof(MediumFlightModel)] = KeyCode.Alpha9;
             module_hotkeys[typeof(PitchAngularAccController)] = KeyCode.P;
             module_hotkeys[typeof(PitchAngularVelocityController)] = KeyCode.P;
-			module_hotkeys[typeof(RollAngularAccController)] = KeyCode.O;
-			module_hotkeys[typeof(RollAngularVelocityController)] = KeyCode.O;
-			module_hotkeys[typeof(YawAngularAccController)] = KeyCode.Slash;
-			module_hotkeys[typeof(YawAngularVelocityController)] = KeyCode.Slash;
+			module_hotkeys[typeof(RollAngularAccController)] = KeyCode.P;
+			module_hotkeys[typeof(RollAngularVelocityController)] = KeyCode.P;
+			module_hotkeys[typeof(YawAngularAccController)] = KeyCode.P;
+			module_hotkeys[typeof(YawAngularVelocityController)] = KeyCode.P;
+            module_hotkeys[typeof(TopModuleManager)] = KeyCode.P;
         }
 
         void initialize_module_lists()
@@ -204,6 +204,16 @@ namespace AtmosphereAutopilot
 			YawAngularAccController acc = cur_ves_modules[typeof(YawAngularAccController)] as YawAngularAccController;
 			return new YawAngularVelocityController(v, sfmodel, mfmodel, acc);
 		}
+
+        [ModuleConstructor(typeof(TopModuleManager))]
+        TopModuleManager create_TopModuleManager(Vessel v)
+        {
+            MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
+            PitchAngularVelocityController pav = cur_ves_modules[typeof(PitchAngularVelocityController)] as PitchAngularVelocityController;
+            RollAngularVelocityController rov = cur_ves_modules[typeof(RollAngularVelocityController)] as RollAngularVelocityController;
+            YawAngularVelocityController yav = cur_ves_modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
+            return new TopModuleManager(v, mfmodel, pav, rov, yav);
+        }
 
         #endregion
 

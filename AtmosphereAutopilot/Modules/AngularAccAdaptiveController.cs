@@ -129,12 +129,13 @@ namespace AtmosphereAutopilot
                 }
             }
 
-            if (is_user_handling(cntrl))
+            // If flybyfire is off
+            if (!FlyByWire)
             {
                 // user is flying
                 double raw_output = get_user_input(cntrl);
                 // apply dampener output
-                double dampening = -user_dampening * pid.KP * input;
+                double dampening = user_dampening * pid.KP * error;
                 raw_output = raw_output + dampening;
                 output = smooth_and_clamp(raw_output);
                 set_output(cntrl, output);
@@ -175,21 +176,6 @@ namespace AtmosphereAutopilot
             set_output(cntrl, output);
             return output;
 		}
-
-        bool is_user_handling(FlightCtrlState state)
-        {
-            switch (axis)
-            {
-                case PITCH:
-                    return !(state.pitch == state.pitchTrim);
-                case ROLL:
-                    return !(state.roll == state.rollTrim);
-                case YAW:
-                    return !(state.yaw == state.yawTrim);
-                default:
-                    return false;
-            }
-        }
 
         double get_user_input(FlightCtrlState state)
         {
@@ -299,6 +285,9 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("user_dampening")]
         [AutoGuiAttr("user_dampening", true, "G6")]
         public double user_dampening = 1.0;
+
+        [AutoGuiAttr("FlyByWire", false, null)]
+        public bool FlyByWire = false;
 
 		[GlobalSerializable("pid_coeff_inertia")]
 		[AutoGuiAttr("PID inertia", true, "G6")]
