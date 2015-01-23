@@ -77,8 +77,8 @@ namespace AtmosphereAutopilot
                 {
                     //angular_dv[i].Put(smooth_derivative_hybrid(prev_dt, i));
                     angular_dv[i].Put(
-                        Common.derivative1_short(
-                            angular_v[i].getFromTail(1),
+                        Common.derivative1_middle(
+                            angular_v[i].getFromTail(2),
                             angular_v[i].getFromTail(0),
                             prev_dt));
                     angular_dv_central[i].Put(smooth_derivative_central(prev_dt, i));
@@ -149,7 +149,7 @@ namespace AtmosphereAutopilot
 
 		public void update_dv_model()
 		{
-			if (stable_dt < 6)
+			if (stable_dt < 10)
 				return;
 
 			for (int i = 0; i < 3; i++)
