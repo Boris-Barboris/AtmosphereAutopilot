@@ -41,6 +41,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("lever arms", false, null)]
         public double[] lever_arm = new double[3];
         public double max_lever_arm = 1.0;
+		public double wing_load_k = 1.0;
 
 		double prev_dt = 1.0;		// dt in previous call
 		int stable_dt = 0;			// counts amount of stable dt intervals
@@ -127,6 +128,8 @@ namespace AtmosphereAutopilot
                 max_angular_v[i] = Math.Sqrt(Math.Abs(max_part_acceleration) / lever_arm[i]);
                 max_angular_dv[i] = max_part_acceleration / lever_arm[i];
             }
+			double wing_area_aprox = lever_arm[ROLL] * lever_arm[PITCH];
+			wing_load_k = vessel.GetTotalMass() / wing_area_aprox;
         }
 
         void max_part_offset_from_com(double[] offsets)
