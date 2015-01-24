@@ -29,8 +29,8 @@ namespace AtmosphereAutopilot
 				angular_v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
 				angular_dv[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
                 angular_dv_central[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
-                k_dv_control[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
-                dv_mistake[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
+                k_dv_control[i] = new CircularBuffer<double>(10, true);
+                dv_mistake[i] = new CircularBuffer<double>(5, true);
 			}
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
             vessel.OnPostAutopilotUpdate += new FlightInputCallback(OnPostAutopilot);
@@ -150,25 +150,52 @@ namespace AtmosphereAutopilot
 
 			for (int i = 0; i < 3; i++)
 			{
+                //double d_control = input_buf[i].getFromTail(3) - input_buf[i].getFromTail(4);
+
+                //if (Math.Abs(d_control) > min_d_short_control)        // if d_control is substantial
+                //{
+                //    // get control authority in acceleration
+                //    double d1dv = Common.derivative1_short(angular_dv_central[i].getFromTail(2),
+                //        angular_dv_central[i].getFromTail(1), prev_dt);
+                //    double d2dv = Common.derivative2(angular_dv_central[i].getFromTail(3),
+                //        angular_dv_central[i].getFromTail(2),  angular_dv_central[i].getFromTail(1), prev_dt);
+                //    double extrapolated_dv = Common.extrapolate(angular_dv_central[i].getFromTail(1),
+                //        d1dv, d2dv, prev_dt);
+                //    double control_authority_dv = (angular_dv_central[i].getLast() - extrapolated_dv) / d_control;
+                //    if (control_authority_dv > min_authority_dv)
+                //        k_dv_control[i].Put(control_authority_dv);
+                //    else
+                //        k_dv_control[i].Put(min_authority_dv);
+                //}
+
+                //double d_control = input_buf[i].getFromTail(0) - input_buf[i].getFromTail(1);
+
+                //if (Math.Abs(d_control) > min_d_short_control)        // if d_control is substantial
+                //{
+                //    // get control authority in acceleration
+                //    double d1dv = Common.derivative1_short(angular_dv[i].getFromTail(2),
+                //        angular_dv[i].getFromTail(1), prev_dt);
+                //    double d2dv = Common.derivative2(angular_dv[i].getFromTail(3),
+                //        angular_dv[i].getFromTail(2), angular_dv[i].getFromTail(1), prev_dt);
+                //    double extrapolated_dv = Common.extrapolate(angular_dv[i].getFromTail(1),
+                //        d1dv, d2dv, prev_dt);
+                //    double control_authority_dv = (angular_dv[i].getLast() - extrapolated_dv) / d_control;
+                //    if (control_authority_dv > min_authority_dv)
+                //        k_dv_control[i].Put(control_authority_dv);
+                //}
+
                 double d_control = input_buf[i].getFromTail(3) - input_buf[i].getFromTail(4);
 
                 if (Math.Abs(d_control) > min_d_short_control)        // if d_control is substantial
                 {
                     // get control authority in acceleration
-                    double d1dv = Common.derivative1_short(angular_dv_central[i].getFromTail(2),
-                        angular_dv_central[i].getFromTail(1), prev_dt);
-                    double d2dv = Common.derivative2(angular_dv_central[i].getFromTail(3),
-                        angular_dv_central[i].getFromTail(2),  angular_dv_central[i].getFromTail(1), prev_dt);
-                    double extrapolated_dv = Common.extrapolate(angular_dv_central[i].getFromTail(1),
-                        d1dv, d2dv, prev_dt);
-                    double control_authority_dv = (angular_dv_central[i].getLast() - extrapolated_dv) / d_control;
+                    double control_authority_dv = (angular_dv_central[i].getLast() - angular_dv_central[i].getFromTail(1)) / d_control;
                     if (control_authority_dv > min_authority_dv)
                         k_dv_control[i].Put(control_authority_dv);
-                    else
-                        k_dv_control[i].Put(min_authority_dv);
                 }
 
-                dv_mistake[i].Put(Math.Abs(angular_dv_central[i].getLast() - angular_dv[i].getFromTail(3)));
+                double cur_mistake = Math.Abs(angular_dv_central[i].getLast() - angular_dv[i].getFromTail(3));
+                dv_mistake[i].Put(cur_mistake);
 			}
 		}
 

@@ -84,7 +84,7 @@ namespace AtmosphereAutopilot
                 else
                     write_cycle++;
                 desire_dv_writer.Write(target_value.ToString("G8") + ',');
-                dv_writer.Write(model.angular_dv[axis].getLast().ToString("G8") + ',');
+                dv_writer.Write(input.ToString("G8") + ',');
                 extr_dv_writer.Write(input.ToString("G8") + ',');
                 v_writer.Write(model.angular_v[axis].getLast().ToString("G8") + ',');
                 controlWriter.Write(model.input_buf[axis].getLast().ToString("G8") + ',');
@@ -100,7 +100,7 @@ namespace AtmosphereAutopilot
             {
                 if (Math.Abs(error) > small_value_low)
                 {
-                    double cutoff_smoothing = Common.Clamp((Math.Abs(input) - small_value_low) / 
+                    double cutoff_smoothing = Common.Clamp((Math.Abs(error) - small_value_low) / 
                         (small_value_high - small_value_low), 0.0, 1.0);
                     pid.KP = cutoff_smoothing * kp_koeff / auth;
                     pid.KD = cutoff_smoothing * kp_kd_ratio / auth;

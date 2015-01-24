@@ -96,17 +96,17 @@ namespace AtmosphereAutopilot
                         double g_relation = 1.0;
                         double aoa_relation = 1.0;
                         if (max_g > 1e-3 && cur_g >= 0.0)
+                        {
                             g_relation = cur_g / max_g;
+                        }
                         if (fbw_max_aoa > 2.0)
                         {
                             const double dgr_to_rad = 1.0 / 180.0 * Math.PI;
                             double max_aoa_rad = fbw_max_aoa * dgr_to_rad;
-                            aoa_relation = Math.Abs(mmodel.aoa_pitch.getLast()) / max_aoa_rad +
-                                fbw_daoa_k * Common.derivative1_short(
-                                    Math.Abs(mmodel.aoa_pitch.getFromTail(1)),
-                                    Math.Abs(mmodel.aoa_pitch.getLast()), TimeWarp.fixedDeltaTime) / max_aoa_rad;
+                            aoa_relation = Math.Abs(mmodel.aoa_pitch.getLast()) / max_aoa_rad;
                         }
-                        fbw_modifier = Common.Clamp(1.0 - Math.Max(aoa_relation, g_relation), 1.0);
+                        double max_k = Math.Max(aoa_relation, g_relation);
+                        fbw_modifier = Common.Clamp(1.0 - max_k, 1.0);
                         desired_v *= fbw_modifier;
                     }
                 }
