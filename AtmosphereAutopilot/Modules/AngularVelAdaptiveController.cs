@@ -92,7 +92,7 @@ namespace AtmosphereAutopilot
                     if (desired_v * mmodel.aoa_pitch.getLast() > 0.0)
                     {
                         // user is trying to increase AoA
-						max_g = fbw_g_k * 1000.0 / mmodel.wing_load_k;
+                        max_g = fbw_g_k / mmodel.wing_load_k / mmodel.wing_load_k;
                         double g_relation = 1.0;
                         double aoa_relation = 1.0;
                         if (max_g > 1e-3 && cur_g >= 0.0)
