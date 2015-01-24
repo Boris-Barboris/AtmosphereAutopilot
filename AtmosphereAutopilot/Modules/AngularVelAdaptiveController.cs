@@ -93,22 +93,20 @@ namespace AtmosphereAutopilot
                     {
                         // user is trying to increase AoA
                         max_g = fbw_g_k * 100.0 / (mmodel.lever_arm.Max() + 1.0);
-                        fbw_modifier = 1.0;
                         double g_relation = 1.0;
                         double aoa_relation = 1.0;
                         if (max_g > 1e-3 && cur_g >= 0.0)
-                            g_relation = Common.Clamp(cur_g / max_g, 0.0, 1.0) +
-                            Common.Clamp(
-                                fbw_daoa_k / max_g * Math.Sign(mmodel.aoa_pitch.getLast()) *
-                                Common.derivative1_short(mmodel.g_force.getFromTail(1), mmodel.g_force.getLast(), TimeWarp.fixedDeltaTime),
-                                0.0, 1.0);
+                            g_relation = cur_g / max_g;
                         if (fbw_max_aoa > 2.0)
-                            aoa_relation = Math.Abs(mmodel.aoa_pitch.getLast()) / (fbw_max_aoa / 180.0 * Math.PI) +
-                            Common.Clamp(
-                                fbw_daoa_k / fbw_max_aoa * Math.Sign(mmodel.aoa_pitch.getLast()) *
-                                Common.derivative1_short(mmodel.aoa_pitch.getFromTail(1), mmodel.aoa_pitch.getLast(), TimeWarp.fixedDeltaTime),
-                                0.0, 1.0);
-                        fbw_modifier *= Common.Clamp(1.0 - Math.Max(aoa_relation, g_relation), 0.0, 1.0);
+                        {
+                            const double dgr_to_rad = 1.0 / 180.0 * Math.PI;
+                            double max_aoa_rad = fbw_max_aoa * dgr_to_rad;
+                            aoa_relation = Math.Abs(mmodel.aoa_pitch.getLast()) / max_aoa_rad +
+                                fbw_daoa_k * Common.derivative1_short(
+                                    Math.Abs(mmodel.aoa_pitch.getFromTail(1)),
+                                    Math.Abs(mmodel.aoa_pitch.getLast()), TimeWarp.fixedDeltaTime) / max_aoa_rad;
+                        }
+                        fbw_modifier = Common.Clamp(1.0 - Math.Max(aoa_relation, g_relation), 1.0);
                         desired_v *= fbw_modifier;
                     }
                 }
@@ -165,8 +163,9 @@ namespace AtmosphereAutopilot
         public double fbw_g_k = 1.0;
 
         [GlobalSerializable("fbw_daoa_k")]
-        [AutoGuiAttr("aoa deriv moderation k", true, "G6")]
-        public double fbw_daoa_k = 1.0;
+        [VesselSerializable("fbw_daoa_k")]
+        [AutoGuiAttr("moderation dAoA k", true, "G6")]
+        public double fbw_daoa_k = 0.1;
 
         [GlobalSerializable("fbw_max_aoa")]
         [VesselSerializable("fbw_max_aoa")]

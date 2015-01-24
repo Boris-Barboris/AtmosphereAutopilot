@@ -93,12 +93,15 @@ namespace AtmosphereAutopilot
                 write_cycle = 0;
 
             double auth = k_auth;
-            small_value = small_value_k * model.dv_mistake[axis].Average();
-            if (auth > 0.05 && proport_relax_time > 1e-3)
+            double mistake_avg = model.dv_mistake[axis].Average();
+            small_value_low = small_value_k_low * mistake_avg;
+            small_value_high = small_value_k_high * mistake_avg;
+            if (auth > 1e-5)
             {
-                if (Math.Abs(input) > small_value)
+                if (Math.Abs(error) > small_value_low)
                 {
-                    double cutoff_smoothing = Common.Clamp((Math.Abs(input) - small_value) / small_value, 0.0, 1.0);
+                    double cutoff_smoothing = Common.Clamp((Math.Abs(input) - small_value_low) / 
+                        (small_value_high - small_value_low), 0.0, 1.0);
                     pid.KP = cutoff_smoothing * kp_koeff / auth;
                     pid.KD = cutoff_smoothing * kp_kd_ratio / auth;
                 }
@@ -312,16 +315,19 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("large value k", true, "G6")]
         public double large_value_k = 5.0;
 
-		[AutoGuiAttr("small value", false, "G6")]
-		public double small_value = 0.1;
+        [AutoGuiAttr("small value high", false, "G6")]
+        public double small_value_high = 0.1;
 
-        [GlobalSerializable("small_value_k")]
-        [AutoGuiAttr("small value k", true, "G6")]
-        public double small_value_k = 1.5;
+		[AutoGuiAttr("small value low", false, "G6")]
+		public double small_value_low = 0.1;
 
-        [GlobalSerializable("proport_relax_time")]
-        [AutoGuiAttr("Proport relax time", true, "G6")]
-        public double proport_relax_time = 0.05;
+        [GlobalSerializable("small_value_k_high")]
+        [AutoGuiAttr("small value k high", true, "G6")]
+        public double small_value_k_high = 1.5;
+
+        [GlobalSerializable("small_value_k_low")]
+        [AutoGuiAttr("small value k low", true, "G6")]
+        public double small_value_k_low = 0.5;
 
         [GlobalSerializable("integral_fill_time")]
         [AutoGuiAttr("Integral fill time", true, "G6")]

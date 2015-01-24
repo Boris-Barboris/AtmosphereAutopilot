@@ -38,6 +38,7 @@ namespace AtmosphereAutopilot
             GameEvents.onHideUI.Add(OnHideUI);
             GameEvents.onShowUI.Add(OnShowUI);
             GameEvents.onGUIApplicationLauncherReady.Add(onAppLauncherLoad);
+            GameEvents.onGUIApplicationLauncherDestroyed.Add(onAppLauncherDestroy);
             Instance = this;
         }
 
@@ -231,6 +232,11 @@ namespace AtmosphereAutopilot
             launcher_btn = ApplicationLauncher.Instance.AddModApplication(
                 OnALTrue, OnALFalse, OnALTrue, OnALUnHover, null, null, ApplicationLauncher.AppScenes.FLIGHT,
                 GameDatabase.Instance.GetTexture("AtmosphereAutopilot/icon", false));
+        }
+
+        void onAppLauncherDestroy()
+        {
+            GameEvents.onGUIApplicationLauncherReady.Add(onAppLauncherLoad);
         }
 
         void OnALTrue()

@@ -75,10 +75,9 @@ namespace AtmosphereAutopilot
 				angular_v[i].Put(-vessel.angularVelocity[i]);
                 if (stable_dt >= 7)
                 {
-                    //angular_dv[i].Put(smooth_derivative_hybrid(prev_dt, i));
                     angular_dv[i].Put(
-                        Common.derivative1_middle(
-                            angular_v[i].getFromTail(2),
+                        Common.derivative1_short(
+                            angular_v[i].getFromTail(1),
                             angular_v[i].getFromTail(0),
                             prev_dt));
                     angular_dv_central[i].Put(smooth_derivative_central(prev_dt, i));
@@ -110,14 +109,11 @@ namespace AtmosphereAutopilot
         double smooth_derivative_hybrid(double dt, int axis)
         {
             double result =
-                6.0 * angular_v[axis].getFromTail(6) +
-                1.0 * angular_v[axis].getFromTail(5) +
-                -10.0 * angular_v[axis].getFromTail(4) +
-                -6.0 * angular_v[axis].getFromTail(3) +
-                -8.0 * angular_v[axis].getFromTail(2) +
-                5.0 * angular_v[axis].getFromTail(1) +
-                12.0 * angular_v[axis].getFromTail(0);
-            result /= 28.0 * dt;
+                1.0 * angular_v[axis].getFromTail(3) +
+                -2.0 * angular_v[axis].getFromTail(2) +
+                -1.0 * angular_v[axis].getFromTail(1) +
+                2.0 * angular_v[axis].getFromTail(0);
+            result /= 2.0 * dt;
             return result;
         }
 
@@ -168,6 +164,8 @@ namespace AtmosphereAutopilot
                     double control_authority_dv = (angular_dv_central[i].getLast() - extrapolated_dv) / d_control;
                     if (control_authority_dv > min_authority_dv)
                         k_dv_control[i].Put(control_authority_dv);
+                    else
+                        k_dv_control[i].Put(min_authority_dv);
                 }
 
                 dv_mistake[i].Put(Math.Abs(angular_dv_central[i].getLast() - angular_dv[i].getFromTail(3)));
