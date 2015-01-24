@@ -40,6 +40,7 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("lever arms", false, null)]
         public double[] lever_arm = new double[3];
+        public double max_lever_arm = 1.0;
 
 		double prev_dt = 1.0;		// dt in previous call
 		int stable_dt = 0;			// counts amount of stable dt intervals
@@ -50,7 +51,7 @@ namespace AtmosphereAutopilot
 			double dt = TimeWarp.fixedDeltaTime;
 			check_dt(dt);
 			update_buffers();
-            update_frames();
+            //update_frames();
 			prev_dt = dt;
             if (cycle_counter == 0)
                 calculate_limits();
@@ -119,38 +120,38 @@ namespace AtmosphereAutopilot
 
         void calculate_limits()
         {
+            max_part_offset_from_com(lever_arm);
+            max_lever_arm = lever_arm.Max();
             for (int i = 0; i < 3; i++)
             {
-                lever_arm[i] = max_part_offset_from_com(i);
                 max_angular_v[i] = Math.Sqrt(Math.Abs(max_part_acceleration) / lever_arm[i]);
                 max_angular_dv[i] = max_part_acceleration / lever_arm[i];
             }
         }
 
-        double max_part_offset_from_com(int axis)
+        void max_part_offset_from_com(double[] offsets)
         {
-            double max_offset = 1.0;
+            double max_o_pitch = 1.0;
+            double max_o_roll = 1.0;
+            double max_o_yaw = 1.0;
             Vector3 com = vessel.findWorldCenterOfMass();
             foreach (var part in vessel.Parts)
             {
                 Vector3 part_v = part.transform.position - com;
-                double offset = 0.0;
-                switch (axis)
-                {
-                    case PITCH:
-                        offset = Vector3.Cross(part_v, vessel.transform.right).magnitude;
-                        break;
-                    case ROLL:
-                        offset = Vector3.Cross(part_v, vessel.transform.up).magnitude;
-                        break;
-                    case YAW:
-                        offset = Vector3.Cross(part_v, vessel.transform.forward).magnitude;
-                        break;
-                }
-                if (offset > max_offset)
-                    max_offset = offset;
+                double o_pitch, o_roll, o_yaw;
+                o_pitch = Vector3.Cross(part_v, vessel.transform.right).magnitude;
+                o_roll = Vector3.Cross(part_v, vessel.transform.up).magnitude;
+                o_yaw = Vector3.Cross(part_v, vessel.transform.forward).magnitude;
+                if (o_pitch > max_o_pitch)
+                    max_o_pitch = o_pitch;
+                if (o_roll > max_o_roll)
+                    max_o_roll = o_roll;
+                if (o_yaw > max_o_yaw)
+                    max_o_yaw = o_yaw;
             }
-            return max_offset;
+            offsets[PITCH] = max_o_pitch;
+            offsets[ROLL] = max_o_roll;
+            offsets[YAW] = max_o_yaw;
         }
 
         #region Serialization
