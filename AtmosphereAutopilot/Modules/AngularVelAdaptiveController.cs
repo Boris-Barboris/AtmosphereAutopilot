@@ -10,7 +10,7 @@ namespace AtmosphereAutopilot
 	/// <summary>
 	/// Controls angular velocity
 	/// </summary>
-	public class AngularVelAdaptiveController : StateController
+	public abstract class AngularVelAdaptiveController : SIMOController
 	{
 		protected int axis;
 
@@ -37,7 +37,7 @@ namespace AtmosphereAutopilot
 		/// <param name="wnd_id">unique for types window id</param>
 		/// <param name="axis">Pitch = 0, roll = 1, yaw = 2</param>
 		/// <param name="model">Flight model instance for adaptive control</param>
-		public AngularVelAdaptiveController(Vessel vessel, string module_name,
+		protected AngularVelAdaptiveController(Vessel vessel, string module_name,
 			int wnd_id, int axis)
 			: base(vessel, module_name, wnd_id)
 		{
@@ -55,11 +55,6 @@ namespace AtmosphereAutopilot
         protected override void OnDeactivate() { }
 
 		double time_in_regime = 0.0;
-
-        public override void ApplyControl(FlightCtrlState cntrl)
-        {
-            throw new NotImplementedException();
-        }
 
 		/// <summary>
 		/// Main control function
@@ -235,6 +230,7 @@ namespace AtmosphereAutopilot
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
 		{
+			base.InitializeDependencies(modules);
 			this.acc_controller = modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
 		}
     }
@@ -247,6 +243,7 @@ namespace AtmosphereAutopilot
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
 		{
+			base.InitializeDependencies(modules);
 			this.acc_controller = modules[typeof(RollAngularAccController)] as RollAngularAccController;
 		}
 	}
@@ -259,6 +256,7 @@ namespace AtmosphereAutopilot
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
 		{
+			base.InitializeDependencies(modules);
 			this.acc_controller = modules[typeof(YawAngularAccController)] as YawAngularAccController;
 		}
 	}

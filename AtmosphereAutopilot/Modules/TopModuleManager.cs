@@ -6,12 +6,12 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-    public sealed class TopModuleManager : AutopilotModule
+	public sealed class TopModuleManager : StateController
     {
         AngularVelAdaptiveController[] angular_vc = new AngularVelAdaptiveController[3];
 
 		internal TopModuleManager(Vessel vessel)
-			: base(vessel, 24888888, "Autopilot panel")
+			: base(vessel, "Autopilot module manager", 24888888)
 		{
 			cur_ves_modules = AtmosphereAutopilot.Instance.autopilot_module_lists[vessel];
 		}
@@ -49,7 +49,7 @@ namespace AtmosphereAutopilot
             vessel.OnAutopilotUpdate -= new FlightInputCallback(ApplyControl);
         }
 
-        public void ApplyControl(FlightCtrlState state)
+        public override void ApplyControl(FlightCtrlState state)
         {
             if (vessel.checkLanded())           // ground breaks the model
                 return;

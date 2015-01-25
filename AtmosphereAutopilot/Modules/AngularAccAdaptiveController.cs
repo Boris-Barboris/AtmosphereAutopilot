@@ -10,7 +10,7 @@ namespace AtmosphereAutopilot
 	/// <summary>
     /// Controls angular acceleration. Meant to be created from AngularVelAdaptiveController
 	/// </summary>
-	public class AngularAccAdaptiveController : StateController
+	public abstract class AngularAccAdaptiveController : SIMOController
 	{
 		protected int axis;
 
@@ -57,9 +57,7 @@ namespace AtmosphereAutopilot
 		/// <param name="module_name">Name of controller</param>
 		/// <param name="wnd_id">unique for types window id</param>
 		/// <param name="axis">Pitch = 0, roll = 1, yaw = 2</param>
-		/// <param name="model">Flight model instance for adaptive control</param>
-        /// <param name="parent">AngularVelAdaptiveController wich uses this instance as a child</param>
-        internal AngularAccAdaptiveController(Vessel vessel, string module_name,
+        protected AngularAccAdaptiveController(Vessel vessel, string module_name,
             int wnd_id, int axis)
 			: base(vessel, module_name, wnd_id)
 		{
@@ -80,11 +78,6 @@ namespace AtmosphereAutopilot
         protected override void OnDeactivate()
         {
 			write_telemetry = false;
-        }
-
-        public override void ApplyControl(FlightCtrlState cntrl)
-        {
-            throw new NotImplementedException();
         }
 
         int write_cycle = 0;

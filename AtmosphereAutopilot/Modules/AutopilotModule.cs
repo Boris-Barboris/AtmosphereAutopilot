@@ -29,7 +29,7 @@ namespace AtmosphereAutopilot
         protected bool enabled = false;
         protected string module_name;
 
-        internal AutopilotModule(Vessel v, int wnd_id, string module_name):
+        protected AutopilotModule(Vessel v, int wnd_id, string module_name):
             base(module_name, wnd_id, new Rect(50.0f, 80.0f, 220.0f, 150.0f))
         {
             vessel = v;
