@@ -25,13 +25,13 @@ namespace AtmosphereAutopilot
         public double output;					// current controller output
 
 		/// <summary>
-		/// Main control function
+		/// Main control function of high-level autopilot.
 		/// </summary>
 		/// <param name="cntrl">Control state to change</param>
 		public abstract void ApplyControl(FlightCtrlState cntrl);
 
         /// <summary>
-        /// Main control function
+        /// Main control function of service autopilot.
         /// </summary>
         /// <param name="cntrl">Control state to change</param>
         /// <param name="target_value">Desired controlled value</param>

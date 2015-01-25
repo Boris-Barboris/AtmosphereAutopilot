@@ -9,30 +9,31 @@ namespace AtmosphereAutopilot
     [KSPAddon(KSPAddon.Startup.Instantly, true)]
     public class AtmosphereAutopilot: MonoBehaviour
     {
-        [AttributeUsage(AttributeTargets.Method)]
-        class ModuleConstructor : Attribute
-        {
-            public Type type;
-            public ModuleConstructor(Type t) { type = t; }
-        }
+		// List of all autopilot modules, that need to be created for vessel
+        internal List<Type> autopilot_module_types = new List<Type>();
 
-        List<Type> autopilot_module_types = new List<Type>();
-        Dictionary<Type, Dictionary<Vessel, object>> autopilot_module_lists = new Dictionary<Type, Dictionary<Vessel, object>>();
-        Dictionary<Type, object> cur_ves_modules = new Dictionary<Type, object>();
-        Dictionary<Type, KeyCode> module_hotkeys = new Dictionary<Type, KeyCode>(); 
-        
-        AppLauncherWindow applauncher;
+		// Map of vessel - module list relation
+        internal Dictionary<Vessel, Dictionary<Type, AutopilotModule>> autopilot_module_lists =
+			new Dictionary<Vessel, Dictionary<Type, AutopilotModule>>();
+
+		// Map of vessel - module manager relation
+		Dictionary<Vessel, TopModuleManager> module_managers = new Dictionary<Vessel, TopModuleManager>();
+
+		// Hotkeys for module activation
+        Dictionary<Type, KeyCode> module_hotkeys = new Dictionary<Type, KeyCode>();
+
+		AppLauncherWindow applauncher = new AppLauncherWindow();
 
         public static AtmosphereAutopilot Instance { get; private set; }
+
+		public Vessel ActiveVessel { get; private set; }
 
         public void Start()
         {
             Debug.Log("[Autopilot]: AtmosphereAutopilot starting up!"); 
             DontDestroyOnLoad(this);
             initialize_types();
-            initialize_module_lists();
             initialize_hotkeys();
-            applauncher = new AppLauncherWindow(cur_ves_modules);
             GameEvents.onVesselChange.Add(vesselSwitch);
             GameEvents.onGameSceneLoadRequested.Add(sceneSwitch);
             GameEvents.onHideUI.Add(OnHideUI);
@@ -40,6 +41,7 @@ namespace AtmosphereAutopilot
             GameEvents.onGUIApplicationLauncherReady.Add(onAppLauncherLoad);
             GameEvents.onGUIApplicationLauncherDestroyed.Add(onAppLauncherDestroy);
             Instance = this;
+			ActiveVessel = null;
         }
 
         void initialize_types()
@@ -52,29 +54,16 @@ namespace AtmosphereAutopilot
 			autopilot_module_types.Add(typeof(RollAngularVelocityController));
 			autopilot_module_types.Add(typeof(YawAngularAccController));
 			autopilot_module_types.Add(typeof(YawAngularVelocityController));
-            autopilot_module_types.Add(typeof(TopModuleManager));
         }
 
         void initialize_hotkeys()
         {
-            module_hotkeys[typeof(PitchAngularAccController)] = KeyCode.P;
-            module_hotkeys[typeof(PitchAngularVelocityController)] = KeyCode.P;
-			module_hotkeys[typeof(RollAngularAccController)] = KeyCode.P;
-			module_hotkeys[typeof(RollAngularVelocityController)] = KeyCode.P;
-			module_hotkeys[typeof(YawAngularAccController)] = KeyCode.P;
-			module_hotkeys[typeof(YawAngularVelocityController)] = KeyCode.P;
             module_hotkeys[typeof(TopModuleManager)] = KeyCode.P;
-        }
-
-        void initialize_module_lists()
-        {
-            foreach (Type type in autopilot_module_types)
-                autopilot_module_lists[type] = new Dictionary<Vessel, object>();
         }
 
         void serialize_active_modules()
         {
-            foreach (var pair in cur_ves_modules)
+			foreach (var pair in autopilot_module_lists[ActiveVessel])
             {
                 ISerializable s = pair.Value as ISerializable;
                 if (s != null)
@@ -90,147 +79,42 @@ namespace AtmosphereAutopilot
         private void sceneSwitch(GameScenes scenes)
         {
             serialize_active_modules();
-            cur_ves_modules.Clear();
+			if (scenes != GameScenes.FLIGHT)
+				ActiveVessel = null;
         }
 
-        private void load_module(Vessel vessel, Type type, Func<Vessel, object> constructor)
+		private void load_manager_for_vessel(Vessel v)
         {
-            Debug.Log("[Autopilot] load_module");
-            object module;
-            if (!autopilot_module_lists.ContainsKey(type))
-                throw new ArgumentException("[AtmosphereAutopilot]: module type " + type.Name + " is not present in autopilot_module_lists");
-            if (autopilot_module_lists[type].ContainsKey(vessel))
-            {
-                module = autopilot_module_lists[type][vessel];
-                Debug.Log("[Autopilot]: " + type.Name + " for vessel " + vessel.name + " loaded");
-            }
-            else
-            {
-                module = constructor(vessel);
-                Debug.Log("[Autopilot]: " + type.Name + " for vessel " + vessel.name + " created");
-                autopilot_module_lists[type][vessel] = module;
-            }
-            ISerializable s = module as ISerializable;
-            if (s != null) 
-                s.Deserialize();
-            cur_ves_modules[type] = module;
+			if (v == null)
+				return;
+			if (!autopilot_module_lists.ContainsKey(v))
+				autopilot_module_lists[v] = new Dictionary<Type, AutopilotModule>();
+			if (!module_managers.ContainsKey(v))
+				module_managers[v] = new TopModuleManager(v);			
         }
-
-        private void load_all_modules_for_vessel(Vessel v)
-        {
-            Dictionary<Type, System.Reflection.MethodInfo> constructorMap = new Dictionary<Type, System.Reflection.MethodInfo>();
-            var constructors = typeof(AtmosphereAutopilot).
-                GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).
-                        Where(m => m.GetCustomAttributes(typeof(ModuleConstructor), false).Length > 0).ToArray();
-            foreach (var cons in constructors)
-            {
-                var att = cons.GetCustomAttributes(typeof(ModuleConstructor), false).First() as ModuleConstructor;
-                constructorMap.Add(att.type, cons);
-            }
-
-            Debug.Log("[Autopilot] load_all_modules_for_vessel constructors.Length = " + constructors.Length.ToString() +
-                " constructorMap.Count = " + constructorMap.Keys.Count.ToString());
-                
-            foreach (Type type in autopilot_module_types)
-            {
-                if (constructorMap.ContainsKey(type))
-                {
-                    var constructor = constructorMap[type];
-                    load_module(v, type, ve => { return constructor.Invoke(this, new[] { ve }); });
-                }
-            }
-        }
-
-        #region module_constructors
-
-        [ModuleConstructor(typeof(InstantControlModel))]
-        InstantControlModel create_InstantControlModel(Vessel v)
-        {
-            return new InstantControlModel(v);
-        }
-
-        [ModuleConstructor(typeof(MediumFlightModel))]
-        MediumFlightModel create_MediumFlightModel(Vessel v)
-        {
-            return new MediumFlightModel(v);
-        }
-
-        [ModuleConstructor(typeof(PitchAngularAccController))]
-        PitchAngularAccController create_PitchAngularAccController(Vessel v)
-        {
-            InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
-            MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
-            return new PitchAngularAccController(v, sfmodel, mfmodel);
-        }
-
-        [ModuleConstructor(typeof(PitchAngularVelocityController))]
-        PitchAngularVelocityController create_PitchAngularVelocityController(Vessel v)
-        {
-            InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
-            MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
-            PitchAngularAccController acc = cur_ves_modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
-            return new PitchAngularVelocityController(v, sfmodel, mfmodel, acc);
-        }
-
-		[ModuleConstructor(typeof(RollAngularAccController))]
-		RollAngularAccController create_RollAngularAccController(Vessel v)
-		{
-			InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
-			MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
-			return new RollAngularAccController(v, sfmodel, mfmodel);
-		}
-
-		[ModuleConstructor(typeof(RollAngularVelocityController))]
-		RollAngularVelocityController create_RollAngularVelocityController(Vessel v)
-		{
-			InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
-			MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
-			RollAngularAccController acc = cur_ves_modules[typeof(RollAngularAccController)] as RollAngularAccController;
-			return new RollAngularVelocityController(v, sfmodel, mfmodel, acc);
-		}
-
-		[ModuleConstructor(typeof(YawAngularAccController))]
-		YawAngularAccController create_YawAngularAccController(Vessel v)
-		{
-			InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
-			MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
-			return new YawAngularAccController(v, sfmodel, mfmodel);
-		}
-
-		[ModuleConstructor(typeof(YawAngularVelocityController))]
-		YawAngularVelocityController create_YawAngularVelocityController(Vessel v)
-		{
-			InstantControlModel sfmodel = cur_ves_modules[typeof(InstantControlModel)] as InstantControlModel;
-			MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
-			YawAngularAccController acc = cur_ves_modules[typeof(YawAngularAccController)] as YawAngularAccController;
-			return new YawAngularVelocityController(v, sfmodel, mfmodel, acc);
-		}
-
-        [ModuleConstructor(typeof(TopModuleManager))]
-        TopModuleManager create_TopModuleManager(Vessel v)
-        {
-            MediumFlightModel mfmodel = cur_ves_modules[typeof(MediumFlightModel)] as MediumFlightModel;
-            PitchAngularVelocityController pav = cur_ves_modules[typeof(PitchAngularVelocityController)] as PitchAngularVelocityController;
-            RollAngularVelocityController rov = cur_ves_modules[typeof(RollAngularVelocityController)] as RollAngularVelocityController;
-            YawAngularVelocityController yav = cur_ves_modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
-            return new TopModuleManager(v, mfmodel, pav, rov, yav);
-        }
-
-        #endregion
 
         private void vesselSwitch(Vessel v)
         {
             Debug.Log("[Autopilot] vessel switch");
-            load_all_modules_for_vessel(v);
+            load_manager_for_vessel(v);
+			ActiveVessel = v;
         }
 
-        ApplicationLauncherButton launcher_btn;
+		public Dictionary<Type, AutopilotModule> getCurVesselModules()
+		{
+			return autopilot_module_lists[ActiveVessel];
+		}
+
+
+		#region AppLauncherSection
+
+		ApplicationLauncherButton launcher_btn;
 
         void onAppLauncherLoad()
         {
             GameEvents.onGUIApplicationLauncherReady.Remove(onAppLauncherLoad);
             launcher_btn = ApplicationLauncher.Instance.AddModApplication(
-                OnALTrue, OnALFalse, OnALTrue, OnALUnHover, null, null, ApplicationLauncher.AppScenes.FLIGHT,
+				OnALTrue, OnALFalse, OnHover, OnALUnHover, null, null, ApplicationLauncher.AppScenes.FLIGHT,
                 GameDatabase.Instance.GetTexture("AtmosphereAutopilot/icon", false));
         }
 
@@ -243,7 +127,14 @@ namespace AtmosphereAutopilot
         {
             applauncher.ShowGUI();
             applauncher.show_while_hover = false;
+
         }
+
+		void OnHover()
+		{
+			applauncher.ShowGUI();
+			applauncher.show_while_hover = false;
+		}
 
         void OnALFalse()
         {
@@ -256,10 +147,15 @@ namespace AtmosphereAutopilot
                 applauncher.show_while_hover = true;
         }
 
-        bool styles_init = false;
+		#endregion
+
+
+		bool styles_init = false;
 
         public void OnGUI()
         {
+			if (ActiveVessel == null)
+				return;
             if (!styles_init)
             {
                 GUIStyles.Init();
@@ -267,7 +163,7 @@ namespace AtmosphereAutopilot
             }
             GUI.skin = GUIStyles.skin;
             applauncher.OnGUI();
-            foreach (var pair in cur_ves_modules)
+			foreach (var pair in autopilot_module_lists[ActiveVessel])
             {
                 IWindow s = pair.Value as IWindow;
                 if (s != null)
@@ -278,7 +174,9 @@ namespace AtmosphereAutopilot
         public void OnHideUI()
         {
             applauncher.HideGUI();
-            foreach (var pair in cur_ves_modules)
+			if (ActiveVessel == null)
+				return;
+			foreach (var pair in autopilot_module_lists[ActiveVessel])
             {
                 IWindow s = pair.Value as IWindow;
                 if (s != null)
@@ -289,7 +187,9 @@ namespace AtmosphereAutopilot
         public void OnShowUI()
         {
             applauncher.UnHideGUI();
-            foreach (var pair in cur_ves_modules)
+			if (ActiveVessel == null)
+				return;
+			foreach (var pair in autopilot_module_lists[ActiveVessel])
             {
                 IWindow s = pair.Value as IWindow;
                 if (s != null)
@@ -303,19 +203,27 @@ namespace AtmosphereAutopilot
                 return;
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
+			if (ActiveVessel == null)
+				return;
 
             bool mod = GameSettings.MODIFIER_KEY.GetKey();
 
-            foreach (var pair in module_hotkeys)
-                if (Input.GetKeyDown(pair.Value))
-                {
-                    AutopilotModule module = cur_ves_modules[pair.Key] as AutopilotModule;
-                    if (module != null)
-                    {
-                        module.Active = !module.Active;
-                        MessageManager.post_status_message(module.ModuleName + (module.Active ? " enabled" : " disabled"));
-                    }
-                }
+			foreach (var pair in module_hotkeys)
+			{
+				if (pair.Key == typeof(TopModuleManager))
+				{
+					if (Input.GetKeyDown(pair.Value) &&
+						module_managers.ContainsKey(ActiveVessel))
+					{
+						TopModuleManager module = module_managers[ActiveVessel];
+						if (module != null)
+						{
+							module.Active = !module.Active;
+							MessageManager.post_status_message(module.ModuleName + (module.Active ? " enabled" : " disabled"));
+						}
+					}
+				}
+			}
         }
     }
 }

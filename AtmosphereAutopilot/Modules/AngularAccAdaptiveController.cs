@@ -17,7 +17,9 @@ namespace AtmosphereAutopilot
 		InstantControlModel model;
         MediumFlightModel m_model;
 
-        StreamWriter errorWriter, controlWriter, v_writer, dv_writer, smooth_dv_writer, desire_dv_writer, extr_dv_writer;
+		// Telemetry writers
+        StreamWriter errorWriter, controlWriter, v_writer, dv_writer, smooth_dv_writer, 
+			desire_dv_writer;
 
 		
 		PIController pid = new PIController();
@@ -58,12 +60,16 @@ namespace AtmosphereAutopilot
 		/// <param name="model">Flight model instance for adaptive control</param>
         /// <param name="parent">AngularVelAdaptiveController wich uses this instance as a child</param>
         internal AngularAccAdaptiveController(Vessel vessel, string module_name,
-            int wnd_id, int axis, InstantControlModel model, MediumFlightModel m_model)
+            int wnd_id, int axis)
 			: base(vessel, module_name, wnd_id)
 		{
 			this.axis = axis;
-			this.model = model;
-            this.m_model = m_model;
+		}
+
+		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+		{
+			this.model = modules[typeof(InstantControlModel)] as InstantControlModel;
+			this.m_model = modules[typeof(MediumFlightModel)] as MediumFlightModel;
 		}
 
 		protected override void OnActivate()
@@ -104,7 +110,6 @@ namespace AtmosphereAutopilot
                     write_cycle++;
                 desire_dv_writer.Write(target_value.ToString("G8") + ',');
                 dv_writer.Write(input.ToString("G8") + ',');
-                extr_dv_writer.Write(input.ToString("G8") + ',');
                 v_writer.Write(model.angular_v[axis].getLast().ToString("G8") + ',');
                 controlWriter.Write(model.input_buf[axis].getLast().ToString("G8") + ',');
             }
@@ -186,13 +191,10 @@ namespace AtmosphereAutopilot
                             vessel.name + '_' + module_name + "_telemetry_dv.csv");
                         desire_dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
                             vessel.name + '_' + module_name + "_telemetry_desire.csv");
-                        extr_dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-                            vessel.name + '_' + module_name + "_telemetry_extrdv.csv");
                         smooth_dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
                             vessel.name + '_' + module_name + "_telemetry_smoothdv.csv");
                         desire_dv_writer.Write("0.0,");
                         errorWriter.Write(error.ToString("G8") + ',');
-                        extr_dv_writer.Write("0.0,");
                         _write_telemetry = value;
                     }
 				}
@@ -205,7 +207,6 @@ namespace AtmosphereAutopilot
                         v_writer.Close();
                         dv_writer.Close();
                         desire_dv_writer.Close();
-                        extr_dv_writer.Close();
                         smooth_dv_writer.Close();
                         _write_telemetry = value;
                     }					
@@ -229,19 +230,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("DEBUG desired_dv", false, "G8")]
         internal double desired_acc { get; private set; }
 
-        [AutoGuiAttr("DEBUG current_d2v", false, "G8")]
-        internal double current_d2v { get; private set; }
-
         [AutoGuiAttr("DEBUG authority", false, "G8")]
         internal double k_auth { get { return model.getDvAuthority((Axis)axis); } }
-
-        [GlobalSerializable("user_dampening")]
-        [AutoGuiAttr("user_dampening", true, "G6")]
-        protected double user_dampening = 1.0;
-
-		[GlobalSerializable("pid_coeff_inertia")]
-		[AutoGuiAttr("PID inertia", true, "G6")]
-		protected double pid_coeff_inertia = 15.0;		// PID coeffitients inertia factor
 
 		[GlobalSerializable("ki_koeff")]
 		[AutoGuiAttr("ki_koeff", true, "G6")]
@@ -280,10 +270,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Equilibrium i_gain", true, "G6")]
         protected double i_gain = 1.0;
 
-        [GlobalSerializable("i_overshoot_gain")]
-        [AutoGuiAttr("Integral overshoot gain", true, "G6")]
-        protected double i_overshoot_gain = 1.0;
-
 		#endregion
 	}
 
@@ -294,22 +280,22 @@ namespace AtmosphereAutopilot
 
     public sealed class PitchAngularAccController : AngularAccAdaptiveController
     {
-        internal PitchAngularAccController(Vessel vessel, InstantControlModel model, MediumFlightModel mmodel)
-            : base(vessel, "Adaptive elavator trimmer accel", 77821329, (int)Axis.PITCH, model, mmodel)
+        internal PitchAngularAccController(Vessel vessel)
+            : base(vessel, "Adaptive elavator trimmer accel", 77821329, (int)Axis.PITCH)
         { }
     }
 
 	public sealed class RollAngularAccController : AngularAccAdaptiveController
 	{
-		internal RollAngularAccController(Vessel vessel, InstantControlModel model, MediumFlightModel mmodel)
-			: base(vessel, "Adaptive roll trimmer accel", 77821330, (int)Axis.ROLL, model, mmodel)
+		internal RollAngularAccController(Vessel vessel)
+			: base(vessel, "Adaptive roll trimmer accel", 77821330, (int)Axis.ROLL)
 		{ }
 	}
 
 	public sealed class YawAngularAccController : AngularAccAdaptiveController
 	{
-		internal YawAngularAccController(Vessel vessel, InstantControlModel model, MediumFlightModel mmodel)
-			: base(vessel, "Adaptive yaw trimmer accel", 77821331, (int)Axis.YAW, model, mmodel)
+		internal YawAngularAccController(Vessel vessel)
+			: base(vessel, "Adaptive yaw trimmer accel", 77821331, (int)Axis.YAW)
 		{ }
 	}
 

@@ -8,26 +8,44 @@ namespace AtmosphereAutopilot
 {
     public sealed class TopModuleManager : AutopilotModule
     {
-        MediumFlightModel mmodel;
         AngularVelAdaptiveController[] angular_vc = new AngularVelAdaptiveController[3];
 
-        internal TopModuleManager(Vessel vessel, MediumFlightModel mmodel, PitchAngularVelocityController pvc,
-            RollAngularVelocityController rvc, YawAngularVelocityController yvc)
-            : base(vessel, 24888888, "Autopilot panel")
-        {
-            this.mmodel = mmodel;
-            angular_vc[PITCH] = pvc;
-            angular_vc[ROLL] = rvc;
-            angular_vc[YAW] = yvc;
-        }
+		internal TopModuleManager(Vessel vessel)
+			: base(vessel, 24888888, "Autopilot panel")
+		{
+			cur_ves_modules = AtmosphereAutopilot.Instance.autopilot_module_lists[vessel];
+		}
+
+		Dictionary<Type, AutopilotModule> cur_ves_modules;
 
         protected override void OnActivate()
         {
-            vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
+			if (cur_ves_modules.Count == 0)
+			{
+				// We need to create all those modules. Module type needs to define constructor of
+				// Constructor(Vessel v) prototype.
+				foreach (var module_type in AtmosphereAutopilot.Instance.autopilot_module_types)
+				{
+					var constructor = module_type.GetConstructor(new[] { typeof(Vessel) });
+					cur_ves_modules[module_type] = (AutopilotModule)constructor.Invoke(new[] { vessel });
+				}
+				// Then we need to resolve relations
+				foreach (var module_type in AtmosphereAutopilot.Instance.autopilot_module_types)
+					cur_ves_modules[module_type].InitializeDependencies(cur_ves_modules);
+			}
+			else
+			{
+				foreach (var module_type in AtmosphereAutopilot.Instance.autopilot_module_types)
+					cur_ves_modules[module_type].Activate();
+			}
+
+			vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
         }
 
         protected override void OnDeactivate()
         {
+			foreach (var module_type in AtmosphereAutopilot.Instance.autopilot_module_types)
+				cur_ves_modules[module_type].Deactivate();
             vessel.OnAutopilotUpdate -= new FlightInputCallback(ApplyControl);
         }
 

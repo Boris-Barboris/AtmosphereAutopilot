@@ -8,12 +8,9 @@ namespace AtmosphereAutopilot
 {
     class AppLauncherWindow : GUIWindow
     {
-        Dictionary<Type, object> modules;
-        public AppLauncherWindow(Dictionary<Type, object> modules) :
-            base("", 3920049, new Rect(Screen.width - 300, 40, 250, 30))
-        {
-            this.modules = modules;
-        }
+		public AppLauncherWindow() :
+			base("", 3920049, new Rect(Screen.width - 300, 40, 250, 30))
+		{ }
 
         public void set_left(int left)
         {
@@ -25,7 +22,7 @@ namespace AtmosphereAutopilot
         protected override void _drawGUI(int id)
         {
             GUILayout.BeginVertical();
-            foreach (var pair in modules)
+			foreach (var pair in AtmosphereAutopilot.Instance.getCurVesselModules())
             {
                 IWindow gui = pair.Value as IWindow;
                 if (gui != null)

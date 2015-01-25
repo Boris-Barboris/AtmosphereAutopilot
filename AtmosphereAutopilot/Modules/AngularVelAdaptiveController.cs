@@ -15,8 +15,8 @@ namespace AtmosphereAutopilot
 		protected int axis;
 
 		InstantControlModel model;
-        MediumFlightModel mmodel;
-        AngularAccAdaptiveController acc_controller;
+		MediumFlightModel mmodel;
+		protected AngularAccAdaptiveController acc_controller;
 
 
 		PController pid = new PController();
@@ -38,13 +38,16 @@ namespace AtmosphereAutopilot
 		/// <param name="axis">Pitch = 0, roll = 1, yaw = 2</param>
 		/// <param name="model">Flight model instance for adaptive control</param>
 		public AngularVelAdaptiveController(Vessel vessel, string module_name,
-			int wnd_id, int axis, InstantControlModel model, MediumFlightModel mmodel, AngularAccAdaptiveController acc)
+			int wnd_id, int axis)
 			: base(vessel, module_name, wnd_id)
 		{
 			this.axis = axis;
-			this.model = model;
-            this.mmodel = mmodel;
-            acc_controller = acc;
+		}
+
+		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+		{
+			this.model = modules[typeof(InstantControlModel)] as InstantControlModel;
+			this.mmodel = modules[typeof(MediumFlightModel)] as MediumFlightModel;
 		}
 
 		protected override void OnActivate() { }
@@ -226,26 +229,38 @@ namespace AtmosphereAutopilot
 
     public sealed class PitchAngularVelocityController : AngularVelAdaptiveController
     {
-        internal PitchAngularVelocityController(Vessel vessel, InstantControlModel model, 
-			MediumFlightModel mmodel, AngularAccAdaptiveController acc)
-            : base(vessel, "Adaptive elavator trimmer", 1234444, 0, model, mmodel, acc)
+        internal PitchAngularVelocityController(Vessel vessel)
+            : base(vessel, "Adaptive elavator trimmer", 1234444, 0)
         { }
+
+		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+		{
+			this.acc_controller = modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
+		}
     }
 
 	public sealed class RollAngularVelocityController : AngularVelAdaptiveController
 	{
-		internal RollAngularVelocityController(Vessel vessel, InstantControlModel model, 
-			MediumFlightModel mmodel, AngularAccAdaptiveController acc)
-			: base(vessel, "Adaptive roll trimmer", 1234445, 1, model, mmodel, acc)
+		internal RollAngularVelocityController(Vessel vessel)
+			: base(vessel, "Adaptive roll trimmer", 1234445, 1)
 		{ }
+
+		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+		{
+			this.acc_controller = modules[typeof(RollAngularAccController)] as RollAngularAccController;
+		}
 	}
 
 	public sealed class YawAngularVelocityController : AngularVelAdaptiveController
 	{
-		internal YawAngularVelocityController(Vessel vessel, InstantControlModel model, 
-			MediumFlightModel mmodel, AngularAccAdaptiveController acc)
-			: base(vessel, "Adaptive yaw trimmer", 1234446, 2, model, mmodel, acc)
+		internal YawAngularVelocityController(Vessel vessel)
+			: base(vessel, "Adaptive yaw trimmer", 1234446, 2)
 		{ }
+
+		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+		{
+			this.acc_controller = modules[typeof(YawAngularAccController)] as YawAngularAccController;
+		}
 	}
 
 }

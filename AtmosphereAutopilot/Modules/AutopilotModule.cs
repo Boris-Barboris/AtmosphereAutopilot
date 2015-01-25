@@ -36,6 +36,13 @@ namespace AtmosphereAutopilot
             this.module_name = module_name;
         }
 
+		/// <summary>
+		/// If this module is dependent on other modules, you should get references to
+		/// required ones in this call.
+		/// </summary>
+		/// <param name="modules">Map of autopilot modules, instanced for this vessel.</param>
+		public virtual void InitializeDependencies(Dictionary<Type, AutopilotModule> modules) { }
+
         public void Activate()
         {
             if (!enabled)
