@@ -6,16 +6,12 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-    class TopModuleManager : AutopilotModule
+    public sealed class TopModuleManager : AutopilotModule
     {
-        public const int PITCH = 0;
-        public const int ROLL = 1;
-        public const int YAW = 2;
-
         MediumFlightModel mmodel;
         AngularVelAdaptiveController[] angular_vc = new AngularVelAdaptiveController[3];
 
-        public TopModuleManager(Vessel vessel, MediumFlightModel mmodel, PitchAngularVelocityController pvc,
+        internal TopModuleManager(Vessel vessel, MediumFlightModel mmodel, PitchAngularVelocityController pvc,
             RollAngularVelocityController rvc, YawAngularVelocityController yvc)
             : base(vessel, 24888888, "Autopilot panel")
         {

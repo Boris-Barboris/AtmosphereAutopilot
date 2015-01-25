@@ -27,7 +27,7 @@ namespace AtmosphereAutopilot
             GUILayout.BeginVertical();
             foreach (var pair in modules)
             {
-                IAutoGui gui = pair.Value as IAutoGui;
+                IWindow gui = pair.Value as IWindow;
                 if (gui != null)
                 {
                     bool shown = gui.IsShown();

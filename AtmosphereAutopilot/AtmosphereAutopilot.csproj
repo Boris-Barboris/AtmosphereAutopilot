@@ -46,17 +46,19 @@
   <ItemGroup>
     <Compile Include="AppLauncher.cs" />
     <Compile Include="AtmosphereAutopilot.cs" />
-    <Compile Include="AutoGui.cs" />
+    <Compile Include="GUI\AutoGui.cs" />
     <Compile Include="AutoSerialization.cs" />
     <Compile Include="CircularBuffer.cs" />
+    <Compile Include="Controller\PController.cs" />
+    <Compile Include="Controller\PIController.cs" />
     <Compile Include="Models\MediumFlightModel.cs" />
     <Compile Include="Modules\AngularAccAdaptiveController.cs" />
     <Compile Include="Models\InstantControlModel.cs" />
-    <Compile Include="GUIStyles.cs" />
+    <Compile Include="GUI\GUIStyles.cs" />
     <Compile Include="Matrix.cs" />
     <Compile Include="Modules\AngularVelAdaptiveController.cs" />
     <Compile Include="Modules\AutopilotModule.cs" />
-    <Compile Include="Modules\AdaptivePIDController.cs" />
+    <Compile Include="Modules\StateController.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Controller\PIDController.cs" />
     <Compile Include="Modules\TopModuleManager.cs" />

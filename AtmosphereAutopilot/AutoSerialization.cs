@@ -5,8 +5,11 @@ using System.Text;
 
 namespace AtmosphereAutopilot
 {
+	/// <summary>
+	/// Base class for auto-serializable fields and properties
+	/// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, Inherited = true)]
-    class AutoSerializableAttr : Attribute
+    public class AutoSerializableAttr : Attribute
     {
         public string data_name;
         public AutoSerializableAttr(string data_name)
@@ -15,20 +18,26 @@ namespace AtmosphereAutopilot
         }
     }
 
+	/// <summary>
+	/// Use this attribute to make this field auto-serializable to vessel-specific config.
+	/// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, Inherited = true)]
-    class VesselSerializable : AutoSerializableAttr
+    public class VesselSerializable : AutoSerializableAttr
     {
         public VesselSerializable(string data_name) : base(data_name) { }
     }
 
+	/// <summary>
+	/// Use this attribute to make this field auto-serializable to global config.
+	/// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, Inherited = true)]
-    class GlobalSerializable : AutoSerializableAttr
+    public class GlobalSerializable : AutoSerializableAttr
     {
         public GlobalSerializable(string data_name) : base(data_name) { }
     }
 
 
-    interface IAutoSerializable
+    public interface ISerializable
     {
         bool Deserialize();
 
@@ -36,8 +45,22 @@ namespace AtmosphereAutopilot
     }
 
 
+	/// <summary>
+	/// Automatic property and field value serialization/deserialization functionality
+	/// </summary>
     public static class AutoSerialization
     {
+		/// <summary>
+		/// Deserialize object from file
+		/// </summary>
+		/// <param name="obj">Object to deserialize</param>
+		/// <param name="node_name">Node to search for in file</param>
+		/// <param name="filename">full file path</param>
+		/// <param name="attribute_type">Type of attributes to deserialize</param>
+		/// <param name="OnDeserialize">Callback for custom behaviour, 
+		/// called after automatic part is over and didn't crash. Gets node, 
+		/// from wich object was deserialized and attribute type.</param>
+		/// <returns>true if deserialization was not a failure</returns>
         public static bool Deserialize(object obj, string node_name, string filename, Type attribute_type, Action<ConfigNode, Type> OnDeserialize = null)
         {
             ConfigNode node = null;
@@ -61,7 +84,18 @@ namespace AtmosphereAutopilot
             return false;
         }
 
-        public static void Serialize(object obj, string node_name, string filename, Type attribute_type, Action<ConfigNode, Type> OnSerialize = null)
+		/// <summary>
+		/// Serialize object to file
+		/// </summary>
+		/// <param name="obj">Object to serialize</param>
+		/// <param name="node_name">Node to create in file</param>
+		/// <param name="filename">full file path</param>
+		/// <param name="attribute_type">Type of attributes to serialize</param>
+		/// <param name="OnSerialize">Callback for custom behaviour, 
+		/// called after automatic part is over and didn't crash. Gets node, 
+		/// to wich object was serialized to and attribute type.</param>
+        public static void Serialize(object obj, string node_name, string filename, Type attribute_type,
+			Action<ConfigNode, Type> OnSerialize = null)
         {
             ConfigNode fileNode = ConfigNode.Load(filename);
             if (fileNode == null)
@@ -75,7 +109,7 @@ namespace AtmosphereAutopilot
             fileNode.Save(filename);
         }
 
-        public static void DeserializeFromNode(ConfigNode node, object obj, Type attribute_type)
+        static void DeserializeFromNode(ConfigNode node, object obj, Type attribute_type)
         {
             Type type = obj.GetType();
             foreach (var field in type.GetFields())
@@ -112,7 +146,7 @@ namespace AtmosphereAutopilot
             }
         }
 
-        public static void SerializeToNode(ConfigNode node, object obj, Type attribute_type)
+        static void SerializeToNode(ConfigNode node, object obj, Type attribute_type)
         {
             // Serialize
             Type type = obj.GetType();

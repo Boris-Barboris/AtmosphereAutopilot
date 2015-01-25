@@ -8,9 +8,9 @@ namespace AtmosphereAutopilot
 {
 
     /// <summary>
-    /// PID-based input value controller
+    /// PI-based input value controller
     /// </summary>
-    public class PIDController
+    public class PIController
     {
         /// <summary>
         /// Proportional gain coefficient
@@ -23,12 +23,6 @@ namespace AtmosphereAutopilot
         /// </summary>
         public double KI { get { return ki; } set { ki = value; } }
         protected double ki = 1.0;
-
-        /// <summary>
-        /// Diffirential gain coefficient
-        /// </summary>
-        public double KD { get { return kd; } set { kd = value; } }
-        protected double kd = 0.01;
 
         /// <summary>
         /// Maximum error, wich lets integral component to raise
@@ -55,12 +49,6 @@ namespace AtmosphereAutopilot
         protected double igain = 1.0;
 
 		/// <summary>
-		/// Input derivative value from the last control iteration
-		/// </summary>
-		public double InputDerivative { get { return derivative; } }
-        protected double derivative;			            // input derivative value
-
-		/// <summary>
 		/// Current accumulator value
 		/// </summary>
         public double Accumulator { get { return i_accumulator; } set { i_accumulator = value; } }
@@ -68,13 +56,12 @@ namespace AtmosphereAutopilot
         // Main step variables
         protected double i_accumulator = 0.0;               // current integral accumulator state
         protected double last_dt = 1.0;                     // last delta time
-        protected double[] input_stack = new double[3];     // contains last 3 input values, needed for correct integration and differentiation
 
 		/// <summary>
 		/// Last error value. Error = desire - input
 		/// </summary>
 		public double LastError { get { return last_error; } }
-		protected double last_error = 0.0;	
+		protected double last_error = 0.0;
 
         public double Control(double input, double desire, double dt)
         {
@@ -88,14 +75,9 @@ namespace AtmosphereAutopilot
             if (!dt_is_constant(new_dt))
             {
                 // dt has changed
-                clean_value_stack(input);
                 new_dt = TimeWarp.fixedDeltaTime;
                 last_error = error;
             }
-            update_value_stack(input);
-            if (kd != 0.0)
-                derivative = (input_stack[0] - 4 * input_stack[1] + 3 * input_stack[2]) / new_dt * 0.5;
-            double diffirential = -derivative * kd;
 
             // integral component             
             if (ki != 0.0)
@@ -110,39 +92,8 @@ namespace AtmosphereAutopilot
             last_dt = new_dt;
             last_error = error;
 
-            return proportional + integral + diffirential;
+            return proportional + integral;
         }
-
-        /// <summary>
-        /// Control function with manually provided input derivative
-        /// </summary>
-		public double Control(double input, double input_d, double desire, double dt)
-		{
-			double error = desire - input;
-			double new_dt = dt;
-
-			// proportional component
-			double proportional = error * kp;
-
-			// diffirential component
-			derivative = input_d;
-			double diffirential = -input_d * kd;
-
-			// integral component       
-            if (ki != 0.0)
-            {
-                double d_integral = Math.Abs(error) > iclamp ? 0.0 : new_dt * 0.5 * (error + last_error);       // raw diffirential
-                d_integral = Common.Clamp(igain * d_integral, adclamp * new_dt);                                // clamp it
-                i_accumulator = Common.Clamp(i_accumulator + d_integral, aclamp);                               // accumulate
-            }
-			double integral = i_accumulator * ki;
-
-			// update previous values
-			last_dt = new_dt;
-			last_error = error;
-
-			return proportional + integral + diffirential;
-		}
 
 		/// <summary>
 		/// Clear accumulator
@@ -150,19 +101,6 @@ namespace AtmosphereAutopilot
         public void clear()
         {
             i_accumulator = 0.0;
-        }
-
-        protected void update_value_stack(double new_input)     // update value_stack with new input
-        {
-            input_stack[0] = input_stack[1];
-            input_stack[1] = input_stack[2];
-            input_stack[2] = new_input;
-        }
-
-        protected void clean_value_stack(double fill_value)      // need to clean value stack
-        {
-            for (int i = 0; i < 3; i++)
-                input_stack[i] = fill_value;
         }
 
         protected bool dt_is_constant(double new_dt)            // return true if new dt is roughly the same as old one

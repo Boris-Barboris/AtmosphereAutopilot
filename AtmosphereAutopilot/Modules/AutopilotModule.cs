@@ -7,14 +7,29 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
+	public enum Axis
+	{
+		PITCH = 0,
+		ROLL = 1,
+		YAW = 2
+	}
 
-    abstract class AutopilotModule : GUIWindow, IAutoSerializable
+	/// <summary>
+	/// Represents autopilot module, wich can be turned on and off.
+	/// It has GUI and can be serialized. Derived classes need to implement
+	/// OnActivate and OnDeactivate.
+	/// </summary>
+    public abstract class AutopilotModule : GUIWindow, ISerializable
     {
+		public const int PITCH = 0;
+		public const int ROLL = 1;
+		public const int YAW = 2;
+
         protected Vessel vessel = null;
         protected bool enabled = false;
         protected string module_name;
 
-        public AutopilotModule(Vessel v, int wnd_id, string module_name):
+        internal AutopilotModule(Vessel v, int wnd_id, string module_name):
             base(module_name, wnd_id, new Rect(50.0f, 80.0f, 220.0f, 150.0f))
         {
             vessel = v;
@@ -58,6 +73,9 @@ namespace AtmosphereAutopilot
 
         #region Serialization
 
+		/// <summary>
+		/// Deserialize vessel-specific fields. OnDeserialize callback is used.
+		/// </summary>
         public bool DeserializeVesselSpecific()
         {
             return AutoSerialization.Deserialize(this, module_name.Replace(' ', '_'),
@@ -65,6 +83,9 @@ namespace AtmosphereAutopilot
                 typeof(VesselSerializable), OnDeserialize);
         }
 
+		/// <summary>
+		/// Deserialize global fields. OnDeserialize callback is used.
+		/// </summary>
         public bool DeserializeGlobalSpecific()
         {
             return AutoSerialization.Deserialize(this, module_name.Replace(' ', '_'),
@@ -72,9 +93,12 @@ namespace AtmosphereAutopilot
                 typeof(GlobalSerializable), OnDeserialize);
         }
 
-        public void Serialize()
+		/// <summary>
+		/// Serialize global and vessel data to files. BeforeSerialized and OnSerialize callbacks are used.
+		/// </summary>
+        public virtual void Serialize()
         {
-            BeforeSerialize();
+            BeforeSerialized();
             AutoSerialization.Serialize(this, module_name.Replace(' ', '_'),
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/" + vessel.vesselName + ".cfg",
                 typeof(VesselSerializable), OnSerialize);
@@ -83,13 +107,18 @@ namespace AtmosphereAutopilot
                 typeof(GlobalSerializable), OnSerialize);
         }
 
-        protected virtual void BeforeSerialize() { }
+        protected virtual void BeforeSerialized() { }
 
-        protected virtual void BeforeDeserialize() { }
+        protected virtual void BeforeDeserialized() { }
 
-        public bool Deserialize()
+		/// <summary>
+		/// Deserialize global data and then vessel-specific. BeforeDeserialized and OnDeserialize 
+		/// callbacks are used.
+		/// </summary>
+		/// <returns>true if nothing crashed</returns>
+        public virtual bool Deserialize()
         {
-            BeforeDeserialize();
+            BeforeDeserialized();
             return (DeserializeGlobalSpecific() & DeserializeVesselSpecific());
         }
 
@@ -104,14 +133,15 @@ namespace AtmosphereAutopilot
         #region GUI
 
         [GlobalSerializable("window_x")]
-        public float WindowLeft { get { return window.xMin; } set { window.xMin = value; } }
+        protected float WindowLeft { get { return window.xMin; } set { window.xMin = value; } }
 
         [GlobalSerializable("window_y")]
-        public float WindowTop { get { return window.yMin; } set { window.yMin = value; } }
+		protected float WindowTop { get { return window.yMin; } set { window.yMin = value; } }
 
         [GlobalSerializable("window_width")]
-        public float WindowWidth { get { return window.width; } set { window.width = value; } }
+		protected float WindowWidth { get { return window.width; } set { window.width = value; } }
 
+		/// <inheritdoc />
         protected override void _drawGUI(int id)
         {
             GUILayout.BeginVertical();

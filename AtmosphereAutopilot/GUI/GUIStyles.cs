@@ -6,16 +6,19 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-    static class GUIStyles
+	/// <summary>
+	/// Collection of standard for AtmosphereAutopilot AutoGUI styles
+	/// </summary>
+    public static class GUIStyles
     {
-        public static GUISkin skin;
-        public static GUIStyle labelStyleLeft;
-        public static GUIStyle labelStyleCenter;
-        public static GUIStyle labelStyleRight;
-        public static GUIStyle textBoxStyle;
-        public static GUIStyle toggleButtonStyle;
+		public static GUISkin skin { get; private set; }
+		public static GUIStyle labelStyleLeft { get; private set; }
+		public static GUIStyle labelStyleCenter { get; private set; }
+		public static GUIStyle labelStyleRight { get; private set; }
+		public static GUIStyle textBoxStyle { get; private set; }
+		public static GUIStyle toggleButtonStyle { get; private set; }
 
-        public static void Init()
+        internal static void Init()
         {
             skin = GUI.skin;
 

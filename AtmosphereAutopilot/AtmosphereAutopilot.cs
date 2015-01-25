@@ -76,7 +76,7 @@ namespace AtmosphereAutopilot
         {
             foreach (var pair in cur_ves_modules)
             {
-                IAutoSerializable s = pair.Value as IAutoSerializable;
+                ISerializable s = pair.Value as ISerializable;
                 if (s != null)
                     s.Serialize();
             }
@@ -110,7 +110,7 @@ namespace AtmosphereAutopilot
                 Debug.Log("[Autopilot]: " + type.Name + " for vessel " + vessel.name + " created");
                 autopilot_module_lists[type][vessel] = module;
             }
-            IAutoSerializable s = module as IAutoSerializable;
+            ISerializable s = module as ISerializable;
             if (s != null) 
                 s.Deserialize();
             cur_ves_modules[type] = module;
@@ -269,7 +269,7 @@ namespace AtmosphereAutopilot
             applauncher.OnGUI();
             foreach (var pair in cur_ves_modules)
             {
-                IAutoGui s = pair.Value as IAutoGui;
+                IWindow s = pair.Value as IWindow;
                 if (s != null)
                     s.OnGUI();
             }
@@ -280,7 +280,7 @@ namespace AtmosphereAutopilot
             applauncher.HideGUI();
             foreach (var pair in cur_ves_modules)
             {
-                IAutoGui s = pair.Value as IAutoGui;
+                IWindow s = pair.Value as IWindow;
                 if (s != null)
                     s.HideGUI();
             }
@@ -291,7 +291,7 @@ namespace AtmosphereAutopilot
             applauncher.UnHideGUI();
             foreach (var pair in cur_ves_modules)
             {
-                IAutoGui s = pair.Value as IAutoGui;
+                IWindow s = pair.Value as IWindow;
                 if (s != null)
                     s.UnHideGUI();
             }

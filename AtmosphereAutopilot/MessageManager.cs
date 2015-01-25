@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-    static class MessageManager
+    public static class MessageManager
     {
         static Dictionary<string, ScreenMessage> screenMessages = new Dictionary<string, ScreenMessage>();
 

@@ -11,7 +11,7 @@ namespace AtmosphereAutopilot
         public bool Equals(Vessel foo1, Vessel foo2) { return foo1.id == foo2.id; }
     }
 
-    static class Common
+    public static class Common
     {
         public static double Clamp(double val, double under, double upper)
         {

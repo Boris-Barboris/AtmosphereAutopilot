@@ -9,115 +9,157 @@ using System.IO;
 namespace AtmosphereAutopilot
 {
 	/// <summary>
-	/// Class for medium-term model approximation
+	/// Class for medium-term flight model support. Deals with angular positions, 
+	/// angle of attack, g-force history.
 	/// </summary>
-	class MediumFlightModel : GUIWindow, IAutoSerializable
+	public sealed class MediumFlightModel : AutopilotModule, ISerializable
 	{
-		public const int PITCH = 0;
-		public const int ROLL = 1;
-		public const int YAW = 2;
+		internal MediumFlightModel(Vessel v) :
+			base(v, 8459383, "Medium-term flight model") { }
 
-		Vessel vessel;
-
-        public MediumFlightModel(Vessel v):
-            base("Medium-term flight model", 8459383, new Rect(50.0f, 80.0f, 220.0f, 50.0f))
+		protected override void OnActivate()
 		{
-			vessel = v;
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
+		}
+
+		protected override void OnDeactivate()
+		{
+			vessel.OnPreAutopilotUpdate -= new FlightInputCallback(OnPreAutopilot);
 		}
 
 		static readonly int BUFFER_SIZE = 10;
 
-        public CircularBuffer<double> aoa_pitch = new CircularBuffer<double>(BUFFER_SIZE, true);
-        public CircularBuffer<double> aoa_yaw = new CircularBuffer<double>(BUFFER_SIZE, true);
-        public CircularBuffer<double> g_force = new CircularBuffer<double>(BUFFER_SIZE, true);
+		/// <summary>
+		/// Get angle of attack history. Radians.
+		/// </summary>
+		public CircularBuffer<double> AoAHistory { get { return aoa_pitch; } }
+        internal CircularBuffer<double> aoa_pitch = new CircularBuffer<double>(BUFFER_SIZE, true);
+		
+		/// <summary>
+		/// Get sideslip history. Radians.
+		/// </summary>
+		public CircularBuffer<double> SideslipHistory { get { return aoa_yaw; } }
+		internal CircularBuffer<double> aoa_yaw = new CircularBuffer<double>(BUFFER_SIZE, true);
+
+		/// <summary>
+		/// Get G-force history.
+		/// </summary>
+		public CircularBuffer<double> GForceHistory { get { return g_force; } }
+		internal CircularBuffer<double> g_force = new CircularBuffer<double>(BUFFER_SIZE, true);
+
+		/// <summary>
+		/// Get estimated structural-safe maximum angular speed for this vessel. Radians/second.
+		/// </summary>
+		public double MaxAngularSpeed(Axis axis)
+		{
+			return max_angular_v[(int)axis];
+		}
 
         [AutoGuiAttr("max angular v", false, null)]
-        public double[] max_angular_v = new double[3];
+        internal double[] max_angular_v = new double[3];
+
+		/// <summary>
+		/// Get estimated structural-safe maximum angular acceleration for this vessel. Radians/second^2.
+		/// </summary>
+		public double MaxAngularAcc(Axis axis)
+		{
+			return max_angular_dv[(int)axis];
+		}
 
         [AutoGuiAttr("max angular acc", false, null)]
-        public double[] max_angular_dv = new double[3];
+        internal double[] max_angular_dv = new double[3];
+
+		/// <summary>
+		/// Maximum part offset from center of mass in rotation plane, specified by rotation axis. Meters.
+		/// </summary>
+		public double MaxOffsetFromCoM(Axis axis)
+		{
+			return lever_arm[(int)axis];
+		}
 
         [AutoGuiAttr("lever arms", false, null)]
-        public double[] lever_arm = new double[3];
-        public double max_lever_arm = 1.0;
-		public double wing_load_k = 1.0;
+        internal double[] lever_arm = new double[3];
 
-		double prev_dt = 1.0;		// dt in previous call
-		int stable_dt = 0;			// counts amount of stable dt intervals
+        internal double max_lever_arm = 1.0;
+		internal double wing_load_k = 1.0;
+
+		/// <summary>
+		/// Maximum part offset from center of mass in all basis rotation planes. Meters.
+		/// </summary>
+		public double MaxOffsetFromCoMOmni { get { return max_lever_arm; } }
+
+		/// <summary>
+		/// Estimated wing load in level flight. kg / m^2.
+		/// </summary>
+		public double WingLoadEstimate { get { return wing_load_k; } }
+
         int cycle_counter = 0;
 
 		void OnPreAutopilot(FlightCtrlState state)	// update all flight characteristics
 		{
 			double dt = TimeWarp.fixedDeltaTime;
-			check_dt(dt);
 			update_buffers();
             //update_frames();
-			prev_dt = dt;
             if (cycle_counter == 0)
                 calculate_limits();
             cycle_counter = (cycle_counter + 1) % 500;
 		}
 
-		void check_dt(double new_dt)
-		{
-			if (Math.Abs(new_dt / prev_dt - 1.0) < 0.1)
-				stable_dt = Math.Min(1000, stable_dt + 1);
-			else
-				stable_dt = 0;
-		}
+		Vector3 up_srf_v;		// normalized velocity, projected to vessel up direction
+		Vector3 fwd_srf_v;		// normalized velocity, projected to vessel forward direction
+		Vector3 right_srf_v;	// normalized velocity, projected to vessel right direction
 
 		void update_buffers()
 		{
-            Vector3 up_srf_v = vessel.ReferenceTransform.up * Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity.normalized);
-            Vector3 fwd_srf_v = vessel.ReferenceTransform.forward * Vector3.Dot(vessel.ReferenceTransform.forward, vessel.srf_velocity.normalized);
-            Vector3 right_srf_v = vessel.ReferenceTransform.right * Vector3.Dot(vessel.ReferenceTransform.right, vessel.srf_velocity.normalized);
+            up_srf_v = vessel.ReferenceTransform.up * Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity.normalized);
+            fwd_srf_v = vessel.ReferenceTransform.forward * Vector3.Dot(vessel.ReferenceTransform.forward, vessel.srf_velocity.normalized);
+            right_srf_v = vessel.ReferenceTransform.right * Vector3.Dot(vessel.ReferenceTransform.right, vessel.srf_velocity.normalized);
             Vector3 tmpVec = up_srf_v + fwd_srf_v;
             double aoa_p = Math.Asin(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized));
             aoa_pitch.Put(aoa_p);
             tmpVec = up_srf_v + right_srf_v;
-            double aoa_y = Math.Asin(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized));
+            double aoa_y = Math.Asin(Vector3.Dot(vessel.ReferenceTransform.right.normalized, tmpVec.normalized));
             aoa_yaw.Put(aoa_y);
             g_force.Put(vessel.geeForce_immediate);
 		}
 
-        public Vector3d surf_ref_up, surf_ref_right, surf_ref_fwd;
-        public Vector3d surf_up, surf_right, surf_fwd;
+		//public Vector3d surf_ref_up, surf_ref_right, surf_ref_fwd;
+		//public Vector3d surf_up, surf_right, surf_fwd;
 
-        void update_frames()
-        {
-            // Surface reference frame basis vectors
-            surf_ref_fwd = -(vessel.mainBody.transform.position - vessel.transform.position).normalized;
-            surf_ref_up = vessel.mainBody.getRFrmVel(vessel.transform.position).normalized;
-            surf_ref_right = Vector3d.Cross(surf_ref_up, -surf_ref_fwd).normalized;
+		//void update_frames()
+		//{
+		//	// Surface reference frame basis vectors
+		//	surf_ref_fwd = -(vessel.mainBody.transform.position - vessel.transform.position).normalized;
+		//	surf_ref_up = vessel.mainBody.getRFrmVel(vessel.transform.position).normalized;
+		//	surf_ref_right = Vector3d.Cross(surf_ref_up, -surf_ref_fwd).normalized;
 
-            // Plane reference frame basis vectors in surface reference frame
-            surf_up = shiftFrame(vessel.transform.up, surf_ref_right, surf_ref_up, surf_ref_fwd);
-            surf_right = shiftFrame(vessel.transform.right, surf_ref_right, surf_ref_up, surf_ref_fwd);
-            surf_fwd = shiftFrame(vessel.transform.forward, surf_ref_right, surf_ref_up, surf_ref_fwd);
-        }
+		//	// Plane reference frame basis vectors in surface reference frame
+		//	surf_up = shiftFrame(vessel.transform.up, surf_ref_right, surf_ref_up, surf_ref_fwd);
+		//	surf_right = shiftFrame(vessel.transform.right, surf_ref_right, surf_ref_up, surf_ref_fwd);
+		//	surf_fwd = shiftFrame(vessel.transform.forward, surf_ref_right, surf_ref_up, surf_ref_fwd);
+		//}
 
-        Matrix rotateFrame(Vector3[] frame0, Vector3[] frame1)
-        {
-            Matrix result = new Matrix(3, 3);
-            for (int i = 0; i < 3; i++)
-                for (int j = 0; j < 3; j++)
-                    result[i, j] = Vector3.Dot(frame1[i], frame0[j]);
-            return result;
-        }
+		//Matrix rotateFrame(Vector3[] frame0, Vector3[] frame1)
+		//{
+		//	Matrix result = new Matrix(3, 3);
+		//	for (int i = 0; i < 3; i++)
+		//		for (int j = 0; j < 3; j++)
+		//			result[i, j] = Vector3.Dot(frame1[i], frame0[j]);
+		//	return result;
+		//}
 
-        Vector3 shiftFrame(Vector3 vector, Vector3 frame_x, Vector3 frame_y, Vector3 frame_z)
-        {
-            Vector3 result = new Vector3(
-                Vector3.Dot(vector, frame_x),
-                Vector3.Dot(vector, frame_y),
-                Vector3.Dot(vector, frame_z));
-            return result;
-        }
+		//Vector3 shiftFrame(Vector3 vector, Vector3 frame_x, Vector3 frame_y, Vector3 frame_z)
+		//{
+		//	Vector3 result = new Vector3(
+		//		Vector3.Dot(vector, frame_x),
+		//		Vector3.Dot(vector, frame_y),
+		//		Vector3.Dot(vector, frame_z));
+		//	return result;
+		//}
 
         [GlobalSerializable("max_part_acceleration")]
         [AutoGuiAttr("max part accel", true, "G8")]
-        public double max_part_acceleration = 30.0;			// approx 3g
+        internal double max_part_acceleration = 30.0;		// approx 3g.
 
         void calculate_limits()
         {
@@ -128,6 +170,8 @@ namespace AtmosphereAutopilot
                 max_angular_v[i] = Math.Sqrt(Math.Abs(max_part_acceleration) / lever_arm[i]);
                 max_angular_dv[i] = max_part_acceleration / lever_arm[i];
             }
+			// Very rough wing load approximation. We don't anything about wind area, so
+			// let's just use vessel size, roughly estimated by lever arms.
 			double wing_area_aprox = lever_arm[ROLL] * lever_arm[PITCH];
 			wing_load_k = vessel.GetTotalMass() / wing_area_aprox;
         }
@@ -159,23 +203,14 @@ namespace AtmosphereAutopilot
 
         #region Serialization
 
-        [GlobalSerializable("window_x")]
-        public float WindowLeft { get { return window.xMin; } set { window.xMin = value; } }
-
-        [GlobalSerializable("window_y")]
-        public float WindowTop { get { return window.yMin; } set { window.yMin = value; } }
-
-        [GlobalSerializable("window_width")]
-        public float WindowWidth { get { return window.width; } set { window.width = value; } }
-
-        public bool Deserialize()
+        public override bool Deserialize()
         {
             return AutoSerialization.Deserialize(this, "MediumFlightModel",
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.cfg",
                 typeof(GlobalSerializable));
         }
 
-        public void Serialize()
+        public override void Serialize()
         {
             AutoSerialization.Serialize(this, "MediumFlightModel",
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.cfg",

@@ -8,12 +8,24 @@ using System.Reflection;
 
 namespace AtmosphereAutopilot
 {
+	/// <summary>
+	/// Attribute for auto-rendered parameters. Use it on property or field to draw it
+	/// by AutoGUI.AutoDrawObject method. Supports all basic types and IEnumarable.
+	/// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, Inherited = true)]
-    class AutoGuiAttr : Attribute
+    public class AutoGuiAttr : Attribute
     {
-        public string value_name;
-        public bool editable;
-        public string format;
+        internal string value_name;
+		internal bool editable;
+		internal string format;
+
+		/// <summary>
+		/// Set this property or field as auto-renderable.
+		/// </summary>
+		/// <param name="value_name">Displayed element name</param>
+		/// <param name="editable">Can be edited by user. Use for constants only!</param>
+		/// <param name="format">If type provides ToString(string format) method, this format string
+		/// will be used. You can set it to null if not required</param>
 		public AutoGuiAttr(string value_name, bool editable, string format)
         {
             this.value_name = value_name;
@@ -23,21 +35,44 @@ namespace AtmosphereAutopilot
     }
 
 
-
-    interface IAutoGui
+	/// <summary>
+	/// Interface for all windows.
+	/// </summary>
+    public interface IWindow
     {
+		/// <summary>
+		/// OnGUI Unity event handler
+		/// </summary>
         void OnGUI();
 
+		/// <summary>
+		/// Returns true if window is shown.
+		/// </summary>
         bool IsShown();
 
+		/// <summary>
+		/// Toggle window shown\unshown state
+		/// </summary>
         bool ToggleGUI();
 
+		/// <summary>
+		/// Hide window. Use for F2 event.
+		/// </summary>
         void HideGUI();
 
+		/// <summary>
+		/// Unhide window. Use for F2 event.
+		/// </summary>
         void UnHideGUI();
 
+		/// <summary>
+		/// Show window.
+		/// </summary>
         void ShowGUI();
 
+		/// <summary>
+		/// Do not show window.
+		/// </summary>
         void UnShowGUI();
     }
 
@@ -45,28 +80,39 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Basic window, derived class needs to implement _drawGUI method.
     /// </summary>
-    abstract class GUIWindow : IAutoGui
+    public abstract class GUIWindow : IWindow
     {
-        protected string wndname;
-        protected int wnd_id;
-        protected bool gui_shown = false;
-        protected bool gui_hidden = false;
+        string wndname;
+        int wnd_id;
+        bool gui_shown = false;
+        bool gui_hidden = false;
         protected Rect window;
 
-        public GUIWindow(string wndname, int wnd_id, Rect window)
+		/// <summary>
+		/// Create window instance.
+		/// </summary>
+		/// <param name="wndname">Window header</param>
+		/// <param name="wnd_id">Unique for Unity engine id</param>
+		/// <param name="window">Initial window position rectangle</param>
+        internal GUIWindow(string wndname, int wnd_id, Rect window)
         {
             this.wndname = wndname;
             this.wnd_id = wnd_id;
             this.window = window;
         }
 
+		/// <summary>
+		/// Get window header.
+		/// </summary>
         public string WindowName { get { return wndname; } }
 
+		/// <inheritdoc />
         public bool IsShown()
         {
             return gui_shown;
         }
 
+		/// <inheritdoc />
         public void OnGUI()
         {
             if (!gui_shown || gui_hidden)
@@ -75,30 +121,42 @@ namespace AtmosphereAutopilot
             OnGUICustom();
         }
 
+		/// <summary>
+		/// Called after each _drawGUI call
+		/// </summary>
         protected virtual void OnGUICustom() { }
 
+		/// <inheritdoc />
         public bool ToggleGUI()
         {
             return gui_shown = !gui_shown;
         }
 
+		/// <summary>
+		/// Main drawing function
+		/// </summary>
+		/// <param name="id">Unique window id. Just ignore it.</param>
         protected abstract void _drawGUI(int id);
 
+		/// <inheritdoc />
         public void HideGUI()
         {
             gui_hidden = true;
         }
 
+		/// <inheritdoc />
         public void UnHideGUI()
         {
             gui_hidden = false;
         }
 
+		/// <inheritdoc />
         public void ShowGUI()
         {
             gui_shown = true;
         }
 
+		/// <inheritdoc />
         public void UnShowGUI()
         {
             gui_shown = false;
@@ -106,11 +164,23 @@ namespace AtmosphereAutopilot
     }
 
 
-
-    static class AutoGUI
+	/// <summary>
+	/// Automatic property and field rendering functionality
+	/// </summary>
+    public static class AutoGUI
     {
+		// collection of string representations for field values
         static Dictionary<int, string> value_holders = new Dictionary<int, string>();
 
+		// optimization structures
+		static Dictionary<Type, PropertyInfo[]> property_list = new Dictionary<Type, PropertyInfo[]>();
+		static Dictionary<Type, FieldInfo[]> field_list = new Dictionary<Type, FieldInfo[]>();
+		static readonly Type[] formatStrTypes = { typeof(string) };
+
+		/// <summary>
+		/// Render class instace using AutoGuiAttr markup.
+		/// </summary>
+		/// <param name="obj">object to render to current GUILayout.</param>
         public static void AutoDrawObject(object obj)
         {
             Type type = obj.GetType();
@@ -122,15 +192,24 @@ namespace AtmosphereAutopilot
             }
 			
 			// properties
-            foreach (var property in type.GetProperties())
-                draw_element(property, obj);
+			if (!property_list.ContainsKey(type))
+				property_list[type] = type.GetProperties(BindingFlags.Instance | 
+					BindingFlags.Public | BindingFlags.NonPublic);
+			foreach (var property in property_list[type])
+				draw_element(property, obj);
 
 			// fields
-			foreach (var field in type.GetFields())
+			if (!field_list.ContainsKey(type))
+				field_list[type] = type.GetFields(BindingFlags.Instance |
+					BindingFlags.Public | BindingFlags.NonPublic);
+			foreach (var field in field_list[type])
                 draw_element(field, obj);
         }
 
-        static object[] GetCustomAttributes(object element, Type atttype, bool inherit)
+
+		#region FieldPropertyUniversal
+
+		static object[] GetCustomAttributes(object element, Type atttype, bool inherit)
         {
             PropertyInfo p = element as PropertyInfo;
             if (p != null)
@@ -184,11 +263,19 @@ namespace AtmosphereAutopilot
             return null;
         }
 
-        static void draw_primitive(object obj)
+		#endregion
+
+
+		static void draw_primitive(object obj)
         {
             GUILayout.Label(obj.ToString(), GUIStyles.labelStyleRight);
         }
 
+		/// <summary>
+		/// Main rendering function.
+		/// </summary>
+		/// <param name="element">Field or property info to render</param>
+		/// <param name="obj">Object instance</param>
         static void draw_element(object element, object obj)
         {
             var attributes = GetCustomAttributes(element, typeof(AutoGuiAttr), true);
@@ -200,6 +287,8 @@ namespace AtmosphereAutopilot
             Type element_type = ElementType(element);
             if (element_type == null)
                 return;
+
+			// If element is collection
             if (typeof(IEnumerable).IsAssignableFrom(element_type))
             {
                 IEnumerable list = GetValue(element, obj) as IEnumerable;
@@ -209,23 +298,26 @@ namespace AtmosphereAutopilot
                     GUILayout.Label(att.value_name + ':', GUIStyles.labelStyleLeft);
                     GUILayout.BeginVertical();
                     foreach (object lel in list)
-                        AutoDrawObject(lel);
+                        AutoDrawObject(lel);		// render each member
                     GUILayout.EndVertical();
                     GUILayout.EndHorizontal();
                     return;
                 }
             }
+
             if (element_type == typeof(bool) && att.editable)
             {
-                // it's a button
+                // it's a toggle button
                 bool cur_state = (bool)GetValue(element, obj);
                 SetValue(element, obj, GUILayout.Toggle(cur_state, att.value_name,
                         GUIStyles.toggleButtonStyle));
                 return;
             }
+
             GUILayout.BeginHorizontal();
             GUILayout.Label(att.value_name, GUIStyles.labelStyleLeft);
-            var ToStringFormat = element_type.GetMethod("ToString", new[] { typeof(string) });
+
+			var ToStringFormat = element_type.GetMethod("ToString", formatStrTypes);
             if (!att.editable)
             {
                 if (ToStringFormat != null && att.format != null)
@@ -235,7 +327,7 @@ namespace AtmosphereAutopilot
             }
             else
             {
-                int hash = obj.GetHashCode() + Name(element).GetHashCode();
+                int hash = 7 * obj.GetHashCode() + 13 * Name(element).GetHashCode();
                 string val_holder;
                 if (value_holders.ContainsKey(hash))
                     val_holder = value_holders[hash];
@@ -247,7 +339,7 @@ namespace AtmosphereAutopilot
                 val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);
                 try
                 {
-                    var ParseMethod = element_type.GetMethod("Parse", new[] { typeof(string) });
+					var ParseMethod = element_type.GetMethod("Parse", formatStrTypes);
                     if (ParseMethod != null)
                         SetValue(element, obj, ParseMethod.Invoke(null, new[] { val_holder }));
                 }
