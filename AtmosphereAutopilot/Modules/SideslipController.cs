@@ -82,7 +82,7 @@ namespace AtmosphereAutopilot
                     time_in_regime = 0.0;
                 }
 
-                if (time_in_regime >= 1.0)
+                if (time_in_regime >= 5.0)
                     ControlUtils.set_trim(YAW, model);
             }
 

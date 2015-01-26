@@ -148,25 +148,9 @@ namespace AtmosphereAutopilot
             integr = pid.Accumulator * pid.KI;
 
 			output = Common.Clamp(current_raw, 1.0);
-            set_output(cntrl, output);
+            ControlUtils.set_raw_output(cntrl, axis, output);
             return output;
 		}
-
-        void set_output(FlightCtrlState state, double output)
-        {
-            switch (axis)
-            {
-                case PITCH:
-                    state.pitch = (float)output;
-                    break;
-                case ROLL:
-                    state.roll = (float)output;
-                    break;
-                case YAW:
-                    state.yaw = (float)output;
-                    break;
-            }
-        }
 
         [AutoGuiAttr("Write telemetry", true, "G8")]
         protected bool write_telemetry 

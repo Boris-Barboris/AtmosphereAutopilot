@@ -109,7 +109,7 @@ namespace AtmosphereAutopilot
 		void update_control(FlightCtrlState state)
 		{
 			for (int i = 0; i < 3; i++)
-				input_buf[i].Put(getControlFromState(state, i));
+				input_buf[i].Put(Common.Clamp(getControlFromState(state, i), 1.0));
 		}
 
 		double getControlFromState(FlightCtrlState state, int control)

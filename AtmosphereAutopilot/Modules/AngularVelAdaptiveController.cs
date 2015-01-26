@@ -107,7 +107,7 @@ namespace AtmosphereAutopilot
                     time_in_regime = 0.0;
                 }
 
-                if (time_in_regime >= 1.0)
+                if (time_in_regime >= 5.0)
                     ControlUtils.set_trim(axis, model);
             }
 
@@ -174,16 +174,20 @@ namespace AtmosphereAutopilot
                 max_g = fbw_g_k / mmodel.wing_load_k / mmodel.wing_load_k;
                 double g_relation = 1.0;
                 double aoa_relation = 1.0;
-                if (max_g > 1e-3 && cur_g >= 0.0)
-                {
-                    g_relation = cur_g / max_g;
-                }
-                if (fbw_max_aoa > 2.0)
-                {
-                    const double dgr_to_rad = 1.0 / 180.0 * Math.PI;
-                    double max_aoa_rad = fbw_max_aoa * dgr_to_rad;
-                    aoa_relation = Math.Abs(mmodel.aoa_pitch.getLast()) / max_aoa_rad;
-                }
+                if (moderate_g)
+                    if (max_g > 1e-3 && cur_g >= 0.0)
+                    {
+                        double stasis_angular_spd = max_g / vessel.srfSpeed;
+                        double k = 1.0 - Common.Clamp(stasis_angular_spd / des_v, 0.0, 1.0);
+                        g_relation = k * cur_g / max_g;
+                    }
+                if (moderate_aoa)
+                    if (fbw_max_aoa > 2.0)
+                    {
+                        const double dgr_to_rad = 1.0 / 180.0 * Math.PI;
+                        double max_aoa_rad = fbw_max_aoa * dgr_to_rad;
+                        aoa_relation = Math.Abs(mmodel.aoa_pitch.getLast()) / max_aoa_rad;
+                    }
                 double max_k = Math.Max(aoa_relation, g_relation);
                 fbw_modifier = Common.Clamp(1.0 - max_k, 1.0);
                 des_v *= fbw_modifier;
@@ -192,6 +196,16 @@ namespace AtmosphereAutopilot
         }
 
         #region ModerationParameters
+
+        [GlobalSerializable("moderate_aoa")]
+        [VesselSerializable("moderate_aoa")]
+        [AutoGuiAttr("Moderate AoA", true, null)]
+        public bool moderate_aoa = true;
+
+        [GlobalSerializable("moderate_g")]
+        [VesselSerializable("moderate_g")]
+        [AutoGuiAttr("Moderate G-force", true, null)]
+        public bool moderate_g = true;
 
         [GlobalSerializable("fbw_g_k")]
         [VesselSerializable("fbw_g_k")]

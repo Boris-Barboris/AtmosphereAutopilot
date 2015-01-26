@@ -58,39 +58,14 @@ namespace AtmosphereAutopilot
 
         public static double get_neutralized_user_input(FlightCtrlState state, int axis)
         {
-            double result;
             switch (axis)
             {
                 case PITCH:
-                    result = state.pitch == state.pitchTrim ?
-                        Math.Abs(state.pitchTrim) == 1.0 ?
-                            Math.Sign(state.pitchTrim) :
-                            0.0
-                        :
-                        state.pitch > state.pitchTrim ?
-                            (state.pitch - state.pitchTrim) / (1.0 - state.pitchTrim) :
-                            (state.pitch - state.pitchTrim) / (1.0 + state.pitchTrim);
-                    return result;
+                    return state.pitch - state.pitchTrim;
                 case ROLL:
-                    result = state.roll == state.rollTrim ?
-                        Math.Abs(state.rollTrim) == 1.0 ?
-                            Math.Sign(state.rollTrim) :
-                            0.0
-                        :
-                        state.roll > state.rollTrim ?
-                            (state.roll - state.rollTrim) / (1.0 - state.rollTrim) :
-                            (state.roll - state.rollTrim) / (1.0 + state.rollTrim);
-                    return result;
+                    return state.roll - state.rollTrim;
                 case YAW:
-                    result = state.yaw == state.yawTrim ?
-                        Math.Abs(state.yawTrim) == 1.0 ?
-                            Math.Sign(state.yawTrim) :
-                            0.0
-                        :
-                        state.yaw > state.yawTrim ?
-                            (state.yaw - state.yawTrim) / (1.0 - state.yawTrim) :
-                            (state.yaw - state.yawTrim) / (1.0 + state.yawTrim);
-                    return result;
+                    return state.yaw - state.yawTrim;
                 default:
                     return 0.0;
             }
@@ -108,6 +83,25 @@ namespace AtmosphereAutopilot
                     break;
                 case YAW:
                     state.yaw = state.yawTrim;
+                    break;
+            }
+        }
+
+        public static void set_raw_output(FlightCtrlState state, int axis, double output)
+        {
+            switch (axis)
+            {
+                case PITCH:
+                    state.pitch = (float)output;
+                    state.pitchTrim = 0.0f;
+                    break;
+                case ROLL:
+                    state.roll = (float)output;
+                    state.rollTrim = 0.0f;
+                    break;
+                case YAW:
+                    state.yaw = (float)output;
+                    state.yawTrim = 0.0f;
                     break;
             }
         }
