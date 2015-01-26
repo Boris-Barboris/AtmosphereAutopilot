@@ -175,6 +175,8 @@ namespace AtmosphereAutopilot
 		// optimization structures
 		static Dictionary<Type, PropertyInfo[]> property_list = new Dictionary<Type, PropertyInfo[]>();
 		static Dictionary<Type, FieldInfo[]> field_list = new Dictionary<Type, FieldInfo[]>();
+		static Dictionary<Type, MethodInfo> toStringMethods = new Dictionary<Type, MethodInfo>();
+		static Dictionary<Type, MethodInfo> parseMethods = new Dictionary<Type, MethodInfo>();
 		static readonly Type[] formatStrTypes = { typeof(string) };
 
 		/// <summary>
@@ -317,7 +319,9 @@ namespace AtmosphereAutopilot
             GUILayout.BeginHorizontal();
             GUILayout.Label(att.value_name, GUIStyles.labelStyleLeft);
 
-			var ToStringFormat = element_type.GetMethod("ToString", formatStrTypes);
+			if (!toStringMethods.ContainsKey(element_type))
+				toStringMethods[element_type] = element_type.GetMethod("ToString", formatStrTypes);
+			MethodInfo ToStringFormat = toStringMethods[element_type];
             if (!att.editable)
             {
                 if (ToStringFormat != null && att.format != null)
@@ -339,7 +343,9 @@ namespace AtmosphereAutopilot
                 val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);
                 try
                 {
-					var ParseMethod = element_type.GetMethod("Parse", formatStrTypes);
+					if (!parseMethods.ContainsKey(element_type))
+						parseMethods[element_type] = element_type.GetMethod("Parse", formatStrTypes);
+					var ParseMethod = parseMethods[element_type];
                     if (ParseMethod != null)
                         SetValue(element, obj, ParseMethod.Invoke(null, new[] { val_holder }));
                 }
