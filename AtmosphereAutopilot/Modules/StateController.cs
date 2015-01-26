@@ -63,21 +63,30 @@ namespace AtmosphereAutopilot
             {
                 case PITCH:
                     result = state.pitch == state.pitchTrim ?
-                        0.0 :
+                        Math.Abs(state.pitchTrim) == 1.0 ?
+                            Math.Sign(state.pitchTrim) :
+                            0.0
+                        :
                         state.pitch > state.pitchTrim ?
                             (state.pitch - state.pitchTrim) / (1.0 - state.pitchTrim) :
                             (state.pitch - state.pitchTrim) / (1.0 + state.pitchTrim);
                     return result;
                 case ROLL:
                     result = state.roll == state.rollTrim ?
-                        0.0 :
+                        Math.Abs(state.rollTrim) == 1.0 ?
+                            Math.Sign(state.rollTrim) :
+                            0.0
+                        :
                         state.roll > state.rollTrim ?
                             (state.roll - state.rollTrim) / (1.0 - state.rollTrim) :
                             (state.roll - state.rollTrim) / (1.0 + state.rollTrim);
                     return result;
                 case YAW:
                     result = state.yaw == state.yawTrim ?
-                        0.0 :
+                        Math.Abs(state.yawTrim) == 1.0 ?
+                            Math.Sign(state.yawTrim) :
+                            0.0
+                        :
                         state.yaw > state.yawTrim ?
                             (state.yaw - state.yawTrim) / (1.0 - state.yawTrim) :
                             (state.yaw - state.yawTrim) / (1.0 + state.yawTrim);
@@ -92,13 +101,13 @@ namespace AtmosphereAutopilot
             switch (axis)
             {
                 case PITCH:
-                    FlightInputHandler.state.pitch = FlightInputHandler.state.pitchTrim;
+                    state.pitch = state.pitchTrim;
                     break;
                 case ROLL:
-                    FlightInputHandler.state.roll = FlightInputHandler.state.rollTrim;
+                    state.roll = state.rollTrim;
                     break;
                 case YAW:
-                    FlightInputHandler.state.yaw = FlightInputHandler.state.yawTrim;
+                    state.yaw = state.yawTrim;
                     break;
             }
         }

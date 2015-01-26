@@ -42,6 +42,7 @@ namespace AtmosphereAutopilot
 			: base(vessel, module_name, wnd_id)
 		{
 			this.axis = axis;
+            AutoTrim = true;
 		}
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
@@ -95,17 +96,20 @@ namespace AtmosphereAutopilot
             acc_controller.ApplyControl(cntrl, output);
 
 			// check if we're stable on given input value
-            if (Math.Abs(input) < 5e-3)
-			{
-				time_in_regime += TimeWarp.fixedDeltaTime;
-			}
-			else
-			{
-				time_in_regime = 0.0;
-			}
+            if (AutoTrim)
+            {
+                if (Math.Abs(input) < 5e-3)
+                {
+                    time_in_regime += TimeWarp.fixedDeltaTime;
+                }
+                else
+                {
+                    time_in_regime = 0.0;
+                }
 
-			if (time_in_regime >= 1.0 && axis != YAW)
-                ControlUtils.set_trim(axis, model);
+                if (time_in_regime >= 1.0)
+                    ControlUtils.set_trim(axis, model);
+            }
 
             return output;
 		}
@@ -135,6 +139,10 @@ namespace AtmosphereAutopilot
 		[AutoGuiAttr("KP acceleration factor", true, "G6")]
 		protected double kp_acc_factor = 0.5;
 
+        [GlobalSerializable("AutoTrim")]
+        [AutoGuiAttr("AutoTrim", true, null)]
+        public bool AutoTrim { get; set; }
+
 		#endregion
 
 	}
@@ -147,7 +155,7 @@ namespace AtmosphereAutopilot
     public sealed class PitchAngularVelocityController : AngularVelAdaptiveController
     {
         internal PitchAngularVelocityController(Vessel vessel)
-            : base(vessel, "Adaptive elavator trimmer", 1234444, 0)
+            : base(vessel, "Adaptive elavator trimmer", 1234444, PITCH)
         { }
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
@@ -207,7 +215,7 @@ namespace AtmosphereAutopilot
 	public sealed class RollAngularVelocityController : AngularVelAdaptiveController
 	{
 		internal RollAngularVelocityController(Vessel vessel)
-			: base(vessel, "Adaptive roll trimmer", 1234445, 1)
+			: base(vessel, "Adaptive roll trimmer", 1234445, ROLL)
 		{ }
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
@@ -220,7 +228,7 @@ namespace AtmosphereAutopilot
 	public sealed class YawAngularVelocityController : AngularVelAdaptiveController
 	{
 		internal YawAngularVelocityController(Vessel vessel)
-			: base(vessel, "Adaptive yaw trimmer", 1234446, 2)
+			: base(vessel, "Adaptive yaw trimmer", 1234446, YAW)
 		{ }
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)

@@ -14,7 +14,7 @@ namespace AtmosphereAutopilot
         PController pid = new PController();
 
         internal SideslipController(Vessel v) :
-            base(v, "Sideslip controller", 88437222) { }
+            base(v, "Sideslip controller", 88437222) { AutoTrim = true; }
 
         public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
         {
@@ -36,7 +36,7 @@ namespace AtmosphereAutopilot
             mmodel.Deactivate();
             v_controller.Deactivate();
         }
-        
+
         double time_in_regime = 0.0;
 
         /// <summary>
@@ -70,18 +70,21 @@ namespace AtmosphereAutopilot
             ControlUtils.neutralize_user_input(cntrl, YAW);
             v_controller.ApplyControl(cntrl, output);
 
-            // check if we're stable on zero sideslip
-            if (Math.Abs(input) < 5e-3)
+            // check if we're stable on given input value
+            if (AutoTrim)
             {
-                time_in_regime += TimeWarp.fixedDeltaTime;
-            }
-            else
-            {
-                time_in_regime = 0.0;
-            }
+                if (Math.Abs(input) < 5e-3)
+                {
+                    time_in_regime += TimeWarp.fixedDeltaTime;
+                }
+                else
+                {
+                    time_in_regime = 0.0;
+                }
 
-            if (time_in_regime >= 1.0)
-                ControlUtils.set_trim(YAW, model);
+                if (time_in_regime >= 1.0)
+                    ControlUtils.set_trim(YAW, model);
+            }
 
             return output;
         }
@@ -97,13 +100,17 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("fbw_max_sideslip")]
         [VesselSerializable("fbw_max_sideslip")]
         [AutoGuiAttr("max Sideslip in degrees", true, "G6")]
-        double fbw_max_sideslip = 15.0;
+        double fbw_max_sideslip = 10.0;
 
         [AutoGuiAttr("DEBUG desired_v", false, "G8")]
         double desired_v;
 
         [AutoGuiAttr("DEBUG desired_sideslip", false, "G8")]
         double desired_sideslip;
+
+        [GlobalSerializable("AutoTrim")]
+        [AutoGuiAttr("AutoTrim", true, null)]
+        public bool AutoTrim { get; set; }
 
         #endregion
     }

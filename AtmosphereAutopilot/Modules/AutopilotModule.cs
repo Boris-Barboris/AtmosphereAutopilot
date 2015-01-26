@@ -30,7 +30,7 @@ namespace AtmosphereAutopilot
         protected string module_name;
 
         protected AutopilotModule(Vessel v, int wnd_id, string module_name):
-            base(module_name, wnd_id, new Rect(50.0f, 80.0f, 220.0f, 100.0f))
+            base(module_name, wnd_id, new Rect(50.0f, 80.0f, 220.0f, 50.0f))
         {
             vessel = v;
             this.module_name = module_name;
