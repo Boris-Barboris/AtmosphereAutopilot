@@ -33,19 +33,19 @@ namespace AtmosphereAutopilot
 		/// Get angle of attack history. Radians.
 		/// </summary>
 		public CircularBuffer<double> AoAHistory { get { return aoa_pitch; } }
-        internal CircularBuffer<double> aoa_pitch = new CircularBuffer<double>(BUFFER_SIZE, true);
+        internal CircularBuffer<double> aoa_pitch = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
 		
 		/// <summary>
 		/// Get sideslip history. Radians.
 		/// </summary>
 		public CircularBuffer<double> SideslipHistory { get { return aoa_yaw; } }
-		internal CircularBuffer<double> aoa_yaw = new CircularBuffer<double>(BUFFER_SIZE, true);
+        internal CircularBuffer<double> aoa_yaw = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
 
 		/// <summary>
 		/// Get G-force history.
 		/// </summary>
 		public CircularBuffer<double> GForceHistory { get { return g_force; } }
-		internal CircularBuffer<double> g_force = new CircularBuffer<double>(BUFFER_SIZE, true);
+        internal CircularBuffer<double> g_force = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
 
 		/// <summary>
 		/// Get estimated structural-safe maximum angular speed for this vessel. Radians/second.

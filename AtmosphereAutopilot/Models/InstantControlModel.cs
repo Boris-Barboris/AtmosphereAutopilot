@@ -19,12 +19,12 @@ namespace AtmosphereAutopilot
 		{
 			for (int i = 0; i < 3; i++)
 			{
-				input_buf[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
-				angular_v[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
-				angular_dv[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
-                angular_dv_central[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
-                k_dv_control[i] = new CircularBuffer<double>(10, true);
-                dv_mistake[i] = new CircularBuffer<double>(5, true);
+				input_buf[i] = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
+                angular_v[i] = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
+                angular_dv[i] = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
+                angular_dv_central[i] = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
+                k_dv_control[i] = new CircularBuffer<double>(10, true, min_authority_dv);
+                dv_mistake[i] = new CircularBuffer<double>(MISTAKE_BUF_SIZE, true, 0.0);
 			}
 		}
 
@@ -42,6 +42,7 @@ namespace AtmosphereAutopilot
 		}
 
 		static readonly int BUFFER_SIZE = 15;
+        static readonly int MISTAKE_BUF_SIZE = 15;
 
 		/// <summary>
 		/// Control signal history for pitch, roll or yaw. [-1.0, 1.0].
@@ -152,7 +153,8 @@ namespace AtmosphereAutopilot
 		// Diffirence between filtered and raw acceleration will be stored in dv_mistake.
 
 		internal CircularBuffer<double>[] k_dv_control = new CircularBuffer<double>[3];
-        internal CircularBuffer<double>[] dv_mistake = new CircularBuffer<double>[3];   
+        internal CircularBuffer<double>[] dv_mistake = new CircularBuffer<double>[3];
+        internal double[] dv_avg_mistake = new double[3];
 
 		public void update_dv_model()
 		{
@@ -195,13 +197,24 @@ namespace AtmosphereAutopilot
                 //        k_dv_control[i].Put(control_authority_dv);
                 //}
 
-                double d_control = input_buf[i].getFromTail(3) - input_buf[i].getFromTail(4);
+                //double d_control = input_buf[i].getFromTail(3) - input_buf[i].getFromTail(4);
+
+                //if (Math.Abs(d_control) > min_d_short_control)        // if d_control is substantial
+                //{
+                //    // get instant control authority
+                //    double control_authority_dv = 
+                //        (angular_dv_central[i].getLast() - angular_dv_central[i].getFromTail(1)) / d_control;
+                //    if (control_authority_dv > min_authority_dv)
+                //        k_dv_control[i].Put(control_authority_dv);
+                //}
+
+                double d_control = input_buf[i].getFromTail(1) - input_buf[i].getFromTail(2);
 
                 if (Math.Abs(d_control) > min_d_short_control)        // if d_control is substantial
                 {
                     // get instant control authority
-                    double control_authority_dv = 
-						(angular_dv_central[i].getLast() - angular_dv_central[i].getFromTail(1)) / d_control;
+                    double control_authority_dv =
+                        (angular_dv[i].getLast() - angular_dv[i].getFromTail(1)) / d_control;
                     if (control_authority_dv > min_authority_dv)
                         k_dv_control[i].Put(control_authority_dv);
                 }
@@ -209,6 +222,10 @@ namespace AtmosphereAutopilot
 				// update acceleration noise history
                 double cur_mistake = Math.Abs(angular_dv_central[i].getLast() - angular_dv[i].getFromTail(3));
                 dv_mistake[i].Put(cur_mistake);
+                if (dv_mistake.Length < MISTAKE_BUF_SIZE)
+                    dv_avg_mistake[i] = (dv_avg_mistake[i] * dv_mistake.Length + cur_mistake) / (dv_mistake.Length + 1);
+                else
+                    dv_avg_mistake[i] = (dv_avg_mistake[i] * mistake_averaging_gain + cur_mistake) / (mistake_averaging_gain + 1);
 			}
 		}
 
@@ -219,6 +236,10 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("min_authority_dv", true, "G6")]
         [GlobalSerializable("min_authority_dv")]
         internal double min_authority_dv = 0.1;
+
+        [AutoGuiAttr("mistake_averaging_gain", true, "G6")]
+        [GlobalSerializable("mistake_averaging_gain")]
+        internal int mistake_averaging_gain = 1000;
 
 		/// <summary>
 		/// Get averaged control authority for specified rotation axis.

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Reflection;
 
 namespace AtmosphereAutopilot
 {
@@ -112,7 +113,7 @@ namespace AtmosphereAutopilot
         static void DeserializeFromNode(ConfigNode node, object obj, Type attribute_type)
         {
             Type type = obj.GetType();
-            foreach (var field in type.GetFields())
+            foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 var attributes = field.GetCustomAttributes(attribute_type, true);
                 if (attributes.Length <= 0)
@@ -128,7 +129,7 @@ namespace AtmosphereAutopilot
                     continue;
                 field.SetValue(obj, parse_method.Invoke(null, new[] { str }));
             }
-            foreach (var property in type.GetProperties())
+            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 var attributes = property.GetCustomAttributes(attribute_type, true);
                 if (attributes.Length <= 0)
@@ -150,7 +151,7 @@ namespace AtmosphereAutopilot
         {
             // Serialize
             Type type = obj.GetType();
-            foreach (var field in type.GetFields())
+            foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 var attributes = field.GetCustomAttributes(attribute_type, true);
                 if (attributes.Length <= 0)
@@ -163,7 +164,7 @@ namespace AtmosphereAutopilot
                     continue;
                 node.AddValue(att.data_name, str);
             }
-            foreach (var property in type.GetProperties())
+            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 var attributes = property.GetCustomAttributes(attribute_type, true);
                 if (attributes.Length <= 0)

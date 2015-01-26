@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="AppLauncher.cs" />
     <Compile Include="AtmosphereAutopilot.cs" />
+    <Compile Include="Controller\PDController.cs" />
     <Compile Include="GUI\AutoGui.cs" />
     <Compile Include="AutoSerialization.cs" />
     <Compile Include="CircularBuffer.cs" />
@@ -58,6 +59,8 @@
     <Compile Include="Matrix.cs" />
     <Compile Include="Modules\AngularVelAdaptiveController.cs" />
     <Compile Include="Modules\AutopilotModule.cs" />
+    <Compile Include="Modules\SideslipController.cs" />
+    <Compile Include="Modules\StandardFlyByWire.cs" />
     <Compile Include="Modules\StateController.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Controller\PIDController.cs" />

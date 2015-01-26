@@ -34,6 +34,11 @@ namespace System.IO
             AllowOverflow = allowOverflow;
         }
 
+        public CircularBuffer(int capacity, bool allowOverflow, T first_value) : this(capacity, allowOverflow)
+        {
+            Put(first_value);   
+        }
+
         public bool AllowOverflow
         {
             get;

@@ -14,8 +14,8 @@ namespace AtmosphereAutopilot
 	{
 		protected int axis;
 
-		InstantControlModel model;
-		MediumFlightModel mmodel;
+        protected InstantControlModel model;
+        protected MediumFlightModel mmodel;
 		protected AngularAccAdaptiveController acc_controller;
 
 
@@ -50,9 +50,19 @@ namespace AtmosphereAutopilot
 			this.mmodel = modules[typeof(MediumFlightModel)] as MediumFlightModel;
 		}
 
-		protected override void OnActivate() { }
+		protected override void OnActivate() 
+        {
+            model.Activate();
+            mmodel.Activate();
+            acc_controller.Activate();
+        }
 
-        protected override void OnDeactivate() { }
+        protected override void OnDeactivate()
+        {
+            model.Deactivate();
+            mmodel.Deactivate();
+            acc_controller.Deactivate();
+        }
 
 		double time_in_regime = 0.0;
 
@@ -69,36 +79,14 @@ namespace AtmosphereAutopilot
             if (mmodel.max_angular_v[axis] != 0.0)
                 pid.KP = kp_acc_factor * mmodel.max_angular_dv[axis] / mmodel.max_angular_v[axis];
 
-            double user_input = get_neutralized_user_input(cntrl);
+            double user_input = ControlUtils.get_neutralized_user_input(cntrl, axis);
             if (user_input != 0.0)
                 desired_v = fbw_v_k * user_input * mmodel.max_angular_v[axis];      // user is interfering with control
             else
                 desired_v = target_value;                                           // control from above
-            if (axis == PITCH)
-            {
-                // limit it due to g-force limitations
-                double cur_g = mmodel.g_force.getLast();
-                if (desired_v * mmodel.aoa_pitch.getLast() > 0.0)
-                {
-                    // user is trying to increase AoA
-                    max_g = fbw_g_k / mmodel.wing_load_k / mmodel.wing_load_k;
-                    double g_relation = 1.0;
-                    double aoa_relation = 1.0;
-                    if (max_g > 1e-3 && cur_g >= 0.0)
-                    {
-                        g_relation = cur_g / max_g;
-                    }
-                    if (fbw_max_aoa > 2.0)
-                    {
-                        const double dgr_to_rad = 1.0 / 180.0 * Math.PI;
-                        double max_aoa_rad = fbw_max_aoa * dgr_to_rad;
-                        aoa_relation = Math.Abs(mmodel.aoa_pitch.getLast()) / max_aoa_rad;
-                    }
-                    double max_k = Math.Max(aoa_relation, g_relation);
-                    fbw_modifier = Common.Clamp(1.0 - max_k, 1.0);
-                    desired_v *= fbw_modifier;
-                }
-            }
+            
+            desired_v = moderate_desired_v(desired_v);      // moderation stage
+
             output = Common.Clamp(pid.Control(input, desired_v), fbw_dv_k * mmodel.max_angular_dv[axis]);
 
             error = desired_v - input;
@@ -117,10 +105,12 @@ namespace AtmosphereAutopilot
 			}
 
 			if (time_in_regime >= 1.0 && axis != YAW)
-				set_trim();
+                ControlUtils.set_trim(axis, model);
 
             return output;
 		}
+
+        protected virtual double moderate_desired_v(double des_v) { return des_v; }
 
 
 		#region Parameters
@@ -135,32 +125,11 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("moderation dv k", true, "G6")]
         protected double fbw_dv_k = 1.0;
 
-        [GlobalSerializable("fbw_g_k")]
-        [VesselSerializable("fbw_g_k")]
-        [AutoGuiAttr("max g-force k", true, "G6")]
-        protected double fbw_g_k = 1.0;
-
-        [GlobalSerializable("fbw_daoa_k")]
-        [VesselSerializable("fbw_daoa_k")]
-        [AutoGuiAttr("moderation dAoA k", true, "G6")]
-        protected double fbw_daoa_k = 0.1;
-
-        [GlobalSerializable("fbw_max_aoa")]
-        [VesselSerializable("fbw_max_aoa")]
-        [AutoGuiAttr("max AoA degrees", true, "G6")]
-        protected double fbw_max_aoa = 15.0;
-
         [AutoGuiAttr("DEBUG proport", false, "G8")]
         internal double proport { get; private set; }
 
-        [AutoGuiAttr("DEBUG relative_input", false, "G8")]
+        [AutoGuiAttr("DEBUG desired_v", false, "G8")]
         protected double desired_v;
-
-        [AutoGuiAttr("DEBUG g_fwb_modifier", false, "G8")]
-        protected double fbw_modifier;
-
-        [AutoGuiAttr("DEBUG max_g", false, "G8")]
-        protected double max_g;
 
 		[GlobalSerializable("kp_acc_factor")]
 		[AutoGuiAttr("KP acceleration factor", true, "G6")]
@@ -168,53 +137,6 @@ namespace AtmosphereAutopilot
 
 		#endregion
 
-
-		double get_neutralized_user_input(FlightCtrlState state)
-        {
-            double result;
-            switch (axis)
-            {
-                case PITCH:
-                    result = state.pitch == state.pitchTrim ?
-                        0.0 :
-                        state.pitch > state.pitchTrim ?
-                            (state.pitch - state.pitchTrim) / (1.0 - state.pitchTrim) :
-                            (state.pitch - state.pitchTrim) / (1.0 + state.pitchTrim);
-                    return result;
-                case ROLL:
-                    result = state.roll == state.rollTrim ?
-                        0.0 :
-                        state.roll > state.rollTrim ?
-                            (state.roll - state.rollTrim) / (1.0 - state.rollTrim) :
-                            (state.roll - state.rollTrim) / (1.0 + state.rollTrim);
-                    return result;
-                case YAW:
-                    result = state.yaw == state.yawTrim ?
-                        0.0 :
-                        state.yaw > state.yawTrim ?
-                            (state.yaw - state.yawTrim) / (1.0 - state.yawTrim) :
-                            (state.yaw - state.yawTrim) / (1.0 + state.yawTrim);
-                    return result;
-                default:
-                    return 0.0;
-            }
-        }
-
-		void set_trim()
-		{
-			switch (axis)
-			{
-				case PITCH:
-					FlightInputHandler.state.pitchTrim = (float)model.input_buf[axis].Average();
-					break;
-				case ROLL:
-                    FlightInputHandler.state.rollTrim = (float)model.input_buf[axis].Average();
-					break;
-				case YAW:
-                    FlightInputHandler.state.yawTrim = (float)model.input_buf[axis].Average();
-					break;
-			}
-		}
 	}
 
 
@@ -233,6 +155,53 @@ namespace AtmosphereAutopilot
 			base.InitializeDependencies(modules);
 			this.acc_controller = modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
 		}
+
+        protected override double moderate_desired_v(double des_v)
+        {
+            // limit it due to g-force limitations
+            double cur_g = mmodel.g_force.getLast();
+            if (des_v * mmodel.aoa_pitch.getLast() > 0.0)
+            {
+                // user is trying to increase AoA
+                max_g = fbw_g_k / mmodel.wing_load_k / mmodel.wing_load_k;
+                double g_relation = 1.0;
+                double aoa_relation = 1.0;
+                if (max_g > 1e-3 && cur_g >= 0.0)
+                {
+                    g_relation = cur_g / max_g;
+                }
+                if (fbw_max_aoa > 2.0)
+                {
+                    const double dgr_to_rad = 1.0 / 180.0 * Math.PI;
+                    double max_aoa_rad = fbw_max_aoa * dgr_to_rad;
+                    aoa_relation = Math.Abs(mmodel.aoa_pitch.getLast()) / max_aoa_rad;
+                }
+                double max_k = Math.Max(aoa_relation, g_relation);
+                fbw_modifier = Common.Clamp(1.0 - max_k, 1.0);
+                des_v *= fbw_modifier;
+            }
+            return des_v;
+        }
+
+        #region ModerationParameters
+
+        [GlobalSerializable("fbw_g_k")]
+        [VesselSerializable("fbw_g_k")]
+        [AutoGuiAttr("max g-force k", true, "G6")]
+        double fbw_g_k = 1.0;
+
+        [GlobalSerializable("fbw_max_aoa")]
+        [VesselSerializable("fbw_max_aoa")]
+        [AutoGuiAttr("max AoA degrees", true, "G6")]
+        double fbw_max_aoa = 15.0;
+
+        [AutoGuiAttr("DEBUG g_fwb_modifier", false, "G8")]
+        double fbw_modifier;
+
+        [AutoGuiAttr("DEBUG max_g", false, "G8")]
+        double max_g;
+
+        #endregion
     }
 
 	public sealed class RollAngularVelocityController : AngularVelAdaptiveController

@@ -20,6 +20,7 @@ namespace AtmosphereAutopilot
 		/// </summary>
 		/// <param name="cntrl">Control state to change</param>
 		public abstract void ApplyControl(FlightCtrlState cntrl);
+
 	}
 
 	/// <summary>
@@ -48,4 +49,74 @@ namespace AtmosphereAutopilot
 		public abstract double ApplyControl(FlightCtrlState cntrl, double target_value);
 
 	}
+
+    public static class ControlUtils
+    {
+        public const int PITCH = 0;
+        public const int ROLL = 1;
+        public const int YAW = 2;
+
+        public static double get_neutralized_user_input(FlightCtrlState state, int axis)
+        {
+            double result;
+            switch (axis)
+            {
+                case PITCH:
+                    result = state.pitch == state.pitchTrim ?
+                        0.0 :
+                        state.pitch > state.pitchTrim ?
+                            (state.pitch - state.pitchTrim) / (1.0 - state.pitchTrim) :
+                            (state.pitch - state.pitchTrim) / (1.0 + state.pitchTrim);
+                    return result;
+                case ROLL:
+                    result = state.roll == state.rollTrim ?
+                        0.0 :
+                        state.roll > state.rollTrim ?
+                            (state.roll - state.rollTrim) / (1.0 - state.rollTrim) :
+                            (state.roll - state.rollTrim) / (1.0 + state.rollTrim);
+                    return result;
+                case YAW:
+                    result = state.yaw == state.yawTrim ?
+                        0.0 :
+                        state.yaw > state.yawTrim ?
+                            (state.yaw - state.yawTrim) / (1.0 - state.yawTrim) :
+                            (state.yaw - state.yawTrim) / (1.0 + state.yawTrim);
+                    return result;
+                default:
+                    return 0.0;
+            }
+        }
+
+        public static void neutralize_user_input(FlightCtrlState state, int axis)
+        {
+            switch (axis)
+            {
+                case PITCH:
+                    FlightInputHandler.state.pitch = FlightInputHandler.state.pitchTrim;
+                    break;
+                case ROLL:
+                    FlightInputHandler.state.roll = FlightInputHandler.state.rollTrim;
+                    break;
+                case YAW:
+                    FlightInputHandler.state.yaw = FlightInputHandler.state.yawTrim;
+                    break;
+            }
+        }
+
+        public static void set_trim(int axis, InstantControlModel model)
+        {
+            switch (axis)
+            {
+                case PITCH:
+                    FlightInputHandler.state.pitchTrim = (float)model.input_buf[axis].Average();
+                    break;
+                case ROLL:
+                    FlightInputHandler.state.rollTrim = (float)model.input_buf[axis].Average();
+                    break;
+                case YAW:
+                    FlightInputHandler.state.yawTrim = (float)model.input_buf[axis].Average();
+                    break;
+            }
+        }
+    }
 }

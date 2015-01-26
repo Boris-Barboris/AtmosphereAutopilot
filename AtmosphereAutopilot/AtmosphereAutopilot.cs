@@ -16,9 +16,6 @@ namespace AtmosphereAutopilot
         internal Dictionary<Vessel, Dictionary<Type, AutopilotModule>> autopilot_module_lists =
 			new Dictionary<Vessel, Dictionary<Type, AutopilotModule>>();
 
-		// Map of vessel - module manager relation
-		Dictionary<Vessel, TopModuleManager> module_managers = new Dictionary<Vessel, TopModuleManager>();
-
 		// Hotkeys for module activation
         Dictionary<Type, KeyCode> module_hotkeys = new Dictionary<Type, KeyCode>();
 
@@ -46,14 +43,13 @@ namespace AtmosphereAutopilot
 
         void initialize_types()
         {
-            autopilot_module_types.Add(typeof(InstantControlModel));
-            autopilot_module_types.Add(typeof(MediumFlightModel));
-            autopilot_module_types.Add(typeof(PitchAngularAccController));
-            autopilot_module_types.Add(typeof(PitchAngularVelocityController));
-            autopilot_module_types.Add(typeof(RollAngularAccController));
-			autopilot_module_types.Add(typeof(RollAngularVelocityController));
-			autopilot_module_types.Add(typeof(YawAngularAccController));
-			autopilot_module_types.Add(typeof(YawAngularVelocityController));
+            var lListOfBs = (from lAssembly in AppDomain.CurrentDomain.GetAssemblies()
+                             from lType in lAssembly.GetTypes()
+                             where lType.IsSubclassOf(typeof(AutopilotModule))
+                             where lType.IsSealed
+                             select lType);
+
+            autopilot_module_types.AddRange(lListOfBs);
         }
 
         void initialize_hotkeys()
@@ -63,12 +59,10 @@ namespace AtmosphereAutopilot
 
         void serialize_active_modules()
         {
-			foreach (var pair in autopilot_module_lists[ActiveVessel])
-            {
-                ISerializable s = pair.Value as ISerializable;
-                if (s != null)
-                    s.Serialize();
-            }
+            if (ActiveVessel == null)
+                return;
+            foreach (var module in autopilot_module_lists[ActiveVessel].Values)
+                module.Serialize();
         }
 
         public void OnDestroy()
@@ -87,14 +81,18 @@ namespace AtmosphereAutopilot
         {
 			if (v == null)
 				return;
-			if (!autopilot_module_lists.ContainsKey(v))
-				autopilot_module_lists[v] = new Dictionary<Type, AutopilotModule>();
-			if (!module_managers.ContainsKey(v))
-				module_managers[v] = new TopModuleManager(v);			
+            if (!autopilot_module_lists.ContainsKey(v))
+            {
+                Debug.Log("[Autopilot] new vessel, creating new module map");
+                autopilot_module_lists[v] = new Dictionary<Type, AutopilotModule>();
+            }
+            if (!autopilot_module_lists[v].ContainsKey(typeof(TopModuleManager)))
+                autopilot_module_lists[v][typeof(TopModuleManager)] = new TopModuleManager(v);		
         }
 
         private void vesselSwitch(Vessel v)
         {
+            serialize_active_modules();
             Debug.Log("[Autopilot] vessel switch");
             load_manager_for_vessel(v);
 			ActiveVessel = v;
@@ -163,12 +161,8 @@ namespace AtmosphereAutopilot
             }
             GUI.skin = GUIStyles.skin;
             applauncher.OnGUI();
-			foreach (var pair in autopilot_module_lists[ActiveVessel])
-            {
-                IWindow s = pair.Value as IWindow;
-                if (s != null)
-                    s.OnGUI();
-            }
+            foreach (var pair in autopilot_module_lists[ActiveVessel])
+                pair.Value.OnGUI();
         }
 
         public void OnHideUI()
@@ -176,12 +170,8 @@ namespace AtmosphereAutopilot
             applauncher.HideGUI();
 			if (ActiveVessel == null)
 				return;
-			foreach (var pair in autopilot_module_lists[ActiveVessel])
-            {
-                IWindow s = pair.Value as IWindow;
-                if (s != null)
-                    s.HideGUI();
-            }
+            foreach (var pair in autopilot_module_lists[ActiveVessel])
+                pair.Value.HideGUI();
         }
 
         public void OnShowUI()
@@ -189,12 +179,8 @@ namespace AtmosphereAutopilot
             applauncher.UnHideGUI();
 			if (ActiveVessel == null)
 				return;
-			foreach (var pair in autopilot_module_lists[ActiveVessel])
-            {
-                IWindow s = pair.Value as IWindow;
-                if (s != null)
-                    s.UnHideGUI();
-            }
+            foreach (var pair in autopilot_module_lists[ActiveVessel])
+                pair.Value.UnHideGUI();
         }
 
         public void Update()
@@ -210,18 +196,12 @@ namespace AtmosphereAutopilot
 
 			foreach (var pair in module_hotkeys)
 			{
-				if (pair.Key == typeof(TopModuleManager))
+				if (Input.GetKeyDown(pair.Value) &&
+                    autopilot_module_lists.ContainsKey(ActiveVessel))
 				{
-					if (Input.GetKeyDown(pair.Value) &&
-						module_managers.ContainsKey(ActiveVessel))
-					{
-						TopModuleManager module = module_managers[ActiveVessel];
-						if (module != null)
-						{
-							module.Active = !module.Active;
-							MessageManager.post_status_message(module.ModuleName + (module.Active ? " enabled" : " disabled"));
-						}
-					}
+                    AutopilotModule module = autopilot_module_lists[ActiveVessel][pair.Key];
+					module.Active = !module.Active;
+					MessageManager.post_status_message(module.ModuleName + (module.Active ? " enabled" : " disabled"));
 				}
 			}
         }

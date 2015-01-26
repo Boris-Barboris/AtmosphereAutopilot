@@ -22,19 +22,17 @@ namespace AtmosphereAutopilot
         protected override void _drawGUI(int id)
         {
             GUILayout.BeginVertical();
+
 			foreach (var pair in AtmosphereAutopilot.Instance.getCurVesselModules())
             {
-                IWindow gui = pair.Value as IWindow;
-                if (gui != null)
-                {
-                    bool shown = gui.IsShown();
-                    string label = (pair.Value as GUIWindow) != null ?
-                        (pair.Value as GUIWindow).WindowName :
-                        pair.Key.Name;
-                    bool nshown = GUILayout.Toggle(shown, label, GUIStyles.toggleButtonStyle);
-                    if (shown ^ nshown)
-                        gui.ToggleGUI();
-                }
+                IWindow gui = pair.Value;
+                bool shown = gui.IsShown();
+                string label = (pair.Value as GUIWindow) != null ?
+                    (pair.Value as GUIWindow).WindowName :
+                    pair.Key.Name;
+                bool nshown = GUILayout.Toggle(shown, label, GUIStyles.toggleButtonStyle);
+                if (shown ^ nshown)
+                    gui.ToggleGUI();
             }
             GUILayout.EndVertical();
         }

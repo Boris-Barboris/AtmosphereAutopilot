@@ -15,7 +15,7 @@ namespace AtmosphereAutopilot
 		protected int axis;
 
 		InstantControlModel model;
-        MediumFlightModel m_model;
+        MediumFlightModel mmodel;
 
 		// Telemetry writers
         StreamWriter errorWriter, controlWriter, v_writer, dv_writer, smooth_dv_writer, 
@@ -67,17 +67,21 @@ namespace AtmosphereAutopilot
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
 		{
 			this.model = modules[typeof(InstantControlModel)] as InstantControlModel;
-			this.m_model = modules[typeof(MediumFlightModel)] as MediumFlightModel;
+			this.mmodel = modules[typeof(MediumFlightModel)] as MediumFlightModel;
 		}
 
 		protected override void OnActivate()
 		{
             pid.clear();
+            model.Activate();
+            mmodel.Activate();
 		}
 
         protected override void OnDeactivate()
         {
 			write_telemetry = false;
+            model.Deactivate();
+            mmodel.Deactivate();
         }
 
         int write_cycle = 0;
@@ -110,7 +114,7 @@ namespace AtmosphereAutopilot
                 write_cycle = 0;
 
             double auth = k_auth;
-            double mistake_avg = model.dv_mistake[axis].Average();
+            double mistake_avg = model.dv_avg_mistake[axis];
             small_value_low = small_value_k_low * mistake_avg;
             small_value_high = small_value_k_high * mistake_avg;
             if (auth > 1e-5)
@@ -127,7 +131,7 @@ namespace AtmosphereAutopilot
                 }
             }
 
-            large_value = m_model.max_angular_dv[axis];
+            large_value = mmodel.max_angular_dv[axis];
             if (integral_fill_time > 1e-3 && large_value > 1e-3)
             {
                 pid.IntegralClamp = large_value * large_value_k;
