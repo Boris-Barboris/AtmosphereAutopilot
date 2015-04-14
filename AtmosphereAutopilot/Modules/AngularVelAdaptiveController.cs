@@ -14,7 +14,7 @@ namespace AtmosphereAutopilot
 	{
 		protected int axis;
 
-        protected InstantControlModel model;
+        protected InstantControlModel imodel;
         protected MediumFlightModel mmodel;
 		protected AngularAccAdaptiveController acc_controller;
 
@@ -47,20 +47,20 @@ namespace AtmosphereAutopilot
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
 		{
-			this.model = modules[typeof(InstantControlModel)] as InstantControlModel;
+			this.imodel = modules[typeof(InstantControlModel)] as InstantControlModel;
 			this.mmodel = modules[typeof(MediumFlightModel)] as MediumFlightModel;
 		}
 
 		protected override void OnActivate() 
         {
-            model.Activate();
+            imodel.Activate();
             mmodel.Activate();
             acc_controller.Activate();
         }
 
         protected override void OnDeactivate()
         {
-            model.Deactivate();
+            imodel.Deactivate();
             mmodel.Deactivate();
             acc_controller.Deactivate();
         }
@@ -73,22 +73,22 @@ namespace AtmosphereAutopilot
 		/// <param name="cntrl">Control state to change</param>
         public override double ApplyControl(FlightCtrlState cntrl, double target_value)
 		{
-			input = model.angular_v[axis].getLast();				// get angular velocity
-			double accel = model.angular_dv[axis].getLast();		// get angular acceleration
+			input = imodel.angular_v[axis].getLast();				// get angular velocity
+			double accel = imodel.angular_dv[axis].getLast();		// get angular acceleration
 
             // Adapt KP, so that on max_angular_v it produces max_angular_dv * kp_acc factor output
-            if (mmodel.max_angular_v[axis] != 0.0)
-                pid.KP = kp_acc_factor * mmodel.max_angular_dv[axis] / mmodel.max_angular_v[axis];
+            if (mmodel.MaxAngularSpeed(axis) != 0.0)
+                pid.KP = kp_acc_factor * mmodel.MaxAngularAcc(axis) / mmodel.MaxAngularSpeed(axis);
 
             double user_input = ControlUtils.get_neutralized_user_input(cntrl, axis);
             if (user_input != 0.0)
-                desired_v = fbw_v_k * user_input * mmodel.max_angular_v[axis];      // user is interfering with control
+                desired_v = fbw_v_k * user_input * mmodel.MaxAngularSpeed(axis);      // user is interfering with control
             else
                 desired_v = target_value;                                           // control from above
             
             desired_v = moderate_desired_v(desired_v);      // moderation stage
 
-            output = Common.Clamp(pid.Control(input, desired_v), fbw_dv_k * mmodel.max_angular_dv[axis]);
+            output = Common.Clamp(pid.Control(input, desired_v), fbw_dv_k * mmodel.MaxAngularAcc(axis));
 
             error = desired_v - input;
             proport = error * pid.KP;
@@ -108,7 +108,7 @@ namespace AtmosphereAutopilot
                 }
 
                 if (time_in_regime >= 5.0)
-                    ControlUtils.set_trim(axis, model);
+                    ControlUtils.set_trim(axis, imodel);
             }
 
             return output;
@@ -167,8 +167,8 @@ namespace AtmosphereAutopilot
         protected override double moderate_desired_v(double des_v)
         {
             // limit it due to g-force limitations
-            double cur_g = mmodel.g_force.getLast();
-            if (des_v * mmodel.aoa_pitch.getLast() > 0.0)
+            double cur_g = mmodel.GForce;
+            if (des_v * mmodel.AoA > 0.0)
             {
                 // user is trying to increase AoA
                 max_g = fbw_g_k / mmodel.wing_load_k / mmodel.wing_load_k;
@@ -186,7 +186,7 @@ namespace AtmosphereAutopilot
                     {
                         const double dgr_to_rad = 1.0 / 180.0 * Math.PI;
                         double max_aoa_rad = fbw_max_aoa * dgr_to_rad;
-                        aoa_relation = Math.Abs(mmodel.aoa_pitch.getLast()) / max_aoa_rad;
+                        aoa_relation = Math.Abs(mmodel.AoA) / max_aoa_rad;
                     }
                 double max_k = Math.Max(aoa_relation, g_relation);
                 fbw_modifier = Common.Clamp(1.0 - max_k, 1.0);
@@ -207,7 +207,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Moderate G-force", true, null)]
         public bool moderate_g = true;
 
-        [GlobalSerializable("fbw_g_k")]
         [VesselSerializable("fbw_g_k")]
         [AutoGuiAttr("max g-force k", true, "G6")]
         double fbw_g_k = 1.0;

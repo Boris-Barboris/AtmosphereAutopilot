@@ -26,7 +26,7 @@ namespace AtmosphereAutopilot
 		/// <param name="editable">Can be edited by user. Use for constants only!</param>
 		/// <param name="format">If type provides ToString(string format) method, this format string
 		/// will be used. You can set it to null if not required</param>
-		public AutoGuiAttr(string value_name, bool editable, string format)
+		public AutoGuiAttr(string value_name, bool editable, string format = null)
         {
             this.value_name = value_name;
             this.editable = editable;
@@ -135,7 +135,7 @@ namespace AtmosphereAutopilot
 		/// <summary>
 		/// Main drawing function
 		/// </summary>
-		/// <param name="id">Unique window id. Just ignore it.</param>
+		/// <param name="id">Unique window id. Just ignore it in function realization.</param>
         protected abstract void _drawGUI(int id);
 
 		/// <inheritdoc />

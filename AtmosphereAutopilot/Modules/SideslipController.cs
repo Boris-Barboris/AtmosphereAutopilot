@@ -47,12 +47,12 @@ namespace AtmosphereAutopilot
         {
             const double degree_to_rad = Math.PI / 180.0;
 
-            input = -mmodel.aoa_yaw.getLast();
+            input = -mmodel.Sideslip;
 
             // Adapt KP, so that on max_angular_v it produces max_angular_dv * kp_acc factor output
-            if (mmodel.max_angular_v[YAW] != 0.0)
+            if (mmodel.MaxAngularSpeed(YAW) != 0.0)
             {
-                pid.KP = kp_vel_factor * fbw_max_sideslip / mmodel.max_angular_v[YAW];
+                pid.KP = kp_vel_factor * fbw_max_sideslip / mmodel.MaxAngularSpeed(YAW);
             }
 
             double user_input = ControlUtils.get_neutralized_user_input(cntrl, YAW);
@@ -63,7 +63,7 @@ namespace AtmosphereAutopilot
                 
             desired_v = pid.Control(input, desired_sideslip);
 
-            output = Common.Clamp(desired_v, mmodel.max_angular_v[YAW]);
+            output = Common.Clamp(desired_v, mmodel.MaxAngularSpeed(YAW));
 
             error = desired_sideslip - input;
 

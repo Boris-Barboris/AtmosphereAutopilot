@@ -7,12 +7,6 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-	public enum Axis
-	{
-		PITCH = 0,
-		ROLL = 1,
-		YAW = 2
-	}
 
 	/// <summary>
 	/// Represents autopilot module, wich can be turned on and off.
@@ -81,7 +75,7 @@ namespace AtmosphereAutopilot
         #region Serialization
 
 		/// <summary>
-		/// Deserialize vessel-specific fields. OnDeserialize callback is used.
+		/// Deserialize vessel-specific fields. Optional OnDeserialize callback is used.
 		/// </summary>
         public bool DeserializeVesselSpecific()
         {
@@ -91,7 +85,7 @@ namespace AtmosphereAutopilot
         }
 
 		/// <summary>
-		/// Deserialize global fields. OnDeserialize callback is used.
+        /// Deserialize global fields. Optional OnDeserialize callback is used.
 		/// </summary>
         public bool DeserializeGlobalSpecific()
         {
@@ -119,7 +113,7 @@ namespace AtmosphereAutopilot
         protected virtual void BeforeDeserialized() { }
 
 		/// <summary>
-		/// Deserialize global data and then vessel-specific. BeforeDeserialized and OnDeserialize 
+		/// Deserialize global data and then vessel-specific. Optional BeforeDeserialized and OnDeserialize 
 		/// callbacks are used.
 		/// </summary>
 		/// <returns>true if nothing crashed</returns>

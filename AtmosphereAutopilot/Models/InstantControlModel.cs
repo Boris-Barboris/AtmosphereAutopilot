@@ -47,19 +47,19 @@ namespace AtmosphereAutopilot
 		/// <summary>
 		/// Control signal history for pitch, roll or yaw. [-1.0, 1.0].
 		/// </summary>
-		public CircularBuffer<double> InputHistory(Axis axis) { return input_buf[(int)axis]; }
+		public CircularBuffer<double> InputHistory(int axis) { return input_buf[axis]; }
 		internal CircularBuffer<double>[] input_buf = new CircularBuffer<double>[3];
 
 		/// <summary>
 		/// Angular velocity history for pitch, roll or yaw. Radians/second.
 		/// </summary>
-		public CircularBuffer<double> AngularVelHistory(Axis axis) { return angular_v[(int)axis]; }
+		public CircularBuffer<double> AngularVelHistory(int axis) { return angular_v[axis]; }
 		internal CircularBuffer<double>[] angular_v = new CircularBuffer<double>[3];
 
 		/// <summary>
 		/// Angular acceleration hitory for pitch, roll or yaw. Caution: extremely noisy! Radians/second^2.
 		/// </summary>
-		public CircularBuffer<double> AngularAccHistory(Axis axis) { return angular_dv[(int)axis]; }
+		public CircularBuffer<double> AngularAccHistory(int axis) { return angular_dv[axis]; }
 		internal CircularBuffer<double>[] angular_dv = new CircularBuffer<double>[3];
         
 		// Filtered angular acceleration
@@ -124,7 +124,7 @@ namespace AtmosphereAutopilot
 		}
 
         /// <summary>
-        /// Smooth central noise-robust differentiator, author - Pavel Holoborodko. 
+        /// Smooth central noise-robust differentiator, author - Pavel Holoborodko. Based on Savitzky–Golay filter.
         /// http://www.holoborodko.com/pavel/wp-content/uploads/OneSidedNoiseRobustDifferentiators.pdf
         /// </summary>
         double smooth_derivative_central(double dt, int axis)
@@ -244,10 +244,10 @@ namespace AtmosphereAutopilot
 		/// <summary>
 		/// Get averaged control authority for specified rotation axis.
 		/// </summary>
-        public double getDvAuthority(Axis axis)
+        public double getDvAuthority(int axis)
         {
-            if (k_dv_control[(int)axis].Size > 0)
-                return k_dv_control[(int)axis].Average();
+            if (k_dv_control[axis].Size > 0)
+                return k_dv_control[axis].Average();
             else
                 return 1.0;
         }
@@ -255,9 +255,9 @@ namespace AtmosphereAutopilot
 		/// <summary>
 		/// Get last instant control authority for specified rotation axis.
 		/// </summary>
-		public double getDvAuthorityInstant(Axis axis)
+		public double getDvAuthorityInstant(int axis)
         {
-            return k_dv_control[(int)axis].getLast();
+            return k_dv_control[axis].getLast();
         }
 
 

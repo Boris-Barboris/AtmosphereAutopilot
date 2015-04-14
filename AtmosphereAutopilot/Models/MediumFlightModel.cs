@@ -30,74 +30,67 @@ namespace AtmosphereAutopilot
 		static readonly int BUFFER_SIZE = 10;
 
 		/// <summary>
-		/// Get angle of attack history. Radians.
+		/// Get angle of attack in radians.
 		/// </summary>
-		public CircularBuffer<double> AoAHistory { get { return aoa_pitch; } }
-        internal CircularBuffer<double> aoa_pitch = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
+		public double AoA { get { return aoa_pitch.getLast(); } }
+        CircularBuffer<double> aoa_pitch = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
 		
 		/// <summary>
-		/// Get sideslip history. Radians.
+		/// Get sideslip angle in radians.
 		/// </summary>
-		public CircularBuffer<double> SideslipHistory { get { return aoa_yaw; } }
-        internal CircularBuffer<double> aoa_yaw = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
+		public double Sideslip { get { return aoa_yaw.getLast(); } }
+        CircularBuffer<double> aoa_yaw = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
 
 		/// <summary>
-		/// Get G-force history.
+		/// Get G-force.
 		/// </summary>
-		public CircularBuffer<double> GForceHistory { get { return g_force; } }
-        internal CircularBuffer<double> g_force = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
+		public double GForce { get { return g_force.getLast(); } }
+        CircularBuffer<double> g_force = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
 
 		/// <summary>
 		/// Get estimated structural-safe maximum angular speed for this vessel. Radians/second.
 		/// </summary>
-		public double MaxAngularSpeed(Axis axis)
+		public double MaxAngularSpeed(int axis)
 		{
-			return max_angular_v[(int)axis];
+			return max_angular_v[axis];
 		}
 
         [AutoGuiAttr("max angular v", false, null)]
-        internal double[] max_angular_v = new double[3];
+        double[] max_angular_v = new double[3];
 
 		/// <summary>
 		/// Get estimated structural-safe maximum angular acceleration for this vessel. Radians/second^2.
 		/// </summary>
-		public double MaxAngularAcc(Axis axis)
+		public double MaxAngularAcc(int axis)
 		{
-			return max_angular_dv[(int)axis];
+			return max_angular_dv[axis];
 		}
 
         [AutoGuiAttr("max angular acc", false, null)]
-        internal double[] max_angular_dv = new double[3];
+        double[] max_angular_dv = new double[3];
 
 		/// <summary>
 		/// Maximum part offset from center of mass in rotation plane, specified by rotation axis. Meters.
 		/// </summary>
-		public double MaxOffsetFromCoM(Axis axis)
+		public double MaxOffsetFromCoM(int axis)
 		{
-			return lever_arm[(int)axis];
+			return lever_arm[axis];
 		}
 
         [AutoGuiAttr("lever arms", false, null)]
-        internal double[] lever_arm = new double[3];
+        double[] lever_arm = new double[3];
 
-        internal double max_lever_arm = 1.0;
-		internal double wing_load_k = 1.0;
+        double max_lever_arm = 1.0;
 
 		/// <summary>
 		/// Maximum part offset from center of mass in all basis rotation planes. Meters.
 		/// </summary>
 		public double MaxOffsetFromCoMOmni { get { return max_lever_arm; } }
 
-		/// <summary>
-		/// Estimated wing load in level flight. kg / m^2.
-		/// </summary>
-		public double WingLoadEstimate { get { return wing_load_k; } }
-
         int cycle_counter = 0;
 
 		void OnPreAutopilot(FlightCtrlState state)	// update all flight characteristics
 		{
-			double dt = TimeWarp.fixedDeltaTime;
 			update_buffers();
             //update_frames();
             if (cycle_counter == 0)
@@ -111,6 +104,7 @@ namespace AtmosphereAutopilot
 
 		void update_buffers()
 		{
+            // thx ferram
             up_srf_v = vessel.ReferenceTransform.up * Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity.normalized);
             fwd_srf_v = vessel.ReferenceTransform.forward * Vector3.Dot(vessel.ReferenceTransform.forward, vessel.srf_velocity.normalized);
             right_srf_v = vessel.ReferenceTransform.right * Vector3.Dot(vessel.ReferenceTransform.right, vessel.srf_velocity.normalized);
@@ -173,7 +167,6 @@ namespace AtmosphereAutopilot
 			// Very rough wing load approximation. We don't anything about wind area, so
 			// let's just use vessel size, roughly estimated by lever arms.
 			double wing_area_aprox = lever_arm[ROLL] * lever_arm[PITCH];
-			wing_load_k = vessel.GetTotalMass() / wing_area_aprox;
         }
 
         void max_part_offset_from_com(double[] offsets)
@@ -225,8 +218,8 @@ namespace AtmosphereAutopilot
 		protected override void _drawGUI(int id)
 		{
 			GUILayout.BeginVertical();
-			GUILayout.Label("AOA pitch = " + aoa_pitch.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-            GUILayout.Label("AOA yaw = " + aoa_yaw.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+			GUILayout.Label("AoA = " + aoa_pitch.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+            GUILayout.Label("Sideslip = " + aoa_yaw.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
             GUILayout.Label("G-force = " + g_force.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
             AutoGUI.AutoDrawObject(this);
 			GUILayout.EndVertical();

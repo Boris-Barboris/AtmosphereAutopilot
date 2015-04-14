@@ -8,7 +8,7 @@ using System.IO;
 namespace AtmosphereAutopilot
 {
 	/// <summary>
-    /// Controls angular acceleration. Meant to be created from AngularVelAdaptiveController
+    /// Controls angular acceleration. Meant to be used by AngularVelAdaptiveController
 	/// </summary>
 	public abstract class AngularAccAdaptiveController : SIMOController
 	{
@@ -212,7 +212,7 @@ namespace AtmosphereAutopilot
         internal double desired_acc { get; private set; }
 
         [AutoGuiAttr("DEBUG authority", false, "G8")]
-        internal double k_auth { get { return model.getDvAuthority((Axis)axis); } }
+        internal double k_auth { get { return model.getDvAuthority(axis); } }
 
 		[GlobalSerializable("ki_koeff")]
 		[AutoGuiAttr("ki_koeff", true, "G6")]
@@ -251,6 +251,10 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Equilibrium i_gain", true, "G6")]
         protected double i_gain = 1.0;
 
+        [GlobalSerializable("i_gain_auth_k")]
+        [AutoGuiAttr("Integral authority gain k", true, "G6")]
+        protected double i_gain_auth_k = 1.0;
+
 		#endregion
 	}
 
@@ -262,21 +266,21 @@ namespace AtmosphereAutopilot
     public sealed class PitchAngularAccController : AngularAccAdaptiveController
     {
         internal PitchAngularAccController(Vessel vessel)
-            : base(vessel, "Adaptive elavator trimmer accel", 77821329, (int)Axis.PITCH)
+            : base(vessel, "Adaptive elavator trimmer accel", 77821329, PITCH)
         { }
     }
 
 	public sealed class RollAngularAccController : AngularAccAdaptiveController
 	{
 		internal RollAngularAccController(Vessel vessel)
-			: base(vessel, "Adaptive roll trimmer accel", 77821330, (int)Axis.ROLL)
+			: base(vessel, "Adaptive roll trimmer accel", 77821330, ROLL)
 		{ }
 	}
 
 	public sealed class YawAngularAccController : AngularAccAdaptiveController
 	{
 		internal YawAngularAccController(Vessel vessel)
-			: base(vessel, "Adaptive yaw trimmer accel", 77821331, (int)Axis.YAW)
+			: base(vessel, "Adaptive yaw trimmer accel", 77821331, YAW)
 		{ }
 	}
 

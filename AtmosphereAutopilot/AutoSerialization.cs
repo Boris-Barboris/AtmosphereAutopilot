@@ -13,9 +13,9 @@ namespace AtmosphereAutopilot
     public class AutoSerializableAttr : Attribute
     {
         public string data_name;
-        public AutoSerializableAttr(string data_name)
+        public AutoSerializableAttr(string node_name)
         {
-            this.data_name = data_name;
+            this.data_name = node_name;
         }
     }
 
@@ -25,7 +25,7 @@ namespace AtmosphereAutopilot
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, Inherited = true)]
     public class VesselSerializable : AutoSerializableAttr
     {
-        public VesselSerializable(string data_name) : base(data_name) { }
+        public VesselSerializable(string node_name) : base(node_name) { }
     }
 
 	/// <summary>
@@ -34,7 +34,7 @@ namespace AtmosphereAutopilot
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, Inherited = true)]
     public class GlobalSerializable : AutoSerializableAttr
     {
-        public GlobalSerializable(string data_name) : base(data_name) { }
+        public GlobalSerializable(string node_name) : base(node_name) { }
     }
 
 
