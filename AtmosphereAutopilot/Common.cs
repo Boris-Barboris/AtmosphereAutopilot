@@ -22,10 +22,25 @@ namespace AtmosphereAutopilot
             return val;
         }
 
+        public static float Clampf(float val, float under, float upper)
+        {
+            if (under > val)
+                return under;
+            if (upper < val)
+                return upper;
+            return val;
+        }
+
         public static double Clamp(double val, double limit)
         {
             limit = Math.Abs(limit);
             return Clamp(val, -limit, limit);
+        }
+
+        public static float Clampf(float val, float limit)
+        {
+            limit = Math.Abs(limit);
+            return Clampf(val, -limit, limit);
         }
 
         public static double derivative1_short(double y0, double y1, double dt)    // first derivative

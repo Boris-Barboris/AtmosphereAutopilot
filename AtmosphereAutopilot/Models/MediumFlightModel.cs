@@ -10,7 +10,7 @@ namespace AtmosphereAutopilot
 {
 	/// <summary>
 	/// Class for medium-term flight model support. Deals with angular positions, 
-	/// angle of attack, g-force history.
+	/// angle of attack, g-force.
 	/// </summary>
 	public sealed class MediumFlightModel : AutopilotModule, ISerializable
 	{
