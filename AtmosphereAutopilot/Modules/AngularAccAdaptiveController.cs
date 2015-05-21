@@ -78,7 +78,7 @@ namespace AtmosphereAutopilot
             float predicted_diff = desired_acc - model.prediction_2[axis];
             float required_control_diff = predicted_diff / auth / TimeWarp.fixedDeltaTime;
 
-            output = Common.Clampf(current_raw + required_control_diff, 1.0f);
+            output = Common.Clampf(current_raw + Common.Clampf(required_control_diff, max_input_deriv), 1.0f);
             ControlUtils.set_raw_output(cntrl, axis, output);
 
             if (write_telemetry)
@@ -139,6 +139,10 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("DEBUG authority", false, "G8")]
         internal float k_auth { get { return model.linear_authority[axis]; } }
+
+        [AutoGuiAttr("Control speed limit", true, "G8")]
+        [GlobalSerializable("Control speed limit")]
+        protected float max_input_deriv = 0.15f;
 
 		#endregion
 	}

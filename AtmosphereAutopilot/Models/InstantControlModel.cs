@@ -104,7 +104,7 @@ namespace AtmosphereAutopilot
 			{
 				angular_v[i].Put(-vessel.angularVelocity[i]);	// update angular velocity. Minus for more meaningful
 																// numbers (pitch up is positive etc.)
-				if (stable_dt > 2)
+				if (stable_dt > 0)
 					angular_acc[i].Put(
 						(float)Common.derivative1_short(
 							angular_v[i].getFromTail(1),
@@ -188,7 +188,7 @@ namespace AtmosphereAutopilot
             for (int i = 0; i < 3; i++)
             {
                 float acc = angular_acc[i].getLast();               // current angular acceleration
-                float diff = acc - angular_acc[i].getFromTail(1);
+                float diff = acc - angular_acc[i].getFromTail(1);   // it's diffirential
 
                 //
                 // First prediction. Is estimating next physics step.
@@ -197,14 +197,14 @@ namespace AtmosphereAutopilot
                 // find a situation in the past closest to current one
                 int closest_index = 1;
                 float min_diff = float.MaxValue;
-                for (int j = 1; j < stable_dt - 1 && j < BUFFER_SIZE - 1; j++)
+                for (int j = 1; j < stable_dt && j < BUFFER_SIZE - 1; j++)
                 {
                     float past_point = angular_acc[i].getFromTail(j);
-                    float cur_diff = Math.Abs(acc - past_point);
-                    float cur_deriv = past_point - angular_acc[i].getFromTail(j + 1);
-                    if (cur_diff < min_diff && cur_deriv * diff > 0.0f)
+                    float likeness = Math.Abs(acc - past_point);
+                    float past_diff = past_point - angular_acc[i].getFromTail(j + 1);
+                    if (likeness < min_diff && past_diff * diff > 0.0f)
                     {
-                        min_diff = cur_diff;
+                        min_diff = likeness;
                         closest_index = j;
                     }
                 }
@@ -228,21 +228,21 @@ namespace AtmosphereAutopilot
                 acc = prediction[i];
                 diff = acc - angular_acc[i].getLast();
 
-                closest_index = 1;
+                closest_index = 0;
                 min_diff = float.MaxValue;
-                for (int j = 0; j < stable_dt - 1 && j < BUFFER_SIZE - 1; j++)
+                for (int j = 1; j < stable_dt && j < BUFFER_SIZE - 1; j++)
                 {
                     float past_point = angular_acc[i].getFromTail(j);
-                    float cur_diff = Math.Abs(acc - past_point);
-                    float cur_deriv = past_point - angular_acc[i].getFromTail(j + 1);
-                    if (cur_diff < min_diff && cur_deriv * diff > 0.0f)
+                    float likeness = Math.Abs(acc - past_point);
+                    float past_diff = past_point - angular_acc[i].getFromTail(j + 1);
+                    if (likeness < min_diff && past_diff * diff > 0.0f)
                     {
-                        min_diff = cur_diff;
+                        min_diff = likeness;
                         closest_index = j;
                     }
                 }
 
-                if (closest_index == 1)
+                if (closest_index == 0)
                 {
                     // nothing in experience, or it's the last node. Let's just extrapolate
                     prediction_2[i] = acc + 0.5f * diff;
