@@ -33,20 +33,20 @@ namespace AtmosphereAutopilot
 		{ }
 
 		[AutoGuiAttr("input", false, "G8")]
-		public double input;					// current system controlled value
+		public float input;					// current system controlled value
 
 		[AutoGuiAttr("error", false, "G8")]
-		public double error;					// desired - current
+        public float error;					// desired - current
 
 		[AutoGuiAttr("output", false, "G8")]
-		public double output;					// current controller output
+        public float output;				// current controller output
 
 		/// <summary>
 		/// Main control function of service autopilot.
 		/// </summary>
 		/// <param name="cntrl">Control state to change</param>
 		/// <param name="target_value">Desired controlled value</param>
-		public abstract double ApplyControl(FlightCtrlState cntrl, double target_value);
+		public abstract float ApplyControl(FlightCtrlState cntrl, float target_value);
 
 	}
 
@@ -56,7 +56,7 @@ namespace AtmosphereAutopilot
         public const int ROLL = 1;
         public const int YAW = 2;
 
-        public static double get_neutralized_user_input(FlightCtrlState state, int axis)
+        public static float get_neutralized_user_input(FlightCtrlState state, int axis)
         {
             switch (axis)
             {
@@ -67,7 +67,7 @@ namespace AtmosphereAutopilot
                 case YAW:
                     return state.yaw - state.yawTrim;
                 default:
-                    return 0.0;
+                    return 0.0f;
             }
         }
 
@@ -87,37 +87,46 @@ namespace AtmosphereAutopilot
             }
         }
 
-        public static void set_raw_output(FlightCtrlState state, int axis, double output)
+        public static void set_raw_output(FlightCtrlState state, int axis, float output)
         {
             switch (axis)
             {
                 case PITCH:
-                    state.pitch = (float)output;
-                    state.pitchTrim = 0.0f;
+                    state.pitch = output;
                     break;
                 case ROLL:
-                    state.roll = (float)output;
-                    state.rollTrim = 0.0f;
+                    state.roll = output;
                     break;
                 case YAW:
-                    state.yaw = (float)output;
-                    state.yawTrim = 0.0f;
+                    state.yaw = output;
                     break;
             }
         }
 
-        public static void set_trim(int axis, InstantControlModel model)
+        public static void set_trim(FlightCtrlState state, int axis, InstantControlModel model)
         {
+            //switch (axis)
+            //{
+            //    case PITCH:
+            //        FlightInputHandler.state.pitchTrim = model.ControlInputHistory(PITCH).Average();
+            //        break;
+            //    case ROLL:
+            //        FlightInputHandler.state.rollTrim = model.ControlInputHistory(ROLL).Average();
+            //        break;
+            //    case YAW:
+            //        FlightInputHandler.state.yawTrim = model.ControlInputHistory(YAW).Average();
+            //        break;
+            //}
             switch (axis)
             {
                 case PITCH:
-                    FlightInputHandler.state.pitchTrim = (float)model.input_buf[axis].Average();
+                    state.pitchTrim = model.ControlInputHistory(PITCH).Average();
                     break;
                 case ROLL:
-                    FlightInputHandler.state.rollTrim = (float)model.input_buf[axis].Average();
+                    state.rollTrim = model.ControlInputHistory(ROLL).Average();
                     break;
                 case YAW:
-                    FlightInputHandler.state.yawTrim = (float)model.input_buf[axis].Average();
+                    state.yawTrim = model.ControlInputHistory(YAW).Average();
                     break;
             }
         }

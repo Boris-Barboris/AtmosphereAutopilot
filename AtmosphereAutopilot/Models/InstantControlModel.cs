@@ -9,7 +9,7 @@ using System.IO;
 namespace AtmosphereAutopilot
 {
 	/// <summary>
-	/// Short-motion model. Is responsible for angular speed, angular acceleration, control signal
+	/// Short-term motion model. Is responsible for angular speed, angular acceleration, control signal
 	/// history storage. Executes analysis of pitch, roll and yaw evolution and control authority.
 	/// </summary>
 	public sealed class InstantControlModel : AutopilotModule
@@ -21,7 +21,7 @@ namespace AtmosphereAutopilot
 			{
                 input_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
                 angular_v[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
-                angular_dv[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
+                angular_acc[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
 			}
 		}
 
@@ -33,31 +33,45 @@ namespace AtmosphereAutopilot
 
 		protected override void OnDeactivate()
 		{
-			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
-			vessel.OnPostAutopilotUpdate += new FlightInputCallback(OnPostAutopilot);
+			vessel.OnPreAutopilotUpdate -= new FlightInputCallback(OnPreAutopilot);
+			vessel.OnPostAutopilotUpdate -= new FlightInputCallback(OnPostAutopilot);
 			stable_dt = 0;
 		}
 
 		static readonly int BUFFER_SIZE = 15;
-        static readonly int MISTAKE_BUF_SIZE = 15;
 
 		/// <summary>
 		/// Control signal history for pitch, roll or yaw. [-1.0, 1.0].
 		/// </summary>
-		public CircularBuffer<float> InputHistory(int axis) { return input_buf[axis]; }
-        internal CircularBuffer<float>[] input_buf = new CircularBuffer<float>[3];
+		public CircularBuffer<float> ControlInputHistory(int axis) { return input_buf[axis]; }
+        /// <summary>
+        /// Control signal for pitch, roll or yaw. [-1.0, 1.0].
+        /// </summary>
+        public float ControlInput(int axis) { return input_buf[axis].getLast(); }
+
+        CircularBuffer<float>[] input_buf = new CircularBuffer<float>[3];
 
 		/// <summary>
-		/// Angular velocity history for pitch, roll or yaw. Radians/second.
+		/// Angular velocity history for pitch, roll or yaw. Radians per second.
 		/// </summary>
         public CircularBuffer<float> AngularVelHistory(int axis) { return angular_v[axis]; }
-        internal CircularBuffer<float>[] angular_v = new CircularBuffer<float>[3];
+        /// <summary>
+        /// Angular velocity for pitch, roll or yaw. Radians per second.
+        /// </summary>
+        public float AngularVel(int axis) { return angular_v[axis].getLast(); }
+
+        CircularBuffer<float>[] angular_v = new CircularBuffer<float>[3];
 
 		/// <summary>
-		/// Angular acceleration hitory for pitch, roll or yaw. Caution: extremely noisy! Radians/second^2.
+        /// Angular acceleration hitory for pitch, roll or yaw. Radians per second per second.
 		/// </summary>
-        public CircularBuffer<float> AngularAccHistory(int axis) { return angular_dv[axis]; }
-        internal CircularBuffer<float>[] angular_dv = new CircularBuffer<float>[3];
+        public CircularBuffer<float> AngularAccHistory(int axis) { return angular_acc[axis]; }
+        /// <summary>
+        /// Angular acceleration for pitch, roll or yaw. Radians per second per second.
+        /// </summary>
+        public float AngularAcc(int axis) { return angular_acc[axis].getLast(); }
+
+        CircularBuffer<float>[] angular_acc = new CircularBuffer<float>[3];
 
 		float prev_dt = 1.0f;		// dt in previous call
 		int stable_dt = 0;			// amount of stable dt intervals
@@ -72,7 +86,7 @@ namespace AtmosphereAutopilot
 			float dt = TimeWarp.fixedDeltaTime;
 			check_dt(dt);
 			update_buffers();
-			update_dv_model();
+			update_model();
 			prev_dt = dt;
 		}
 
@@ -89,9 +103,9 @@ namespace AtmosphereAutopilot
 			for (int i = 0; i < 3; i++)
 			{
 				angular_v[i].Put(-vessel.angularVelocity[i]);	// update angular velocity. Minus for more meaningful
-																// numbers. Squad uses RHS coord system. Can't deal with it.
+																// numbers (pitch up is positive etc.)
 				if (stable_dt > 2)
-					angular_dv[i].Put(
+					angular_acc[i].Put(
 						(float)Common.derivative1_short(
 							angular_v[i].getFromTail(1),
 							angular_v[i].getLast(),
@@ -105,13 +119,13 @@ namespace AtmosphereAutopilot
 				input_buf[i].Put(Common.Clampf(getControlFromState(state, i), 1.0f));
 		}
 
-		float getControlFromState(FlightCtrlState state, int control)
+		public static float getControlFromState(FlightCtrlState state, int axis)
 		{
-			if (control == PITCH)
+			if (axis == PITCH)
 				return state.pitch;
-			if (control == ROLL)
+			if (axis == ROLL)
 				return state.roll;
-			if (control == YAW)
+			if (axis == YAW)
 				return state.yaw;
 			return 0.0f;
 		}
@@ -138,17 +152,109 @@ namespace AtmosphereAutopilot
         //
         // 
 
-		void update_dv_model()
+        public float[] prediction = new float[3];
+        public float[] prediction_2 = new float[3];
+        public float[] linear_authority = new float[3];
+
+        [AutoGuiAttr("Authority blending", true)]
+        [GlobalSerializable("Authority blending")]
+        float authority_blending = 5.0f;
+
+        [AutoGuiAttr("Minimal control change", true)]
+        [GlobalSerializable("Minimal control change")]
+        float min_dcontroll = 0.04f;
+
+		void update_model()
 		{
-			if (stable_dt < 10)		// minimal number of physics frames for adequate estimation
+			if (stable_dt < 3)		// minimal number of physics frames for adequate estimation
 				return;
 
+            // update authority
             for (int i = 0; i < 3; i++)
             {
-                
+                float diff = angular_acc[i].getLast() - prediction[i];
+                float cntrl_diff = input_buf[i].getFromTail(1) - input_buf[i].getFromTail(2);
+                if (Math.Abs(cntrl_diff) < min_dcontroll)
+                    continue;
+                float authority = diff / cntrl_diff / TimeWarp.fixedDeltaTime;
+                if (authority > 0.0f)
+                    if (linear_authority[i] != 0.0f)
+                        linear_authority[i] = (linear_authority[i] * (authority_blending - 1.0f) + authority) / authority_blending;
+                    else
+                        linear_authority[i] = authority;
+            }
+
+            // update predictions
+            for (int i = 0; i < 3; i++)
+            {
+                float acc = angular_acc[i].getLast();               // current angular acceleration
+                float diff = acc - angular_acc[i].getFromTail(1);
+
+                //
+                // First prediction. Is estimating next physics step.
+                //
+
+                // find a situation in the past closest to current one
+                int closest_index = 1;
+                float min_diff = float.MaxValue;
+                for (int j = 1; j < stable_dt - 1 && j < BUFFER_SIZE - 1; j++)
+                {
+                    float past_point = angular_acc[i].getFromTail(j);
+                    float cur_diff = Math.Abs(acc - past_point);
+                    float cur_deriv = past_point - angular_acc[i].getFromTail(j + 1);
+                    if (cur_diff < min_diff && cur_deriv * diff > 0.0f)
+                    {
+                        min_diff = cur_diff;
+                        closest_index = j;
+                    }
+                }
+
+                if (closest_index == 1)
+                {
+                    // nothing in experience, or it's the last node. Let's just extrapolate
+                    prediction[i] = acc + 0.5f * diff;
+                }
+                else
+                {
+                    float experience_diff = angular_acc[i].getFromTail(closest_index - 1) - angular_acc[i].getFromTail(closest_index);
+                    float predicted_diff = (input_buf[i].getLast() - input_buf[i].getFromTail(closest_index)) * linear_authority[i] * TimeWarp.fixedDeltaTime;
+                    prediction[i] = acc + experience_diff + predicted_diff;
+                }
+
+                //
+                // Second prediction. Is estimating angular acceleration 2 steps ahead
+                //
+
+                acc = prediction[i];
+                diff = acc - angular_acc[i].getLast();
+
+                closest_index = 1;
+                min_diff = float.MaxValue;
+                for (int j = 0; j < stable_dt - 1 && j < BUFFER_SIZE - 1; j++)
+                {
+                    float past_point = angular_acc[i].getFromTail(j);
+                    float cur_diff = Math.Abs(acc - past_point);
+                    float cur_deriv = past_point - angular_acc[i].getFromTail(j + 1);
+                    if (cur_diff < min_diff && cur_deriv * diff > 0.0f)
+                    {
+                        min_diff = cur_diff;
+                        closest_index = j;
+                    }
+                }
+
+                if (closest_index == 1)
+                {
+                    // nothing in experience, or it's the last node. Let's just extrapolate
+                    prediction_2[i] = acc + 0.5f * diff;
+                }
+                else
+                {
+                    float experience_diff = angular_acc[i].getFromTail(closest_index - 1) - angular_acc[i].getFromTail(closest_index);
+                    float predicted_diff = (input_buf[i].getLast() - input_buf[i].getFromTail(closest_index)) * linear_authority[i] * TimeWarp.fixedDeltaTime;
+                    prediction_2[i] = acc + experience_diff + predicted_diff;
+                }
             }
 		}
-
 
 
         #region Serialization
@@ -180,7 +286,8 @@ namespace AtmosphereAutopilot
 			for (int i = 0; i < 3; i++)
 			{
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " ang vel d1 = " + angular_dv[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " ang acc = " + angular_acc[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " linear_authority = " + linear_authority[i].ToString("G8"), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}
             AutoGUI.AutoDrawObject(this);

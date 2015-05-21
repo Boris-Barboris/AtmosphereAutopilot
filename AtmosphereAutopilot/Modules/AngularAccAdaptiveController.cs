@@ -18,37 +18,7 @@ namespace AtmosphereAutopilot
         MediumFlightModel mmodel;
 
 		// Telemetry writers
-        StreamWriter errorWriter, controlWriter, v_writer, dv_writer, smooth_dv_writer, 
-			desire_dv_writer;
-
-		
-		PIController pid = new PIController();
-
-		#region PIproperties
-
-		[AutoGuiAttr("Accumulator", false, "G8")]
-		internal double Accumulator { get { return pid.Accumulator; } }
-
-		[AutoGuiAttr("KP", false, "G8")]
-		internal double KP { get { return pid.KP; } }
-
-		[AutoGuiAttr("KI", false, "G8")]
-		internal double KI { get { return pid.KI; } }
-
-		[AutoGuiAttr("AccumulatorClamp", false, "G8")]
-		internal double AccumulatorClamp { get { return pid.AccumulatorClamp; } }
-
-		[AutoGuiAttr("AccumulDerivClamp", false, "G8")]
-		internal double AccumulDerivClamp { get { return pid.AccumulDerivClamp; } }
-
-		[AutoGuiAttr("IntegralClamp", false, "G8")]
-		internal double IntegralClamp { get { return pid.IntegralClamp; } }
-
-		[AutoGuiAttr("IntegralGain", false, "G8")]
-		internal double IntegralGain { get { return pid.IntegralGain; } }
-
-		#endregion
-
+        StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, prediction_2_writer, desire_dv_writer;
 
 		/// <summary>
 		/// Create controller instance.
@@ -72,7 +42,6 @@ namespace AtmosphereAutopilot
 
 		protected override void OnActivate()
 		{
-            pid.clear();
             model.Activate();
             mmodel.Activate();
 		}
@@ -84,75 +53,41 @@ namespace AtmosphereAutopilot
             mmodel.Deactivate();
         }
 
-        int write_cycle = 0;
-
 		/// <summary>
 		/// Main control function
 		/// </summary>
 		/// <param name="cntrl">Control state to change</param>
         /// <param name="target_value">Desired angular acceleration</param>
-		public override double ApplyControl(FlightCtrlState cntrl, double target_value)
+        public override float ApplyControl(FlightCtrlState cntrl, float target_value)
 		{
-            input = model.angular_dv[axis].getLast();
+            input = model.AngularAcc(axis);
             desired_acc = target_value;
-
             error = target_value - input;
 
             if (write_telemetry)
             {
-                errorWriter.Write(error.ToString("G8") + ',');
-                if (write_cycle >= 3)
-                    smooth_dv_writer.Write(model.angular_dv_central[axis].getLast().ToString("G8") + ',');
-                else
-                    write_cycle++;
                 desire_dv_writer.Write(target_value.ToString("G8") + ',');
-                dv_writer.Write(input.ToString("G8") + ',');
-                v_writer.Write(model.angular_v[axis].getLast().ToString("G8") + ',');
-                controlWriter.Write(model.input_buf[axis].getLast().ToString("G8") + ',');
-            }
-            else
-                write_cycle = 0;
-
-            double auth = k_auth;
-            double mistake_avg = model.dv_avg_mistake[axis];
-            small_value_low = small_value_k_low * mistake_avg;
-            small_value_high = small_value_k_high * mistake_avg;
-            if (auth > 1e-5)
-            {
-                if (Math.Abs(error) > small_value_low)
-                {
-                    double cutoff_smoothing = Common.Clamp((Math.Abs(error) - small_value_low) / 
-                        (small_value_high - small_value_low), 0.0, 1.0);
-                    pid.KP = cutoff_smoothing * kp_koeff / auth;
-                }
-                else
-                {
-                    pid.KP = 0.0;
-                }
+                acc_writer.Write(input.ToString("G8") + ',');
+                v_writer.Write(model.AngularVel(axis).ToString("G8") + ',');
+                prediction_writer.Write(model.prediction[axis].ToString("G8") + ',');
+                prediction_2_writer.Write(model.prediction_2[axis].ToString("G8") + ',');
             }
 
-            large_value = mmodel.max_angular_dv[axis];
-            if (integral_fill_time > 1e-3 && large_value > 1e-3)
-            {
-                pid.IntegralClamp = large_value * large_value_k;
-                pid.AccumulatorClamp = pid.IntegralClamp * integral_fill_time;
-                pid.AccumulDerivClamp = pid.AccumulatorClamp / integral_fill_time;
-                pid.KI = ki_koeff / pid.AccumulatorClamp;
-                // clamp gain on small errors
-                pid.IntegralGain = Common.Clamp(i_gain + Math.Abs(error) * (1.0 - i_gain) / large_value, 1.0);
-            }
+            float auth = k_auth;
+            float current_raw = output;
+            float predicted_diff = desired_acc - model.prediction_2[axis];
+            float required_control_diff = predicted_diff / auth / TimeWarp.fixedDeltaTime;
 
-            current_raw = pid.Control(input, target_value, TimeWarp.fixedDeltaTime);
-
-            proport = error * pid.KP;
-            integr = pid.Accumulator * pid.KI;
-
-			output = Common.Clamp(current_raw, 1.0);
+            output = Common.Clampf(current_raw + required_control_diff, 1.0f);
             ControlUtils.set_raw_output(cntrl, axis, output);
+
+            if (write_telemetry)
+                controlWriter.Write(output.ToString("G8") + ',');
+
             return output;
 		}
 
-        [AutoGuiAttr("Write telemetry", true, "G8")]
+        [AutoGuiAttr("Write telemetry", true)]
         protected bool write_telemetry 
 		{
 			get { return _write_telemetry; }
@@ -162,20 +97,20 @@ namespace AtmosphereAutopilot
 				{
                     if (!_write_telemetry)
                     {
-                        errorWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-                            vessel.name + '_' + module_name + "_telemetry_error.csv");
-                        controlWriter = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-                            vessel.name + '_' + module_name + "_telemetry_control.csv");
-                        v_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-                            vessel.name + '_' + module_name + "_telemetry_v.csv");
-                        dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-                            vessel.name + '_' + module_name + "_telemetry_dv.csv");
-                        desire_dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-                            vessel.name + '_' + module_name + "_telemetry_desire.csv");
-                        smooth_dv_writer = File.CreateText("D:/Games/Kerbal Space Program 0.90/Resources/" +
-                            vessel.name + '_' + module_name + "_telemetry_smoothdv.csv");
-                        desire_dv_writer.Write("0.0,");
-                        errorWriter.Write(error.ToString("G8") + ',');
+                        controlWriter = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
+                            vessel.name + '_' + module_name + " control.csv");
+                        v_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
+                            vessel.name + '_' + module_name + " v.csv");
+                        acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
+                            vessel.name + '_' + module_name + " acc.csv");
+                        desire_dv_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
+                            vessel.name + '_' + module_name + " desire.csv");
+                        prediction_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
+                            vessel.name + '_' + module_name + " predict.csv");
+                        prediction_2_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
+                            vessel.name + '_' + module_name + " predict_2.csv");
+                        prediction_writer.Write("0.0,");
+                        prediction_2_writer.Write("0.0,0.0,");
                         _write_telemetry = value;
                     }
 				}
@@ -183,12 +118,12 @@ namespace AtmosphereAutopilot
 				{
                     if (_write_telemetry)
                     {
-                        errorWriter.Close();
                         controlWriter.Close();
                         v_writer.Close();
-                        dv_writer.Close();
+                        acc_writer.Close();
                         desire_dv_writer.Close();
-                        smooth_dv_writer.Close();
+                        prediction_writer.Close();
+                        prediction_2_writer.Close();
                         _write_telemetry = value;
                     }					
 				}
@@ -199,61 +134,11 @@ namespace AtmosphereAutopilot
 
 		#region Parameters
 
-		[AutoGuiAttr("DEBUG proport", false, "G8")]
-        internal double proport { get; private set; }
-
-        [AutoGuiAttr("DEBUG integr", false, "G8")]
-        internal double integr { get; private set; }
-
-        [AutoGuiAttr("DEBUG current_raw", false, "G8")]
-        internal double current_raw { get; private set; }
-
-        [AutoGuiAttr("DEBUG desired_dv", false, "G8")]
-        internal double desired_acc { get; private set; }
+        [AutoGuiAttr("DEBUG desired acceleration", false, "G8")]
+        internal float desired_acc { get; private set; }
 
         [AutoGuiAttr("DEBUG authority", false, "G8")]
-        internal double k_auth { get { return model.getDvAuthority(axis); } }
-
-		[GlobalSerializable("ki_koeff")]
-		[AutoGuiAttr("ki_koeff", true, "G6")]
-		protected double ki_koeff = 0.8;
-
-        [GlobalSerializable("kp_koeff")]
-        [AutoGuiAttr("KP/Authority ratio", true, "G6")]
-        protected double kp_koeff = 0.75;
-
-		[AutoGuiAttr("large value", false, "G6")]
-		protected double large_value = 10.0;
-
-        [GlobalSerializable("large_value_k")]
-        [AutoGuiAttr("large value k", true, "G6")]
-        protected double large_value_k = 5.0;
-
-        [AutoGuiAttr("small value high", false, "G6")]
-		protected double small_value_high = 0.1;
-
-		[AutoGuiAttr("small value low", false, "G6")]
-		protected double small_value_low = 0.1;
-
-        [GlobalSerializable("small_value_k_high")]
-        [AutoGuiAttr("small value k high", true, "G6")]
-        protected double small_value_k_high = 1.5;
-
-        [GlobalSerializable("small_value_k_low")]
-        [AutoGuiAttr("small value k low", true, "G6")]
-        protected double small_value_k_low = 0.5;
-
-        [GlobalSerializable("integral_fill_time")]
-        [AutoGuiAttr("Integral fill time", true, "G6")]
-        protected double integral_fill_time = 0.1;
-
-        [GlobalSerializable("i_gain")]
-        [AutoGuiAttr("Equilibrium i_gain", true, "G6")]
-        protected double i_gain = 1.0;
-
-        [GlobalSerializable("i_gain_auth_k")]
-        [AutoGuiAttr("Integral authority gain k", true, "G6")]
-        protected double i_gain_auth_k = 1.0;
+        internal float k_auth { get { return model.linear_authority[axis]; } }
 
 		#endregion
 	}

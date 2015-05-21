@@ -43,11 +43,11 @@ namespace AtmosphereAutopilot
         /// Main control function
         /// </summary>
         /// <param name="cntrl">Control state to change</param>
-        public override double ApplyControl(FlightCtrlState cntrl, double target_value)
+        public override float ApplyControl(FlightCtrlState cntrl, float target_value)
         {
-            const double degree_to_rad = Math.PI / 180.0;
+            const float degree_to_rad = (float)Math.PI / 180.0f;
 
-            input = -mmodel.Sideslip;
+            input = -(float)mmodel.Sideslip;
 
             // Adapt KP, so that on max_angular_v it produces max_angular_dv * kp_acc factor output
             if (mmodel.MaxAngularSpeed(YAW) != 0.0)
@@ -57,13 +57,13 @@ namespace AtmosphereAutopilot
 
             double user_input = ControlUtils.get_neutralized_user_input(cntrl, YAW);
             if (user_input != 0.0)
-                desired_sideslip = user_input * fbw_max_sideslip * degree_to_rad;
+                desired_sideslip = (float)(user_input * fbw_max_sideslip * degree_to_rad);
             else
                 desired_sideslip = target_value;
                 
-            desired_v = pid.Control(input, desired_sideslip);
+            desired_v = (float)pid.Control(input, desired_sideslip);
 
-            output = Common.Clamp(desired_v, mmodel.MaxAngularSpeed(YAW));
+            output = Common.Clampf(desired_v, (float)mmodel.MaxAngularSpeed(YAW));
 
             error = desired_sideslip - input;
 
@@ -83,7 +83,7 @@ namespace AtmosphereAutopilot
                 }
 
                 if (time_in_regime >= 5.0)
-                    ControlUtils.set_trim(YAW, model);
+                    ControlUtils.set_trim(cntrl, YAW, model);
             }
 
             return output;
@@ -95,18 +95,18 @@ namespace AtmosphereAutopilot
         [VesselSerializable("kp_vel_factor")]
         [GlobalSerializable("kp_vel_factor")]
         [AutoGuiAttr("KP velocity factor", true, "G6")]
-        double kp_vel_factor = 0.5;
+        float kp_vel_factor = 0.5f;
 
         [GlobalSerializable("fbw_max_sideslip")]
         [VesselSerializable("fbw_max_sideslip")]
         [AutoGuiAttr("max Sideslip in degrees", true, "G6")]
-        double fbw_max_sideslip = 10.0;
+        float fbw_max_sideslip = 10.0f;
 
         [AutoGuiAttr("DEBUG desired_v", false, "G8")]
-        double desired_v;
+        float desired_v;
 
         [AutoGuiAttr("DEBUG desired_sideslip", false, "G8")]
-        double desired_sideslip;
+        float desired_sideslip;
 
         [GlobalSerializable("AutoTrim")]
         [AutoGuiAttr("AutoTrim", true, null)]

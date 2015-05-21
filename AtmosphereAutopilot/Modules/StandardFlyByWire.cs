@@ -46,9 +46,9 @@ namespace AtmosphereAutopilot
             if (vessel.checkLanded())
                 return;
 
-            pc.ApplyControl(cntrl, 0.0);
-            rc.ApplyControl(cntrl, 0.0);
-            yc.ApplyControl(cntrl, 0.0);
+            pc.ApplyControl(cntrl, 0.0f);
+            rc.ApplyControl(cntrl, 0.0f);
+            yc.ApplyControl(cntrl, 0.0f);
         }
 
         protected override void _drawGUI(int id)

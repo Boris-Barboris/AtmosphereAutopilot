@@ -71,10 +71,10 @@ namespace AtmosphereAutopilot
 		/// Main control function
 		/// </summary>
 		/// <param name="cntrl">Control state to change</param>
-        public override double ApplyControl(FlightCtrlState cntrl, double target_value)
+        public override float ApplyControl(FlightCtrlState cntrl, float target_value)
 		{
-			input = imodel.angular_v[axis].getLast();				// get angular velocity
-			double accel = imodel.angular_dv[axis].getLast();		// get angular acceleration
+			input = imodel.AngularVel(axis);				// get angular velocity
+            double accel = imodel.AngularAcc(axis);		    // get angular acceleration
 
             // Adapt KP, so that on max_angular_v it produces max_angular_dv * kp_acc factor output
             if (mmodel.MaxAngularSpeed(axis) != 0.0)
@@ -82,18 +82,16 @@ namespace AtmosphereAutopilot
 
             double user_input = ControlUtils.get_neutralized_user_input(cntrl, axis);
             if (user_input != 0.0)
-                desired_v = fbw_v_k * user_input * mmodel.MaxAngularSpeed(axis);      // user is interfering with control
+                desired_v = (float)(fbw_v_k * user_input * mmodel.MaxAngularSpeed(axis));      // user is interfering with control
             else
                 desired_v = target_value;                                           // control from above
             
             desired_v = moderate_desired_v(desired_v);      // moderation stage
 
-            output = Common.Clamp(pid.Control(input, desired_v), fbw_dv_k * mmodel.MaxAngularAcc(axis));
+            output = (float)Common.Clamp(pid.Control(input, desired_v), fbw_dv_k * mmodel.MaxAngularAcc(axis));
 
             error = desired_v - input;
             proport = error * pid.KP;
-
-            acc_controller.ApplyControl(cntrl, output);
 
 			// check if we're stable on given input value
             if (AutoTrim)
@@ -108,13 +106,15 @@ namespace AtmosphereAutopilot
                 }
 
                 if (time_in_regime >= 5.0)
-                    ControlUtils.set_trim(axis, imodel);
+                    ControlUtils.set_trim(cntrl, axis, imodel);
             }
+
+            acc_controller.ApplyControl(cntrl, output);
 
             return output;
 		}
 
-        protected virtual double moderate_desired_v(double des_v) { return des_v; }
+        protected virtual float moderate_desired_v(float des_v) { return des_v; }
 
 
 		#region Parameters
@@ -122,22 +122,22 @@ namespace AtmosphereAutopilot
 		[GlobalSerializable("fbw_v_k")]
         [VesselSerializable("fbw_v_k")]
         [AutoGuiAttr("moderation v k", true, "G6")]
-        protected double fbw_v_k = 1.0;
+        protected float fbw_v_k = 1.0f;
 
         [GlobalSerializable("fbw_dv_k")]
         [VesselSerializable("fbw_dv_k")]
         [AutoGuiAttr("moderation dv k", true, "G6")]
-        protected double fbw_dv_k = 1.0;
+        protected float fbw_dv_k = 1.0f;
 
         [AutoGuiAttr("DEBUG proport", false, "G8")]
         internal double proport { get; private set; }
 
         [AutoGuiAttr("DEBUG desired_v", false, "G8")]
-        protected double desired_v;
+        protected float desired_v;
 
 		[GlobalSerializable("kp_acc_factor")]
 		[AutoGuiAttr("KP acceleration factor", true, "G6")]
-		protected double kp_acc_factor = 0.5;
+        protected float kp_acc_factor = 0.5f;
 
         [GlobalSerializable("AutoTrim")]
         [AutoGuiAttr("AutoTrim", true, null)]
@@ -164,32 +164,32 @@ namespace AtmosphereAutopilot
 			this.acc_controller = modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
 		}
 
-        protected override double moderate_desired_v(double des_v)
+        protected override float moderate_desired_v(float des_v)
         {
             // limit it due to g-force limitations
-            double cur_g = mmodel.GForce;
+            float cur_g = (float)mmodel.GForce;
             if (des_v * mmodel.AoA > 0.0)
             {
                 // user is trying to increase AoA
-                max_g = fbw_g_k * 10.0;
-                double g_relation = 1.0;
-                double aoa_relation = 1.0;
+                max_g = fbw_g_k * 10.0f;
+                float g_relation = 1.0f;
+                float aoa_relation = 1.0f;
                 if (moderate_g)
-                    if (max_g > 1e-3 && cur_g >= 0.0)
+                    if (max_g > 1e-3f && cur_g >= 0.0f)
                     {
-                        double stasis_angular_spd = max_g / vessel.srfSpeed;
-                        double k = 1.0 - Common.Clamp(stasis_angular_spd / des_v, 0.0, 1.0);
+                        float stasis_angular_spd = max_g / (float)vessel.srfSpeed;
+                        float k = 1.0f - Common.Clampf(stasis_angular_spd / des_v, 0.0f, 1.0f);
                         g_relation = k * cur_g / max_g;
                     }
                 if (moderate_aoa)
                     if (fbw_max_aoa > 2.0)
                     {
-                        const double dgr_to_rad = 1.0 / 180.0 * Math.PI;
-                        double max_aoa_rad = fbw_max_aoa * dgr_to_rad;
-                        aoa_relation = Math.Abs(mmodel.AoA) / max_aoa_rad;
+                        const float dgr_to_rad = (float)Math.PI / 180.0f;
+                        float max_aoa_rad = fbw_max_aoa * dgr_to_rad;
+                        aoa_relation = Math.Abs((float)mmodel.AoA) / max_aoa_rad;
                     }
-                double max_k = Math.Max(aoa_relation, g_relation);
-                fbw_modifier = Common.Clamp(1.0 - max_k, 1.0);
+                float max_k = Math.Max(aoa_relation, g_relation);
+                fbw_modifier = Common.Clampf(1.0f - max_k, 1.0f);
                 des_v *= fbw_modifier;
             }
             return des_v;
@@ -209,18 +209,18 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("fbw_g_k")]
         [AutoGuiAttr("max g-force k", true, "G6")]
-        double fbw_g_k = 1.0;
+        float fbw_g_k = 1.0f;
 
         [GlobalSerializable("fbw_max_aoa")]
         [VesselSerializable("fbw_max_aoa")]
         [AutoGuiAttr("max AoA degrees", true, "G6")]
-        double fbw_max_aoa = 15.0;
+        float fbw_max_aoa = 15.0f;
 
         [AutoGuiAttr("DEBUG g_fwb_modifier", false, "G8")]
-        double fbw_modifier;
+        float fbw_modifier;
 
         [AutoGuiAttr("DEBUG max_g", false, "G8")]
-        double max_g;
+        float max_g;
 
         #endregion
     }

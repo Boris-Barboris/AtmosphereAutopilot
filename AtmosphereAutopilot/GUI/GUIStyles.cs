@@ -47,6 +47,7 @@ namespace AtmosphereAutopilot
             toggleButtonStyle.margin = new RectOffset(4, 4, 1, 1);
             toggleButtonStyle.fontSize = 12;
             toggleButtonStyle.stretchWidth = true;
+            toggleButtonStyle.onActive.textColor = Color.green;
         }
     }
 }
