@@ -98,6 +98,7 @@ namespace AtmosphereAutopilot
 			float dt = TimeWarp.fixedDeltaTime;
 			check_dt(dt);
 			update_velocity_acc();
+            update_aoa();
 			update_model();
 			prev_dt = dt;
 		}
@@ -319,6 +320,7 @@ namespace AtmosphereAutopilot
         #region GUI
 
 		static readonly string[] axis_names = { "pitch", "roll", "yaw" };
+        static readonly float rad_to_degree = (float)(180.0 / Math.PI);
 
 		protected override void _drawGUI(int id)
 		{
@@ -328,7 +330,7 @@ namespace AtmosphereAutopilot
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " ang acc = " + angular_acc[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " linear_authority = " + linear_authority[i].ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " AoA = " + linear_authority[i].ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " AoA = " + (aoa[i].getLast() * rad_to_degree).ToString("G8"), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}
             AutoGUI.AutoDrawObject(this);
