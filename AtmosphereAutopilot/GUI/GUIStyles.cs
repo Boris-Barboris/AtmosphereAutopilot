@@ -42,12 +42,34 @@ namespace AtmosphereAutopilot
             textBoxStyle.fontSize = 11;
             textBoxStyle.margin = new RectOffset(2, 2, 1, 1);
 
-            skin.button.active.textColor = Color.green;
             toggleButtonStyle = new GUIStyle(skin.button);
             toggleButtonStyle.alignment = TextAnchor.MiddleCenter;
             toggleButtonStyle.margin = new RectOffset(4, 4, 1, 1);
             toggleButtonStyle.fontSize = 12;
             toggleButtonStyle.stretchWidth = true;
+        }
+
+        static Color old_background, old_color, old_content;
+
+        static Color my_background = new Color(0.0f, 0.0f, 0.0f, 2.0f);
+        static Color my_color = new Color(1.0f, 1.0f, 1.0f, 0.3f);
+        static Color my_content = new Color(1.0f, 1.0f, 1.0f, 3.3f);
+
+        internal static void set_colors()
+        {
+            old_background = GUI.backgroundColor;
+            old_color = GUI.color;
+            old_content = GUI.contentColor;
+            GUI.backgroundColor = my_background;
+            GUI.color = my_color;
+            GUI.contentColor = my_content;
+        }
+
+        internal static void reset_colors()
+        {
+            GUI.backgroundColor = old_background;
+            GUI.color = old_color;
+            GUI.contentColor = old_content;
         }
     }
 }
