@@ -237,9 +237,8 @@ namespace AtmosphereAutopilot
                 float min_diff = float.MaxValue;
                 for (int j = 1; j < stable_dt && j < BUFFER_SIZE - 1; j++)
                 {
-                    float past_aoa = aoa[i].getFromTail(j);
                     float past_point = angular_acc[i].getFromTail(j);
-                    float likeness = Math.Abs(aoa_cur - past_aoa);
+                    float likeness = Math.Abs(acc - past_point);
                     float past_diff = past_point - angular_acc[i].getFromTail(j + 1);
                     if (likeness < min_diff)
                     {
@@ -272,9 +271,8 @@ namespace AtmosphereAutopilot
                 min_diff = float.MaxValue;
                 for (int j = 1; j < stable_dt && j < BUFFER_SIZE - 1; j++)
                 {
-                    float past_aoa = aoa[i].getFromTail(j);
                     float past_point = angular_acc[i].getFromTail(j);
-                    float likeness = Math.Abs(aoa_cur - past_aoa);
+                    float likeness = Math.Abs(acc - past_point);
                     float past_diff = past_point - angular_acc[i].getFromTail(j + 1);
                     if (likeness < min_diff)
                     {
