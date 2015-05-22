@@ -28,12 +28,6 @@ namespace AtmosphereAutopilot
 		}
 
 		static readonly int BUFFER_SIZE = 10;
-
-		/// <summary>
-		/// Get angle of attack in radians.
-		/// </summary>
-		public double AoA { get { return aoa_pitch.getLast(); } }
-        CircularBuffer<double> aoa_pitch = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0);
 		
 		/// <summary>
 		/// Get sideslip angle in radians.
@@ -98,22 +92,8 @@ namespace AtmosphereAutopilot
             cycle_counter = (cycle_counter + 1) % 500;
 		}
 
-		Vector3 up_srf_v;		// normalized velocity, projected to vessel up direction
-		Vector3 fwd_srf_v;		// normalized velocity, projected to vessel forward direction
-		Vector3 right_srf_v;	// normalized velocity, projected to vessel right direction
-
 		void update_buffers()
 		{
-            // thx ferram
-            up_srf_v = vessel.ReferenceTransform.up * Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity.normalized);
-            fwd_srf_v = vessel.ReferenceTransform.forward * Vector3.Dot(vessel.ReferenceTransform.forward, vessel.srf_velocity.normalized);
-            right_srf_v = vessel.ReferenceTransform.right * Vector3.Dot(vessel.ReferenceTransform.right, vessel.srf_velocity.normalized);
-            Vector3 tmpVec = up_srf_v + fwd_srf_v;
-            double aoa_p = Math.Asin(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized));
-            aoa_pitch.Put(aoa_p);
-            tmpVec = up_srf_v + right_srf_v;
-            double aoa_y = Math.Asin(Vector3.Dot(vessel.ReferenceTransform.right.normalized, tmpVec.normalized));
-            aoa_yaw.Put(aoa_y);
             g_force.Put(vessel.geeForce_immediate);
 		}
 
@@ -218,7 +198,6 @@ namespace AtmosphereAutopilot
 		protected override void _drawGUI(int id)
 		{
 			GUILayout.BeginVertical();
-			GUILayout.Label("AoA = " + aoa_pitch.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
             GUILayout.Label("Sideslip = " + aoa_yaw.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
             GUILayout.Label("G-force = " + g_force.getLast().ToString("G8"), GUIStyles.labelStyleLeft);
             AutoGUI.AutoDrawObject(this);

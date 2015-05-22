@@ -14,7 +14,7 @@ namespace AtmosphereAutopilot
 	{
 		protected int axis;
 
-		InstantControlModel model;
+		InstantControlModel imodel;
         MediumFlightModel mmodel;
 
 		// Telemetry writers
@@ -36,20 +36,20 @@ namespace AtmosphereAutopilot
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
 		{
-			this.model = modules[typeof(InstantControlModel)] as InstantControlModel;
+			this.imodel = modules[typeof(InstantControlModel)] as InstantControlModel;
 			this.mmodel = modules[typeof(MediumFlightModel)] as MediumFlightModel;
 		}
 
 		protected override void OnActivate()
 		{
-            model.Activate();
+            imodel.Activate();
             mmodel.Activate();
 		}
 
         protected override void OnDeactivate()
         {
 			write_telemetry = false;
-            model.Deactivate();
+            imodel.Deactivate();
             mmodel.Deactivate();
         }
 
@@ -60,7 +60,7 @@ namespace AtmosphereAutopilot
         /// <param name="target_value">Desired angular acceleration</param>
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
 		{
-            input = model.AngularAcc(axis);
+            input = imodel.AngularAcc(axis);
             desired_acc = target_value;
             error = target_value - input;
 
@@ -68,14 +68,14 @@ namespace AtmosphereAutopilot
             {
                 desire_dv_writer.Write(target_value.ToString("G8") + ',');
                 acc_writer.Write(input.ToString("G8") + ',');
-                v_writer.Write(model.AngularVel(axis).ToString("G8") + ',');
-                prediction_writer.Write(model.prediction[axis].ToString("G8") + ',');
-                prediction_2_writer.Write(model.prediction_2[axis].ToString("G8") + ',');
+                v_writer.Write(imodel.AngularVel(axis).ToString("G8") + ',');
+                prediction_writer.Write(imodel.prediction[axis].ToString("G8") + ',');
+                prediction_2_writer.Write(imodel.prediction_2[axis].ToString("G8") + ',');
             }
 
             float auth = k_auth;
             float current_raw = output;
-            float predicted_diff = desired_acc - model.prediction_2[axis];
+            float predicted_diff = desired_acc - imodel.prediction_2[axis];
             float required_control_diff = predicted_diff / auth / TimeWarp.fixedDeltaTime;
 
             output = Common.Clampf(current_raw + Common.Clampf(required_control_diff, max_input_deriv), 1.0f);
@@ -134,11 +134,11 @@ namespace AtmosphereAutopilot
 
 		#region Parameters
 
-        [AutoGuiAttr("DEBUG desired acceleration", false, "G8")]
+        [AutoGuiAttr("DEBUG desired acc", false, "G8")]
         internal float desired_acc { get; private set; }
 
         [AutoGuiAttr("DEBUG authority", false, "G8")]
-        internal float k_auth { get { return model.linear_authority[axis]; } }
+        internal float k_auth { get { return imodel.linear_authority[axis]; } }
 
         [AutoGuiAttr("Control speed limit", true, "G8")]
         [GlobalSerializable("Control speed limit")]

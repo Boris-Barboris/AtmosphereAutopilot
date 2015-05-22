@@ -168,7 +168,7 @@ namespace AtmosphereAutopilot
         {
             // limit it due to g-force limitations
             float cur_g = (float)mmodel.GForce;
-            if (des_v * mmodel.AoA > 0.0)
+            if (des_v * imodel.AoA(PITCH) > 0.0)
             {
                 // user is trying to increase AoA
                 max_g = fbw_g_k * 10.0f;
@@ -186,7 +186,7 @@ namespace AtmosphereAutopilot
                     {
                         const float dgr_to_rad = (float)Math.PI / 180.0f;
                         float max_aoa_rad = fbw_max_aoa * dgr_to_rad;
-                        aoa_relation = Math.Abs((float)mmodel.AoA) / max_aoa_rad;
+                        aoa_relation = Math.Abs(imodel.AoA(PITCH)) / max_aoa_rad;
                     }
                 float max_k = Math.Max(aoa_relation, g_relation);
                 fbw_modifier = Common.Clampf(1.0f - max_k, 1.0f);

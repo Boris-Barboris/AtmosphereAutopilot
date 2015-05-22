@@ -22,6 +22,7 @@ namespace AtmosphereAutopilot
                 input_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
                 angular_v[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
                 angular_acc[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
+                aoa[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
 			}
 		}
 
@@ -73,6 +74,17 @@ namespace AtmosphereAutopilot
 
         CircularBuffer<float>[] angular_acc = new CircularBuffer<float>[3];
 
+        /// <summary>
+        /// Angle of attack hitory for pitch, roll or yaw. Radians.
+        /// </summary>
+        public CircularBuffer<float> AoAHistory(int axis) { return aoa[axis]; }
+        /// <summary>
+        /// Angle of attack for pitch, roll or yaw. Radians.
+        /// </summary>
+        public float AoA(int axis) { return aoa[axis].getLast(); }
+
+        CircularBuffer<float>[] aoa = new CircularBuffer<float>[3];
+
 		float prev_dt = 1.0f;		// dt in previous call
 		int stable_dt = 0;			// amount of stable dt intervals
 
@@ -85,7 +97,7 @@ namespace AtmosphereAutopilot
 		{
 			float dt = TimeWarp.fixedDeltaTime;
 			check_dt(dt);
-			update_buffers();
+			update_velocity_acc();
 			update_model();
 			prev_dt = dt;
 		}
@@ -98,7 +110,7 @@ namespace AtmosphereAutopilot
 				stable_dt = 0;			// dt has changed
 		}
 
-		void update_buffers()
+		void update_velocity_acc()
 		{
 			for (int i = 0; i < 3; i++)
 			{
@@ -112,6 +124,30 @@ namespace AtmosphereAutopilot
 							prev_dt));
 			}
 		}
+
+        Vector3 up_srf_v;		// normalized velocity, projected to vessel up direction
+        Vector3 fwd_srf_v;		// normalized velocity, projected to vessel forward direction
+        Vector3 right_srf_v;	// normalized velocity, projected to vessel right direction
+
+        void update_aoa()
+        {
+            // thx ferram
+            up_srf_v = vessel.ReferenceTransform.up * Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity.normalized);
+            fwd_srf_v = vessel.ReferenceTransform.forward * Vector3.Dot(vessel.ReferenceTransform.forward, vessel.srf_velocity.normalized);
+            right_srf_v = vessel.ReferenceTransform.right * Vector3.Dot(vessel.ReferenceTransform.right, vessel.srf_velocity.normalized);
+            
+            Vector3 tmpVec = up_srf_v + fwd_srf_v;
+            float aoa_p = (float)Math.Asin(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized));
+            aoa[PITCH].Put(aoa_p);
+            
+            tmpVec = up_srf_v + right_srf_v;
+            float aoa_y = (float)Math.Asin(Vector3.Dot(vessel.ReferenceTransform.right.normalized, tmpVec.normalized));
+            aoa[YAW].Put(aoa_y);
+
+            tmpVec = right_srf_v + fwd_srf_v;
+            float aoa_r = (float)Math.Asin(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized));
+            aoa[ROLL].Put(aoa_r);
+        }
 
 		void update_control(FlightCtrlState state)
 		{
@@ -288,6 +324,7 @@ namespace AtmosphereAutopilot
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " ang acc = " + angular_acc[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " linear_authority = " + linear_authority[i].ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " AoA = " + linear_authority[i].ToString("G8"), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}
             AutoGUI.AutoDrawObject(this);
