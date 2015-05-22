@@ -225,6 +225,7 @@ namespace AtmosphereAutopilot
             {
                 float acc = angular_acc[i].getLast();               // current angular acceleration
                 float diff = acc - angular_acc[i].getFromTail(1);   // it's diffirential
+                float aoa_cur = aoa[i].getLast();                   // current AoA
 
                 //
                 // First prediction. Is estimating next physics step.
@@ -235,10 +236,11 @@ namespace AtmosphereAutopilot
                 float min_diff = float.MaxValue;
                 for (int j = 1; j < stable_dt && j < BUFFER_SIZE - 1; j++)
                 {
+                    float past_aoa = aoa[i].getFromTail(j);
                     float past_point = angular_acc[i].getFromTail(j);
-                    float likeness = Math.Abs(acc - past_point);
+                    float likeness = Math.Abs(aoa_cur - past_aoa);
                     float past_diff = past_point - angular_acc[i].getFromTail(j + 1);
-                    if (likeness < min_diff && past_diff * diff > 0.0f)
+                    if (likeness < min_diff)
                     {
                         min_diff = likeness;
                         closest_index = j;
@@ -263,15 +265,17 @@ namespace AtmosphereAutopilot
 
                 acc = prediction[i];
                 diff = acc - angular_acc[i].getLast();
+                aoa_cur = aoa_cur + angular_v[i].getLast() * TimeWarp.fixedDeltaTime;
 
                 closest_index = 0;
                 min_diff = float.MaxValue;
                 for (int j = 1; j < stable_dt && j < BUFFER_SIZE - 1; j++)
                 {
+                    float past_aoa = aoa[i].getFromTail(j);
                     float past_point = angular_acc[i].getFromTail(j);
-                    float likeness = Math.Abs(acc - past_point);
+                    float likeness = Math.Abs(aoa_cur - past_aoa);
                     float past_diff = past_point - angular_acc[i].getFromTail(j + 1);
-                    if (likeness < min_diff && past_diff * diff > 0.0f)
+                    if (likeness < min_diff)
                     {
                         min_diff = likeness;
                         closest_index = j;
