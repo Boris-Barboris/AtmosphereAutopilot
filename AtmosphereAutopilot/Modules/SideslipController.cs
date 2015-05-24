@@ -7,7 +7,7 @@ namespace AtmosphereAutopilot
 {
     public sealed class SideslipController : SIMOController
     {
-        InstantControlModel model;
+        InstantControlModel imodel;
         MediumFlightModel mmodel;
         YawAngularVelocityController v_controller;
 
@@ -18,21 +18,21 @@ namespace AtmosphereAutopilot
 
         public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
         {
-            model = modules[typeof(InstantControlModel)] as InstantControlModel;
+            imodel = modules[typeof(InstantControlModel)] as InstantControlModel;
             mmodel = modules[typeof(MediumFlightModel)] as MediumFlightModel;
             v_controller = modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
         }
 
         protected override void OnActivate()
         {
-            model.Activate();
+            imodel.Activate();
             mmodel.Activate();
             v_controller.Activate();
         }
 
         protected override void OnDeactivate()
         {
-            model.Deactivate();
+            imodel.Deactivate();
             mmodel.Deactivate();
             v_controller.Deactivate();
         }
@@ -47,7 +47,7 @@ namespace AtmosphereAutopilot
         {
             const float degree_to_rad = (float)Math.PI / 180.0f;
 
-            input = -(float)mmodel.Sideslip;
+            input = -imodel.AoA(YAW);
 
             // Adapt KP, so that on max_angular_v it produces max_angular_dv * kp_acc factor output
             if (mmodel.MaxAngularSpeed(YAW) != 0.0)
@@ -83,7 +83,7 @@ namespace AtmosphereAutopilot
                 }
 
                 if (time_in_regime >= 5.0)
-                    ControlUtils.set_trim(cntrl, YAW, model);
+                    ControlUtils.set_trim(cntrl, YAW, imodel);
             }
 
             return output;

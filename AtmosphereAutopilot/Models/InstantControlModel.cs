@@ -192,10 +192,15 @@ namespace AtmosphereAutopilot
         public float[] prediction = new float[3];
         public float[] prediction_2 = new float[3];
         public float[] linear_authority = new float[3];
+		public float[] noiseness = new float[3];
 
         [AutoGuiAttr("Authority blending", true)]
         [GlobalSerializable("Authority blending")]
         float authority_blending = 5.0f;
+
+		[AutoGuiAttr("Noiseness blending", true)]
+		[GlobalSerializable("Noiseness blending")]
+		float noise_blending = 50.0f;
 
         [AutoGuiAttr("Minimal control change", true)]
         [GlobalSerializable("Minimal control change")]
@@ -226,7 +231,12 @@ namespace AtmosphereAutopilot
             {
                 float acc = angular_acc[i].getLast();               // current angular acceleration
                 float diff = acc - angular_acc[i].getFromTail(1);   // it's diffirential
-                float aoa_cur = aoa[i].getLast();                   // current AoA
+
+				// update noiseness
+				if (stable_dt > 3)
+					noiseness[i] = (noiseness[i] * (noise_blending - 1.0f) + Math.Abs(diff)) / noise_blending;
+				else
+					noiseness[i] = Math.Abs(diff);
 
                 //
                 // First prediction. Is estimating next physics step.
@@ -240,7 +250,7 @@ namespace AtmosphereAutopilot
                     float past_point = angular_acc[i].getFromTail(j);
                     float likeness = Math.Abs(acc - past_point);
                     float past_diff = past_point - angular_acc[i].getFromTail(j + 1);
-                    if (likeness < min_diff)
+                    if (likeness < min_diff && Math.Abs(past_diff - diff) < noiseness[i] / 4.0f && past_diff * diff >= 0.0f)
                     {
                         min_diff = likeness;
                         closest_index = j;
@@ -265,7 +275,6 @@ namespace AtmosphereAutopilot
 
                 acc = prediction[i];
                 diff = acc - angular_acc[i].getLast();
-                aoa_cur = aoa_cur + angular_v[i].getLast() * TimeWarp.fixedDeltaTime;
 
                 closest_index = 0;
                 min_diff = float.MaxValue;
@@ -274,7 +283,7 @@ namespace AtmosphereAutopilot
                     float past_point = angular_acc[i].getFromTail(j);
                     float likeness = Math.Abs(acc - past_point);
                     float past_diff = past_point - angular_acc[i].getFromTail(j + 1);
-                    if (likeness < min_diff)
+					if (likeness < min_diff && Math.Abs(past_diff - diff) < noiseness[i] / 4.0f && past_diff * diff >= 0.0f)
                     {
                         min_diff = likeness;
                         closest_index = j;

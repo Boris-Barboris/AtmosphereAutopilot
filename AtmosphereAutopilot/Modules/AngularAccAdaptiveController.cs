@@ -18,7 +18,7 @@ namespace AtmosphereAutopilot
         MediumFlightModel mmodel;
 
 		// Telemetry writers
-        StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, prediction_2_writer, desire_dv_writer;
+		StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, prediction_2_writer, desire_dv_writer, aoa_writer;
 
 		/// <summary>
 		/// Create controller instance.
@@ -71,12 +71,17 @@ namespace AtmosphereAutopilot
                 v_writer.Write(imodel.AngularVel(axis).ToString("G8") + ',');
                 prediction_writer.Write(imodel.prediction[axis].ToString("G8") + ',');
                 prediction_2_writer.Write(imodel.prediction_2[axis].ToString("G8") + ',');
+				aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');
             }
 
-            float auth = k_auth;
             float current_raw = output;
-            float predicted_diff = desired_acc - imodel.prediction_2[axis];
-            float required_control_diff = predicted_diff / auth / TimeWarp.fixedDeltaTime;
+			float predicted_diff = desired_acc - imodel.prediction[axis];
+			float required_control_diff = predicted_diff / k_auth / TimeWarp.fixedDeltaTime;
+
+			// dampen control_diff near oscillation regions
+			float ETN = Math.Abs(error) / (noise_damp_k * imodel.noiseness[axis]);
+			if (ETN < 1.0f)
+				required_control_diff *= (float)Math.Pow(ETN, noise_damp_pow);
 
             output = Common.Clampf(current_raw + Common.Clampf(required_control_diff, max_input_deriv), 1.0f);
             ControlUtils.set_raw_output(cntrl, axis, output);
@@ -109,6 +114,8 @@ namespace AtmosphereAutopilot
                             vessel.name + '_' + module_name + " predict.csv");
                         prediction_2_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
                             vessel.name + '_' + module_name + " predict_2.csv");
+						aoa_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
+							vessel.name + '_' + module_name + " aoa.csv");
                         prediction_writer.Write("0.0,");
                         prediction_2_writer.Write("0.0,0.0,");
                         _write_telemetry = value;
@@ -124,6 +131,7 @@ namespace AtmosphereAutopilot
                         desire_dv_writer.Close();
                         prediction_writer.Close();
                         prediction_2_writer.Close();
+						aoa_writer.Close();
                         _write_telemetry = value;
                     }					
 				}
@@ -142,7 +150,15 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("Control speed limit", true, "G8")]
         [GlobalSerializable("Control speed limit")]
-        protected float max_input_deriv = 0.15f;
+        protected float max_input_deriv = 0.5f;
+
+		[AutoGuiAttr("Noise damp diap", true, "G8")]
+		[GlobalSerializable("Noise damp diap")]
+		protected float noise_damp_k = 2.0f;
+
+		[AutoGuiAttr("Noise damp power", true, "G8")]
+		[GlobalSerializable("Noise damp power")]
+		protected float noise_damp_pow = 3.0f;
 
 		#endregion
 	}
