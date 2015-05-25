@@ -37,7 +37,7 @@ namespace AtmosphereAutopilot
         protected double adclamp = 1.0;
 
         /// <summary>
-        /// Maximum magnitude for integral component of controller reaction
+		/// Maximum magnitude of accumulator for integral component
         /// </summary>
         public double AccumulatorClamp { get { return aclamp; } set { aclamp = value; } }
         protected double aclamp = 0.1;

@@ -39,7 +39,7 @@ namespace AtmosphereAutopilot
 			stable_dt = 0;
 		}
 
-		static readonly int BUFFER_SIZE = 20;
+		static readonly int BUFFER_SIZE = 50;
 
 		#region Exports
 
@@ -134,28 +134,49 @@ namespace AtmosphereAutopilot
 			}
 		}
 
-        Vector3 up_srf_v;		// normalized velocity, projected to vessel up direction
-        Vector3 fwd_srf_v;		// normalized velocity, projected to vessel forward direction
-        Vector3 right_srf_v;	// normalized velocity, projected to vessel right direction
+        Vector3 up_srf_v;		// velocity, projected to vessel up direction
+        Vector3 fwd_srf_v;		// velocity, projected to vessel forward direction
+        Vector3 right_srf_v;	// velocity, projected to vessel right direction
 
         void update_aoa()
         {
             // thx ferram
-            up_srf_v = vessel.ReferenceTransform.up * Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity.normalized);
-            fwd_srf_v = vessel.ReferenceTransform.forward * Vector3.Dot(vessel.ReferenceTransform.forward, vessel.srf_velocity.normalized);
-            right_srf_v = vessel.ReferenceTransform.right * Vector3.Dot(vessel.ReferenceTransform.right, vessel.srf_velocity.normalized);
-            
-            Vector3 tmpVec = up_srf_v + fwd_srf_v;
-            float aoa_p = (float)Math.Asin(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized));
-            aoa[PITCH].Put(aoa_p);
-            
-            tmpVec = up_srf_v + right_srf_v;
-            float aoa_y = (float)Math.Asin(Vector3.Dot(vessel.ReferenceTransform.right.normalized, tmpVec.normalized));
-            aoa[YAW].Put(aoa_y);
+            up_srf_v = vessel.ReferenceTransform.up * Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity);
+            fwd_srf_v = vessel.ReferenceTransform.forward * Vector3.Dot(vessel.ReferenceTransform.forward, vessel.srf_velocity);
+            right_srf_v = vessel.ReferenceTransform.right * Vector3.Dot(vessel.ReferenceTransform.right, vessel.srf_velocity);
 
-            tmpVec = right_srf_v + fwd_srf_v;
-            float aoa_r = (float)Math.Asin(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized));
-            aoa[ROLL].Put(aoa_r);
+			Vector3 tmpVec = up_srf_v + fwd_srf_v;
+			if (tmpVec.sqrMagnitude > 1.0f)
+			{
+				float aoa_p = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized), 1.0f));
+				if (Vector3.Dot(tmpVec, vessel.ReferenceTransform.up) < 0.0)
+					aoa_p = (float)Math.PI - aoa_p;
+				aoa[PITCH].Put(aoa_p);
+			}
+			else
+				aoa[PITCH].Put(0.0f);
+			
+			tmpVec = up_srf_v + right_srf_v;
+			if (tmpVec.sqrMagnitude > 1.0f)
+			{
+				float aoa_y = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.right.normalized, tmpVec.normalized), 1.0f));
+				if (Vector3.Dot(tmpVec, vessel.ReferenceTransform.up) < 0.0)
+					aoa_y = (float)Math.PI - aoa_y;
+				aoa[YAW].Put(aoa_y);
+			}
+			else
+				aoa[YAW].Put(0.0f);
+
+			tmpVec = right_srf_v + fwd_srf_v;
+			if (tmpVec.sqrMagnitude > 1.0f)
+			{
+				float aoa_r = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized), 1.0f));
+				if (Vector3.Dot(tmpVec, vessel.ReferenceTransform.right) < 0.0)
+					aoa_r = (float)Math.PI - aoa_r;
+				aoa[ROLL].Put(aoa_r);
+			}
+			else
+				aoa[ROLL].Put(0.0f);
         }
 
 		void update_control(FlightCtrlState state)
@@ -183,8 +204,9 @@ namespace AtmosphereAutopilot
         public float[] prediction_2 = new float[3];
 
 		// Model dynamically identified parameters
-		public float[] moment_aoa_k = new float[3];			// negative on stable crafts, positive or zero on unstable
+		public float[] moment_aoa_k = new float[3];			// negative on stable crafts, positive or zero on unstable.
 		public float[] moment_aoa_b = new float[3];
+		public float[] moment_v_d = new float[3];			// dissipative coefficient
 		public float[] moment_input_k = new float[3];		// positive or zero
 
 		// Regression parameters
@@ -214,8 +236,8 @@ namespace AtmosphereAutopilot
 			{
 				for (int axis = 0; axis < 3; axis++)
 				{
-					moment_input_k[axis] = 1.0f;
-					moment_aoa_k[axis] = 1.0f;
+					moment_input_k[axis] = 100.0f;
+					moment_aoa_k[axis] = 10.0f;
 					moment_aoa_b[axis] = 0.0f;
 					prediction[axis] = angular_acc[axis].getLast();
 					prediction_2[axis] = prediction[axis];
@@ -229,7 +251,7 @@ namespace AtmosphereAutopilot
 				gradient_descent();
 				for (int axis = 0; axis < 3; axis++)
 				{
-					prediction[axis] = compute_angular_acc(MOI[e_axis], moment_aoa_k[axis], moment_aoa_b[axis], aoa[axis].getLast(), 
+					prediction[axis] = compute_angular_acc(MOI[axis], moment_aoa_k[axis], moment_aoa_b[axis], aoa[axis].getLast(), 
 						moment_input_k[axis], input_buf[axis].getLast());
 					prediction_2[axis] = prediction[axis];
 				}
@@ -242,7 +264,7 @@ namespace AtmosphereAutopilot
 				}
 		}
 
-		GradientDescent descender = new GradientDescent(3);
+		GradientDescend descender = new GradientDescend(3);
 
 		[AutoGuiAttr("Descent cycles", true)]
 		[GlobalSerializable("Gradient descent cycle count")]
@@ -279,22 +301,26 @@ namespace AtmosphereAutopilot
 				moment_aoa_k[axis] = param_arrays[axis][0];
 				moment_aoa_b[axis] = param_arrays[axis][1];
 				moment_input_k[axis] = param_arrays[axis][2];
+
+				if (moment_aoa_k[axis] == float.NaN)
+					Debug.Log("probe_delta = " + probe_deltas[0].ToString() + "  descent_koeff = " + descent_koeff[0].ToString() +
+						"param_array_aoa_k = " + param_arrays[axis][0].ToString());
 			}
 		}
 
 		int e_axis;
 		float error_function(float[] parameters)
 		{
-			float error = 0.0f;
+			float sqr_error = 0.0f;
 			for (int i = 0; i < error_memory; i++)
 			{
 				float step_accel = angular_acc[e_axis].getFromTail(i);
 				float step_aoa = aoa[e_axis].getFromTail(i + 1);
 				float step_input = input_buf[e_axis].getFromTail(i + 1);
 				float model_accel = compute_angular_acc(MOI[e_axis], parameters[0], parameters[1], step_aoa, parameters[2], step_input);
-				error += (step_accel - model_accel) * (step_accel - model_accel);
+				sqr_error += (step_accel - model_accel) * (step_accel - model_accel);
 			}
-			return error;
+			return sqr_error;
 		}
 
 		/// <summary>

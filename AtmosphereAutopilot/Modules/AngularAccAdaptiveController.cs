@@ -76,7 +76,7 @@ namespace AtmosphereAutopilot
 
             float current_raw = output;
 			float predicted_diff = desired_acc - imodel.prediction[axis];
-			float required_control_diff = predicted_diff / (k_auth != 0.0f ? k_auth : 1.0f) / TimeWarp.fixedDeltaTime;
+			float required_control_diff = predicted_diff / (k_auth != 0.0f ? k_auth : 1.0f) / imodel.MOI[axis];
 
             output = Common.Clampf(current_raw + Common.Clampf(required_control_diff, max_input_deriv), 1.0f);
             //ControlUtils.set_raw_output(cntrl, axis, output);
@@ -147,14 +147,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Control speed limit", true, "G8")]
         [GlobalSerializable("Control speed limit")]
         protected float max_input_deriv = 0.5f;
-
-		[AutoGuiAttr("Noise damp diap", true, "G8")]
-		[GlobalSerializable("Noise damp diap")]
-		protected float noise_damp_k = 2.0f;
-
-		[AutoGuiAttr("Noise damp power", true, "G8")]
-		[GlobalSerializable("Noise damp power")]
-		protected float noise_damp_pow = 3.0f;
 
 		#endregion
 	}
