@@ -39,7 +39,9 @@ namespace AtmosphereAutopilot
 			stable_dt = 0;
 		}
 
-		static readonly int BUFFER_SIZE = 15;
+		static readonly int BUFFER_SIZE = 20;
+
+		#region Exports
 
 		/// <summary>
 		/// Control signal history for pitch, roll or yaw. [-1.0, 1.0].
@@ -85,6 +87,8 @@ namespace AtmosphereAutopilot
 
         CircularBuffer<float>[] aoa = new CircularBuffer<float>[3];
 
+		#endregion
+
 		float prev_dt = 1.0f;		// dt in previous call
 		int stable_dt = 0;			// amount of stable dt intervals
 
@@ -99,9 +103,13 @@ namespace AtmosphereAutopilot
 			check_dt(dt);
 			update_velocity_acc();
             update_aoa();
+			if (vessel.LandedOrSplashed)
+				stable_dt = 0;
 			update_model();
 			prev_dt = dt;
 		}
+
+		#region Angular_Update
 
 		void check_dt(float new_dt)	// check if dt is consistent with previous one
 		{
@@ -166,148 +174,155 @@ namespace AtmosphereAutopilot
 				return state.yaw;
 			return 0.0f;
 		}
-		
-		// Main challenge is to make control flight-model-agnostic. It means that 
-		// we can't operate with basic newton's laws, because we intentionally say that forces are unknown.
-		// It's very inprecise, but robust way of building a control system, and it will make the code more versatile.
-		//
-		// Let's formulate implicit angular acceleration evolution model:
-		// a(t+dt) = G(X, c(t)), where
-		// a - angular acceleration
-        // t - current time
-        // dt - physics time step
-        // G - physics function, part of the game engine, wich does the math of applying forces. It takes following arguments:
-        //   X - unknown vector of internal physics variables (angular positions, craft aerodynamics profile, altitude, speed...),
-        //   c(t) - axis control value, being set by user at the moment t. It will be used as constant value by G
-        //     during the "t -> t + dt" evolution.
-        //
-        // We don't want to know anything about G and X, so we only have a and c.
-        // Next step - assumptions.
-        // 1). da/dc > 0 If we pitch up a little more, we will actually pitch up harder then we would do without the increase in control.
-        // 2). If we're in stable flight (angular positions are constant over some period of time), X changes slowly, in the matter of hundreds of
-        //    physics steps. Basicly it means that in stabilized leveled flight fluctuations in c are more important than misc unknown factors evolution.
-        //
-        // 
 
-        public float[] prediction = new float[3];
+		#endregion
+
+		#region Model_Identification
+
+		public float[] prediction = new float[3];
         public float[] prediction_2 = new float[3];
-        public float[] linear_authority = new float[3];
-		public float[] noiseness = new float[3];
 
-        [AutoGuiAttr("Authority blending", true)]
-        [GlobalSerializable("Authority blending")]
-        float authority_blending = 5.0f;
+		// Model dynamically identified parameters
+		public float[] moment_aoa_k = new float[3];			// negative on stable crafts, positive or zero on unstable
+		public float[] moment_aoa_b = new float[3];
+		public float[] moment_input_k = new float[3];		// positive or zero
 
-		[AutoGuiAttr("Noiseness blending", true)]
-		[GlobalSerializable("Noiseness blending")]
-		float noise_blending = 50.0f;
+		// Regression parameters
+		public float[] prediction_error = new float[3];		// Current step prediction error.
 
-        [AutoGuiAttr("Minimal control change", true)]
-        [GlobalSerializable("Minimal control change")]
-        float min_dcontroll = 0.04f;
+		[AutoGuiAttr("Error function memory", true)]
+		[GlobalSerializable("Error function memory")]
+		public int error_memory = 5;
+
+		// Model known parameters
+		[AutoGuiAttr("MOI", false)]
+		public Vector3 MOI { get { return vessel.MOI; } }
 
 		void update_model()
 		{
-			if (stable_dt < 3)		// minimal number of physics frames for adequate estimation
+			if (stable_dt < 4)
 				return;
 
-            // update authority
-            for (int i = 0; i < 3; i++)
-            {
-                float diff = angular_acc[i].getLast() - prediction[i];
-                float cntrl_diff = input_buf[i].getFromTail(1) - input_buf[i].getFromTail(2);
-                if (Math.Abs(cntrl_diff) < min_dcontroll)
-                    continue;
-                float authority = diff / cntrl_diff / TimeWarp.fixedDeltaTime;
-                if (authority > 0.0f)
-                    if (linear_authority[i] != 0.0f)
-                        linear_authority[i] = (linear_authority[i] * (authority_blending - 1.0f) + authority) / authority_blending;
-                    else
-                        linear_authority[i] = authority;
-            }
+			// Prediction error
+			for (int axis = 0; axis < 3; axis++)
+			{
+				prediction_error[axis] = prediction[axis] - angular_acc[axis].getLast();
+			}
 
-            // update predictions
-            for (int i = 0; i < 3; i++)
-            {
-                float acc = angular_acc[i].getLast();               // current angular acceleration
-                float diff = acc - angular_acc[i].getFromTail(1);   // it's diffirential
+			// we need to initialize koeffitients on the start of flight
+			if (stable_dt == 4)
+			{
+				for (int axis = 0; axis < 3; axis++)
+				{
+					moment_input_k[axis] = 1.0f;
+					moment_aoa_k[axis] = 1.0f;
+					moment_aoa_b[axis] = 0.0f;
+					prediction[axis] = angular_acc[axis].getLast();
+					prediction_2[axis] = prediction[axis];
+				}
+				return;
+			}
 
-				// update noiseness
-				if (stable_dt > 3)
-					noiseness[i] = (noiseness[i] * (noise_blending - 1.0f) + Math.Abs(diff)) / noise_blending;
-				else
-					noiseness[i] = Math.Abs(diff);
-
-                //
-                // First prediction. Is estimating next physics step.
-                //
-
-                // find a situation in the past closest to current one
-                int closest_index = 1;
-                float min_diff = float.MaxValue;
-                for (int j = 1; j < stable_dt && j < BUFFER_SIZE - 1; j++)
-                {
-                    float past_point = angular_acc[i].getFromTail(j);
-                    float likeness = Math.Abs(acc - past_point);
-                    float past_diff = past_point - angular_acc[i].getFromTail(j + 1);
-                    if (likeness < min_diff && Math.Abs(past_diff - diff) < noiseness[i] / 4.0f && past_diff * diff >= 0.0f)
-                    {
-                        min_diff = likeness;
-                        closest_index = j;
-                    }
-                }
-
-                if (closest_index == 1)
-                {
-                    // nothing in experience, or it's the last node. Let's just extrapolate
-                    prediction[i] = acc + 0.5f * diff;
-                }
-                else
-                {
-                    float experience_diff = angular_acc[i].getFromTail(closest_index - 1) - angular_acc[i].getFromTail(closest_index);
-                    float predicted_diff = (input_buf[i].getLast() - input_buf[i].getFromTail(closest_index)) * linear_authority[i] * TimeWarp.fixedDeltaTime;
-                    prediction[i] = acc + experience_diff + predicted_diff;
-                }
-
-                //
-                // Second prediction. Is estimating angular acceleration 2 steps ahead
-                //
-
-                acc = prediction[i];
-                diff = acc - angular_acc[i].getLast();
-
-                closest_index = 0;
-                min_diff = float.MaxValue;
-                for (int j = 1; j < stable_dt && j < BUFFER_SIZE - 1; j++)
-                {
-                    float past_point = angular_acc[i].getFromTail(j);
-                    float likeness = Math.Abs(acc - past_point);
-                    float past_diff = past_point - angular_acc[i].getFromTail(j + 1);
-					if (likeness < min_diff && Math.Abs(past_diff - diff) < noiseness[i] / 4.0f && past_diff * diff >= 0.0f)
-                    {
-                        min_diff = likeness;
-                        closest_index = j;
-                    }
-                }
-
-                if (closest_index == 0)
-                {
-                    // nothing in experience, or it's the last node. Let's just extrapolate
-                    prediction_2[i] = acc + 0.5f * diff;
-                }
-                else
-                {
-                    float experience_diff = angular_acc[i].getFromTail(closest_index - 1) - angular_acc[i].getFromTail(closest_index);
-                    float predicted_diff = (input_buf[i].getLast() - input_buf[i].getFromTail(closest_index)) * linear_authority[i] * TimeWarp.fixedDeltaTime;
-                    prediction_2[i] = acc + experience_diff + predicted_diff;
-                }
-            }
+			// Main model update algorithm
+			if (stable_dt > error_memory + 2)
+			{
+				gradient_descent();
+				for (int axis = 0; axis < 3; axis++)
+				{
+					prediction[axis] = compute_angular_acc(MOI[e_axis], moment_aoa_k[axis], moment_aoa_b[axis], aoa[axis].getLast(), 
+						moment_input_k[axis], input_buf[axis].getLast());
+					prediction_2[axis] = prediction[axis];
+				}
+			}
+			else
+				for (int axis = 0; axis < 3; axis++)
+				{
+					prediction[axis] = angular_acc[axis].getLast();
+					prediction_2[axis] = prediction[axis];
+				}
 		}
 
+		GradientDescent descender = new GradientDescent(3);
 
-        #region Serialization
+		[AutoGuiAttr("Descent cycles", true)]
+		[GlobalSerializable("Gradient descent cycle count")]
+		public int descent_iter_count = 3;
 
-        public override bool Deserialize()
+		[AutoGuiAttr("Probe delta", true)]
+		[GlobalSerializable("Probe delta")]
+		public float probe_delta = 1e-6f;
+
+		[AutoGuiAttr("Descend speed", true)]
+		[GlobalSerializable("Descend speed")]
+		public float descent_speed = 1.0f;
+
+		public float[] probe_deltas = new float[3];
+		public float[] descent_koeff = new float[3];
+		public float[][] param_arrays = { new float[3], new float[3], new float[3] };
+
+		void gradient_descent()
+		{
+			for (int i = 0; i < 3; i++)
+			{
+				probe_deltas[i] = probe_delta;
+				descent_koeff[i] = descent_speed;
+			}
+
+			for (int axis = 0; axis < 3; axis++)
+			{
+				e_axis = axis;
+				param_arrays[axis][0] = moment_aoa_k[axis];
+				param_arrays[axis][1] = moment_aoa_b[axis];
+				param_arrays[axis][2] = moment_input_k[axis];
+				for (int i = 0; i < descent_iter_count; i++)
+					descender.apply(param_arrays[axis], error_function, probe_deltas, descent_koeff);
+				moment_aoa_k[axis] = param_arrays[axis][0];
+				moment_aoa_b[axis] = param_arrays[axis][1];
+				moment_input_k[axis] = param_arrays[axis][2];
+			}
+		}
+
+		int e_axis;
+		float error_function(float[] parameters)
+		{
+			float error = 0.0f;
+			for (int i = 0; i < error_memory; i++)
+			{
+				float step_accel = angular_acc[e_axis].getFromTail(i);
+				float step_aoa = aoa[e_axis].getFromTail(i + 1);
+				float step_input = input_buf[e_axis].getFromTail(i + 1);
+				float model_accel = compute_angular_acc(MOI[e_axis], parameters[0], parameters[1], step_aoa, parameters[2], step_input);
+				error += (step_accel - model_accel) * (step_accel - model_accel);
+			}
+			return error;
+		}
+
+		/// <summary>
+		/// Model evolution function. Computes angular acceleration by Newton's law in angular form.
+		/// </summary>
+		/// <param name="moi">Moment of inertia</param>
+		/// <param name="k_aoa">Linear air force koefficient</param>
+		/// <param name="b_aoa">Air force bias</param>
+		/// <param name="aoa">Angle of attack</param>
+		/// <param name="k_input">Linear control input koefficient</param>
+		/// <param name="b_input">Control input bias</param>
+		/// <param name="input">Control input</param>
+		/// <returns></returns>
+		public static float compute_angular_acc(float moi, float k_aoa, float b_aoa, float aoa, float k_input, float input)
+		{
+			float air_moment = k_aoa * aoa + b_aoa;
+			float input_moment = k_input * input;
+			if (Math.Abs(moi) < 1e-3f)
+				moi = 1e-3f;
+			float angular_acc = (air_moment + input_moment) / moi;
+			return angular_acc;
+		}
+
+		#endregion
+
+		#region Serialization
+
+		public override bool Deserialize()
         {
             return AutoSerialization.Deserialize(this, "InstantControlModel",
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.cfg",
@@ -323,7 +338,6 @@ namespace AtmosphereAutopilot
 
         #endregion
 
-
         #region GUI
 
 		static readonly string[] axis_names = { "pitch", "roll", "yaw" };
@@ -336,8 +350,11 @@ namespace AtmosphereAutopilot
 			{
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " ang acc = " + angular_acc[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " linear_authority = " + linear_authority[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " AoA = " + (aoa[i].getLast() * rad_to_degree).ToString("G8"), GUIStyles.labelStyleLeft);
+				GUILayout.Label(axis_names[i] + " input_authority_k = " + moment_input_k[i].ToString("G8"), GUIStyles.labelStyleLeft);
+				GUILayout.Label(axis_names[i] + " aoa_authority_k = " + moment_aoa_k[i].ToString("G8"), GUIStyles.labelStyleLeft);
+				GUILayout.Label(axis_names[i] + " aoa_authority_b = " + moment_aoa_b[i].ToString("G8"), GUIStyles.labelStyleLeft);
+				GUILayout.Label(axis_names[i] + " prediction_error = " + prediction_error[i].ToString("G8"), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}
             AutoGUI.AutoDrawObject(this);

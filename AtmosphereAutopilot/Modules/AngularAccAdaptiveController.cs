@@ -76,18 +76,13 @@ namespace AtmosphereAutopilot
 
             float current_raw = output;
 			float predicted_diff = desired_acc - imodel.prediction[axis];
-			float required_control_diff = predicted_diff / k_auth / TimeWarp.fixedDeltaTime;
-
-			// dampen control_diff near oscillation regions
-			float ETN = Math.Abs(error) / (noise_damp_k * imodel.noiseness[axis]);
-			if (ETN < 1.0f)
-				required_control_diff *= (float)Math.Pow(ETN, noise_damp_pow);
+			float required_control_diff = predicted_diff / (k_auth != 0.0f ? k_auth : 1.0f) / TimeWarp.fixedDeltaTime;
 
             output = Common.Clampf(current_raw + Common.Clampf(required_control_diff, max_input_deriv), 1.0f);
-            ControlUtils.set_raw_output(cntrl, axis, output);
+            //ControlUtils.set_raw_output(cntrl, axis, output);
 
             if (write_telemetry)
-                controlWriter.Write(output.ToString("G8") + ',');
+                controlWriter.Write(InstantControlModel.getControlFromState(cntrl, axis).ToString("G8") + ',');
 
             return output;
 		}
@@ -118,6 +113,7 @@ namespace AtmosphereAutopilot
 							vessel.name + '_' + module_name + " aoa.csv");
                         prediction_writer.Write("0.0,");
                         prediction_2_writer.Write("0.0,0.0,");
+						controlWriter.Write("0.0,0.0,");
                         _write_telemetry = value;
                     }
 				}
@@ -146,7 +142,7 @@ namespace AtmosphereAutopilot
         internal float desired_acc { get; private set; }
 
         [AutoGuiAttr("DEBUG authority", false, "G8")]
-        internal float k_auth { get { return imodel.linear_authority[axis]; } }
+        internal float k_auth { get { return imodel.moment_input_k[axis]; } }
 
         [AutoGuiAttr("Control speed limit", true, "G8")]
         [GlobalSerializable("Control speed limit")]

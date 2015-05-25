@@ -147,6 +147,7 @@ namespace AtmosphereAutopilot
 
 		#endregion
 
+		#region UI
 
 		bool styles_init = false;
 
@@ -183,7 +184,9 @@ namespace AtmosphereAutopilot
                 pair.Value.UnHideGUI();
         }
 
-        public void Update()
+		#endregion
+
+		public void Update()
         {
             if (InputLockManager.IsLocked(ControlTypes.ALL_SHIP_CONTROLS))
                 return;
