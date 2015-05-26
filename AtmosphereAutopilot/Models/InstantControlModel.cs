@@ -182,18 +182,7 @@ namespace AtmosphereAutopilot
 		void update_control(FlightCtrlState state)
 		{
 			for (int i = 0; i < 3; i++)
-				input_buf[i].Put(Common.Clampf(getControlFromState(state, i), 1.0f));
-		}
-
-		public static float getControlFromState(FlightCtrlState state, int axis)
-		{
-			if (axis == PITCH)
-				return state.pitch;
-			if (axis == ROLL)
-				return state.roll;
-			if (axis == YAW)
-				return state.yaw;
-			return 0.0f;
+				input_buf[i].Put(Common.Clampf(ControlUtils.getControlFromState(state, i), 1.0f));
 		}
 
 		#endregion
@@ -245,6 +234,7 @@ namespace AtmosphereAutopilot
 				return;
 			}
 
+			/*
 			// Main model update algorithm
 			if (stable_dt > error_memory + 2)
 			{
@@ -262,6 +252,7 @@ namespace AtmosphereAutopilot
 					prediction[axis] = angular_acc[axis].getLast();
 					prediction_2[axis] = prediction[axis];
 				}
+			 */
 		}
 
 		GradientDescend descender = new GradientDescend(3);

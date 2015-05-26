@@ -130,5 +130,16 @@ namespace AtmosphereAutopilot
                     break;
             }
         }
+
+		public static float getControlFromState(FlightCtrlState state, int axis)
+		{
+			if (axis == PITCH)
+				return state.pitch;
+			if (axis == ROLL)
+				return state.roll;
+			if (axis == YAW)
+				return state.yaw;
+			return 0.0f;
+		}
     }
 }

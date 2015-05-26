@@ -54,6 +54,5 @@ namespace AtmosphereAutopilot
 		
 		public float simple_gradient_error = 0.0f;
 		public float advanced_gradient_error = 0.0f;
-		public float 
 	}
 }

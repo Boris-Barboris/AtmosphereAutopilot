@@ -74,15 +74,21 @@ namespace AtmosphereAutopilot
 				aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');
             }
 
-            float current_raw = output;
-			float predicted_diff = desired_acc - imodel.prediction[axis];
-			float required_control_diff = predicted_diff / (k_auth != 0.0f ? k_auth : 1.0f) / imodel.MOI[axis];
+			//float current_raw = output;
+			//float predicted_diff = desired_acc - imodel.prediction[axis];
+			//float required_control_diff = predicted_diff / (k_auth != 0.0f ? k_auth : 1.0f) / imodel.MOI[axis];
 
-            output = Common.Clampf(current_raw + Common.Clampf(required_control_diff, max_input_deriv), 1.0f);
+			//output = Common.Clampf(current_raw + Common.Clampf(required_control_diff, max_input_deriv), 1.0f);
             //ControlUtils.set_raw_output(cntrl, axis, output);
 
+			float prev_input = imodel.ControlInput(axis);
+			float cur_input_raw = ControlUtils.getControlFromState(cntrl, axis);
+			output = prev_input + Common.Clampf(cur_input_raw - prev_input, max_input_deriv * TimeWarp.fixedDeltaTime);
+
+			ControlUtils.set_raw_output(cntrl, axis, output);
+
             if (write_telemetry)
-                controlWriter.Write(InstantControlModel.getControlFromState(cntrl, axis).ToString("G8") + ',');
+				controlWriter.Write(ControlUtils.getControlFromState(cntrl, axis).ToString("G8") + ',');
 
             return output;
 		}
@@ -97,21 +103,16 @@ namespace AtmosphereAutopilot
 				{
                     if (!_write_telemetry)
                     {
-                        controlWriter = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
-                            vessel.name + '_' + module_name + " control.csv");
-                        v_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
-                            vessel.name + '_' + module_name + " v.csv");
-                        acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
-                            vessel.name + '_' + module_name + " acc.csv");
-                        desire_dv_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
-                            vessel.name + '_' + module_name + " desire.csv");
-                        prediction_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
-                            vessel.name + '_' + module_name + " predict.csv");
-                        prediction_2_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
-                            vessel.name + '_' + module_name + " predict_2.csv");
-						aoa_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/" +
-							vessel.name + '_' + module_name + " aoa.csv");
+                        controlWriter = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/control.csv");
+                        v_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/v.csv");
+                        acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/acc.csv");
+                        desire_dv_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/desire.csv");
+                        prediction_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/predict.csv");
+                        prediction_2_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/predict_2.csv");
+						aoa_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/aoa.csv");
                         prediction_writer.Write("0.0,");
+						v_writer.Write("0.0,");
+						aoa_writer.Write("0.0,");
                         prediction_2_writer.Write("0.0,0.0,");
 						controlWriter.Write("0.0,0.0,");
                         _write_telemetry = value;
@@ -146,7 +147,7 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("Control speed limit", true, "G8")]
         [GlobalSerializable("Control speed limit")]
-        protected float max_input_deriv = 0.5f;
+        protected float max_input_deriv = 6.0f;
 
 		#endregion
 	}
