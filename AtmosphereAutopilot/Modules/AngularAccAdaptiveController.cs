@@ -18,7 +18,7 @@ namespace AtmosphereAutopilot
         MediumFlightModel mmodel;
 
 		// Telemetry writers
-		StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, prediction_2_writer, desire_dv_writer, aoa_writer;
+		StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, desire_dv_writer, aoa_writer;
 
 		/// <summary>
 		/// Create controller instance.
@@ -70,7 +70,6 @@ namespace AtmosphereAutopilot
                 acc_writer.Write(input.ToString("G8") + ',');
                 v_writer.Write(imodel.AngularVel(axis).ToString("G8") + ',');
                 prediction_writer.Write(imodel.prediction[axis].ToString("G8") + ',');
-                prediction_2_writer.Write(imodel.prediction_2[axis].ToString("G8") + ',');
 				aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');
             }
 
@@ -108,13 +107,7 @@ namespace AtmosphereAutopilot
                         acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/acc.csv");
                         desire_dv_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/desire.csv");
                         prediction_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/predict.csv");
-                        prediction_2_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/predict_2.csv");
 						aoa_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/aoa.csv");
-                        prediction_writer.Write("0.0,");
-						v_writer.Write("0.0,");
-						aoa_writer.Write("0.0,");
-                        prediction_2_writer.Write("0.0,0.0,");
-						controlWriter.Write("0.0,0.0,");
                         _write_telemetry = value;
                     }
 				}
@@ -127,7 +120,6 @@ namespace AtmosphereAutopilot
                         acc_writer.Close();
                         desire_dv_writer.Close();
                         prediction_writer.Close();
-                        prediction_2_writer.Close();
 						aoa_writer.Close();
                         _write_telemetry = value;
                     }					
@@ -141,9 +133,6 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("DEBUG desired acc", false, "G8")]
         internal float desired_acc { get; private set; }
-
-        [AutoGuiAttr("DEBUG authority", false, "G8")]
-        internal float k_auth { get { return imodel.moment_input_k[axis]; } }
 
         [AutoGuiAttr("Control speed limit", true, "G8")]
         [GlobalSerializable("Control speed limit")]

@@ -8,51 +8,71 @@ namespace AtmosphereAutopilot
 		public GradientDescend(int param_count)
 		{
 			this.param_count = param_count;
-			partial_deriv = new float[param_count];
-			changed_param1 = new float[param_count];
+			changed_param1 = new double[param_count];
+			changed_param2 = new double[param_count];
+			gradient = new double[param_count];
 		}
 
 		int param_count;
-		float[] partial_deriv;
-		float[] changed_param1;
+		double[] changed_param1, changed_param2;
+		double[] gradient;
 
-		public float[] apply(float[] parameters, Func<float[], float> function, float[] probe_delta, float[] descent_k)
-		{			
-			parameters.CopyTo(changed_param1, 0);
-			float fun_val = function(parameters);
-			for (int i = 0; i < param_count; i++)
-			{
-				float old_param = parameters[i];
-				if (Math.Abs(probe_delta[i]) < 1e-6f)
-					probe_delta[i] = 1e-6f;
-				changed_param1[i] = parameters[i] + probe_delta[i];
-				float delta_value = function(changed_param1) - fun_val;
-				partial_deriv[i] = delta_value / probe_delta[i];
-				changed_param1[i] = old_param;
-			}
-			for (int i = 0; i < param_count; i++)
-				parameters[i] = parameters[i] - descent_k[i] * partial_deriv[i];
+		public int max_func_calls = 100;
+		public double descend_k = 0.0;
+		public double descend_miss_k = 0.1;
+		
+		const double PROBE_DX = 0.1;
 
-			return parameters;
-		}
-	}
-
-
-	class AdvancedGradientDescend
-	{
-		public AdvancedGradientDescend(int param_count, Func<float[], float> e_func)
+		public void apply(double[] parameters, Func<double[], double> function, ref int call_counter)
 		{
-			this.param_count = param_count;
-			error_func = e_func;
-			param_vector = new float[3];
-		}
+			bool skip_gradient = false;
+			double f_val = 0.0;
+			double sqrnorm = 0.0;
 
-		int param_count;
-		Func<float[], float> error_func;
-		
-		public float[] param_vector;
-		
-		public float simple_gradient_error = 0.0f;
-		public float advanced_gradient_error = 0.0f;
+			parameters.CopyTo(changed_param1, 0);
+			while (call_counter < max_func_calls)
+			{
+				if (!skip_gradient)
+				{
+					f_val = function(changed_param1);
+					// get gradient
+					for (int i = 0; i < param_count; i++)
+					{
+						double orig_ch = changed_param1[i];
+						changed_param1[i] += PROBE_DX;
+						gradient[i] = (function(changed_param1) - f_val) / PROBE_DX;
+						changed_param1[i] = orig_ch;
+					}
+
+					// get gradient size
+					sqrnorm = 0.0;
+					for (int i = 0; i < param_count; i++)
+						sqrnorm += gradient[i] * gradient[i];
+				}
+				skip_gradient = false;
+				
+				// evaluate descend speed
+				double descend_speed = f_val * (1 - descend_k) / sqrnorm;
+				
+				// apply descend
+				for (int i = 0; i < param_count; i++)
+					changed_param2[i] = changed_param1[i] - gradient[i] * descend_speed;
+				double f_val_new = function(changed_param2);
+
+				if (f_val_new >= f_val)
+				{
+					// we've fucked up
+					descend_k = 1 - descend_miss_k * (1 - descend_k);
+					skip_gradient = true;
+				}
+				else
+				{
+					changed_param2.CopyTo(changed_param1, 0);
+				}
+			}
+
+			// output new optimization
+			changed_param1.CopyTo(parameters, 0);
+		}
 	}
 }

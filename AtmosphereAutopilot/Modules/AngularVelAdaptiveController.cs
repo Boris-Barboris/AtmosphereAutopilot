@@ -21,7 +21,7 @@ namespace AtmosphereAutopilot
 
 		PController pid = new PController();
 
-		#region CpntrollerProperties
+		#region ControllerProperties
 
 		[AutoGuiAttr("KP", false, "G8")]
 		internal double KP { get { return pid.KP; } }

@@ -128,8 +128,6 @@ namespace AtmosphereAutopilot
         protected virtual void OnSerialize(ConfigNode node, Type attribute_type) { }
 
         #endregion
-
-
      
         #region GUI
 

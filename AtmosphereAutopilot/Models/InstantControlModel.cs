@@ -24,6 +24,7 @@ namespace AtmosphereAutopilot
                 angular_acc[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
                 aoa[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
 			}
+			init_model_params();
 		}
 
 		protected override void OnActivate()
@@ -39,7 +40,7 @@ namespace AtmosphereAutopilot
 			stable_dt = 0;
 		}
 
-		static readonly int BUFFER_SIZE = 50;
+		static readonly int BUFFER_SIZE = 30;
 
 		#region Exports
 
@@ -87,6 +88,12 @@ namespace AtmosphereAutopilot
 
         CircularBuffer<float>[] aoa = new CircularBuffer<float>[3];
 
+		/// <summary>
+		/// Moment of inertia.
+		/// </summary>
+		[AutoGuiAttr("MOI", false)]
+		public Vector3 MOI { get { return vessel.MOI; } }
+
 		#endregion
 
 		float prev_dt = 1.0f;		// dt in previous call
@@ -97,7 +104,7 @@ namespace AtmosphereAutopilot
 			update_control(state);
 		}
 
-		void OnPreAutopilot(FlightCtrlState state)		// update all flight characteristics
+		void OnPreAutopilot(FlightCtrlState state)		// workhorse function
 		{
 			float dt = TimeWarp.fixedDeltaTime;
 			check_dt(dt);
@@ -189,133 +196,48 @@ namespace AtmosphereAutopilot
 
 		#region Model_Identification
 
-		public float[] prediction = new float[3];
-        public float[] prediction_2 = new float[3];
-
 		// Model dynamically identified parameters
-		public float[] moment_aoa_k = new float[3];			// negative on stable crafts, positive or zero on unstable.
-		public float[] moment_aoa_b = new float[3];
-		public float[] moment_v_d = new float[3];			// dissipative coefficient
-		public float[] moment_input_k = new float[3];		// positive or zero
+		double[][] model_parameters = { new double[4], new double[4], new double[4] };
 
-		// Regression parameters
-		public float[] prediction_error = new float[3];		// Current step prediction error.
-
-		[AutoGuiAttr("Error function memory", true)]
-		[GlobalSerializable("Error function memory")]
-		public int error_memory = 5;
-
-		// Model known parameters
-		[AutoGuiAttr("MOI", false)]
-		public Vector3 MOI { get { return vessel.MOI; } }
-
-		void update_model()
+		void init_model_params()
 		{
-			if (stable_dt < 4)
-				return;
-
-			// Prediction error
 			for (int axis = 0; axis < 3; axis++)
 			{
-				prediction_error[axis] = prediction[axis] - angular_acc[axis].getLast();
+				model_parameters[axis][0] = 0.0;
+				model_parameters[axis][1] = 0.0;
+				model_parameters[axis][2] = 100.0;
+				model_parameters[axis][3] = -10.0;
 			}
-
-			// we need to initialize koeffitients on the start of flight
-			if (stable_dt == 4)
-			{
-				for (int axis = 0; axis < 3; axis++)
-				{
-					moment_input_k[axis] = 100.0f;
-					moment_aoa_k[axis] = 10.0f;
-					moment_aoa_b[axis] = 0.0f;
-					prediction[axis] = angular_acc[axis].getLast();
-					prediction_2[axis] = prediction[axis];
-				}
-				return;
-			}
-
-			/*
-			// Main model update algorithm
-			if (stable_dt > error_memory + 2)
-			{
-				gradient_descent();
-				for (int axis = 0; axis < 3; axis++)
-				{
-					prediction[axis] = compute_angular_acc(MOI[axis], moment_aoa_k[axis], moment_aoa_b[axis], aoa[axis].getLast(), 
-						moment_input_k[axis], input_buf[axis].getLast());
-					prediction_2[axis] = prediction[axis];
-				}
-			}
-			else
-				for (int axis = 0; axis < 3; axis++)
-				{
-					prediction[axis] = angular_acc[axis].getLast();
-					prediction_2[axis] = prediction[axis];
-				}
-			 */
-		}
-
-		GradientDescend descender = new GradientDescend(3);
-
-		[AutoGuiAttr("Descent cycles", true)]
-		[GlobalSerializable("Gradient descent cycle count")]
-		public int descent_iter_count = 3;
-
-		[AutoGuiAttr("Probe delta", true)]
-		[GlobalSerializable("Probe delta")]
-		public float probe_delta = 1e-6f;
-
-		[AutoGuiAttr("Descend speed", true)]
-		[GlobalSerializable("Descend speed")]
-		public float descent_speed = 1.0f;
-
-		public float[] probe_deltas = new float[3];
-		public float[] descent_koeff = new float[3];
-		public float[][] param_arrays = { new float[3], new float[3], new float[3] };
-
-		void gradient_descent()
-		{
-			for (int i = 0; i < 3; i++)
-			{
-				probe_deltas[i] = probe_delta;
-				descent_koeff[i] = descent_speed;
-			}
-
-			for (int axis = 0; axis < 3; axis++)
-			{
-				e_axis = axis;
-				param_arrays[axis][0] = moment_aoa_k[axis];
-				param_arrays[axis][1] = moment_aoa_b[axis];
-				param_arrays[axis][2] = moment_input_k[axis];
-				for (int i = 0; i < descent_iter_count; i++)
-					descender.apply(param_arrays[axis], error_function, probe_deltas, descent_koeff);
-				moment_aoa_k[axis] = param_arrays[axis][0];
-				moment_aoa_b[axis] = param_arrays[axis][1];
-				moment_input_k[axis] = param_arrays[axis][2];
-
-				if (moment_aoa_k[axis] == float.NaN)
-					Debug.Log("probe_delta = " + probe_deltas[0].ToString() + "  descent_koeff = " + descent_koeff[0].ToString() +
-						"param_array_aoa_k = " + param_arrays[axis][0].ToString());
-			}
-		}
-
-		int e_axis;
-		float error_function(float[] parameters)
-		{
-			float sqr_error = 0.0f;
-			for (int i = 0; i < error_memory; i++)
-			{
-				float step_accel = angular_acc[e_axis].getFromTail(i);
-				float step_aoa = aoa[e_axis].getFromTail(i + 1);
-				float step_input = input_buf[e_axis].getFromTail(i + 1);
-				float model_accel = compute_angular_acc(MOI[e_axis], parameters[0], parameters[1], step_aoa, parameters[2], step_input);
-				sqr_error += (step_accel - model_accel) * (step_accel - model_accel);
-			}
-			return sqr_error;
 		}
 
 		/// <summary>
-		/// Model evolution function. Computes angular acceleration by Newton's law in angular form.
+		/// Linear coefficient before angle of attack. Negative on stable crafts, positive or zero on unstable.
+		/// </summary>
+		public double moment_aoa_k(int axis) { return model_parameters[axis][0]; }
+
+		/// <summary>
+		/// Momentum bias. Sometimes craft is assimetric.
+		/// </summary>
+		public double moment_aoa_b(int axis) { return model_parameters[axis][1]; }
+
+		/// <summary>
+		/// Linear control authority.
+		/// </summary>
+		public double moment_input_k(int axis) { return model_parameters[axis][2]; }
+
+		/// <summary>
+		/// Dissipative coefficient, is responsible for rotational friction. Is multiplied on an
+		/// angular velocity square. Can't be positive.
+		/// </summary>
+		public double moment_v_d(int axis) { return model_parameters[axis][3]; }
+		
+
+		// Regression performance
+		public float[] prediction_error = new float[3];		// Current step prediction error.
+		public float[] prediction = new float[3];			// prediction for next step
+
+		/// <summary>
+		/// Computes angular acceleration in scalar form around one axis. Works in atmosphere.
 		/// </summary>
 		/// <param name="moi">Moment of inertia</param>
 		/// <param name="k_aoa">Linear air force koefficient</param>
@@ -324,15 +246,79 @@ namespace AtmosphereAutopilot
 		/// <param name="k_input">Linear control input koefficient</param>
 		/// <param name="b_input">Control input bias</param>
 		/// <param name="input">Control input</param>
-		/// <returns></returns>
-		public static float compute_angular_acc(float moi, float k_aoa, float b_aoa, float aoa, float k_input, float input)
+		/// <returns>Angular acceleration</returns>
+		public static double model_angular_acc(double moi, double k_aoa, double b_aoa, double aoa,
+			double k_input, double input, double v_d, double v)
 		{
-			float air_moment = k_aoa * aoa + b_aoa;
-			float input_moment = k_input * input;
-			if (Math.Abs(moi) < 1e-3f)
-				moi = 1e-3f;
-			float angular_acc = (air_moment + input_moment) / moi;
+			double air_moment = k_aoa * aoa + b_aoa;
+			double input_moment = k_input * input;
+			double friction_moment = v_d * v * v;
+			if (Math.Abs(moi) < 1e-3)
+				moi = 1e-3;
+			double angular_acc = (air_moment + input_moment + friction_moment) / moi;
 			return angular_acc;
+		}
+
+		int call_counter = 0;
+		double model_angular_acc(int axis, int past, double[] parameters)
+		{
+			call_counter++;
+			return model_angular_acc(MOI[axis], parameters[0], parameters[1], aoa[axis].getFromTail(past+1),
+				parameters[2], input_buf[axis].getFromTail(past+1), parameters[3], angular_v[axis].getFromTail(past+1));
+		}
+
+		double error_function(int axis, int frame_size, double[] parameters)
+		{
+			double meansqr = 0.0;
+			for (int i = 0; i < frame_size; i++)
+			{
+				double err = model_angular_acc(axis, i, parameters) - angular_acc[axis].getFromTail(i);
+				err *= err;
+				meansqr += err;
+			}
+			return meansqr / (double)frame_size;
+		}
+
+		GradientDescend optimizer = new GradientDescend(4);
+
+		[AutoGuiAttr("frame size", true)]
+		[GlobalSerializable("frame_size")]
+		int frame_size = 7;
+
+		[AutoGuiAttr("max calls", true)]
+		[GlobalSerializable("max_calls")]
+		int Max_calls { get { return optimizer.max_func_calls; } set { optimizer.max_func_calls = value; } }
+
+		[AutoGuiAttr("descend_k", true, "G6")]
+		[GlobalSerializable("descend_k")]
+		double Descend_k { get { return optimizer.descend_k; } set { optimizer.descend_k = value; } }
+
+		[AutoGuiAttr("miss_k", true, "G6")]
+		[GlobalSerializable("miss_k")]
+		double Miss_k { get { return optimizer.descend_miss_k; } set { optimizer.descend_miss_k = value; } }
+
+		void update_model()
+		{
+			// Prediction error
+			for (int axis = 0; axis < 3; axis++)
+			{
+				prediction_error[axis] = prediction[axis] - angular_acc[axis].getLast();
+			}
+
+			int avail_frame = stable_dt - 2;
+			if (avail_frame > 1)
+			{
+				// we have data to proceed
+				for (int axis = 0; axis < 3; axis++)
+				{
+					call_counter = 0;
+					// apply gradient descend
+					optimizer.apply(model_parameters[axis], 
+						(p) => { return error_function(axis, Math.Min(avail_frame, frame_size), p); }, ref call_counter);
+					// make predictions for next cycle
+					prediction[axis] = (float)model_angular_acc(axis, -1, model_parameters[axis]);
+				}
+			}
 		}
 
 		#endregion
@@ -368,9 +354,10 @@ namespace AtmosphereAutopilot
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " ang acc = " + angular_acc[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " AoA = " + (aoa[i].getLast() * rad_to_degree).ToString("G8"), GUIStyles.labelStyleLeft);
-				GUILayout.Label(axis_names[i] + " input_authority_k = " + moment_input_k[i].ToString("G8"), GUIStyles.labelStyleLeft);
-				GUILayout.Label(axis_names[i] + " aoa_authority_k = " + moment_aoa_k[i].ToString("G8"), GUIStyles.labelStyleLeft);
-				GUILayout.Label(axis_names[i] + " aoa_authority_b = " + moment_aoa_b[i].ToString("G8"), GUIStyles.labelStyleLeft);
+				GUILayout.Label(axis_names[i] + " aoa_k = " + moment_aoa_k(i).ToString("G8"), GUIStyles.labelStyleLeft);
+				GUILayout.Label(axis_names[i] + " aoa_b = " + moment_aoa_b(i).ToString("G8"), GUIStyles.labelStyleLeft);
+				GUILayout.Label(axis_names[i] + " v_d = " + moment_v_d(i).ToString("G8"), GUIStyles.labelStyleLeft);
+				GUILayout.Label(axis_names[i] + " input_k = " + moment_input_k(i).ToString("G8"), GUIStyles.labelStyleLeft);
 				GUILayout.Label(axis_names[i] + " prediction_error = " + prediction_error[i].ToString("G8"), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}
