@@ -32,14 +32,22 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\..\Games\Kerbal Space Program 0.90\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="FerramAerospaceResearch">
+      <HintPath>..\..\..\..\Games\Kerbal Space Program 0.90\GameData\FerramAerospaceResearch\Plugins\FerramAerospaceResearch.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Scale_Redist">
+      <HintPath>..\..\..\..\Games\Kerbal Space Program 0.90\GameData\FerramAerospaceResearch\Plugins\Scale_Redist.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\KSP_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\..\Games\Kerbal Space Program 0.90\KSP_Data\Managed\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
@@ -47,6 +55,7 @@
     <Compile Include="AppLauncher.cs" />
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="Controller\PDController.cs" />
+    <Compile Include="GradientDescend.cs" />
     <Compile Include="GUI\AutoGui.cs" />
     <Compile Include="AutoSerialization.cs" />
     <Compile Include="CircularBuffer.cs" />

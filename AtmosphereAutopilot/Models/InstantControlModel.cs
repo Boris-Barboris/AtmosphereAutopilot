@@ -40,7 +40,7 @@ namespace AtmosphereAutopilot
 			stable_dt = 0;
 		}
 
-		static readonly int BUFFER_SIZE = 30;
+		static readonly int BUFFER_SIZE = 20;
 
 		#region Exports
 
@@ -141,9 +141,9 @@ namespace AtmosphereAutopilot
 			}
 		}
 
-        Vector3 up_srf_v;		// velocity, projected to vessel up direction
-        Vector3 fwd_srf_v;		// velocity, projected to vessel forward direction
-        Vector3 right_srf_v;	// velocity, projected to vessel right direction
+        public Vector3 up_srf_v;		// velocity, projected to vessel up direction
+        public Vector3 fwd_srf_v;		// velocity, projected to vessel forward direction
+        public Vector3 right_srf_v;		// velocity, projected to vessel right direction
 
         void update_aoa()
         {
@@ -152,33 +152,33 @@ namespace AtmosphereAutopilot
             fwd_srf_v = vessel.ReferenceTransform.forward * Vector3.Dot(vessel.ReferenceTransform.forward, vessel.srf_velocity);
             right_srf_v = vessel.ReferenceTransform.right * Vector3.Dot(vessel.ReferenceTransform.right, vessel.srf_velocity);
 
-			Vector3 tmpVec = up_srf_v + fwd_srf_v;
-			if (tmpVec.sqrMagnitude > 1.0f)
+			Vector3 project = up_srf_v + fwd_srf_v;
+			if (project.sqrMagnitude > 1.0f)
 			{
-				float aoa_p = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized), 1.0f));
-				if (Vector3.Dot(tmpVec, vessel.ReferenceTransform.up) < 0.0)
+				float aoa_p = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, project.normalized), 1.0f));
+				if (Vector3.Dot(project, vessel.ReferenceTransform.up) < 0.0)
 					aoa_p = (float)Math.PI - aoa_p;
 				aoa[PITCH].Put(aoa_p);
 			}
 			else
 				aoa[PITCH].Put(0.0f);
 			
-			tmpVec = up_srf_v + right_srf_v;
-			if (tmpVec.sqrMagnitude > 1.0f)
+			project = up_srf_v + right_srf_v;
+			if (project.sqrMagnitude > 1.0f)
 			{
-				float aoa_y = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.right.normalized, tmpVec.normalized), 1.0f));
-				if (Vector3.Dot(tmpVec, vessel.ReferenceTransform.up) < 0.0)
+				float aoa_y = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.right.normalized, project.normalized), 1.0f));
+				if (Vector3.Dot(project, vessel.ReferenceTransform.up) < 0.0)
 					aoa_y = (float)Math.PI - aoa_y;
 				aoa[YAW].Put(aoa_y);
 			}
 			else
 				aoa[YAW].Put(0.0f);
 
-			tmpVec = right_srf_v + fwd_srf_v;
-			if (tmpVec.sqrMagnitude > 1.0f)
+			project = right_srf_v + fwd_srf_v;
+			if (project.sqrMagnitude > 1.0f)
 			{
-				float aoa_r = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, tmpVec.normalized), 1.0f));
-				if (Vector3.Dot(tmpVec, vessel.ReferenceTransform.right) < 0.0)
+				float aoa_r = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, project.normalized), 1.0f));
+				if (Vector3.Dot(project, vessel.ReferenceTransform.right) < 0.0)
 					aoa_r = (float)Math.PI - aoa_r;
 				aoa[ROLL].Put(aoa_r);
 			}
@@ -250,7 +250,7 @@ namespace AtmosphereAutopilot
 		public static double model_angular_acc(double moi, double k_aoa, double b_aoa, double aoa,
 			double k_input, double input, double v_d, double v)
 		{
-			double air_moment = k_aoa * aoa + b_aoa;
+			double air_moment = k_aoa * (aoa + b_aoa);
 			double input_moment = k_input * input;
 			double friction_moment = v_d * v * v;
 			if (Math.Abs(moi) < 1e-3)
@@ -269,14 +269,14 @@ namespace AtmosphereAutopilot
 
 		double error_function(int axis, int frame_size, double[] parameters)
 		{
-			double meansqr = 0.0;
+			double sqrerr = 0.0;
 			for (int i = 0; i < frame_size; i++)
 			{
 				double err = model_angular_acc(axis, i, parameters) - angular_acc[axis].getFromTail(i);
 				err *= err;
-				meansqr += err;
+				sqrerr += err;
 			}
-			return meansqr / (double)frame_size;
+			return sqrerr;
 		}
 
 		GradientDescend optimizer = new GradientDescend(4);

@@ -18,7 +18,8 @@ namespace AtmosphereAutopilot
         MediumFlightModel mmodel;
 
 		// Telemetry writers
-		StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, desire_dv_writer, aoa_writer;
+		StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, 
+			desire_acc_writer, aoa_writer, airspd_writer, density_writer;
 
 		/// <summary>
 		/// Create controller instance.
@@ -66,11 +67,13 @@ namespace AtmosphereAutopilot
 
             if (write_telemetry)
             {
-                desire_dv_writer.Write(target_value.ToString("G8") + ',');
+                desire_acc_writer.Write(target_value.ToString("G8") + ',');
                 acc_writer.Write(input.ToString("G8") + ',');
                 v_writer.Write(imodel.AngularVel(axis).ToString("G8") + ',');
                 prediction_writer.Write(imodel.prediction[axis].ToString("G8") + ',');
 				aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');
+				airspd_writer.Write((imodel.up_srf_v + imodel.fwd_srf_v).magnitude.ToString("G8") + ',');
+				density_writer.Write(vessel.atmDensity.ToString("G8") + ',');
             }
 
 			//float current_raw = output;
@@ -82,14 +85,29 @@ namespace AtmosphereAutopilot
 
 			float prev_input = imodel.ControlInput(axis);
 			float cur_input_raw = ControlUtils.getControlFromState(cntrl, axis);
-			output = prev_input + Common.Clampf(cur_input_raw - prev_input, max_input_deriv * TimeWarp.fixedDeltaTime);
+			output = cur_input_raw;
+			true_output = far_exponential_blend(true_output, output);
 
 			ControlUtils.set_raw_output(cntrl, axis, output);
 
             if (write_telemetry)
-				controlWriter.Write(ControlUtils.getControlFromState(cntrl, axis).ToString("G8") + ',');
+				controlWriter.Write(true_output.ToString("G8") + ',');
 
             return output;
+		}
+
+		[AutoGuiAttr("True output", false, "G8")]
+		protected float true_output = 0.0f;
+
+		float far_exponential_blend(float prev, float desire)
+		{
+			float error = desire - prev;
+			if (Math.Abs(error * 20.0f) > 0.1)
+			{
+				return prev + Common.Clampf(error * TimeWarp.fixedDeltaTime / ferramTimeConstant, Math.Abs(0.6f * error));
+			}
+			else
+				return desire;
 		}
 
         [AutoGuiAttr("Write telemetry", true)]
@@ -105,10 +123,12 @@ namespace AtmosphereAutopilot
                         controlWriter = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/control.csv");
                         v_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/v.csv");
                         acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/acc.csv");
-                        desire_dv_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/desire.csv");
+                        desire_acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/desire.csv");
                         prediction_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/predict.csv");
 						aoa_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/aoa.csv");
-                        _write_telemetry = value;
+						airspd_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/airspd.csv");
+						density_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/density.csv");
+						_write_telemetry = value;
                     }
 				}
 				else
@@ -118,9 +138,11 @@ namespace AtmosphereAutopilot
                         controlWriter.Close();
                         v_writer.Close();
                         acc_writer.Close();
-                        desire_dv_writer.Close();
+                        desire_acc_writer.Close();
                         prediction_writer.Close();
 						aoa_writer.Close();
+						airspd_writer.Close();
+						density_writer.Close();
                         _write_telemetry = value;
                     }					
 				}
@@ -128,15 +150,19 @@ namespace AtmosphereAutopilot
 		}
 		bool _write_telemetry = false;
 
-
 		#region Parameters
 
         [AutoGuiAttr("DEBUG desired acc", false, "G8")]
         internal float desired_acc { get; private set; }
 
-        [AutoGuiAttr("Control speed limit", true, "G8")]
-        [GlobalSerializable("Control speed limit")]
-        protected float max_input_deriv = 6.0f;
+		[AutoGuiAttr("FAR csurf time constant", false, "G6")]
+		protected float ferramTimeConstant
+		{
+			get
+			{
+				return (float)ferram4.FARControllableSurface.timeConstant;
+			}
+		}
 
 		#endregion
 	}
