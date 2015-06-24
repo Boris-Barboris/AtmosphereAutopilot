@@ -54,8 +54,9 @@
   <ItemGroup>
     <Compile Include="AppLauncher.cs" />
     <Compile Include="AtmosphereAutopilot.cs" />
+    <Compile Include="BackgroundThread.cs" />
     <Compile Include="Controller\PDController.cs" />
-    <Compile Include="GradientDescend.cs" />
+    <Compile Include="Math\GradientDescend.cs" />
     <Compile Include="GUI\AutoGui.cs" />
     <Compile Include="AutoSerialization.cs" />
     <Compile Include="CircularBuffer.cs" />
@@ -65,7 +66,7 @@
     <Compile Include="Modules\AngularAccAdaptiveController.cs" />
     <Compile Include="Models\InstantControlModel.cs" />
     <Compile Include="GUI\GUIStyles.cs" />
-    <Compile Include="Matrix.cs" />
+    <Compile Include="Math\Matrix.cs" />
     <Compile Include="Modules\AngularVelAdaptiveController.cs" />
     <Compile Include="Modules\AutopilotModule.cs" />
     <Compile Include="Modules\SideslipController.cs" />

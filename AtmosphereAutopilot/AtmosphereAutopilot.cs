@@ -194,9 +194,6 @@ namespace AtmosphereAutopilot
                 return;
 			if (ActiveVessel == null)
 				return;
-
-            bool mod = GameSettings.MODIFIER_KEY.GetKey();
-
 			foreach (var pair in module_hotkeys)
 			{
 				if (Input.GetKeyDown(pair.Value) &&
