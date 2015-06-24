@@ -42,7 +42,7 @@ namespace AtmosphereAutopilot
             Stop();
         }
 
-        public bool IsRunning { get { return thread.IsAlive; } };
+        public bool IsRunning { get { return thread.IsAlive; } }
 
         bool abort = false;
 
