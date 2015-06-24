@@ -4,12 +4,12 @@
     Faculty of Mathematics and Physics
     Charles University in Prague
     (C) 2010
-    - updated on 1. 6.2014 - Trimming the string before parsing
-    - updated on 14.6.2012 - parsing improved. Thanks to Andy!
-    - updated on 3.10.2012 - there was a terrible bug in LU, SoLE and Inversion. Thanks to Danilo Neves Cruz for reporting that!
+    - updated on 01.06.2014 - Trimming the string before parsing
+    - updated on 14.06.2012 - parsing improved. Thanks to Andy!
+    - updated on 03.10.2012 - there was a terrible bug in LU, SoLE and Inversion. Thanks to Danilo Neves Cruz for reporting that!
+    - updated on 21.01.2014 - multiple changes based on comments -> see git for further info
 	
     This code is distributed under MIT licence.
-	
 	
 		Permission is hereby granted, free of charge, to any person
 		obtaining a copy of this software and associated documentation
@@ -34,6 +34,7 @@
 */
 
 using System;
+using System.Text;
 using System.Text.RegularExpressions;
 
 
@@ -41,7 +42,7 @@ public class Matrix
 {
     public int rows;
     public int cols;
-    public double[,] mat;
+    public double[] mat;
 
     public Matrix L;
     public Matrix U;
@@ -52,7 +53,7 @@ public class Matrix
     {
         rows = iRows;
         cols = iCols;
-        mat = new double[rows, cols];
+        mat = new double[rows * cols];
     }
 
     public Boolean IsSquare()
@@ -62,20 +63,20 @@ public class Matrix
 
     public double this[int iRow, int iCol]      // Access this matrix as a 2D array
     {
-        get { return mat[iRow, iCol]; }
-        set { mat[iRow, iCol] = value; }
+        get { return mat[iRow * cols + iCol]; }
+        set { mat[iRow * cols + iCol] = value; }
     }
 
     public Matrix GetCol(int k)
     {
         Matrix m = new Matrix(rows, 1);
-        for (int i = 0; i < rows; i++) m[i, 0] = mat[i, k];
+        for (int i = 0; i < rows; i++) m[i, 0] = this[i, k];
         return m;
     }
 
     public void SetCol(Matrix v, int k)
     {
-        for (int i = 0; i < rows; i++) mat[i, k] = v[i, 0];
+        for (int i = 0; i < rows; i++) this[i, k] = v[i, 0];
     }
 
     public void MakeLU()                        // Function for LU decomposition
@@ -129,7 +130,6 @@ public class Matrix
         }
     }
 
-
     public Matrix SolveWith(Matrix v)                        // Function solves Ax = v in confirmity with solution vector "v"
     {
         if (rows != cols) throw new MException("The matrix is not square!");
@@ -143,6 +143,48 @@ public class Matrix
         Matrix x = SubsBack(U, z);
 
         return x;
+    }
+
+    // TODO check for redundancy with MakeLU() and SolveWith()
+    public void MakeRref()                                    // Function makes reduced echolon form
+    {
+        int lead = 0;
+        for (int r = 0; r < rows; r++)
+        {
+            if (cols <= lead) break;
+            int i = r;
+            while (this[i, lead] == 0)
+            {
+                i++;
+                if (i == rows)
+                {
+                    i = r;
+                    lead++;
+                    if (cols == lead)
+                    {
+                        lead--;
+                        break;
+                    }
+                }
+            }
+            for (int j = 0; j < cols; j++)
+            {
+                double temp = this[r, j];
+                this[r, j] = this[i, j];
+                this[i, j] = temp;
+            }
+            double div = this[r, lead];
+            for (int j = 0; j < cols; j++) this[r, j] /= div;
+            for (int j = 0; j < rows; j++)
+            {
+                if (j != r)
+                {
+                    double sub = this[j, lead];
+                    for (int k = 0; k < cols; k++) this[j, k] -= (sub * this[r, k]);
+                }
+            }
+            lead++;
+        }
     }
 
     public Matrix Invert()                                   // Function returns the inverted matrix
@@ -184,7 +226,7 @@ public class Matrix
         Matrix matrix = new Matrix(rows, cols);
         for (int i = 0; i < rows; i++)
             for (int j = 0; j < cols; j++)
-                matrix[i, j] = mat[i, j];
+                matrix[i, j] = this[i, j];
         return matrix;
     }
 
@@ -265,13 +307,14 @@ public class Matrix
 
     public override string ToString()                           // Function returns matrix as a string
     {
-        string s = "";
+        StringBuilder s = new StringBuilder();
         for (int i = 0; i < rows; i++)
         {
-            for (int j = 0; j < cols; j++) s += String.Format("{0,5:0.00}", mat[i, j]) + " ";
-            s += "\r\n";
+            for (int j = 0; j < cols; j++)
+                s.Append(String.Format("{0,5:E2}", this[i, j]) + " ");
+            s.AppendLine();
         }
-        return s;
+        return s.ToString();
     }
 
     public static Matrix Transpose(Matrix m)              // Matrix transpose, for any rectangular matrix
@@ -353,6 +396,7 @@ public class Matrix
             for (int j = 0; j < size; j++) C[i, j] = A[ya + i, xa + j];
     }
 
+    // TODO assume matrix 2^N x 2^N and then directly call StrassenMultiplyRun(A,B,?,1,?)
     private static Matrix StrassenMultiply(Matrix A, Matrix B)                // Smart matrix multiplication
     {
         if (A.cols != B.rows) throw new MException("Wrong dimension of matrix!");
@@ -360,16 +404,6 @@ public class Matrix
         Matrix R;
 
         int msize = Math.Max(Math.Max(A.rows, A.cols), Math.Max(B.rows, B.cols));
-
-        if (msize < 32)
-        {
-            R = ZeroMatrix(A.rows, B.cols);
-            for (int i = 0; i < R.rows; i++)
-                for (int j = 0; j < R.cols; j++)
-                    for (int k = 0; k < A.cols; k++)
-                        R[i, j] += A[i, k] * B[k, j];
-            return R;
-        }
 
         int size = 1; int n = 0;
         while (msize > size) { size *= 2; n++; };
@@ -444,24 +478,10 @@ public class Matrix
 
         return R;
     }
-
-    // function for square matrix 2^N x 2^N
-
     private static void StrassenMultiplyRun(Matrix A, Matrix B, Matrix C, int l, Matrix[,] f)    // A * B into C, level of recursion, matrix field
     {
         int size = A.rows;
         int h = size / 2;
-
-        if (size < 32)
-        {
-            for (int i = 0; i < C.rows; i++)
-                for (int j = 0; j < C.cols; j++)
-                {
-                    C[i, j] = 0;
-                    for (int k = 0; k < A.cols; k++) C[i, j] += A[i, k] * B[k, j];
-                }
-            return;
-        }
 
         AplusBintoC(A, 0, 0, A, h, h, f[l, 0], h);
         AplusBintoC(B, 0, 0, B, h, h, f[l, 1], h);
@@ -511,8 +531,7 @@ public class Matrix
             for (int j = h; j < size; j++)     // cols
                 C[i, j] = f[l, 1 + 1][i - h, j - h] - f[l, 1 + 2][i - h, j - h] + f[l, 1 + 3][i - h, j - h] + f[l, 1 + 6][i - h, j - h];
     }
-
-    public static Matrix StupidMultiply(Matrix m1, Matrix m2)                  // Stupid matrix multiplication
+    private static Matrix StupidMultiply(Matrix m1, Matrix m2)                  // Stupid matrix multiplication
     {
         if (m1.cols != m2.rows) throw new MException("Wrong dimensions of matrix!");
 
@@ -522,6 +541,33 @@ public class Matrix
                 for (int k = 0; k < m1.cols; k++)
                     result[i, j] += m1[i, k] * m2[k, j];
         return result;
+    }
+
+    private static Matrix Multiply(Matrix m1, Matrix m2)                         // Matrix multiplication
+    {
+        if (m1.cols != m2.rows) throw new MException("Wrong dimension of matrix!");
+        int msize = Math.Max(Math.Max(m1.rows, m1.cols), Math.Max(m2.rows, m2.cols));
+        // stupid multiplication faster for small matrices
+        if (msize < 32)
+        {
+            return StupidMultiply(m1, m2);
+        }
+        // stupid multiplication faster for non square matrices
+        if (!m1.IsSquare() || !m2.IsSquare())
+        {
+            return StupidMultiply(m1, m2);
+        }
+        // Strassen multiplication is faster for large square matrix 2^N x 2^N
+        // NOTE because of previous checks msize == m1.cols == m1.rows == m2.cols == m2.cols
+        double exponent = Math.Log(msize) / Math.Log(2);
+        if (Math.Pow(2, exponent) == msize)
+        {
+            return StrassenMultiply(m1, m2);
+        }
+        else
+        {
+            return StupidMultiply(m1, m2);
+        }
     }
     private static Matrix Multiply(double n, Matrix m)                          // Multiplication by constant n
     {
@@ -574,7 +620,7 @@ public class Matrix
     { return Matrix.Add(m1, -m2); }
 
     public static Matrix operator *(Matrix m1, Matrix m2)
-    { return Matrix.StrassenMultiply(m1, m2); }
+    { return Matrix.Multiply(m1, m2); }
 
     public static Matrix operator *(double n, Matrix m)
     { return Matrix.Multiply(n, m); }
