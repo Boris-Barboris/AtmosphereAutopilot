@@ -38,10 +38,10 @@ function [new_weights, new_biases, old_meansqr] =...
     
     % collapse batches
     for i = 1:batch_count
-        %jacob_batch(i,:) = sum(jacob((i-1)*batch_size+1 : i*batch_size, :));
-        %w_errors_batch(i) = sum(weighted_errors((i-1)*batch_size+1 : i*batch_size));
-        jacob_batch(i,:) = sum(jacob(1 : i*batch_size, :));
-        w_errors_batch(i) = sum(weighted_errors(1 : i*batch_size));
+        jacob_batch(i,:) = sum(jacob((i-1)*batch_size+1 : i*batch_size, :));
+        w_errors_batch(i) = sum(weighted_errors((i-1)*batch_size+1 : i*batch_size));
+        %jacob_batch(i,:) = sum(jacob(1 : i*batch_size, :));
+        %w_errors_batch(i) = sum(weighted_errors(1 : i*batch_size));
     end
     jacob_batch(i+1:end,:) = jacob(i*batch_size+1: end, :);
     w_errors_batch(i+1:end) = weighted_errors(i*batch_size+1 : end);

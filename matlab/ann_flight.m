@@ -14,9 +14,9 @@ hidden_count = int16(6);                            % hidden layer neuron count
 input_count = int16(size(global_inputs,1));         % number of network inputs
 mu = 1;
 mu_min = 1e-7;
-mu_max = 1e6;
-tau_inc = 2;        % to move towards newton's method
-tau_dec = 100;      % to move towards gradient descend
+mu_max = 1e7;
+tau_inc = 2;         % to move towards newton's method
+tau_dec = 1000;      % to move towards gradient descend
 grad_min = 1e-7;                % target gradient of mean square error
 grad_min_iter_limit = 4;        % exit training after this amount of minimal gradient
 grad_min_iter = 0;
@@ -26,12 +26,13 @@ biases = 2 .* (rand(1, hidden_count + 1) - 0.5);
 
 % TELEMETRY CACHE
 % immediate buffer contains last state vectors
-imm_buf_size = int16(32);
+imm_buf_size = int16(24);
 imm_buf_input = zeros(input_count, imm_buf_size);
 imm_buf_output = zeros(1, imm_buf_size);
 imm_buf_count = 0;
 imm_buf_head = 1;
-imm_batch_size = int16(2);         % immediate buffer is subject to batching
+imm_batch_size = int16(24);         % immediate buffer is subject to batching
+imm_batch_weight = 0.15;             % batch error is multiplied by this
 % stohastic buffer contains random state vectors, wich left immediate buffer
 stoh_buf_size = int16(0);
 stoh_prob = 1;          % probability of new state vector to be included in stohastic buffer
@@ -44,8 +45,8 @@ gen_buf_dims = int16([13, 13]);
 gen_buf_upper = [0.25, 1.1];
 gen_buf_lower = [-0.25, -1.1];
 gen_buf_avg_factor = 4;         % continuous inputs to one cell will be smoothed by this factor
-gen_time_decay = 1.5;             % importance of old generalization data is decreased by this factor
-gen_importance = 0.5;          % general error weight of generalization space
+gen_time_decay = 1;             % importance of old generalization data is decreased by this factor
+gen_importance = 0.2;           % general error weight of generalization space
 temp = cumprod(gen_buf_dims);   % temp array for deriving a linear size of generalization buffer
 gen_buf_size = temp(end);
 gen_buf_input = zeros(input_count, gen_buf_size) + NaN;
@@ -63,8 +64,8 @@ ann_descend_success = zeros(1, length(global_outputs));
 %% commit simulation
 
 % SIMULATION SETTINGS
-cpu_ratio = 0.34;   % amount of ann training iterations per 1 game physics frame
-cpu_time = 0;       % amount of availiable training iterations. When >= 1, we should train once
+cpu_ratio = 1;   % amount of ann training iterations per 1 game physixcs frame
+cpu_time = 0;      % amount of availiable training iterations. When >= 1, we should train once
 
 % MAIN CYCLE
 for frame = 1:length(global_inputs)
@@ -176,13 +177,13 @@ for frame = 1:length(global_inputs)
     while cpu_time >= 1
         % iterate here
         [new_weights, new_biases, old_sqr_err] =...
-            anntrain_lm_batch(training_input, input_weights, training_output,...
-            cur_batch_size, cur_batch_count,...
+            anntrain_lm_hybrid(training_input, input_weights, training_output,...
+            cur_batch_size, imm_batch_weight,...
             weights, biases, mu, input_count, hidden_count);
         ann_outputs = anneval_large(training_input, new_weights, new_biases, input_count, hidden_count);
         %new_sqr_err = meansqr((ann_outputs - training_output) .* input_weights);
-        new_sqr_err = batch_sqrerr((ann_outputs - training_output) .* input_weights,...
-            cur_batch_size, cur_batch_count);
+        new_sqr_err = hybrid_sqerr((ann_outputs - training_output) .* input_weights,...
+            cur_batch_size, imm_batch_weight);
         if (new_sqr_err < old_sqr_err)
             weights = new_weights;
             biases = new_biases;
