@@ -40,7 +40,7 @@ namespace AtmosphereAutopilot
 			stable_dt = 0;
 		}
 
-		static readonly int BUFFER_SIZE = 20;
+		static readonly int BUFFER_SIZE = 10;
 
 		#region Exports
 

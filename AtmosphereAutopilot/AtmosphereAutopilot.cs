@@ -6,8 +6,8 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-    [KSPAddon(KSPAddon.Startup.Instantly, true)]
-    public class AtmosphereAutopilot: MonoBehaviour
+    [KSPAddon(KSPAddon.Startup.MainMenu, true)]
+    public sealed class AtmosphereAutopilot: MonoBehaviour
     {
 		// List of all autopilot modules, that need to be created for vessel
         internal List<Type> autopilot_module_types = new List<Type>();
@@ -19,10 +19,17 @@ namespace AtmosphereAutopilot
 		// Hotkeys for module activation
         Dictionary<Type, KeyCode> module_hotkeys = new Dictionary<Type, KeyCode>();
 
+        // Application launcher window
 		AppLauncherWindow applauncher = new AppLauncherWindow();
 
+        /// <summary>
+        /// Get AtmosphereAutopilot addon class instance
+        /// </summary>
         public static AtmosphereAutopilot Instance { get; private set; }
 
+        /// <summary>
+        /// Get current active (controlled by player) vessel
+        /// </summary>
 		public Vessel ActiveVessel { get; private set; }
 
         public void Start()
@@ -31,6 +38,7 @@ namespace AtmosphereAutopilot
             DontDestroyOnLoad(this);
             initialize_types();
             initialize_hotkeys();
+            initialize_thread();
             GameEvents.onVesselChange.Add(vesselSwitch);
             GameEvents.onGameSceneLoadRequested.Add(sceneSwitch);
             GameEvents.onHideUI.Add(OnHideUI);
@@ -43,18 +51,31 @@ namespace AtmosphereAutopilot
 
         void initialize_types()
         {
+            // Find all sealed children of AutopilotModule and treat them as complete autopilot modules
             var lListOfBs = (from lAssembly in AppDomain.CurrentDomain.GetAssemblies()
                              from lType in lAssembly.GetTypes()
                              where lType.IsSubclassOf(typeof(AutopilotModule))
                              where lType.IsSealed
                              select lType);
-
             autopilot_module_types.AddRange(lListOfBs);
         }
 
         void initialize_hotkeys()
         {
-            module_hotkeys[typeof(TopModuleManager)] = KeyCode.P;
+            module_hotkeys[typeof(TopModuleManager)] = KeyCode.P;       // press P to activate master switch
+        }
+
+        // Thread for computational-heavy tasks
+        BackgroundThread thread;
+
+        /// <summary>
+        /// Get background thread, used by autopilot framework
+        /// </summary>
+        public BackgroundThread BackgroundThread { get { return thread; } }
+        
+        void initialize_thread()
+        {
+            thread = new BackgroundThread();
         }
 
         void serialize_active_modules()
@@ -98,9 +119,15 @@ namespace AtmosphereAutopilot
 			ActiveVessel = v;
         }
 
-		public Dictionary<Type, AutopilotModule> getCurVesselModules()
+        /// <summary>
+        /// Get set of AutopilotModule instances, created for arbitrary vessel.
+        /// </summary>
+		public Dictionary<Type, AutopilotModule> getCurVesselModules(Vessel v)
 		{
-			return autopilot_module_lists[ActiveVessel];
+            if (autopilot_module_lists.ContainsKey(v))
+                return autopilot_module_lists[v];
+            else
+                return null;
 		}
 
 
@@ -108,6 +135,7 @@ namespace AtmosphereAutopilot
 
 		ApplicationLauncherButton launcher_btn;
 
+        // Called when applauncher is ready for population
         void onAppLauncherLoad()
         {
             GameEvents.onGUIApplicationLauncherReady.Remove(onAppLauncherLoad);
@@ -125,7 +153,6 @@ namespace AtmosphereAutopilot
         {
             applauncher.ShowGUI();
             applauncher.show_while_hover = false;
-
         }
 
 		void OnHover()
@@ -188,6 +215,7 @@ namespace AtmosphereAutopilot
 
 		public void Update()
         {
+            // Handle keyboard hotkeys here
             if (InputLockManager.IsLocked(ControlTypes.ALL_SHIP_CONTROLS))
                 return;
             if (!HighLogic.LoadedSceneIsFlight)

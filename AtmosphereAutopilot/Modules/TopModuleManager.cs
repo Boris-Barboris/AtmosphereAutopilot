@@ -15,8 +15,13 @@ namespace AtmosphereAutopilot
 			cur_ves_modules = AtmosphereAutopilot.Instance.autopilot_module_lists[vessel];
 		}
 
+        // All finished autopilot modules, created for this vessel
 		Dictionary<Type, AutopilotModule> cur_ves_modules;
+
+        // All high-level autopilot modules, created for this vessel
         List<StateController> HighLevelControllers = new List<StateController>();
+
+        // Currently active high-level autopilot
         StateController active_controller = null;
 
         protected override void OnActivate()
@@ -47,18 +52,17 @@ namespace AtmosphereAutopilot
                 // Move all high-level controllers to list
                 foreach (var module_type in cur_ves_modules.Keys)
                     if (!module_type.Equals(typeof(TopModuleManager)))
-                        if (module_type.IsSealed && module_type.IsSubclassOf(typeof(StateController)))
+                        if (module_type.IsSubclassOf(typeof(StateController)))
                             HighLevelControllers.Add((StateController)cur_ves_modules[module_type]);
 
                 if (HighLevelControllers.Count <= 0)
                     throw new InvalidOperationException("No high-level autopilot modules were found");
                 else
-                {
                     active_controller = HighLevelControllers[0];
-                    active_controller.Activate();
-                }
 			}
 
+            if (active_controller != null)
+                active_controller.Activate();
 			vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
         }
 

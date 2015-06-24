@@ -47,8 +47,8 @@ namespace AtmosphereAutopilot
                 return;
 
             pc.ApplyControl(cntrl, 0.0f);
-            rc.ApplyControl(cntrl, 0.0f);
             yc.ApplyControl(cntrl, 0.0f);
+            rc.ApplyControl(cntrl, 0.0f);            
         }
 
         protected override void _drawGUI(int id)
