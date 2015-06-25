@@ -58,6 +58,7 @@
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="BackgroundThread.cs" />
     <Compile Include="Controller\PDController.cs" />
+    <Compile Include="ListView.cs" />
     <Compile Include="Math\GradientDescend.cs" />
     <Compile Include="GUI\AutoGui.cs" />
     <Compile Include="AutoSerialization.cs" />

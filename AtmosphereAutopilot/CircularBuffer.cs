@@ -2,23 +2,20 @@
 using System.Collections.Generic;
 using System.Threading;
 
-namespace System.IO
+namespace System.Collections.Generic
 {
-    public class CircularBuffer<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable
+    public class CircularBuffer<T> : IList<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable
     {
-        private int capacity;
-        private int size;
-        private int head;
-        private int tail;
-        private T[] buffer;
+        private int capacity;       // underlying array size
+        private int size;           // current count of elements
+        private int head;           // index of first element
+        private int tail;           // index of element behind the last one
+        private T[] buffer;         // underlying array
 
         [NonSerialized]
         private object syncRoot;
 
-        public CircularBuffer(int capacity)
-            : this(capacity, false)
-        {
-        }
+        public CircularBuffer(int capacity) : this(capacity, false) { }
 
         public CircularBuffer(int capacity, bool allowOverflow)
         {
@@ -250,6 +247,54 @@ namespace System.IO
             CopyTo(dst);
             return dst;
         }
+
+        # region IList<T> Members
+
+        public int IndexOf(T item)
+        {
+            int bufferIndex = head;
+            var comparer = EqualityComparer<T>.Default;
+            for (int i = 0; i < size; i++, bufferIndex++)
+            {
+                if (bufferIndex == capacity)
+                    bufferIndex = 0;
+                if (item == null && buffer[bufferIndex] == null)
+                    return bufferIndex;
+                else if ((buffer[bufferIndex] != null) &&
+                    comparer.Equals(buffer[bufferIndex], item))
+                    return bufferIndex;
+            }
+            return -1;
+        }
+
+        public void Insert(int index, T item)
+        {
+            if (index > size || index < 0)
+                throw new ArgumentOutOfRangeException("index", "CircularBuffer Insert at index > size");
+            if (index == size)
+                Put(item);
+            else
+            {
+                for (int i = 0; i < index; i++)
+                    this[i] = this[i + 1];
+                this[index] = item;
+            }
+        }
+
+        public void RemoveAt(int index)
+        {
+            if (index >= size || index < 0)
+                throw new ArgumentOutOfRangeException("index", "CircularBuffer RemoveAt index >= size");
+            if (index != size -1)
+            {
+                for (int i = index; i < size; i++)
+                    this[i] = this[i + 1];
+            }
+            tail = (tail - 1 + capacity) % capacity;
+            size--;
+        }
+
+        #endregion
 
         #region ICollection<T> Members
 

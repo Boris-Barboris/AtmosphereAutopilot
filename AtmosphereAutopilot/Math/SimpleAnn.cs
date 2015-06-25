@@ -183,6 +183,21 @@ namespace AtmosphereAutopilot
         }
 
         #endregion
+
+        static void lm_get_weights(Matrix jacob, IList<double> weights, IList<double> new_weights, IList<double> errors, double mu)
+        {
+            Matrix jacob_trans = Matrix.Transpose(jacob);
+            Matrix identity = Matrix.IdentityMatrix(weights.Count, weights.Count, mu);
+            Matrix weight_delta = (jacob_trans * jacob + identity).Invert() * jacob_trans * new Matrix(errors, true);
+            for (int i = 0; i < weights.Count; i++)
+                new_weights[i] = weights[i] - weight_delta[i, 0];
+        }
+
+        public bool lm_iterate_batched(IList<double[]> inputs, IList<double> error_weights,
+            int batch_size, double batch_weight, double mu)
+        {
+            
+        }
     }
 
 }

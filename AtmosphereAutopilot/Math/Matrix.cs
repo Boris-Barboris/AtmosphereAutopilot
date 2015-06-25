@@ -36,6 +36,7 @@
 using System;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace AtmosphereAutopilot
 {
@@ -44,7 +45,7 @@ namespace AtmosphereAutopilot
     {
         public int rows;
         public int cols;
-        public double[] mat;
+        public IList<double> mat;
 
         public Matrix L;
         public Matrix U;
@@ -58,6 +59,26 @@ namespace AtmosphereAutopilot
             mat = new double[rows * cols];
         }
 
+        /// <summary>
+        /// Create matrix view of collection
+        /// </summary>
+        /// <param name="source">Collection to view as matrix</param>
+        /// <param name="column_vector">Create column vector instead of row vector</param>
+        public Matrix(IList<double> source, bool column_vector = false)
+        {
+            if (column_vector)
+            {
+                cols = 1;
+                rows = source.Count;
+            }
+            else
+            {
+                cols = source.Count;
+                rows = 1;
+            }
+            mat = source;
+        }
+
         public Boolean IsSquare()
         {
             return (rows == cols);
@@ -65,8 +86,14 @@ namespace AtmosphereAutopilot
 
         public double this[int iRow, int iCol]      // Access this matrix as a 2D array
         {
-            get { return mat[iRow * cols + iCol]; }
-            set { mat[iRow * cols + iCol] = value; }
+            get 
+            {
+                return mat[iRow * cols + iCol];
+            }
+            set 
+            {
+                mat[iRow * cols + iCol] = value;
+            }
         }
 
         public Matrix GetCol(int k)
@@ -197,7 +224,7 @@ namespace AtmosphereAutopilot
 
             for (int i = 0; i < rows; i++)
             {
-                Matrix Ei = Matrix.ZeroMatrix(rows, 1);
+                Matrix Ei = new Matrix(rows, 1);
                 Ei[i, 0] = 1;
                 Matrix col = SolveWith(Ei);
                 inv.SetCol(col, i);
@@ -218,7 +245,7 @@ namespace AtmosphereAutopilot
         {
             if (L == null) MakeLU();
 
-            Matrix matrix = ZeroMatrix(rows, cols);
+            Matrix matrix = new Matrix(rows, cols);
             for (int i = 0; i < rows; i++) matrix[pi[i], i] = 1;
             return matrix;
         }
@@ -262,20 +289,11 @@ namespace AtmosphereAutopilot
             return x;
         }
 
-        public static Matrix ZeroMatrix(int iRows, int iCols)       // Function generates the zero matrix
+        public static Matrix IdentityMatrix(int iRows, int iCols, double init = 1.0)   // Function generates the identity matrix
         {
             Matrix matrix = new Matrix(iRows, iCols);
-            for (int i = 0; i < iRows; i++)
-                for (int j = 0; j < iCols; j++)
-                    matrix[i, j] = 0;
-            return matrix;
-        }
-
-        public static Matrix IdentityMatrix(int iRows, int iCols)   // Function generates the identity matrix
-        {
-            Matrix matrix = ZeroMatrix(iRows, iCols);
             for (int i = 0; i < Math.Min(iRows, iCols); i++)
-                matrix[i, i] = 1;
+                matrix[i, i] = init;
             return matrix;
         }
 
@@ -537,7 +555,7 @@ namespace AtmosphereAutopilot
         {
             if (m1.cols != m2.rows) throw new MException("Wrong dimensions of matrix!");
 
-            Matrix result = ZeroMatrix(m1.rows, m2.cols);
+            Matrix result = new Matrix(m1.rows, m2.cols);
             for (int i = 0; i < result.rows; i++)
                 for (int j = 0; j < result.cols; j++)
                     for (int k = 0; k < m1.cols; k++)

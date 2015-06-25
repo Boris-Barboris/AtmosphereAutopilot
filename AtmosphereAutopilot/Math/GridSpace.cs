@@ -15,14 +15,18 @@ namespace AtmosphereAutopilot
         int dim_count;                      // dimension count
         int[] cell_count;                   // amount of cells by dimension
 
-        double[] lower_limits;              // lower bounds of space
-        double[] upper_limits;              // upper bounds of space
+        double[] lower_limits;              // lower bounds of supercell
+        double[] upper_limits;              // upper bounds of supercell
         double[] cell_size;                 // sizes of cells
         double[] region_size;               // sizes of supercells
 
         int storage_length;                 // length of main linear storage of supercell
-
         int[] index_weight;                 // weight of each index in space when linearizing it to 1-dimensional array
+
+        List<Supercell> space = new List<Supercell>();
+
+
+        # region InternalTypes
 
         class CellValue
         {
@@ -67,7 +71,7 @@ namespace AtmosphereAutopilot
                 }
             }
 
-            // get 1-dimensional index for storage from n-dimensional coordinate
+            // get one-dimensional index for storage from n-dimensional coordinate
             int getLinearIndex(params double[] coord)
             {
                 int linear_index = 0;
@@ -88,9 +92,16 @@ namespace AtmosphereAutopilot
             }
         }
 
+        #endregion
 
-        List<Supercell> space = new List<Supercell>();
 
+        /// <summary>
+        /// Create new instance of GridSpace
+        /// </summary>
+        /// <param name="dimensions">number of dimensions</param>
+        /// <param name="cells">number of cells for each dimension</param>
+        /// <param name="l_bound">assumed lower bounds for each dimension</param>
+        /// <param name="u_bound">assumed upper bounds for each dimension</param>
         public GridSpace(int dimensions, int[] cells, double[] l_bound, double[] u_bound)
         {
             this.dim_count = dimensions;
