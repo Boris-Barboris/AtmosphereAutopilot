@@ -26,9 +26,11 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\GameData\AtmosphereAutopilot\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>
+    </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>..\..\..\..\..\Games\Kerbal Space Program 0.90\GameData\AtmosphereAutopilot\AtmosphereAutopilot.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
@@ -62,6 +64,7 @@
     <Compile Include="CircularBuffer.cs" />
     <Compile Include="Controller\PController.cs" />
     <Compile Include="Controller\PIController.cs" />
+    <Compile Include="Math\GridSpace.cs" />
     <Compile Include="Math\SimpleAnn.cs" />
     <Compile Include="Models\MediumFlightModel.cs" />
     <Compile Include="Modules\AngularAccAdaptiveController.cs" />

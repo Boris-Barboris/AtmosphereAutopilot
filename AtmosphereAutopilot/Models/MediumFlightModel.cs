@@ -17,6 +17,13 @@ namespace AtmosphereAutopilot
 		internal MediumFlightModel(Vessel v) :
 			base(v, 8459383, "Medium-term flight model") { }
 
+        InstantControlModel imodel;
+
+        public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+        {
+            imodel = modules[typeof(InstantControlModel)] as InstantControlModel;
+        }
+
 		protected override void OnActivate()
 		{
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
