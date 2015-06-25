@@ -22,8 +22,8 @@ namespace AtmosphereAutopilot
         protected override void _drawGUI(int id)
         {
             GUILayout.BeginVertical();
-
-			foreach (var pair in AtmosphereAutopilot.Instance.getCurVesselModules())
+            AtmosphereAutopilot aa = AtmosphereAutopilot.Instance;
+            foreach (var pair in aa.getVesselModules(aa.ActiveVessel))
             {
                 IWindow gui = pair.Value;
                 bool shown = gui.IsShown();

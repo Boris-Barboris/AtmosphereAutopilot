@@ -125,92 +125,96 @@ for frame = 1:length(global_inputs)
         end
     end
     
-    % try to perform training iterations
-    cpu_time = cpu_time + cpu_ratio;    
-    if (cpu_time >= 1)
-        % we'll iterate this frame so we need to prepare ANN training set
-        % prepare set of excluded ring
-        % excluded_ring = zeros(1, (gen_spacing * 2 + 1)^2);
-        
-        % get all not NaN generalization outputs
-        gen_inputs = zeros(input_count, gen_buf_size);
-        gen_outputs = zeros(1, gen_buf_size);
-        gen_births = zeros(1, gen_buf_size);
-        j = 0;
-        for i=1:gen_buf_size
-            if ~isnan(gen_buf_output(:,i)) && (i ~= gen_linear_index)
-                j = j+1;
-                gen_inputs(:,j) = gen_buf_input(:,i);
-                gen_outputs(:,j) = gen_buf_output(:,i);
-                gen_births(j) = gen_buf_birth(i);
+    if frame < 500
+
+        % try to perform training iterations
+        cpu_time = cpu_time + cpu_ratio;    
+        if (cpu_time >= 1)
+            % we'll iterate this frame so we need to prepare ANN training set
+            % prepare set of excluded ring
+            % excluded_ring = zeros(1, (gen_spacing * 2 + 1)^2);
+
+            % get all not NaN generalization outputs
+            gen_inputs = zeros(input_count, gen_buf_size);
+            gen_outputs = zeros(1, gen_buf_size);
+            gen_births = zeros(1, gen_buf_size);
+            j = 0;
+            for i=1:gen_buf_size
+                if ~isnan(gen_buf_output(:,i)) && (i ~= gen_linear_index)
+                    j = j+1;
+                    gen_inputs(:,j) = gen_buf_input(:,i);
+                    gen_outputs(:,j) = gen_buf_output(:,i);
+                    gen_births(j) = gen_buf_birth(i);
+                end
+            end
+
+            % find current batching configuration
+            cur_batch_size = min(imm_buf_count, imm_batch_size);
+            cur_batch_count = floor(double(imm_buf_count) / double(cur_batch_size));
+
+            % concatenate to unite training vectors
+            training_input = [imm_buf_input(:,1:imm_buf_count), stoh_buf_input(:,1:stoh_buf_count),...
+                gen_inputs(:,1:j)];
+            training_output = [imm_buf_output(:,1:imm_buf_count), stoh_buf_output(:,1:stoh_buf_count),...
+                gen_outputs(:,1:j)];
+            %training_input = [imm_buf_input(:,1:imm_buf_count), stoh_buf_input(:,1:stoh_buf_count)];
+            %training_output = [imm_buf_output(:,1:imm_buf_count), stoh_buf_output(:,1:stoh_buf_count)];
+
+            % prepare input weights vector
+            if j > 0
+                cur_time = frame * 0.02;
+                gen_imm_ratio = j / double(imm_buf_count + stoh_buf_count);
+                % base undecayed importance of generalization data point:
+                base_gen_weight = gen_importance / gen_imm_ratio;
+                decayed_gen_weight = zeros(1, j);
+                for i=1:j
+                    decayed_gen_weight(i) = base_gen_weight ./...
+                        (gen_time_decay * (cur_time - gen_births(i)) + 1);
+                end
+                input_weights  = [zeros(1, imm_buf_count + stoh_buf_count) + 1, decayed_gen_weight];
+            else
+                input_weights  = zeros(1, imm_buf_count + stoh_buf_count) + 1;
             end
         end
-        
-        % find current batching configuration
-        cur_batch_size = min(imm_buf_count, imm_batch_size);
-        cur_batch_count = floor(double(imm_buf_count) / double(cur_batch_size));
-        
-        % concatenate to unite training vectors
-        training_input = [imm_buf_input(:,1:imm_buf_count), stoh_buf_input(:,1:stoh_buf_count),...
-            gen_inputs(:,1:j)];
-        training_output = [imm_buf_output(:,1:imm_buf_count), stoh_buf_output(:,1:stoh_buf_count),...
-            gen_outputs(:,1:j)];
-        %training_input = [imm_buf_input(:,1:imm_buf_count), stoh_buf_input(:,1:stoh_buf_count)];
-        %training_output = [imm_buf_output(:,1:imm_buf_count), stoh_buf_output(:,1:stoh_buf_count)];
-        
-        % prepare input weights vector
-        if j > 0
-            cur_time = frame * 0.02;
-            gen_imm_ratio = j / double(imm_buf_count + stoh_buf_count);
-            % base undecayed importance of generalization data point:
-            base_gen_weight = gen_importance / gen_imm_ratio;
-            decayed_gen_weight = zeros(1, j);
-            for i=1:j
-                decayed_gen_weight(i) = base_gen_weight ./...
-                    (gen_time_decay * (cur_time - gen_births(i)) + 1);
-            end
-            input_weights  = [zeros(1, imm_buf_count + stoh_buf_count) + 1, decayed_gen_weight];
-        else
-            input_weights  = zeros(1, imm_buf_count + stoh_buf_count) + 1;
-        end
-    end
-    while cpu_time >= 1
-        % iterate here
-        [new_weights, new_biases, old_sqr_err] =...
-            anntrain_lm_hybrid(training_input, input_weights, training_output,...
-            cur_batch_size, imm_batch_weight,...
-            weights, biases, mu, input_count, hidden_count);
-        ann_outputs = anneval_large(training_input, new_weights, new_biases, input_count, hidden_count);
-        %new_sqr_err = meansqr((ann_outputs - training_output) .* input_weights);
-        new_sqr_err = hybrid_sqerr((ann_outputs - training_output) .* input_weights,...
-            cur_batch_size, imm_batch_weight);
-        if (new_sqr_err < old_sqr_err)
-            weights = new_weights;
-            biases = new_biases;
-            % add success
-            ann_descend_success(frame) = ann_descend_success(frame) + 0.05;
-            if mu/tau_inc >= mu_min
-                mu = mu / tau_inc;
-            end
-            grad = old_sqr_err - new_sqr_err;
-            if grad < grad_min
-                grad_min_iter = grad_min_iter + 1;
-                if grad_min_iter >= grad_min_iter_limit
+        while cpu_time >= 1
+            % iterate here
+            [new_weights, new_biases, old_sqr_err] =...
+                anntrain_lm_hybrid(training_input, input_weights, training_output,...
+                cur_batch_size, imm_batch_weight,...
+                weights, biases, mu, input_count, hidden_count);
+            ann_outputs = anneval_large(training_input, new_weights, new_biases, input_count, hidden_count);
+            %new_sqr_err = meansqr((ann_outputs - training_output) .* input_weights);
+            new_sqr_err = hybrid_sqerr((ann_outputs - training_output) .* input_weights,...
+                cur_batch_size, imm_batch_weight);
+            if (new_sqr_err < old_sqr_err)
+                weights = new_weights;
+                biases = new_biases;
+                % add success
+                ann_descend_success(frame) = ann_descend_success(frame) + 0.05;
+                if mu/tau_inc >= mu_min
+                    mu = mu / tau_inc;
+                end
+                grad = old_sqr_err - new_sqr_err;
+                if grad < grad_min
+                    grad_min_iter = grad_min_iter + 1;
+                    if grad_min_iter >= grad_min_iter_limit
+                        cpu_time = 0;
+                        break
+                    end
+                end
+                if new_sqr_err == 0
                     cpu_time = 0;
                     break
                 end
+                %plot(inputs, ann_outputs);
+            else
+                if mu*tau_dec <= mu_max
+                    mu = mu * tau_dec;
+                end
             end
-            if new_sqr_err == 0
-                cpu_time = 0;
-                break
-            end
-            %plot(inputs, ann_outputs);
-        else
-            if mu*tau_dec <= mu_max
-                mu = mu * tau_dec;
-            end
+            cpu_time = cpu_time - 1;
         end
-        cpu_time = cpu_time - 1;
+        
     end
     
     % current model acceleration

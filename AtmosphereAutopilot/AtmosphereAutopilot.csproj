@@ -62,6 +62,7 @@
     <Compile Include="CircularBuffer.cs" />
     <Compile Include="Controller\PController.cs" />
     <Compile Include="Controller\PIController.cs" />
+    <Compile Include="Math\SimpleAnn.cs" />
     <Compile Include="Models\MediumFlightModel.cs" />
     <Compile Include="Modules\AngularAccAdaptiveController.cs" />
     <Compile Include="Models\InstantControlModel.cs" />

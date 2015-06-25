@@ -122,7 +122,7 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// Get set of AutopilotModule instances, created for arbitrary vessel.
         /// </summary>
-		public Dictionary<Type, AutopilotModule> getCurVesselModules(Vessel v)
+		public Dictionary<Type, AutopilotModule> getVesselModules(Vessel v)
 		{
             if (autopilot_module_lists.ContainsKey(v))
                 return autopilot_module_lists[v];
