@@ -114,7 +114,7 @@ namespace AtmosphereAutopilot
             }
         }
 
-        static void DeserializeFromNode(ConfigNode node, object obj, Type attribute_type)
+        public static void DeserializeFromNode(ConfigNode node, object obj, Type attribute_type)
         {
             Type type = obj.GetType();
             foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
@@ -151,7 +151,7 @@ namespace AtmosphereAutopilot
             }
         }
 
-        static void SerializeToNode(ConfigNode node, object obj, Type attribute_type)
+        public static void SerializeToNode(ConfigNode node, object obj, Type attribute_type)
         {
             // Serialize
             Type type = obj.GetType();

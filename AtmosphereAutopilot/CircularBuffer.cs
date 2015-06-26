@@ -131,6 +131,11 @@ namespace System.Collections.Generic
             tail = (tail + 1) % capacity;
         }
 
+        public T getWritingCell()
+        {
+            return buffer[tail];
+        }
+
         public T getFromTail(int shift)
         {
             if (shift >= size)

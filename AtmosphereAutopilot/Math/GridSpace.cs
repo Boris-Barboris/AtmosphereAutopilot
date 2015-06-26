@@ -28,7 +28,7 @@ namespace AtmosphereAutopilot
 
         # region InternalTypes
 
-        class CellValue
+        public class CellValue
         {
             public CellValue(T data, params double[] coord)
             {
@@ -49,7 +49,7 @@ namespace AtmosphereAutopilot
             GridSpace<T> owner;
             public int[] super_index;
 
-            CellValue[] storage;            // linear storage
+            public CellValue[] storage;            // linear storage
 
             public Supercell(GridSpace<T> creator, params int[] supercell_index)
             {
@@ -87,7 +87,7 @@ namespace AtmosphereAutopilot
             }
 
             // get one-dimensional index for storage from n-dimensional coordinate
-            int getLinearIndex(params double[] coord)
+            public int getLinearIndex(params double[] coord)
             {
                 int linear_index = 0;
                 for (int i = 0; i < owner.dim_count; i++)
@@ -167,6 +167,19 @@ namespace AtmosphereAutopilot
                 return scell.Get(out data, coord);
         }
 
+        public int getCellIdForCoord(params double[] coord)
+        {
+            Supercell scell = GetSupercell(coord, false);
+            if (scell == null)
+                return -1;
+            else
+            {
+                int index = space.IndexOf(scell) * storage_length;
+                index += scell.getLinearIndex(coord);
+                return index;
+            }
+        }
+
         Supercell GetSupercell(double[] coord, bool create = true)
         {
             int[] scindex = getSupercellCoord(coord);
@@ -186,7 +199,17 @@ namespace AtmosphereAutopilot
             for (int i = 0; i < dim_count; i++)
                 output[i] = (int)Math.Floor((coord[i] - lower_limits[i]) / region_size[i]);
 			return output;
-        }        
+        }
+
+        public List<CellValue> linearize()
+        {
+            List<CellValue> result = new List<CellValue>(storage_length);
+            foreach (var scell in space)
+                foreach (var val in scell.storage)
+                    if (val != null)
+                        result.Add(val);
+            return result;
+        }
     }
 
 }

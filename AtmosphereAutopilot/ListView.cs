@@ -12,54 +12,20 @@ namespace System.Collections.Generic
         public ListView(params IList<T>[] targets)
         {
             foreach (var target in targets)
-                lists.Add(target);
-        }
-
-        struct Enumerator : IEnumerator<T>, IEnumerator, IDisposable
-        {
-            int index;
-            ListView<T> owner;
-
-            public Enumerator(ListView<T> col)
-            {
-                index = -1;
-                owner = col;
-            }
-
-            public T Current
-            {
-                get { return owner[index]; }
-            }
-
-            object IEnumerator.Current
-            {
-                get { return owner[index]; }
-            }
-
-            public bool MoveNext()
-            {
-                index++;
-                if (index >= owner.Count)
-                    return false;
-                return true;
-            }
-
-            public void Reset()
-            {
-                index = 0;
-            }
-
-            public void Dispose() { owner = null; }
+                if (target != null)
+                    lists.Add(target);
         }
 
         public IEnumerator<T> GetEnumerator()
         {
-            return new Enumerator(this);
+            foreach (var list in lists)
+                foreach (T x in list)
+                    yield return x;
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return new Enumerator(this);
+            return GetEnumerator();
         }
 
         public int Count
@@ -100,10 +66,8 @@ namespace System.Collections.Generic
         {
             get
             {
-                if (index < 0)
-                    throw new InvalidOperationException("index < 0");
                 if (lists.Count <= 0)
-                    throw new InvalidOperationException("lists.Count <= 0");
+                    throw new InvalidOperationException("ListView is empty");
                 int i = 0;
                 while (lists[i].Count <= index)
                 {
@@ -116,10 +80,8 @@ namespace System.Collections.Generic
             }
             set
             {
-                if (index < 0)
-                    throw new InvalidOperationException("index < 0");
                 if (lists.Count <= 0)
-                    throw new InvalidOperationException("lists.Count <= 0");
+                    throw new InvalidOperationException("ListView is empty");
                 int i = 0;
                 while (lists[i].Count <= index)
                 {

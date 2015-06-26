@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+//using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
@@ -17,6 +18,7 @@ namespace AtmosphereAutopilot
         List<Func<bool>> execution_que = new List<Func<bool>>();
 
         Thread thread;
+        ManualResetEvent sema = new ManualResetEvent(true);
 
         public BackgroundThread(int idle_pause = 1)
         {
@@ -26,7 +28,7 @@ namespace AtmosphereAutopilot
 
         public void Start()
         {
-            if (abort)
+            if (stop)
                 throw new InvalidOperationException("Thread was aborted");
             if (!thread.IsAlive)
                 thread.Start();
@@ -34,7 +36,8 @@ namespace AtmosphereAutopilot
 
         public void Stop()
         {
-            abort = true;
+            Resume();
+            stop = true;
         }
 
         public void Dispose()
@@ -42,41 +45,68 @@ namespace AtmosphereAutopilot
             Stop();
         }
 
+        public void Pause()
+        {
+            if (stop)
+                throw new InvalidOperationException("Thread was stopped");
+            sema.Reset();
+        }
+
+        public void Resume()
+        {
+            if (stop)
+                throw new InvalidOperationException("Thread was stopped");
+            sema.Set();
+        }
+
         public bool IsRunning { get { return thread.IsAlive; } }
 
-        bool abort = false;
+        bool stop = false;
 
         void cycle()
         {
-            bool success = false;
-            foreach (var func in execution_que)
+            while (true)
             {
-                if (abort)
-                    return;
-                success |= func();
-            }
-            if (abort)
-                return;
-            if (!success)
-                Thread.Sleep(idle_pause);
-            lock (removal_que)
-            {
-                // Process removal requests
-                while (removal_que.Count > 0)
+                sema.WaitOne();
+                bool success = false;
+                foreach (var func in execution_que)
                 {
-                    var hndl = removal_que[0];
-                    execution_que.Remove(hndl);
-                    removal_que.RemoveAt(0);
+                    if (stop)
+                        return;
+                    try
+                    {
+                        success |= func();
+                    }
+                    catch (Exception e)
+                    {
+                        //Debug.Log("Background thread exception - broken function removed from queue\r\n" + e.Message);
+                        remove_func(func);
+                    }
+                    sema.WaitOne();
                 }
-            }
-            lock (addition_que)
-            {
-                // Process addition requests
-                while (addition_que.Count > 0)
+                if (stop)
+                    return;
+                if (!success)
+                    Thread.Sleep(idle_pause);
+                lock (removal_que)
                 {
-                    var hndl = addition_que[0];
-                    execution_que.Add(hndl);
-                    addition_que.RemoveAt(0);
+                    // Process removal requests
+                    while (removal_que.Count > 0)
+                    {
+                        var hndl = removal_que[0];
+                        execution_que.Remove(hndl);
+                        removal_que.RemoveAt(0);
+                    }
+                }
+                lock (addition_que)
+                {
+                    // Process addition requests
+                    while (addition_que.Count > 0)
+                    {
+                        var hndl = addition_que[0];
+                        execution_que.Add(hndl);
+                        addition_que.RemoveAt(0);
+                    }
                 }
             }
         }

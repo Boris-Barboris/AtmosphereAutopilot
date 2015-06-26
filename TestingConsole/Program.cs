@@ -14,7 +14,7 @@ namespace TestingConsole
         static void Main(string[] args)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
-			GridSpaceTest();
+            trainingTest();
             Console.ReadKey(true);
         }
 
@@ -65,6 +65,35 @@ namespace TestingConsole
 				Console.Write(output.ToString("G8"));
 			else
 				Console.Write("Can't read");
+            var linear = space.linearize();
+        }
+
+        static void trainingTest()
+        {
+            List<double[]> inputs = new List<double[]>();
+            List<double> outputs = new List<double>();
+            int set_size = 50;
+            for (int j = 0; j < set_size; j++)
+            {
+                inputs.Add(new double[] { j * 1.0 / (double)set_size });
+                outputs.Add( j * 0.5 / (double)set_size);
+            }
+            int i = 0;
+            SimpleAnn ann = new SimpleAnn(4, 1);
+            OnlineAnnTrainer trainer = new OnlineAnnTrainer(ann, 10, new int[] { 5 },
+                new double[] { -10.0 }, new double[] { 10.0 },
+                (arr) => { arr[0] = inputs[i][0]; },
+                () => { return outputs[i]; });
+            BackgroundThread thread = new BackgroundThread();
+            thread.add_func(() => { trainer.Train(); Console.WriteLine(trainer.ann_performance.ToString("G8")); return false; });
+            thread.Start();
+            while (i < set_size)
+            {
+                Thread.Sleep(5);
+                trainer.UpdateState(0);
+                i++;
+            }
+            thread.Stop();
         }
     }
 }
