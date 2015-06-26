@@ -19,8 +19,8 @@ namespace System.Collections.Generic
 
         public CircularBuffer(int capacity, bool allowOverflow)
         {
-            if (capacity < 0)
-                throw new ArgumentException("capacity must be greater than or equal to zero.",
+            if (capacity <= 0)
+                throw new ArgumentException("capacity must be greater than zero.",
                     "capacity");
 
             this.capacity = capacity;
@@ -140,8 +140,6 @@ namespace System.Collections.Generic
         {
             if (shift >= size)
                 throw new IndexOutOfRangeException("shift >= size = " + size.ToString());
-            if (capacity <= 0)
-                throw new IndexOutOfRangeException("capacity <= 0");
             return buffer[capacity - 1 - ((capacity - tail + shift) % capacity)];
         }
 

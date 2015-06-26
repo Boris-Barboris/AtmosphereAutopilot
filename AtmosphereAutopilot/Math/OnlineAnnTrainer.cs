@@ -7,14 +7,18 @@ using System.Threading;
 namespace AtmosphereAutopilot
 {
 
+    using Vector = VectorArray.Vector;
+
     public class OnlineAnnTrainer
     {
         // Buffers, that will be updated by calls from Unity event cycle
         // Immediate buffer contains recent state records
-        CircularBuffer<double[]> imm_buf_inputs;
+        CircularBuffer<Vector> imm_buf_inputs;
+        VectorArray imm_buf_vectors;
         CircularBuffer<double> imm_buf_outputs;
 
-        CircularBuffer<double[]> imm_training_inputs;       // immediate buffer, used directly for training
+        CircularBuffer<Vector> imm_training_inputs;         // immediate buffer, used directly for training
+        VectorArray imm_training_vectors;
         CircularBuffer<double> imm_training_outputs;
 
         // Generalization buffer is being used as ANN generality augmentor
@@ -38,14 +42,22 @@ namespace AtmosphereAutopilot
         }
 
         public OnlineAnnTrainer(SimpleAnn ann, int imm_buf_size, int[] gen_cells, double[] l_gen_bound, double[] u_gen_bound,
-            Action<double[]> input_method, Func<double> output_method)
+            Action<Vector> input_method, Func<double> output_method)
         {
             this.ann = ann;
             // Immediate buffer initialization
-            imm_buf_inputs = new CircularBuffer<double[]>(imm_buf_size, true);
-            imm_training_inputs = new CircularBuffer<double[]>(imm_buf_size, true);
+            imm_buf_inputs = new CircularBuffer<Vector>(imm_buf_size, true);
+            imm_buf_vectors = new VectorArray(ann.input_count, imm_buf_size);
+            imm_training_inputs = new CircularBuffer<Vector>(imm_buf_size, true);
+            imm_training_vectors = new VectorArray(ann.input_count, imm_buf_size);
             imm_buf_outputs = new CircularBuffer<double>(imm_buf_size, true);
             imm_training_outputs = new CircularBuffer<double>(imm_buf_size, true);
+            // bind vectors in circular buffers to vector arrays
+            for (int i = 0; i < imm_buf_size; i++)
+            {
+                imm_buf_inputs[i] = imm_buf_vectors[i];
+                imm_training_inputs[i] = imm_training_vectors[i];
+            }
             // Generalization space initialization
             gen_space = new GridSpace<GenStruct>(ann.input_count, gen_cells, l_gen_bound, u_gen_bound);
             // Delegates assignment
@@ -71,7 +83,7 @@ namespace AtmosphereAutopilot
             updated = true;
         }
 
-        Action<double[]> input_update_dlg;              // new state input getter
+        Action<Vector> input_update_dlg;                // new state input getter
         Func<double> output_update_dlg;                 // new state output getter
 
         void update_immediate_buffer()
@@ -79,9 +91,7 @@ namespace AtmosphereAutopilot
             lock (imm_buf_inputs)
             {
                 // inputs
-                double[] input = imm_buf_inputs.getWritingCell();
-                if (input == null)
-                    input = new double[ann.input_count];
+                Vector input = imm_buf_inputs.getWritingCell();
                 input_update_dlg(input);
                 imm_buf_inputs.Put(input);
                 // outputs
@@ -96,7 +106,7 @@ namespace AtmosphereAutopilot
         List<double> imm_error_weights = new List<double>();
         List<double> gen_error_weights = new List<double>();
 
-        ListView<double[]> ann_input_view;
+        ListView<Vector> ann_input_view;
         ListView<double> ann_output_view;
         ListView<double> err_weight_view;
 
@@ -129,10 +139,8 @@ namespace AtmosphereAutopilot
                 int count = imm_buf_inputs.Size;
                 while (count > 0)
                 {
-                    double[] writing_cell = imm_training_inputs.getWritingCell();
-                    if (writing_cell == null)
-                        writing_cell = new double[ann.input_count];
-                    imm_buf_inputs.Get().CopyTo(writing_cell, 0);
+                    Vector writing_cell = imm_training_inputs.getWritingCell();
+                    imm_buf_inputs.Get().DeepCopy(writing_cell);
                     imm_training_inputs.Put(writing_cell);
                     imm_training_outputs.Put(imm_buf_outputs.Get());
                     count--;

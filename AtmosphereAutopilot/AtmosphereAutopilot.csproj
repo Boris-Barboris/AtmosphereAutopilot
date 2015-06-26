@@ -67,6 +67,7 @@
     <Compile Include="Controller\PIController.cs" />
     <Compile Include="Math\GridSpace.cs" />
     <Compile Include="Math\SimpleAnn.cs" />
+    <Compile Include="Math\VectorArray.cs" />
     <Compile Include="Models\MediumFlightModel.cs" />
     <Compile Include="Math\OnlineAnnTrainer.cs" />
     <Compile Include="Modules\AngularAccAdaptiveController.cs" />

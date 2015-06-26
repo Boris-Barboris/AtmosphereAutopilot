@@ -6,6 +6,8 @@ using System.Text;
 namespace AtmosphereAutopilot
 {
 
+    using Vector = VectorArray.Vector;
+
     /// <summary>
     /// Simple single hidden layer artificial neural network with tansig transfer function
     /// and purelin output transfer function.
@@ -103,7 +105,7 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// Evaluate network on given inputs
         /// </summary>
-        public double eval(params double[] inputs)
+        public double eval(Vector inputs)
         {
             a2 = 0.0;
             for (int n = 0; n < hidden_count; n++)
@@ -256,7 +258,7 @@ namespace AtmosphereAutopilot
         /// <param name="iter_limit">Descend iteration limit. Will break descend cycle if it's not possible</param>
         /// <param name="new_msqrerr">Get resulting performance index of the net</param>
         /// <returns></returns>
-        public bool lm_iterate_batched(IList<double[]> inputs, IList<double> outputs, IList<double> error_weights,
+        public bool lm_iterate_batched(IList<Vector> inputs, IList<double> outputs, IList<double> error_weights,
             int batch_size, double batch_weight, GaussKoeff gauss, int iter_limit, out double new_msqrerr)
         {
             int param_count = weights.Length + biases.Length;            

@@ -6,6 +6,8 @@ using System.Text;
 namespace AtmosphereAutopilot
 {
 
+    using Vector = VectorArray.Vector;
+
     /// <summary>
     /// Class-container for sparse spatial data with uniform distribution
     /// </summary>
@@ -24,19 +26,18 @@ namespace AtmosphereAutopilot
         int[] index_weight;                 // weight of each index in space when linearizing it to 1-dimensional array
 
         List<Supercell> space = new List<Supercell>();
-
+        List<CellValue> linear_form = new List<CellValue>();
 
         # region InternalTypes
 
         public class CellValue
         {
-            public CellValue(T data, params double[] coord)
+            public CellValue(T data)
             {
                 this.data = data;
-                this.coord = coord;
             }
 
-            public double[] coord;
+            public Vector coord;
             public T data;
         }        
 
@@ -49,7 +50,8 @@ namespace AtmosphereAutopilot
             GridSpace<T> owner;
             public int[] super_index;
 
-            public CellValue[] storage;            // linear storage
+            public CellValue[] storage;             // linear storage
+            public VectorArray coord_storage;       // coordinate storage
 
             public Supercell(GridSpace<T> creator, params int[] supercell_index)
             {
@@ -57,21 +59,27 @@ namespace AtmosphereAutopilot
                 super_index = supercell_index;
                 // allocate storage
                 storage = new CellValue[owner.storage_length];
+                coord_storage = new VectorArray(creator.dim_count, owner.storage_length);
             }
 
-            public void Put(T data, params double[] coord)
+            public void Put(T data, Vector coord)
             {
                 int index = getLinearIndex(coord);
                 if (storage[index] == null)
-                    storage[index] = new CellValue(data, coord);
+                {
+                    storage[index] = new CellValue(data);
+                    storage[index].coord = coord_storage[index];
+                    coord.DeepCopy(storage[index].coord);
+                    owner.linear_form.Add(storage[index]);
+                }
                 else
                 {
-                    coord.CopyTo(storage[index].coord, 0);
+                    coord.DeepCopy(storage[index].coord);
                     storage[index].data = data;
                 }
             }
 
-            public bool Get(out T data, params double[] coord)
+            public bool Get(out T data, Vector coord)
             {
                 int index = getLinearIndex(coord);
                 if (storage[index] == null)
@@ -87,7 +95,7 @@ namespace AtmosphereAutopilot
             }
 
             // get one-dimensional index for storage from n-dimensional coordinate
-            public int getLinearIndex(params double[] coord)
+            public int getLinearIndex(Vector coord)
             {
                 int linear_index = 0;
                 for (int i = 0; i < owner.dim_count; i++)
@@ -149,13 +157,13 @@ namespace AtmosphereAutopilot
         /// </summary>
         /// <param name="data">Data to put</param>
         /// <param name="coord">coordinate of new data point</param>
-        public void Put(T data, params double[] coord)
+        public void Put(T data, Vector coord)
         {
             Supercell scell = GetSupercell(coord);
             scell.Put(data, coord);
         }
 
-        public bool Get(out T data, params double[] coord)
+        public bool Get(out T data, Vector coord)
         {
             Supercell scell = GetSupercell(coord, false);
             if (scell == null)
@@ -167,7 +175,7 @@ namespace AtmosphereAutopilot
                 return scell.Get(out data, coord);
         }
 
-        public int getCellIdForCoord(params double[] coord)
+        public int getCellIdForCoord(Vector coord)
         {
             Supercell scell = GetSupercell(coord, false);
             if (scell == null)
@@ -180,7 +188,7 @@ namespace AtmosphereAutopilot
             }
         }
 
-        Supercell GetSupercell(double[] coord, bool create = true)
+        Supercell GetSupercell(Vector coord, bool create = true)
         {
             int[] scindex = getSupercellCoord(coord);
 			Supercell sc = space.Find((s) => { return s.super_index.SequenceEqual(scindex); });
@@ -193,7 +201,7 @@ namespace AtmosphereAutopilot
             return sc;
         }
 
-		int[] getSupercellCoord(double[] coord)
+        int[] getSupercellCoord(Vector coord)
         {
 			int[] output = new int[dim_count];
             for (int i = 0; i < dim_count; i++)
@@ -201,14 +209,9 @@ namespace AtmosphereAutopilot
 			return output;
         }
 
-        public List<CellValue> linearize()
+        public List<CellValue> Linearized
         {
-            List<CellValue> result = new List<CellValue>(storage_length);
-            foreach (var scell in space)
-                foreach (var val in scell.storage)
-                    if (val != null)
-                        result.Add(val);
-            return result;
+            get { return linear_form; }
         }
     }
 
