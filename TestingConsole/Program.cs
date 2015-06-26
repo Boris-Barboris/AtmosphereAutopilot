@@ -13,7 +13,8 @@ namespace TestingConsole
     {
         static void Main(string[] args)
         {
-            LMTest();
+            Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
+            
             Console.ReadKey(true);
         }
 
@@ -42,7 +43,6 @@ namespace TestingConsole
 
         static void LMTest()
         {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
             List<double[]> inputs = new List<double[]>();
             inputs.Add(new double[2] { -1, -1 });
             inputs.Add(new double[2] { 0, 0 });
@@ -53,6 +53,12 @@ namespace TestingConsole
             double err;
             bool succ = ann.lm_iterate_batched(inputs, outputs, new double[3] { 1, 1, 1 }, 3, 0.25, koeff, 3, out err);
             Console.Write(succ.ToString());
+        }
+
+        static void GridSpaceTest()
+        {
+            GridSpace<double> space = new GridSpace<double>(2, new int[2] { 5, 5 }, new double[2] { -10, -10 }, new double[2] { 10, 10 });
+
         }
     }
 }

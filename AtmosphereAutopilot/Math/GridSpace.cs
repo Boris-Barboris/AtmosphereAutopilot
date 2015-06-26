@@ -71,6 +71,21 @@ namespace AtmosphereAutopilot
                 }
             }
 
+            public bool Get(out T data, params double[] coord)
+            {
+                int index = getLinearIndex(coord);
+                if (storage[index] == null)
+                {
+                    data = new T();
+                    return false;
+                }
+                else
+                {
+                    data = storage[index].data;
+                    return true;
+                }
+            }
+
             // get one-dimensional index for storage from n-dimensional coordinate
             int getLinearIndex(params double[] coord)
             {
@@ -140,12 +155,24 @@ namespace AtmosphereAutopilot
             scell.Put(data, coord);
         }
 
-        Supercell GetSupercell(double[] coord)
+        public bool Get(out T data, params double[] coord)
+        {
+            Supercell scell = GetSupercell(coord, false);
+            if (scell == null)
+            {
+                data = new T();
+                return false;
+            }
+            else
+                return scell.Get(out data, coord);
+        }
+
+        Supercell GetSupercell(double[] coord, bool create = true)
         {
             int[] scindex = new int[dim_count];
             getSupercellCoord(coord, scindex);
             Supercell sc = space.First((s) => { return s.super_index.SequenceEqual(scindex); });
-            if (sc == null)
+            if (sc == null && create)
             {
                 // need to create new supercell
                 sc = new Supercell(this, scindex);
