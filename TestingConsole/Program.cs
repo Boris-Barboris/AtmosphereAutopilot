@@ -9,6 +9,8 @@ using AtmosphereAutopilot;
 
 namespace TestingConsole
 {
+	using Vector = VectorArray.Vector;
+
     class Program
     {
         static void Main(string[] args)
@@ -24,7 +26,7 @@ namespace TestingConsole
             SimpleAnn ann = new SimpleAnn(3);
             foreach (var i in ann_inputs)
             {
-                double output = ann.eval(i);
+                double output = ann.eval((Vector)i);
                 Console.Write(output.ToString("G8") + " ");
             }
         }
@@ -43,10 +45,10 @@ namespace TestingConsole
 
         static void LMTest()
         {
-            List<double[]> inputs = new List<double[]>();
-            inputs.Add(new double[2] { -1, -1 });
-            inputs.Add(new double[2] { 0, 0 });
-            inputs.Add(new double[2] { 1, 1 });
+			List<Vector> inputs = new List<Vector>();
+            inputs.Add((Vector)new double[2] { -1, -1 });
+			inputs.Add((Vector)new double[2] { 0, 0 });
+			inputs.Add((Vector)new double[2] { 1, 1 });
             double[] outputs = { -0.25, 0, 0.5 };
             SimpleAnn ann = new SimpleAnn(3, 2);
             SimpleAnn.GaussKoeff koeff = new SimpleAnn.GaussKoeff(1e-3, 1e-7, 1e7, 2, 100);
@@ -58,14 +60,13 @@ namespace TestingConsole
         static void GridSpaceTest()
         {
             GridSpace<double> space = new GridSpace<double>(2, new int[2] { 4, 9 }, new double[2] { -10, -10 }, new double[2] { 10, 10 });
-			space.Put(42.0, -11.3, 1.2);
-			double output;
-			bool read = space.Get(out output, -11.5, 1.21);
-			if (read)
-				Console.Write(output.ToString("G8"));
+			space.Put(42.0, (Vector)new double[] {-11.3, 1.1});
+			var read = space.Get(new double[] { -11.5, 1.21});
+			if (read != null)
+				Console.Write(read.data.ToString("G8"));
 			else
 				Console.Write("Can't read");
-            var linear = space.linearize();
+			var linear = space.Linearized;
         }
 
         static void trainingTest()

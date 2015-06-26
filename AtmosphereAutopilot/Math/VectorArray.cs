@@ -55,7 +55,25 @@ namespace AtmosphereAutopilot
                 this.index = index;
             }
 
-            public double this[int proj]
+			public static implicit operator Vector(double[] arr)
+			{
+				int dim = arr.Length;
+				VectorArray a = new VectorArray(dim, 1);
+				Vector v = a[0];
+				for (int i = 0; i < dim; i++)
+					v[i] = arr[i];
+				return v;
+			}
+
+			public static implicit operator Vector(double val)
+			{
+				VectorArray a = new VectorArray(1, 1);
+				Vector v = a[0];
+				v[0] = val;
+				return v;
+			}
+
+			public double this[int proj]
             {
                 get { return source.data[index * source.vector_size + proj]; }
                 set { source.data[index * source.vector_size + proj] = value; }

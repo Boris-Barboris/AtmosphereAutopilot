@@ -60,11 +60,14 @@ namespace AtmosphereAutopilot
             }
             // Generalization space initialization
             gen_space = new GridSpace<GenStruct>(ann.input_count, gen_cells, l_gen_bound, u_gen_bound);
+			linear_gen_buff = gen_space.Linearized;
             // Delegates assignment
             input_update_dlg = input_method;
             output_update_dlg = output_method;
             // Misc
             batch_size = imm_buf_size;
+			temp_array = new VectorArray(ann.input_count, 10);
+			coord_vector = temp_array[0];
         }
 
         /// <summary>
@@ -150,43 +153,42 @@ namespace AtmosphereAutopilot
 
         int last_gen_index = -2;
 
-        List<GridSpace<GenStruct>.CellValue> linear_gen_buff = new List<GridSpace<GenStruct>.CellValue>();
+		List<GridSpace<GenStruct>.CellValue> linear_gen_buff;
+		VectorArray temp_array;
+		Vector coord_vector;
 
         void update_gen_space()
         {
             if (imm_training_inputs.Size >= cell_batch)         // there is enough material for generalization averaging
             {
-                double[] gen_coord = new double[ann.input_count];
                 double val = 0.0;
+				int dim = ann.input_count;
                 for (int i = 0; i < ann.input_count; i++)
-                    gen_coord[i] = 0.0;
+					coord_vector[i] = 0.0;
                 // Average state over cell_batch samples
                 for (int i = 0; i < cell_batch; i++)
                 {
-                    val += imm_buf_outputs.getFromTail(i);
-                    double[] inputs = imm_buf_inputs.getFromTail(i);
-                    for (int j = 0; j < inputs.Length; j++)
-                        gen_coord[j] += inputs[j];
+                    val += imm_training_outputs.getFromTail(i);
+					for (int j = 0; j < dim; j++)
+						coord_vector[j] += imm_training_inputs.getFromTail(i)[j];
                 }
                 val /= (double)cell_batch;
-                for (int j = 0; j < gen_coord.Length; j++)
-                    gen_coord[j] /= (double)cell_batch;
+				for (int j = 0; j < dim; j++)
+                    coord_vector[j] /= (double)cell_batch;
                 // check if we switched to new cell
-                int cellid = gen_space.getCellIdForCoord(gen_coord);
+				int cellid = gen_space.getCellIdForCoord(coord_vector);
                 if (cellid != last_gen_index)
                 {
                     // Push state to generalization space
-                    gen_space.Put(new GenStruct(val, last_time), gen_coord);
+					gen_space.Put(new GenStruct(val, last_time), coord_vector);
                     last_gen_index = cellid;
-                    // We need to update generalization buffer linear representation
-                    linear_gen_buff = gen_space.linearize();
                 }
             }
         }
 
         void update_views()
         {
-            ann_input_view = new ListView<double[]>(imm_training_inputs, linear_gen_buff.Select(v => v.coord).ToArray());
+			ann_input_view = new ListView<Vector>(imm_training_inputs, linear_gen_buff.Select(v => v.coord).ToArray());
             ann_output_view = new ListView<double>(imm_training_outputs, linear_gen_buff.Select(v => v.data.val).ToArray());
             err_weight_view = new ListView<double>(imm_error_weights, gen_error_weights);
         }

@@ -79,22 +79,15 @@ namespace AtmosphereAutopilot
                 }
             }
 
-            public bool Get(out T data, Vector coord)
+			public CellValue Get(Vector coord)
             {
                 int index = getLinearIndex(coord);
-                if (storage[index] == null)
-                {
-                    data = new T();
-                    return false;
-                }
-                else
-                {
-                    data = storage[index].data;
-                    return true;
-                }
+				return storage[index];
             }
 
-            // get one-dimensional index for storage from n-dimensional coordinate
+            /// <summary>
+			/// get one-dimensional index of cell from coordinate vector
+            /// </summary>
             public int getLinearIndex(Vector coord)
             {
                 int linear_index = 0;
@@ -163,16 +156,13 @@ namespace AtmosphereAutopilot
             scell.Put(data, coord);
         }
 
-        public bool Get(out T data, Vector coord)
+        public CellValue Get(Vector coord)
         {
             Supercell scell = GetSupercell(coord, false);
-            if (scell == null)
-            {
-                data = new T();
-                return false;
-            }
-            else
-                return scell.Get(out data, coord);
+			if (scell == null)
+				return null;
+			else
+				return scell.Get(coord);
         }
 
         public int getCellIdForCoord(Vector coord)
