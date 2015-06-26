@@ -5,6 +5,8 @@ VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtmosphereAutopilot", "AtmosphereAutopilot.csproj", "{D8C77EB2-8B40-4ECB-9DA2-29682020C89B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestingConsole", "..\TestingConsole\TestingConsole.csproj", "{FE12F262-92A5-4D94-B34C-E536FEBE651D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{D8C77EB2-8B40-4ECB-9DA2-29682020C89B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D8C77EB2-8B40-4ECB-9DA2-29682020C89B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D8C77EB2-8B40-4ECB-9DA2-29682020C89B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE12F262-92A5-4D94-B34C-E536FEBE651D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE12F262-92A5-4D94-B34C-E536FEBE651D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE12F262-92A5-4D94-B34C-E536FEBE651D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE12F262-92A5-4D94-B34C-E536FEBE651D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

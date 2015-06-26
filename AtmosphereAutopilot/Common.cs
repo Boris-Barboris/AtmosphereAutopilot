@@ -13,6 +13,14 @@ namespace AtmosphereAutopilot
 
     public static class Common
     {
+        public static double Meansqr(this ICollection<double> col)
+        {
+            double sqr_sum = 0.0;
+            foreach (double i in col)
+                sqr_sum += i * i;
+            return sqr_sum / col.Count;
+        }
+
         public static double Clamp(double val, double under, double upper)
         {
             if (under > val)

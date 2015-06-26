@@ -22,7 +22,7 @@ namespace System.Collections.Generic
 
             public Enumerator(ListView<T> col)
             {
-                index = 0;
+                index = -1;
                 owner = col;
             }
 
@@ -73,7 +73,7 @@ namespace System.Collections.Generic
             }
         }
 
-        public bool IsReadOnly { get { return true; } }
+        public bool IsReadOnly { get { return false; } }
 
         public void Add(T item) { throw new NotSupportedException("ListView is read-only"); }
 
@@ -144,5 +144,11 @@ namespace System.Collections.Generic
         public void Insert(int index, T item) { throw new NotSupportedException("ListView is read-only"); }
 
         public void RemoveAt(int index) { throw new NotSupportedException("ListView is read-only"); }
+
+        public override string ToString()
+        {
+            string result = "{" + string.Join(", ", this.Select(x => x.ToString()).ToArray()) + "}";
+            return result;
+        }
     }
 }

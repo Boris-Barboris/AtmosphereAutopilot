@@ -134,7 +134,7 @@ namespace AtmosphereAutopilot
                     }
                 }
                 if (p == 0) // samé nuly ve sloupci
-                    throw new MException("The matrix is singular!");
+                    throw new MSingularException("The matrix is singular!");
 
                 pom1 = pi[k]; pi[k] = pi[k0]; pi[k0] = pom1;    // switch two rows in permutation matrix
 
@@ -651,6 +651,13 @@ namespace AtmosphereAutopilot
     public class MException : Exception
     {
         public MException(string Message)
+            : base(Message)
+        { }
+    }
+
+    public class MSingularException : MException
+    {
+        public MSingularException(string Message)
             : base(Message)
         { }
     }
