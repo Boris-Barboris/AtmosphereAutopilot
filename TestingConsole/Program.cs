@@ -14,7 +14,7 @@ namespace TestingConsole
         static void Main(string[] args)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
-            
+			GridSpaceTest();
             Console.ReadKey(true);
         }
 
@@ -57,8 +57,14 @@ namespace TestingConsole
 
         static void GridSpaceTest()
         {
-            GridSpace<double> space = new GridSpace<double>(2, new int[2] { 5, 5 }, new double[2] { -10, -10 }, new double[2] { 10, 10 });
-
+            GridSpace<double> space = new GridSpace<double>(2, new int[2] { 4, 9 }, new double[2] { -10, -10 }, new double[2] { 10, 10 });
+			space.Put(42.0, -11.3, 1.2);
+			double output;
+			bool read = space.Get(out output, -11.5, 1.21);
+			if (read)
+				Console.Write(output.ToString("G8"));
+			else
+				Console.Write("Can't read");
         }
     }
 }

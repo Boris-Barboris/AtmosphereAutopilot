@@ -138,7 +138,7 @@ namespace AtmosphereAutopilot
             // Prechached index weights for faster linearization
             index_weight = new int[dim_count];
             index_weight[dim_count - 1] = 1;
-            for (int i = dim_count - 1; i >= 0; i--)
+            for (int i = dim_count - 2; i >= 0; i--)
                 index_weight[i] = index_weight[i + 1] * cell_count[i + 1];
             // Initialize base supercell
             space.Add(new Supercell(this, new int[dim_count]));
@@ -169,9 +169,8 @@ namespace AtmosphereAutopilot
 
         Supercell GetSupercell(double[] coord, bool create = true)
         {
-            int[] scindex = new int[dim_count];
-            getSupercellCoord(coord, scindex);
-            Supercell sc = space.First((s) => { return s.super_index.SequenceEqual(scindex); });
+            int[] scindex = getSupercellCoord(coord);
+			Supercell sc = space.Find((s) => { return s.super_index.SequenceEqual(scindex); });
             if (sc == null && create)
             {
                 // need to create new supercell
@@ -181,10 +180,12 @@ namespace AtmosphereAutopilot
             return sc;
         }
 
-        void getSupercellCoord(double[] coord, int[] output)
+		int[] getSupercellCoord(double[] coord)
         {
+			int[] output = new int[dim_count];
             for (int i = 0; i < dim_count; i++)
                 output[i] = (int)Math.Floor((coord[i] - lower_limits[i]) / region_size[i]);
+			return output;
         }        
     }
 
