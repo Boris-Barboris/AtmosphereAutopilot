@@ -21,7 +21,7 @@ namespace AtmosphereAutopilot
 			{
                 input_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
                 angular_v[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
-                angular_acc[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
+				angular_acc[i] = new CircularBuffer<double>(BUFFER_SIZE, true, 0.0f);
                 aoa[i] = new CircularBuffer<float>(BUFFER_SIZE, true, 0.0f);
 			}
 			init_model_params();
@@ -40,7 +40,7 @@ namespace AtmosphereAutopilot
 			stable_dt = 0;
 		}
 
-		static readonly int BUFFER_SIZE = 10;
+		static readonly int BUFFER_SIZE = 8;
 
 		#region Exports
 
@@ -69,13 +69,13 @@ namespace AtmosphereAutopilot
 		/// <summary>
         /// Angular acceleration hitory for pitch, roll or yaw. Radians per second per second.
 		/// </summary>
-        public CircularBuffer<float> AngularAccHistory(int axis) { return angular_acc[axis]; }
+		public CircularBuffer<double> AngularAccHistory(int axis) { return angular_acc[axis]; }
         /// <summary>
         /// Angular acceleration for pitch, roll or yaw. Radians per second per second.
         /// </summary>
-        public float AngularAcc(int axis) { return angular_acc[axis].getLast(); }
+		public double AngularAcc(int axis) { return angular_acc[axis].getLast(); }
 
-        CircularBuffer<float>[] angular_acc = new CircularBuffer<float>[3];
+		CircularBuffer<double>[] angular_acc = new CircularBuffer<double>[3];
 
         /// <summary>
         /// Angle of attack hitory for pitch, roll or yaw. Radians.
@@ -96,7 +96,7 @@ namespace AtmosphereAutopilot
 
 		#endregion
 
-		float prev_dt = 1.0f;		// dt in previous call
+		float dt = 1.0f;			// dt in this call
 		int stable_dt = 0;			// amount of stable dt intervals
 
         void OnPostAutopilot(FlightCtrlState state)		// update control input
@@ -106,38 +106,28 @@ namespace AtmosphereAutopilot
 
 		void OnPreAutopilot(FlightCtrlState state)		// workhorse function
 		{
-			float dt = TimeWarp.fixedDeltaTime;
-			check_dt(dt);
+			dt = TimeWarp.fixedDeltaTime;
 			update_velocity_acc();
             update_aoa();
 			if (vessel.LandedOrSplashed)
 				stable_dt = 0;
 			update_model();
-			prev_dt = dt;
 		}
 
 		#region Angular_Update
-
-		void check_dt(float new_dt)	// check if dt is consistent with previous one
-		{
-			if (Math.Abs(new_dt / prev_dt - 1.0) < 0.1)
-				stable_dt = Math.Min(1000, stable_dt + 1);	// overflow protection
-			else
-				stable_dt = 0;			// dt has changed
-		}
 
 		void update_velocity_acc()
 		{
 			for (int i = 0; i < 3; i++)
 			{
 				angular_v[i].Put(-vessel.angularVelocity[i]);	// update angular velocity. Minus for more meaningful
-																// numbers (pitch up is positive etc.)
+																// numbers (pitch up is positive)
 				if (stable_dt > 0)
 					angular_acc[i].Put(
-						(float)Common.derivative1_short(
+						Common.derivative1_short(
 							angular_v[i].getFromTail(1),
 							angular_v[i].getLast(),
-							prev_dt));
+							dt));
 			}
 		}
 
