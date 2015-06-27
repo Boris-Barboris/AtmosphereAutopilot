@@ -85,6 +85,19 @@ namespace AtmosphereAutopilot
 				return storage[index];
             }
 
+            public bool Remove(CellValue val)
+            {
+                int index = Array.IndexOf(storage, val);
+                if (index == -1)
+                    return false;
+                else
+                {
+                    storage[index] = null;
+                    owner.linear_form.Remove(val);
+                    return true;
+                }
+            }
+
             /// <summary>
 			/// get one-dimensional index of cell from coordinate vector
             /// </summary>
@@ -105,7 +118,7 @@ namespace AtmosphereAutopilot
                 int cell = (int)Math.Floor(
                     (coord - (owner.lower_limits[dim] + super_index[dim] * owner.region_size[dim])) / owner.cell_size[dim]);
                 return cell;
-            }
+            }            
         }
 
         #endregion
@@ -176,6 +189,15 @@ namespace AtmosphereAutopilot
                 index += scell.getLinearIndex(coord);
                 return index;
             }
+        }
+
+        public bool Remove(CellValue val)
+        {
+            Supercell scell = GetSupercell(val.coord, false);
+            if (scell == null)
+                return false;
+            else
+                return scell.Remove(val);
         }
 
         Supercell GetSupercell(Vector coord, bool create = true)

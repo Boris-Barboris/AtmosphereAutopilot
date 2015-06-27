@@ -12,19 +12,31 @@ namespace AtmosphereAutopilot
     public class OnlineAnnTrainer
     {
         // Buffers, that will be updated by calls from Unity event cycle
-        // Immediate buffer contains recent state records
+
+        // Immediate buffer
         CircularBuffer<Vector> imm_buf_inputs;
         VectorArray imm_buf_vectors;
-        CircularBuffer<double> imm_buf_outputs;
+        CircularBuffer<double> imm_buf_outputs;        
 
-        CircularBuffer<Vector> imm_training_inputs;         // immediate buffer, used directly for training
+        // Buffers for ANN training
+
+        // Immediate buffer
+        CircularBuffer<Vector> imm_training_inputs;
         VectorArray imm_training_vectors;
         CircularBuffer<double> imm_training_outputs;
-
         // Generalization buffer is being used as ANN generality augmentor
         GridSpace<GenStruct> gen_space;
+        List<GridSpace<GenStruct>.CellValue> linear_gen_buff;
         List<Vector> gen_training_inputs = new List<Vector>();
-        List<double> gen_training_outputs = new List<double>();
+        List<double> gen_training_outputs = new List<double>();        
+        // Error weight buffers
+        List<double> imm_error_weights = new List<double>();
+        List<double> gen_error_weights = new List<double>();
+        
+        // Views to adapt inputs for ANN
+        ListView<Vector> ann_input_view;
+        ListView<double> ann_output_view;
+        ListView<double> err_weight_view;
 
         // flag of buffers update
         volatile bool updated = false;
@@ -63,28 +75,28 @@ namespace AtmosphereAutopilot
             // Generalization space initialization
             gen_space = new GridSpace<GenStruct>(ann.input_count, gen_cells, l_gen_bound, u_gen_bound);
 			linear_gen_buff = gen_space.Linearized;
-            // Delegates assignment
+            // Delegate assignment
             input_update_dlg = input_method;
             output_update_dlg = output_method;
             // Misc
             batch_size = imm_buf_size;
-			temp_array = new VectorArray(ann.input_count, 10);
+			temp_array = new VectorArray(ann.input_count, 1);
 			coord_vector = temp_array[0];
         }
 
         /// <summary>
         /// While pushing new state to generalization space last CellBatch states will be averaged
         /// </summary>
-        public int cell_batch = 4;
+        public volatile int cell_batch = 4;
 
         int last_time = 0;
 
         #region DataSourceThread
 
-        public void UpdateState(int time)
+        public void UpdateState(int time_elapsed)
         {
             update_immediate_buffer();
-            last_time = time;
+            last_time += time_elapsed;
             updated = true;
         }
 
@@ -108,18 +120,11 @@ namespace AtmosphereAutopilot
 
         #region TrainingThread
 
-        List<double> imm_error_weights = new List<double>();
-        List<double> gen_error_weights = new List<double>();
-
-        ListView<Vector> ann_input_view;
-        ListView<double> ann_output_view;
-        ListView<double> err_weight_view;
-
         SimpleAnn.GaussKoeff gauss = new SimpleAnn.GaussKoeff(1e-3, 1e-7, 1e6, 2.0, 100.0);
 
         public int batch_size;
-        public double batch_weight = 0.15;
-        public double ann_performance = double.NaN;
+        public volatile float batch_weight = 0.15f;
+        public volatile float ann_performance = float.NaN;
 
         public void Train()
         {
@@ -128,14 +133,20 @@ namespace AtmosphereAutopilot
                 update_imm_train_buf();
                 updated = false;
                 update_gen_space();
+                if (last_time > time_reset)
+                    reset_time();
                 update_weights();
                 if (ann_input_view == null)
                     create_views();
             }
             if (ann_input_view != null)
                 if (ann_input_view.Count > 0)
+                {
+                    double new_performance;
                     ann.lm_iterate_batched(ann_input_view, ann_output_view, err_weight_view, Math.Min(batch_size, imm_training_inputs.Size),
-                        batch_weight, gauss, 3, out ann_performance);
+                        batch_weight, gauss, 3, out new_performance);
+                    ann_performance = (float)new_performance;
+                }
         }
 
         void update_imm_train_buf()
@@ -155,9 +166,6 @@ namespace AtmosphereAutopilot
             }
         }
 
-        int last_gen_index = -2;
-
-		List<GridSpace<GenStruct>.CellValue> linear_gen_buff;
 		VectorArray temp_array;
 		Vector coord_vector;
 
@@ -179,14 +187,6 @@ namespace AtmosphereAutopilot
                 val /= (double)cell_batch;
 				for (int j = 0; j < dim; j++)
                     coord_vector[j] /= (double)cell_batch;
-                // check if we switched to new cell
-                //int cellid = gen_space.getCellIdForCoord(coord_vector);
-                //if (cellid != last_gen_index)
-                //{
-                //    // Push state to generalization space
-                //    gen_space.Put(new GenStruct(val, last_time), coord_vector);
-                //    last_gen_index = cellid;
-                //}
                 gen_space.Put(new GenStruct(val, last_time), coord_vector);
             }
             if (linear_gen_buff.Count > 0)                      // let's update current state of generalization lists
@@ -216,7 +216,7 @@ namespace AtmosphereAutopilot
             err_weight_view = new ListView<double>(imm_error_weights, gen_error_weights);
         }
 
-        public double base_gen_weight = 0.2;
+        public volatile float base_gen_weight = 0.2f;
 
         void update_weights()
         {
@@ -249,11 +249,24 @@ namespace AtmosphereAutopilot
             }
         }
 
-        public double time_decay = 1.0;
+        public volatile float time_decay = 0.01f;
+        public volatile int max_age = 100000;
+
+        const int time_reset = int.MaxValue / 2;
+
+        void reset_time()
+        {
+            foreach (var val in linear_gen_buff)
+            {
+                int cur_age = Math.Min(last_time - val.data.birth, max_age);
+                val.data.birth = max_age - cur_age;
+            }
+            last_time = max_age;
+        }
 
         double getAgeWeight(int birth)
         {
-            int age = last_time - birth;
+            int age = Math.Min(last_time - birth, max_age);
             double result = 1.0 / (time_decay * age + 1.0);
             return result;
         }

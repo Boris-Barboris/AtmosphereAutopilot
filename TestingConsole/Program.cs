@@ -90,8 +90,9 @@ namespace TestingConsole
             thread.Start();
             while (i < set_size)
             {
-                Thread.Sleep(5);
+                Thread.Sleep(20);
                 trainer.UpdateState(0);
+                Console.WriteLine("updated");
                 i++;
             }
             thread.Stop();
