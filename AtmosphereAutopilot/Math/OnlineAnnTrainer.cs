@@ -23,6 +23,8 @@ namespace AtmosphereAutopilot
 
         // Generalization buffer is being used as ANN generality augmentor
         GridSpace<GenStruct> gen_space;
+        List<Vector> gen_training_inputs = new List<Vector>();
+        List<double> gen_training_outputs = new List<double>();
 
         // flag of buffers update
         volatile bool updated = false;
@@ -127,11 +129,13 @@ namespace AtmosphereAutopilot
                 updated = false;
                 update_gen_space();
                 update_weights();
-                update_views();           
+                if (ann_input_view == null)
+                    create_views();
             }
             if (ann_input_view != null)
-                ann.lm_iterate_batched(ann_input_view, ann_output_view, err_weight_view, Math.Min(batch_size, imm_training_inputs.Size),
-                    batch_weight, gauss, 3, out ann_performance);
+                if (ann_input_view.Count > 0)
+                    ann.lm_iterate_batched(ann_input_view, ann_output_view, err_weight_view, Math.Min(batch_size, imm_training_inputs.Size),
+                        batch_weight, gauss, 3, out ann_performance);
         }
 
         void update_imm_train_buf()
@@ -163,7 +167,7 @@ namespace AtmosphereAutopilot
             {
                 double val = 0.0;
 				int dim = ann.input_count;
-                for (int i = 0; i < ann.input_count; i++)
+                for (int i = 0; i < dim; i++)
 					coord_vector[i] = 0.0;
                 // Average state over cell_batch samples
                 for (int i = 0; i < cell_batch; i++)
@@ -176,20 +180,39 @@ namespace AtmosphereAutopilot
 				for (int j = 0; j < dim; j++)
                     coord_vector[j] /= (double)cell_batch;
                 // check if we switched to new cell
-				int cellid = gen_space.getCellIdForCoord(coord_vector);
-                if (cellid != last_gen_index)
+                //int cellid = gen_space.getCellIdForCoord(coord_vector);
+                //if (cellid != last_gen_index)
+                //{
+                //    // Push state to generalization space
+                //    gen_space.Put(new GenStruct(val, last_time), coord_vector);
+                //    last_gen_index = cellid;
+                //}
+                gen_space.Put(new GenStruct(val, last_time), coord_vector);
+            }
+            if (linear_gen_buff.Count > 0)                      // let's update current state of generalization lists
+            {
+                for (int i = 0; i < linear_gen_buff.Count; i++)
                 {
-                    // Push state to generalization space
-					gen_space.Put(new GenStruct(val, last_time), coord_vector);
-                    last_gen_index = cellid;
+                    if (i >= gen_training_inputs.Count)
+                        gen_training_inputs.Add(linear_gen_buff[i].coord);
+                    else
+                        gen_training_inputs[i] = linear_gen_buff[i].coord;
+                    if (i >= gen_training_outputs.Count)
+                        gen_training_outputs.Add(linear_gen_buff[i].data.val);
+                    else
+                        gen_training_outputs[i] = linear_gen_buff[i].data.val;
                 }
+                for (int i = gen_training_inputs.Count - 1; i >= linear_gen_buff.Count; i--)
+                    gen_training_inputs.RemoveAt(i);
+                for (int i = gen_training_outputs.Count - 1; i >= linear_gen_buff.Count; i--)
+                    gen_training_outputs.RemoveAt(i);
             }
         }
 
-        void update_views()
+        void create_views()
         {
-			ann_input_view = new ListView<Vector>(imm_training_inputs, linear_gen_buff.Select(v => v.coord).ToArray());
-            ann_output_view = new ListView<double>(imm_training_outputs, linear_gen_buff.Select(v => v.data.val).ToArray());
+            ann_input_view = new ListView<Vector>(imm_training_inputs, gen_training_inputs);
+            ann_output_view = new ListView<double>(imm_training_outputs, gen_training_outputs);
             err_weight_view = new ListView<double>(imm_error_weights, gen_error_weights);
         }
 
@@ -215,7 +238,14 @@ namespace AtmosphereAutopilot
             if (linear_gen_buff.Count > 0)
             {
                 double popul_ratio = imm_training_inputs.Size / linear_gen_buff.Count;
-                gen_error_weights = new List<double>(linear_gen_buff.Select(v => getAgeWeight(v.data.birth) * popul_ratio * base_gen_weight));
+                for (int i = 0; i < linear_gen_buff.Count; i++)
+                {
+                    double weight = getAgeWeight(linear_gen_buff[i].data.birth) * popul_ratio * base_gen_weight;
+                    if (i >= gen_error_weights.Count)
+                        gen_error_weights.Add(weight);
+                    else
+                        gen_error_weights[i] = weight;
+                }
             }
         }
 

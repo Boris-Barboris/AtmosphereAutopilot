@@ -196,7 +196,7 @@ namespace System.Collections.Generic
                 throw new InvalidOperationException("Buffer is empty.");
 
             var item = buffer[head];
-            if (head++ == capacity)
+            if (++head == capacity)
                 head = 0;
             size--;
             return item;
