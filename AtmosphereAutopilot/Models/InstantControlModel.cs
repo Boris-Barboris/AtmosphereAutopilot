@@ -118,6 +118,7 @@ namespace AtmosphereAutopilot
             Vector3 moi = Vector3.zero;
             Vector3 am = Vector3.zero;
             Vector3 com = vessel.findWorldCenterOfMass();
+            Vector3 world_v = vessel.rootPart.rb.velocity;
             sum_mass = 0.0f;
             foreach (var part in vessel.parts)
             {
@@ -130,21 +131,22 @@ namespace AtmosphereAutopilot
                     sum_mass += mass;
                     Vector3 world_pv = part.rb.worldCenterOfMass - com;
                     Vector3 pv = world_to_root * world_pv;
-                    Vector3 world_impulse = mass * part.rb.velocity;
+                    Vector3 impulse = mass * (world_to_root * (part.rb.velocity - world_v));
                     // from part.rb principal frame to root part rotation
                     Quaternion principal_to_root = part.rb.inertiaTensorRotation * part_to_root;
                     // part as offsetted material point
                     moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
                     // part as rigid body moi over part CoM
-                    //Vector3 rotated_moi = get_rotated_moi(part.rb.inertiaTensor, principal_to_root);
-                    //moi += rotated_moi;
+                    Vector3 rotated_moi = get_rotated_moi(part.rb.inertiaTensor, principal_to_root);
+                    moi += rotated_moi;
                     // part moment as offsetted material point
-                    am += world_to_root * Vector3.Cross(world_pv, world_impulse);
+                    am += Vector3.Cross(pv, impulse);
                     // part moment as rotating rigid body over part CoM
-                    //am += Vector3.Scale(rotated_moi, world_to_root * part.rb.angularVelocity);
+                    am += Vector3.Scale(rotated_moi, world_to_root * part.rb.angularVelocity);
                 }
                 else
                 {
+                    /*
                     float mass = part.mass + part.GetResourceMass();
                     sum_mass += mass;
                     Vector3 world_pv = part.partTransform.position + part.partTransform.rotation * part.CoMOffset - com;
@@ -153,6 +155,7 @@ namespace AtmosphereAutopilot
                     // part as offsetted material point
                     moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
                     am += world_to_root * Vector3.Cross(world_pv, world_impulse);
+                    */
                 }
             }
             MOI = moi;
@@ -160,14 +163,88 @@ namespace AtmosphereAutopilot
             angular_vel = Common.divideVector(AngMoment, MOI);
         }
 
+        [AutoGuiAttr("DEBUG Moments", true)]
+        internal bool test_outputs = false;
+
+        // Draw debug vectors here
+        internal void Update()
+        {
+            if (test_outputs)
+            {
+                using (var writer = System.IO.File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/moments.txt"))
+                {
+                    Quaternion world_to_root = vessel.rootPart.partTransform.rotation.Inverse();     // from world to root part rotation
+                    writer.WriteLine("world_to_root = " + world_to_root.ToString("G6"));
+                    Vector3 moi = Vector3.zero;
+                    Vector3 am = Vector3.zero;
+                    Vector3 com = vessel.findWorldCenterOfMass();
+                    Vector3 world_v = vessel.rootPart.rb.velocity;
+                    writer.WriteLine("com = " + com.ToString("G6"));
+                    writer.WriteLine("world_v = " + world_v.ToString("G6"));
+                    sum_mass = 0.0f;
+                    foreach (var part in vessel.parts)
+                    {
+                        if (part.physicalSignificance == Part.PhysicalSignificance.NONE)
+                            continue;
+                        Quaternion part_to_root = part.partTransform.rotation * world_to_root;   // from part to root part rotation
+                        if (part.rb != null)
+                        {
+                            writer.WriteLine("\r\nprocessing part " + part.partName);
+                            float mass = part.rb.mass;
+                            writer.WriteLine("mass = " + mass.ToString("G6"));
+                            sum_mass += mass;
+                            Vector3 world_pv = part.rb.worldCenterOfMass - com;
+                            writer.WriteLine("part.rb.worldCenterOfMass = " + part.rb.worldCenterOfMass.ToString("G6"));
+                            writer.WriteLine("world_pv = " + world_pv.ToString("G6"));
+                            Vector3 pv = world_to_root * world_pv;
+                            writer.WriteLine("pv = " + pv.ToString("G6"));
+                            Vector3 impulse = mass * (world_to_root * (part.rb.velocity - world_v));
+                            writer.WriteLine("part.rb.velocity = " + part.rb.velocity.ToString("G6"));
+                            writer.WriteLine("impulse = " + impulse.ToString("G6"));
+                            // from part.rb principal frame to root part rotation
+                            Quaternion principal_to_root = part.rb.inertiaTensorRotation * part_to_root;
+                            writer.WriteLine("part.rb.inertiaTensorRotation = " + part.rb.inertiaTensorRotation.ToString("G6"));
+                            writer.WriteLine("principal_to_root = " + principal_to_root.ToString("G6"));
+                            // part as offsetted material point
+                            var dmoi = mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
+                            moi += dmoi;
+                            writer.WriteLine("dmoi = " + dmoi.ToString("G6"));
+                            // part as rigid body moi over part CoM
+                            Vector3 rotated_moi = get_rotated_moi(part.rb.inertiaTensor, principal_to_root);
+                            moi += rotated_moi;
+                            writer.WriteLine("rotated_moi = " + rotated_moi.ToString("G6"));
+                            // part moment as offsetted material point
+                            var dam = Vector3.Cross(pv, impulse);
+                            am += dam;
+                            writer.WriteLine("dam = " + dam.ToString("G6"));
+                            // part moment as rotating rigid body over part CoM
+                            var self_am = world_to_root * part.rb.angularVelocity;
+                            var d_self_am = Vector3.Scale(rotated_moi, self_am);
+                            writer.WriteLine("self_am = " + self_am.ToString("G6"));
+                            writer.WriteLine("d_self_am = " + d_self_am.ToString("G6"));
+                            am += d_self_am;
+                        }
+                    }
+                    MOI = moi;
+                    AngMoment = am;
+                    angular_vel = Common.divideVector(AngMoment, MOI);
+                    writer.WriteLine();
+                    writer.WriteLine("MOI = " + MOI.ToString("G6"));
+                    writer.WriteLine("AngMoment = " + AngMoment.ToString("G6"));
+                    writer.WriteLine("angular_vel = " + angular_vel.ToString("G6"));
+                }
+                test_outputs = false;
+            }
+        }
+
         static Vector3 get_rotated_moi(Vector3 inertia_tensor, Quaternion rotation)
         {
-            Matrix4x4 inert_matrix = Matrix4x4.identity;
+            Matrix4x4 inert_matrix = Matrix4x4.zero;
             for (int i = 0; i < 3; i++)
                 inert_matrix[i, i] = inertia_tensor[i];
             Matrix4x4 rot_matrix = Common.rotationMatrix(rotation);
-            inert_matrix = rot_matrix * inert_matrix * rot_matrix.transpose;
-            return new Vector3(inert_matrix[0, 0], inert_matrix[1, 1], inert_matrix[2, 2]);
+            Matrix4x4 new_inert = (rot_matrix * inert_matrix) * rot_matrix.transpose;
+            return new Vector3(new_inert[0, 0], new_inert[1, 1], new_inert[2, 2]);
         }
 
         void update_velocity_acc()
