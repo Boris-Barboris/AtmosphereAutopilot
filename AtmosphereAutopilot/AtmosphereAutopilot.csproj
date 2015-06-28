@@ -58,6 +58,7 @@
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="BackgroundThread.cs" />
     <Compile Include="Controller\PDController.cs" />
+    <Compile Include="FixedKrakensbane.cs" />
     <Compile Include="ListView.cs" />
     <Compile Include="Math\GradientDescend.cs" />
     <Compile Include="GUI\AutoGui.cs" />
@@ -84,6 +85,9 @@
     <Compile Include="Modules\TopModuleManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MessageManager.cs" />
+    <Compile Include="Reversing\Krakensbane.cs" />
+    <None Include="Reversing\Part.cs" />
+    <None Include="Reversing\Vessel.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Vessel_info.txt" />

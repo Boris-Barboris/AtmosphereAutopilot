@@ -67,7 +67,7 @@ namespace AtmosphereAutopilot
 
             error = desired_sideslip - input;
 
-            ControlUtils.neutralize_user_input(cntrl, YAW);
+            //ControlUtils.neutralize_user_input(cntrl, YAW);
             v_controller.ApplyControl(cntrl, output);
 
             // check if we're stable on given input value

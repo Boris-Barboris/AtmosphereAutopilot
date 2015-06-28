@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Reflection;
+using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
@@ -64,22 +65,25 @@ namespace AtmosphereAutopilot
 		/// <returns>true if node_name node was found and used to deserialize</returns>
         public static bool Deserialize(object obj, string node_name, string filename, Type attribute_type, Action<ConfigNode, Type> OnDeserialize = null)
         {
-            ConfigNode node = null;
-            ConfigNode fileNode = ConfigNode.Load(filename);
-            if (fileNode != null)
+            if (System.IO.File.Exists(filename))
             {
-                var nodes = fileNode.GetNodes(node_name);
-                try
+                ConfigNode node = null;
+                ConfigNode fileNode = ConfigNode.Load(filename);
+                if (fileNode != null)
                 {
-                    node = nodes != null ? nodes.First() : null;
-                }
-                catch { node = null; }
-                if (node != null)
-                {
-                    DeserializeFromNode(node, obj, attribute_type);
-                    if (OnDeserialize != null)
-                        OnDeserialize(node, attribute_type);
-                    return true;
+                    var nodes = fileNode.GetNodes(node_name);
+                    try
+                    {
+                        node = nodes != null ? nodes.First() : null;
+                    }
+                    catch { node = null; }
+                    if (node != null)
+                    {
+                        DeserializeFromNode(node, obj, attribute_type);
+                        if (OnDeserialize != null)
+                            OnDeserialize(node, attribute_type);
+                        return true;
+                    }
                 }
             }
             return false;
@@ -98,6 +102,9 @@ namespace AtmosphereAutopilot
         public static void Serialize(object obj, string node_name, string filename, Type attribute_type,
 			Action<ConfigNode, Type> OnSerialize = null)
         {
+            string dir = System.IO.Path.GetDirectoryName(filename);
+            if (!System.IO.Directory.Exists(dir))
+                System.IO.Directory.CreateDirectory(dir);
             ConfigNode fileNode = ConfigNode.Load(filename);
             if (fileNode == null)
                 fileNode = new ConfigNode();

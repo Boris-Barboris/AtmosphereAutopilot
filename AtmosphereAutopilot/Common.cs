@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
@@ -13,6 +14,44 @@ namespace AtmosphereAutopilot
 
     public static class Common
     {
+        public static Quaternion normalizeQuaternion(Quaternion quat)
+        {
+            float n = (float)Math.Sqrt(quat.x * quat.x + quat.y * quat.y + quat.z * quat.z + quat.w * quat.w);
+            quat.x /= n;
+            quat.y /= n;
+            quat.z /= n;
+            quat.w /= n;
+            return quat;
+        }
+
+        /// <summary>
+        /// http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
+        /// </summary>
+        /// <param name="q">Rotation</param>
+        /// <returns>Transformation matrix representing rotation</returns>
+        public static Matrix4x4 rotationMatrix(Quaternion q)
+        {
+            Matrix4x4 mat = Matrix4x4.zero;
+            mat[3, 3] = 1.0f;
+            q = normalizeQuaternion(q);
+            mat[0, 0] = 1.0f - 2.0f * q.y * q.y - 2.0f * q.z * q.z;
+            mat[1, 0] = 2.0f * q.x * q.y + 2.0f * q.z * q.w;
+            mat[2, 0] = 2.0f * q.x * q.z - 2.0f * q.y * q.w;
+            mat[0, 1] = 2.0f * q.x * q.y - 2.0f * q.z * q.w;
+            mat[1, 1] = 1.0f - 2.0f * q.x * q.x - 2.0f * q.z * q.z;
+            mat[2, 1] = 2.0f * q.y * q.z + 2.0f * q.x * q.w;
+            mat[0, 2] = 2.0f * q.x * q.z + 2.0f * q.y * q.w;
+            mat[1, 2] = 2.0f * q.y * q.z - 2.0f * q.x * q.w;
+            mat[2, 2] = 1.0f - 2.0f * q.x * q.x - 2.0f * q.y * q.y;
+            return mat;
+        }
+
+        public static Vector3 divideVector(Vector3 lhs, Vector3 rhs)
+        {
+            Vector3 result = new Vector3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
+            return result;
+        }
+
         public static double Meansqr(this ICollection<double> col)
         {
             double sqr_sum = 0.0;

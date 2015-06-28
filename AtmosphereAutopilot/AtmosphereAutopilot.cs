@@ -32,7 +32,7 @@ namespace AtmosphereAutopilot
         /// </summary>
 		public Vessel ActiveVessel { get; private set; }
 
-        public void Start()
+        void Start()
         {
             Debug.Log("[Autopilot]: AtmosphereAutopilot starting up!"); 
             DontDestroyOnLoad(this);
@@ -86,19 +86,19 @@ namespace AtmosphereAutopilot
                 module.Serialize();
         }
 
-        public void OnDestroy()
+        void OnDestroy()
         {
             sceneSwitch(GameScenes.CREDITS);
         }
 
-        private void sceneSwitch(GameScenes scenes)
+        void sceneSwitch(GameScenes scenes)
         {
             serialize_active_modules();
-			if (scenes != GameScenes.FLIGHT)
-				ActiveVessel = null;
+            if (scenes != GameScenes.FLIGHT)
+                ActiveVessel = null;
         }
 
-		private void load_manager_for_vessel(Vessel v)
+		void load_manager_for_vessel(Vessel v)
         {
 			if (v == null)
 				return;
@@ -111,7 +111,7 @@ namespace AtmosphereAutopilot
                 autopilot_module_lists[v][typeof(TopModuleManager)] = new TopModuleManager(v);		
         }
 
-        private void vesselSwitch(Vessel v)
+        void vesselSwitch(Vessel v)
         {
             serialize_active_modules();
             Debug.Log("[Autopilot] vessel switch");
@@ -178,7 +178,7 @@ namespace AtmosphereAutopilot
 
 		bool styles_init = false;
 
-        public void OnGUI()
+        void OnGUI()
         {
 			if (ActiveVessel == null)
 				return;
@@ -193,7 +193,7 @@ namespace AtmosphereAutopilot
                 pair.Value.OnGUI();
         }
 
-        public void OnHideUI()
+        void OnHideUI()
         {
             applauncher.HideGUI();
 			if (ActiveVessel == null)
@@ -202,7 +202,7 @@ namespace AtmosphereAutopilot
                 pair.Value.HideGUI();
         }
 
-        public void OnShowUI()
+        void OnShowUI()
         {
             applauncher.UnHideGUI();
 			if (ActiveVessel == null)
@@ -213,7 +213,7 @@ namespace AtmosphereAutopilot
 
 		#endregion
 
-		public void Update()
+		void Update()
         {
             // Handle keyboard hotkeys here
             if (InputLockManager.IsLocked(ControlTypes.ALL_SHIP_CONTROLS))
