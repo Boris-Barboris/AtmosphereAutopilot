@@ -9,8 +9,8 @@ using System.IO;
 namespace AtmosphereAutopilot
 {
 	/// <summary>
-	/// Short-term motion model. Is responsible for angular speed, angular acceleration, control signal
-	/// history storage. Executes analysis of pitch, roll and yaw evolution and control authority.
+	/// Short-term motion model. Is responsible for angular velocity, angular acceleration, control signal and 
+	/// angle of attack evaluation and storage. Executes analysis of pitch, roll and yaw evolution and control authority.
 	/// </summary>
 	public sealed class InstantControlModel : AutopilotModule
 	{
@@ -88,8 +88,6 @@ namespace AtmosphereAutopilot
 
 		#endregion
 
-		float dt = 1.0f;			// dt in this call
-
         void OnPostAutopilot(FlightCtrlState state)		// update control input
 		{
 			update_control(state);
@@ -97,8 +95,7 @@ namespace AtmosphereAutopilot
 
 		void OnPreAutopilot(FlightCtrlState state)		// workhorse function
 		{
-			dt = TimeWarp.fixedDeltaTime;
-            get_angular_motion();
+            update_moments();
 			update_velocity_acc();
             update_aoa();
 		}
@@ -107,60 +104,123 @@ namespace AtmosphereAutopilot
 
         public Vector3 angular_vel = Vector3.zero;
         Vector3 MOI = Vector3.zero;
-        Vector3 AngMoment = Vector3.zero;
+        Vector3 AM = Vector3.zero;
+        Vector3 CoM = Vector3.zero;
 
         [AutoGuiAttr("mass", false, "G6")]
         float sum_mass = 0.0f;
 
-        void get_angular_motion()
+        // It's too expensive to iterate over all parts every physics frame, so we'll stick with 20 most massive
+        const int PartsMax = 20;
+        struct PartMass
+        {
+            public PartMass(Part p, float m) { part = p; mass = m; }
+            public Part part;
+            public float mass;
+            public static int Comparison(PartMass x, PartMass y)
+            {
+                if (x.mass < y.mass)
+                    return -1;
+                else
+                    if (x.mass == y.mass)
+                        return 0;
+                    else
+                        return 1;
+            }
+        }
+        List<PartMass> massive_parts = new List<PartMass>(PartsMax);
+        Vector3 partial_MOI = Vector3.zero;
+        Vector3 partial_AM = Vector3.zero;
+
+        const int FullMomentFreq = 40;
+        int cycle_counter = 0;
+
+        void update_moments()
+        {
+            if (cycle_counter == 0)
+                get_moments(true);
+            else
+                get_moments(false);
+            cycle_counter = (cycle_counter + 1) % FullMomentFreq;
+        }
+
+        void get_moments(bool all_parts)
         {
             Quaternion world_to_root = vessel.rootPart.partTransform.rotation.Inverse();     // from world to root part rotation
-            Vector3 moi = Vector3.zero;
-            Vector3 am = Vector3.zero;
-            Vector3 com = vessel.findWorldCenterOfMass();
+            CoM = vessel.findWorldCenterOfMass();
             Vector3 world_v = vessel.rootPart.rb.velocity;
-            sum_mass = 0.0f;
-            foreach (var part in vessel.parts)
+            if (all_parts)
             {
+                MOI = Vector3.zero;
+                AM = Vector3.zero;
+                massive_parts.Clear();
+                sum_mass = 0.0f;
+            }
+            partial_MOI = Vector3.zero;
+            partial_AM = Vector3.zero;
+            int indexing = all_parts ? vessel.parts.Count : massive_parts.Count;
+            for (int pi = 0; pi < indexing; pi++)
+            {
+                Part part = all_parts ? vessel.parts[pi] : massive_parts[pi].part;
                 if (part.physicalSignificance == Part.PhysicalSignificance.NONE)
                     continue;
+                if (!part.isAttached || part.State == PartStates.DEAD)
+                {
+                    cycle_counter = 0;      // iterating over old part list
+                    continue;
+                }
                 Quaternion part_to_root = part.partTransform.rotation * world_to_root;   // from part to root part rotation
+                Vector3 moi = Vector3.zero;
+                Vector3 am = Vector3.zero;
+                float mass = 0.0f;
                 if (part.rb != null)
                 {
-                    float mass = part.rb.mass;
-                    sum_mass += mass;
-                    Vector3 world_pv = part.rb.worldCenterOfMass - com;
+                    mass = part.rb.mass;
+                    Vector3 world_pv = part.rb.worldCenterOfMass - CoM;
                     Vector3 pv = world_to_root * world_pv;
                     Vector3 impulse = mass * (world_to_root * (part.rb.velocity - world_v));
                     // from part.rb principal frame to root part rotation
                     Quaternion principal_to_root = part.rb.inertiaTensorRotation * part_to_root;
-                    // part as offsetted material point
+                    // MOI of part as offsetted material point
                     moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
-                    // part as rigid body moi over part CoM
+                    // MOI of part as rigid body
                     Vector3 rotated_moi = get_rotated_moi(part.rb.inertiaTensor, principal_to_root);
                     moi += rotated_moi;
-                    // part moment as offsetted material point
+                    // angular moment of part as offsetted material point
                     am += Vector3.Cross(pv, impulse);
-                    // part moment as rotating rigid body over part CoM
+                    // angular moment of part as rotating rigid body
                     am += Vector3.Scale(rotated_moi, world_to_root * part.rb.angularVelocity);
                 }
                 else
                 {
-                    /*
-                    float mass = part.mass + part.GetResourceMass();
-                    sum_mass += mass;
-                    Vector3 world_pv = part.partTransform.position + part.partTransform.rotation * part.CoMOffset - com;
+                    mass = part.mass + part.GetResourceMass();
+                    Vector3 world_pv = part.partTransform.position + part.partTransform.rotation * part.CoMOffset - CoM;
                     Vector3 pv = world_to_root * world_pv;
-                    Vector3 world_impulse = mass * part.vel;
-                    // part as offsetted material point
+                    Vector3 impulse = mass * (world_to_root * (part.vel - world_v));
+                    // MOI of part as offsetted material point
                     moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
-                    am += world_to_root * Vector3.Cross(world_pv, world_impulse);
-                    */
+                    // angular moment of part as offsetted material point
+                    am += Vector3.Cross(pv, impulse);
                 }
+                if (all_parts)
+                {
+                    massive_parts.Add(new PartMass(part, mass));
+                    MOI += moi;
+                    AM += am;
+                    sum_mass += mass;
+                }
+                partial_MOI += moi;
+                partial_AM += am;
             }
-            MOI = moi;
-            AngMoment = am;
-            angular_vel = Common.divideVector(AngMoment, MOI);
+            if (all_parts)
+            {
+                massive_parts.Sort(PartMass.Comparison);
+                if (massive_parts.Count > PartsMax)
+                    massive_parts.RemoveRange(PartsMax, massive_parts.Count - 1);
+                angular_vel = -Common.divideVector(AM, MOI);
+            }
+            else
+                angular_vel = -Common.divideVector(partial_AM, partial_MOI);
         }
 
         [AutoGuiAttr("DEBUG Moments", true)]
@@ -226,11 +286,11 @@ namespace AtmosphereAutopilot
                         }
                     }
                     MOI = moi;
-                    AngMoment = am;
-                    angular_vel = Common.divideVector(AngMoment, MOI);
+                    AM = am;
+                    angular_vel = Common.divideVector(AM, MOI);
                     writer.WriteLine();
                     writer.WriteLine("MOI = " + MOI.ToString("G6"));
-                    writer.WriteLine("AngMoment = " + AngMoment.ToString("G6"));
+                    writer.WriteLine("AngMoment = " + AM.ToString("G6"));
                     writer.WriteLine("angular_vel = " + angular_vel.ToString("G6"));
                 }
                 test_outputs = false;
@@ -258,7 +318,7 @@ namespace AtmosphereAutopilot
 						Common.derivative1_short(
 							angular_v[i].getFromTail(1),
 							angular_v[i].getLast(),
-							dt));
+							TimeWarp.fixedDeltaTime));
 			}
 		}
 
@@ -342,7 +402,7 @@ namespace AtmosphereAutopilot
         #region GUI
 
 		static readonly string[] axis_names = { "pitch", "roll", "yaw" };
-        static readonly float rad_to_degree = (float)(180.0 / Math.PI);
+        static readonly float rad2degree = (float)(180.0 / Math.PI);
 
 		protected override void _drawGUI(int id)
 		{
@@ -351,9 +411,9 @@ namespace AtmosphereAutopilot
 			{
 				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " ang acc = " + angular_acc[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " AoA = " + (aoa[i].getLast() * rad_to_degree).ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " AoA = " + (aoa[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " AngMoment = " + AngMoment[i].ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label(axis_names[i] + " AngMoment = " + AM[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label(axis_names[i] + " NewVel = " + angular_vel[i].ToString("G8"), GUIStyles.labelStyleLeft);
 				GUILayout.Space(5);
 			}

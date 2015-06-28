@@ -70,7 +70,7 @@ namespace AtmosphereAutopilot
                 desire_acc_writer.Write(target_value.ToString("G8") + ',');
                 acc_writer.Write(input.ToString("G8") + ',');
                 v_writer.Write(imodel.AngularVel(axis).ToString("G8") + ',');
-                prediction_writer.Write((-imodel.angular_vel[axis]).ToString("G8") + ',');
+                prediction_writer.Write(imodel.angular_vel[axis].ToString("G8") + ',');
 				aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');
 				airspd_writer.Write((imodel.up_srf_v + imodel.fwd_srf_v).magnitude.ToString("G8") + ',');
 				density_writer.Write(vessel.atmDensity.ToString("G8") + ',');
