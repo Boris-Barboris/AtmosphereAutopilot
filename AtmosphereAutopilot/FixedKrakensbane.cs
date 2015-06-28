@@ -7,12 +7,25 @@ using System.Reflection;
 
 namespace FixedKrakensbane
 {
-    [KSPAddon(KSPAddon.Startup.MainMenu, true)]
+    [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class FixedKrakensbane : MonoBehaviour
     {
         public static FixedKrakensbane Instance { get; private set; }
 
-        public float MaxVelocity = 750.0f;
+        public float MaxVelocity
+        {
+            get
+            {
+                return _maxv;
+            }
+            private set
+            {
+                _maxv = value;
+                if (krak_instance != null)
+                    krak_instance.MaxV = _maxv;
+            }
+        }
+        float _maxv = 750.0f;
 
         public Vector3d FrameVelocity 
         {
@@ -23,7 +36,7 @@ namespace FixedKrakensbane
             private set
             {
                 _fv = value;
-                if (krak_instance)
+                if (krak_instance != null)
                     krak_instance.FrameVel = _fv;
             }
         }
@@ -31,37 +44,42 @@ namespace FixedKrakensbane
 
         void Awake()
         {
-            if (Instance)
-            {
-                UnityEngine.Object.Destroy(this);
-                return;
-            }
+            if (Instance != null && Instance != this)
+                UnityEngine.Object.Destroy(Instance);
             Debug.Log("FixedKrakensbane.Awake()");
             Instance = this;
         }
 
-        Krakensbane krak_instance;
+        static Krakensbane krak_instance;
 
         void Start()
         {
             Debug.Log("FixedKrakensbane.Start()");
-            // Find and destroy Squad's Krakensbane
-            FieldInfo kraken_field = (from field in typeof(Krakensbane).GetFields(BindingFlags.Static | BindingFlags.NonPublic)
-                                      where field.FieldType.Equals(typeof(Krakensbane))
-                                      select field).First();
-            if (kraken_field != null)
-            {
-                Debug.Log("Krakensbane static field is found");
-                krak_instance = kraken_field.GetValue(null) as Krakensbane;
-                if (krak_instance)
-                {
-                    //UnityEngine.Object.Destroy(krak_instance);
-                    krak_instance.enabled = false;
-                    Debug.Log("Krakensbane is disabled");
-                }
-            }
             // Initialize frames to zero
             FrameVelocity = Vector3d.zero;
+            // Krakensbane handling
+            if (krak_instance == null)
+            {
+                // Find and destroy Squad's Krakensbane
+                FieldInfo kraken_field = (from field in typeof(Krakensbane).GetFields(BindingFlags.Static | BindingFlags.NonPublic)
+                                          where field.FieldType.Equals(typeof(Krakensbane))
+                                          select field).First();
+                if (kraken_field != null)
+                {
+                    Debug.Log("Krakensbane static field is found");
+                    krak_instance = kraken_field.GetValue(null) as Krakensbane;
+                    if (krak_instance)
+                    {
+                        //UnityEngine.Object.Destroy(krak_instance);
+                        krak_instance.enabled = false;
+                        Debug.Log("Krakensbane is disabled");
+                        krak_instance.MaxV = MaxVelocity;
+                        krak_instance.FrameVel = FrameVelocity;
+                    }
+                }
+            }
+            else
+                Debug.Log("Krakensbane was already off");
         }
 
         double max_proj(Vector3d v)
@@ -79,12 +97,12 @@ namespace FixedKrakensbane
             if (!FlightGlobals.ready)
                 return;
             Vessel cur_ves = FlightGlobals.ActiveVessel;
-            if (!cur_ves)
+            if (cur_ves == null)
                 return;
-            Rigidbody cur_rb = cur_ves.rigidbody;
-            if (cur_rb != null)
+            Rigidbody root_rb = cur_ves.rootPart.rigidbody;
+            if (root_rb != null)
             {
-                Vector3 ves_vel = cur_rb.velocity;
+                Vector3 ves_vel = root_rb.velocity;
                 if (!cur_ves.packed)
                 {
                     if (cur_ves.state != Vessel.State.DEAD)
@@ -104,7 +122,7 @@ namespace FixedKrakensbane
                         else
                         {
                             // check if we can return to original non-moving inertia frame
-                            if (max_proj(ves_vel + FrameVelocity) < MaxVelocity * 0.75f)
+                            if (!FrameVelocity.IsZero() && (max_proj(ves_vel + FrameVelocity) < MaxVelocity * 0.75f))
                             {
                                 Vector3 shift_vel = -FrameVelocity;
                                 GameEvents.onKrakensbaneDisengage.Fire(FrameVelocity);
@@ -128,16 +146,16 @@ namespace FixedKrakensbane
         void offset_velocities(Vector3 vel_offset)
         {
             // update unpacked loaded vessels
-            var vessels_to_chenge =
+            var vessels_to_change =
                 from vessel in FlightGlobals.Vessels
-                where vessel.loaded && !vessel.packed && vessel.state != Vessel.State.DEAD
+                where (vessel != null) && vessel.loaded && !vessel.packed && (vessel.state != Vessel.State.DEAD)
                 select vessel;
-            foreach (var v in vessels_to_chenge)
+            foreach (var v in vessels_to_change)
                 v.ChangeWorldVelocity(vel_offset);
             // update physical objects
             var obj_to_change =
                 from obj in FlightGlobals.physicalObjects
-                where obj != null && obj.rigidbody != null
+                where (obj != null) && (obj.rigidbody != null)
                 select obj.rigidbody;
             foreach (var rb in obj_to_change)
                 rb.AddForce(vel_offset, ForceMode.VelocityChange);
@@ -184,7 +202,7 @@ namespace FixedKrakensbane
                                 }
                         }
                     }
-                    if (vessel.loaded && !vessel.packed)
+                    if (!vessel.loaded || vessel.packed)
                         vessel.SetPosition(vessel.transform.position + offset);                 
                 }
             }

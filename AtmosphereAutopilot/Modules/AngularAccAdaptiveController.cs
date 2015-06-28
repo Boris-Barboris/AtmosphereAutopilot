@@ -164,6 +164,12 @@ namespace AtmosphereAutopilot
 			}
 		}
 
+        [AutoGuiAttr("Position", false, "G8")]
+        public float coord { get { return vessel.vesselTransform.position[axis]; } }
+
+        [AutoGuiAttr("Velocity", false, "G8")]
+        public float vel { get { return vessel.rootPart.rb.velocity[axis]; } }
+
 		#endregion
 	}
 

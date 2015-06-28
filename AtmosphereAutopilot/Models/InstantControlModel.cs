@@ -136,12 +136,12 @@ namespace AtmosphereAutopilot
                     // part as offsetted material point
                     moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
                     // part as rigid body moi over part CoM
-                    Vector3 rotated_moi = get_rotated_moi(part.rb.inertiaTensor, principal_to_root);
-                    moi += rotated_moi;
+                    //Vector3 rotated_moi = get_rotated_moi(part.rb.inertiaTensor, principal_to_root);
+                    //moi += rotated_moi;
                     // part moment as offsetted material point
                     am += world_to_root * Vector3.Cross(world_pv, world_impulse);
                     // part moment as rotating rigid body over part CoM
-                    am += Vector3.Scale(rotated_moi, world_to_root * part.rb.angularVelocity);
+                    //am += Vector3.Scale(rotated_moi, world_to_root * part.rb.angularVelocity);
                 }
                 else
                 {
