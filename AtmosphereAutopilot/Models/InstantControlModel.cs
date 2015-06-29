@@ -401,7 +401,7 @@ namespace AtmosphereAutopilot
 
         #region GUI
 
-		readonly string[] axis_names = { "pitch", "roll", "yaw" };
+		static readonly string[] axis_names = { "pitch", "roll", "yaw" };
         const float rad2degree = (float)(180.0 / Math.PI);
 
 		protected override void _drawGUI(int id)

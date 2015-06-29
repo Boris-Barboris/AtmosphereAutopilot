@@ -54,6 +54,12 @@ namespace AtmosphereAutopilot
             mmodel.Deactivate();
         }
 
+        [AutoGuiAttr("angular acc", false, "G8")]
+        protected float acc;
+
+        [AutoGuiAttr("output", false, "G8")]
+        protected float output;
+
 		/// <summary>
 		/// Main control function
 		/// </summary>
@@ -61,14 +67,14 @@ namespace AtmosphereAutopilot
         /// <param name="target_value">Desired angular acceleration</param>
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
 		{
-            input = (float)imodel.AngularAcc(axis);
+            acc = (float)imodel.AngularAcc(axis);
             desired_acc = target_value;
-            error = target_value - input;
+            float error = target_value - acc;
 
             if (write_telemetry)
             {
                 desire_acc_writer.Write(target_value.ToString("G8") + ',');
-                acc_writer.Write(input.ToString("G8") + ',');
+                acc_writer.Write(acc.ToString("G8") + ',');
                 v_writer.Write(imodel.AngularVel(axis).ToString("G8") + ',');
                 prediction_writer.Write(imodel.angular_vel[axis].ToString("G8") + ',');
 				aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');

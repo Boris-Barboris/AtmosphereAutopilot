@@ -27,8 +27,6 @@ namespace AtmosphereAutopilot
         // Generalization buffer is being used as ANN generality augmentor
         GridSpace<GenStruct> gen_space;
         List<GridSpace<GenStruct>.CellValue> linear_gen_buff;
-        List<Vector> gen_training_inputs = new List<Vector>();
-        List<double> gen_training_outputs = new List<double>();
         // Error weight buffers
         List<double> imm_error_weights = new List<double>();
         List<double> gen_error_weights = new List<double>();
@@ -88,8 +86,7 @@ namespace AtmosphereAutopilot
             output_update_dlg = output_method;
             // Misc
             batch_size = imm_buf_size;
-			temp_array = new VectorArray(ann.input_count, 1);
-			coord_vector = temp_array[0];
+            coord_vector = new Vector(ann.input_count);
         }
 
         #region DataSourceThread
@@ -167,8 +164,7 @@ namespace AtmosphereAutopilot
             }
         }
 
-		VectorArray temp_array;
-		Vector coord_vector;
+        Vector coord_vector;
 
         void update_gen_space()
         {
@@ -186,34 +182,17 @@ namespace AtmosphereAutopilot
 						coord_vector[j] += imm_training_inputs.getFromTail(i)[j];
                 }
                 val /= (double)cell_batch;
-				for (int j = 0; j < dim; j++)
-                    coord_vector[j] /= (double)cell_batch;
+                coord_vector.Scale(1.0/(double)cell_batch);
                 gen_space.Put(new GenStruct(val, cur_time), coord_vector);
-            }
-            if (linear_gen_buff.Count > 0)                      // let's update current state of generalization lists
-            {
-                for (int i = 0; i < linear_gen_buff.Count; i++)
-                {
-                    if (i >= gen_training_inputs.Count)
-                        gen_training_inputs.Add(linear_gen_buff[i].coord);
-                    else
-                        gen_training_inputs[i] = linear_gen_buff[i].coord;
-                    if (i >= gen_training_outputs.Count)
-                        gen_training_outputs.Add(linear_gen_buff[i].data.val);
-                    else
-                        gen_training_outputs[i] = linear_gen_buff[i].data.val;
-                }
-                for (int i = gen_training_inputs.Count - 1; i >= linear_gen_buff.Count; i--)
-                    gen_training_inputs.RemoveAt(i);
-                for (int i = gen_training_outputs.Count - 1; i >= linear_gen_buff.Count; i--)
-                    gen_training_outputs.RemoveAt(i);
             }
         }
 
         void create_views()
         {
-            ann_input_view = new ListView<Vector>(imm_training_inputs, gen_training_inputs);
-            ann_output_view = new ListView<double>(imm_training_outputs, gen_training_outputs);
+            ann_input_view = new ListView<Vector>(imm_training_inputs, 
+                new ListSelector<GridSpace<GenStruct>.CellValue, Vector>(linear_gen_buff, (cv) => { return cv.coord; }));
+            ann_output_view = new ListView<double>(imm_training_outputs,
+                new ListSelector<GridSpace<GenStruct>.CellValue, double>(linear_gen_buff, (cv) => { return cv.data.val; }));
             err_weight_view = new ListView<double>(imm_error_weights, gen_error_weights);
         }
 

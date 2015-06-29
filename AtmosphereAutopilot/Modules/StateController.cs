@@ -32,15 +32,6 @@ namespace AtmosphereAutopilot
 			: base(cur_vessel, wnd_id, module_name)
 		{ }
 
-		[AutoGuiAttr("input", false, "G8")]
-		public float input;					// current system controlled value
-
-		[AutoGuiAttr("error", false, "G8")]
-        public float error;					// desired - current
-
-		[AutoGuiAttr("output", false, "G8")]
-        public float output;				// current controller output
-
 		/// <summary>
 		/// Main control function of service autopilot.
 		/// </summary>

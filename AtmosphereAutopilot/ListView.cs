@@ -41,9 +41,9 @@ namespace System.Collections.Generic
 
         public bool IsReadOnly { get { return false; } }
 
-        public void Add(T item) { throw new NotSupportedException("ListView is read-only"); }
+        public void Add(T item) { throw new NotSupportedException("ListView is fixed-size"); }
 
-        public void Clear() { throw new NotSupportedException("ListView is read-only"); }
+        public void Clear() { throw new NotSupportedException("ListView is fixed-size"); }
 
         public bool Contains(T item)
         {
@@ -60,7 +60,7 @@ namespace System.Collections.Generic
                 array[i] = this[j];
         }
 
-        public bool Remove(T item) { throw new NotSupportedException("ListView is read-only"); }
+        public bool Remove(T item) { throw new NotSupportedException("ListView is fixed-size"); }
 
         public T this[int index]
         {
@@ -110,4 +110,5 @@ namespace System.Collections.Generic
             return result;
         }
     }
+
 }

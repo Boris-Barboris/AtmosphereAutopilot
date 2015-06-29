@@ -67,13 +67,19 @@ namespace AtmosphereAutopilot
 
 		double time_in_regime = 0.0;
 
+        [AutoGuiAttr("angular vel", false, "G8")]
+        protected float vel;
+
+        [AutoGuiAttr("output", false, "G8")]
+        protected float output;
+
 		/// <summary>
 		/// Main control function
 		/// </summary>
 		/// <param name="cntrl">Control state to change</param>
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
 		{
-			input = imodel.AngularVel(axis);				// get angular velocity
+            vel = imodel.AngularVel(axis);				// get angular velocity
             double accel = imodel.AngularAcc(axis);		    // get angular acceleration
 
             // Adapt KP, so that on max_angular_v it produces max_angular_dv * kp_acc factor output
@@ -88,15 +94,15 @@ namespace AtmosphereAutopilot
             
             desired_v = moderate_desired_v(desired_v);      // moderation stage
 
-            output = (float)Common.Clamp(pid.Control(input, desired_v), fbw_dv_k * mmodel.MaxAngularAcc(axis));
+            output = (float)Common.Clamp(pid.Control(vel, desired_v), fbw_dv_k * mmodel.MaxAngularAcc(axis));
 
-            error = desired_v - input;
+            float error = desired_v - vel;
             proport = error * pid.KP;
 
 			// check if we're stable on given input value
             if (AutoTrim)
             {
-                if (Math.Abs(input) < 5e-3)
+                if (Math.Abs(vel) < 5e-3)
                 {
                     time_in_regime += TimeWarp.fixedDeltaTime;
                 }

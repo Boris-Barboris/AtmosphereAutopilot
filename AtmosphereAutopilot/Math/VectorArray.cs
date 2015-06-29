@@ -49,6 +49,12 @@ namespace AtmosphereAutopilot
             VectorArray source;
             int index;
 
+            public Vector(int size)
+            {
+                source = new VectorArray(size, 1);
+                index = 0;
+            }
+
             public Vector(VectorArray binding, int index)
             {
                 source = binding;
@@ -122,6 +128,13 @@ namespace AtmosphereAutopilot
             public static bool operator !=(Vector x, Vector y)
             {
                 return !(x == y);
+            }
+
+            public Vector Scale(double s)
+            {
+                for (int i = 0; i < source.vector_size; i++)
+                    this[i] /= s;
+                return this;
             }
         }
     }

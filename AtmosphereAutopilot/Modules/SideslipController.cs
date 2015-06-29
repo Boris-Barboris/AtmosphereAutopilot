@@ -39,6 +39,12 @@ namespace AtmosphereAutopilot
 
         double time_in_regime = 0.0;
 
+        [AutoGuiAttr("sideslip angle", false, "G8")]
+        protected float sideslip;
+
+        [AutoGuiAttr("output vel", false, "G8")]
+        protected float output;
+
         /// <summary>
         /// Main control function
         /// </summary>
@@ -47,7 +53,7 @@ namespace AtmosphereAutopilot
         {
             const float degree_to_rad = (float)Math.PI / 180.0f;
 
-            input = -imodel.AoA(YAW);
+            sideslip = -imodel.AoA(YAW);
 
             // Adapt KP, so that on max_angular_v it produces max_angular_dv * kp_acc factor output
             if (mmodel.MaxAngularSpeed(YAW) != 0.0)
@@ -60,12 +66,12 @@ namespace AtmosphereAutopilot
                 desired_sideslip = (float)(user_input * fbw_max_sideslip * degree_to_rad);
             else
                 desired_sideslip = target_value;
-                
-            desired_v = (float)pid.Control(input, desired_sideslip);
+
+            desired_v = (float)pid.Control(sideslip, desired_sideslip);
 
             output = Common.Clampf(desired_v, (float)mmodel.MaxAngularSpeed(YAW));
 
-            error = desired_sideslip - input;
+            float error = desired_sideslip - sideslip;
 
             //ControlUtils.neutralize_user_input(cntrl, YAW);
             v_controller.ApplyControl(cntrl, output);
@@ -73,7 +79,7 @@ namespace AtmosphereAutopilot
             // check if we're stable on given input value
             if (AutoTrim)
             {
-                if (Math.Abs(input) < 5e-3)
+                if (Math.Abs(sideslip) < 5e-3)
                 {
                     time_in_regime += TimeWarp.fixedDeltaTime;
                 }

@@ -59,6 +59,7 @@
     <Compile Include="BackgroundThread.cs" />
     <Compile Include="Controller\PDController.cs" />
     <Compile Include="FixedKrakensbane.cs" />
+    <Compile Include="ListSelector.cs" />
     <Compile Include="ListView.cs" />
     <Compile Include="Math\GradientDescend.cs" />
     <Compile Include="GUI\AutoGui.cs" />
