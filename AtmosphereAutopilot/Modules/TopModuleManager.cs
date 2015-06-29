@@ -41,7 +41,7 @@ namespace AtmosphereAutopilot
                         throw new NullReferenceException(module_type.Name + " module has no void(Vessel) constructor.");
 					cur_ves_modules[module_type] = (AutopilotModule)constructor.Invoke(new[] { vessel });
 				}
-				// Then we need to resolve relations
+				// Then we need to resolve relations and deserialize
                 foreach (var module_type in cur_ves_modules.Keys)
                     if (!module_type.Equals(typeof(TopModuleManager)))
                     {

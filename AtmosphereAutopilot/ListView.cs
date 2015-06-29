@@ -66,32 +66,29 @@ namespace System.Collections.Generic
         {
             get
             {
-                if (lists.Count <= 0)
-                    throw new InvalidOperationException("ListView is empty");
-                int i = 0;
-                while (lists[i].Count <= index)
-                {
-                    index -= lists[i].Count;
-                    i++;
-                    if (i >= lists.Count)
-                        throw new InvalidOperationException("index too large");
-                }
+                int i = get_list_index(ref index);
                 return lists[i][index];
             }
             set
             {
-                if (lists.Count <= 0)
-                    throw new InvalidOperationException("ListView is empty");
-                int i = 0;
-                while (lists[i].Count <= index)
-                {
-                    index -= lists[i].Count;
-                    i++;
-                    if (i >= lists.Count)
-                        throw new InvalidOperationException("index too large");
-                }
+                int i = get_list_index(ref index);
                 lists[i][index] = value;
             }
+        }
+
+        int get_list_index(ref int lin_index)
+        {
+            if (lists.Count == 0)
+                throw new InvalidOperationException("ListView is empty");
+            int i = 0;
+            while (lists[i].Count <= lin_index)
+            {
+                lin_index -= lists[i].Count;
+                i++;
+                if (i >= lists.Count)
+                    throw new InvalidOperationException("index too large");
+            }
+            return i;
         }
 
         public int IndexOf(T item)
@@ -103,9 +100,9 @@ namespace System.Collections.Generic
             return -1;
         }
 
-        public void Insert(int index, T item) { throw new NotSupportedException("ListView is read-only"); }
+        public void Insert(int index, T item) { throw new NotSupportedException("ListView is fixed-size"); }
 
-        public void RemoveAt(int index) { throw new NotSupportedException("ListView is read-only"); }
+        public void RemoveAt(int index) { throw new NotSupportedException("ListView is fixed-size"); }
 
         public override string ToString()
         {

@@ -16,7 +16,7 @@ namespace TestingConsole
         static void Main(string[] args)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
-            trainingTest();
+            simple_ann_test();
             Console.ReadKey(true);
         }
 
