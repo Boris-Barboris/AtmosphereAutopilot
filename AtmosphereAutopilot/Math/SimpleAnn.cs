@@ -242,17 +242,43 @@ namespace AtmosphereAutopilot
             }
         }
 
-        static void lm_get_weights(Matrix jacob, IList<double> pars, IList<double> new_pars, IList<double> errors, double mu)
+        // Service containers for learning
+        double[] new_params, new_errors;
+        double[] weighted_errors;
+        Matrix jacob_storage, jacob_transposed_storage, identity_storage,
+            temp1, temp2, hessian_storage, invert_storage,
+            temp_errors, weight_delta;
+
+        public void preallocate(int expected_input_count)
         {
-            Matrix jacob_trans = Matrix.Transpose(jacob);
-            Matrix identity = Matrix.IdentityMatrix(pars.Count, pars.Count, mu);
-            Matrix weight_delta = (jacob_trans * jacob + identity).Invert() * jacob_trans * new Matrix(errors, true);
+            int ic = expected_input_count + 1;
+            int pl = parameters.Length;
+            new_params = new double[pl];
+            new_errors = new double[ic];
+            weighted_errors = new double[ic];
+            jacob_storage = new Matrix(ic, pl);
+            jacob_transposed_storage = new Matrix(pl, ic);
+            identity_storage = new Matrix(pl, pl);
+            hessian_storage = new Matrix(pl, pl);
+            invert_storage = new Matrix(pl, pl);
+            temp1 = new Matrix(pl, pl);
+            temp2 = new Matrix(pl, ic);
+            temp_errors = new Matrix(ic, 1);
+            weight_delta = new Matrix(pl, 1);
+        }
+
+        void lm_get_weights(Matrix hessian, Matrix jacob_trans, IList<double> pars, IList<double> new_pars, IList<double> errors, double mu)
+        {
+            Matrix.IdentityMatrix(pars.Count, pars.Count, ref identity_storage, mu);
+            Matrix.Add(hessian, identity_storage, ref temp1);
+            temp1.Invert(ref invert_storage);
+            Matrix.Multiply(invert_storage, jacob_trans, ref temp2);
+            Matrix.ChangeData(errors, jacob_trans.cols, ref temp_errors, true);
+            Matrix.Multiply(temp2, temp_errors, ref weight_delta);
+
             for (int i = 0; i < pars.Count; i++)
                 new_pars[i] = pars[i] - weight_delta[i, 0];
         }
-
-        // Service containers
-        double[] new_params;
 
         /// <summary>
         /// Perform complete cycle of Levenberg-Marquardt training algorithm. Weighted least squares with head batching is used as target function.
@@ -275,10 +301,10 @@ namespace AtmosphereAutopilot
             int error_count = inputs.Count + batch_count;
 
             // Allocate jacobian
-            Matrix jacob = new Matrix(error_count, param_count);
+            Matrix jacob = Matrix.Realloc(error_count, param_count, ref jacob_storage);
 
             // Evaluate error vector and jacobian
-            double[] weighted_errors = new double[error_count];
+            Common.Realloc(ref weighted_errors, error_count);
             for (int i = 0; i < inputs.Count; i++)                              // iterate over algorithm inputs
             {
                 // errors
@@ -302,6 +328,9 @@ namespace AtmosphereAutopilot
             // Evaluate batch error if needed
             if (batch_size > 0)
             {
+                weighted_errors[error_count - 1] = 0.0;
+                for (int par = 0; par < param_count; par++)
+                    jacob[error_count - 1, par] = 0.0;
                 for (int i = 0; i < batch_size; i++)
                 {
                     for (int par = 0; par < param_count; par++)
@@ -311,22 +340,25 @@ namespace AtmosphereAutopilot
                 weighted_errors[error_count - 1] *= batch_weight;
             }
 
+            // Calculate jacobian transpose and hessian
+            Matrix transpose = Matrix.Transpose(jacob, ref jacob_transposed_storage);
+            Matrix hessian = Matrix.Multiply(transpose, jacob, ref hessian_storage);
+
             // Evaluate meansqrerr if needed
-            double old_msqrerr = weighted_errors.Meansqr();
+            double old_msqrerr = weighted_errors.Meansqr(error_count);
             new_msqrerr = old_msqrerr;
 
-            // Allocate storage for new params if needed
-            if (new_params == null)
-                new_params = new double[param_count];
+            // Allocate storage for new params and errors if needed
+            Common.Realloc(ref new_params, param_count);
+            Common.Realloc(ref new_errors, error_count);
 
-            // Try to perform Levenberg-Marquardt descend
-            double[] new_errors = new double[error_count];
+            // Try to perform Levenberg-Marquardt descend            
             int iter = 0;
             do
             {
                 try
                 {
-                    lm_get_weights(jacob, parameters, new_params, weighted_errors, gauss.mu);
+                    lm_get_weights(hessian, transpose, parameters, new_params, weighted_errors, gauss.mu);
                 }
                 catch (MSingularException)
                 {
@@ -342,11 +374,12 @@ namespace AtmosphereAutopilot
                 }
                 if (batch_size > 0)
                 {
+                    new_errors[error_count - 1] = 0.0;
                     for (int i = 0; i < batch_size; i++)
                         new_errors[error_count - 1] += new_errors[i];
                     new_errors[error_count - 1] *= batch_weight;
                 }
-                new_msqrerr = new_errors.Meansqr();
+                new_msqrerr = new_errors.Meansqr(error_count);
                 if (new_msqrerr < old_msqrerr)
                 {
                     gauss.Success();
@@ -357,7 +390,7 @@ namespace AtmosphereAutopilot
                     gauss.Fail();
                 iter++;
             } while (new_msqrerr >= old_msqrerr && (iter < iter_limit));
-
+            new_msqrerr = old_msqrerr;
             return false;
         }
     }

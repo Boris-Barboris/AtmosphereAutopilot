@@ -59,6 +59,45 @@ namespace AtmosphereAutopilot
             mat = new double[rows * cols];
         }
 
+        bool old_lu = false;
+
+        public static Matrix Realloc(int iRows, int iCols, ref Matrix storage)
+        {
+            if (storage == null)
+                storage = new Matrix(iRows, iCols);
+            else
+            {
+                if (storage.mat.Count < iRows * iCols)
+                    storage.mat = new double[iRows * iCols];
+                storage.rows = iRows;
+                storage.cols = iCols;
+                storage.old_lu = true;
+            }            
+            return storage;
+        }
+
+        public static Matrix ChangeData(IList<double> source, int count, ref Matrix storage, bool column_vector = false)
+        {
+            if (storage != null)
+            {
+                if (column_vector)
+                {
+                    storage.cols = 1;
+                    storage.rows = count;
+                }
+                else
+                {
+                    storage.cols = count;
+                    storage.rows = 1;
+                }
+                storage.mat = source;
+                storage.old_lu = true;
+            }
+            else
+                storage = new Matrix(source, column_vector);
+            return storage;
+        }
+
         /// <summary>
         /// Create matrix view of collection
         /// </summary>
@@ -111,10 +150,10 @@ namespace AtmosphereAutopilot
         public void MakeLU()                        // Function for LU decomposition
         {
             if (!IsSquare()) throw new MException("The matrix is not square!");
-            L = IdentityMatrix(rows, cols);
-            U = Duplicate();
+            IdentityMatrix(rows, cols, ref L);
+            Duplicate(ref U);
 
-            pi = new int[rows];
+            Common.Realloc(ref pi, rows);
             for (int i = 0; i < rows; i++) pi[i] = i;
 
             double p = 0;
@@ -157,15 +196,20 @@ namespace AtmosphereAutopilot
                         U[i, j] = U[i, j] - L[i, k] * U[k, j];
                 }
             }
+
+            old_lu = false;
         }
+
+        Matrix solv_res;
 
         public Matrix SolveWith(Matrix v)                        // Function solves Ax = v in confirmity with solution vector "v"
         {
             if (rows != cols) throw new MException("The matrix is not square!");
             if (rows != v.rows) throw new MException("Wrong number of results in solution vector!");
-            if (L == null) MakeLU();
+            if (L == null || old_lu) MakeLU();
 
-            Matrix b = new Matrix(rows, 1);
+
+            Matrix b = Realloc(rows, 1, ref solv_res);
             for (int i = 0; i < rows; i++) b[i, 0] = v[pi[i], 0];   // switch two items in "v" due to permutation matrix
 
             Matrix z = SubsForth(L, b);
@@ -218,16 +262,34 @@ namespace AtmosphereAutopilot
 
         public Matrix Invert()                                   // Function returns the inverted matrix
         {
-            if (L == null) MakeLU();
+            if (L == null || old_lu) MakeLU();
 
             Matrix inv = new Matrix(rows, cols);
 
             for (int i = 0; i < rows; i++)
             {
                 Matrix Ei = new Matrix(rows, 1);
-                Ei[i, 0] = 1;
+                Ei[i, 0] = 1.0;
                 Matrix col = SolveWith(Ei);
                 inv.SetCol(col, i);
+            }
+            return inv;
+        }
+
+        Matrix Ei;
+
+        public Matrix Invert(ref Matrix result)                                   // Function returns the inverted matrix
+        {
+            if (L == null || old_lu) MakeLU();
+            Matrix inv = Realloc(rows, cols, ref result);
+            Realloc(rows, 1, ref Ei);
+            Ei.Fill(0.0);
+            for (int i = 0; i < rows; i++)
+            {
+                Ei[i, 0] = 1.0;
+                Matrix col = SolveWith(Ei);
+                inv.SetCol(col, i);
+                Ei[i, 0] = 0.0;
             }
             return inv;
         }
@@ -235,7 +297,7 @@ namespace AtmosphereAutopilot
 
         public double Det()                         // Function for determinant
         {
-            if (L == null) MakeLU();
+            if (L == null || old_lu) MakeLU();
             double det = detOfP;
             for (int i = 0; i < rows; i++) det *= U[i, i];
             return det;
@@ -243,7 +305,7 @@ namespace AtmosphereAutopilot
 
         public Matrix GetP()                        // Function returns permutation matrix "P" due to permutation vector "pi"
         {
-            if (L == null) MakeLU();
+            if (L == null || old_lu) MakeLU();
 
             Matrix matrix = new Matrix(rows, cols);
             for (int i = 0; i < rows; i++) matrix[pi[i], i] = 1;
@@ -259,11 +321,22 @@ namespace AtmosphereAutopilot
             return matrix;
         }
 
+        public Matrix Duplicate(ref Matrix storage)                   // Function returns the copy of this matrix
+        {
+            Matrix matrix = Realloc(rows, cols, ref storage);
+            for (int i = 0; i < rows; i++)
+                for (int j = 0; j < cols; j++)
+                    matrix[i, j] = this[i, j];
+            return matrix;
+        }
+
+        Matrix subsf_res;
+
         public static Matrix SubsForth(Matrix A, Matrix b)          // Function solves Ax = b for A as a lower triangular matrix
         {
-            if (A.L == null) A.MakeLU();
+            if (A.L == null || A.old_lu) A.MakeLU();
             int n = A.rows;
-            Matrix x = new Matrix(n, 1);
+            Matrix x = Realloc(n, 1, ref A.subsf_res);
 
             for (int i = 0; i < n; i++)
             {
@@ -274,11 +347,13 @@ namespace AtmosphereAutopilot
             return x;
         }
 
+        Matrix subsb_res;
+
         public static Matrix SubsBack(Matrix A, Matrix b)           // Function solves Ax = b for A as an upper triangular matrix
         {
-            if (A.L == null) A.MakeLU();
+            if (A.L == null || A.old_lu) A.MakeLU();
             int n = A.rows;
-            Matrix x = new Matrix(n, 1);
+            Matrix x = Realloc(n, 1, ref A.subsb_res);
 
             for (int i = n - 1; i > -1; i--)
             {
@@ -295,6 +370,22 @@ namespace AtmosphereAutopilot
             for (int i = 0; i < Math.Min(iRows, iCols); i++)
                 matrix[i, i] = init;
             return matrix;
+        }
+
+        public static Matrix IdentityMatrix(int iRows, int iCols, ref Matrix storage, double init = 1.0)   // Function generates the identity matrix
+        {
+            Matrix matrix = Realloc(iRows, iCols, ref storage);
+            matrix.Fill(0.0);
+            for (int i = 0; i < Math.Min(iRows, iCols); i++)
+                matrix[i, i] = init;
+            return matrix;
+        }
+
+        public void Fill(double x)
+        {
+            for (int i = 0; i < rows; i++)
+                for (int j = 0; j < cols; j++)
+                    this[i, j] = x;
         }
 
         public static Matrix RandomMatrix(int iRows, int iCols, int dispersion)       // Function generates the random matrix
@@ -340,6 +431,15 @@ namespace AtmosphereAutopilot
         public static Matrix Transpose(Matrix m)              // Matrix transpose, for any rectangular matrix
         {
             Matrix t = new Matrix(m.cols, m.rows);
+            for (int i = 0; i < m.rows; i++)
+                for (int j = 0; j < m.cols; j++)
+                    t[j, i] = m[i, j];
+            return t;
+        }
+
+        public static Matrix Transpose(Matrix m, ref Matrix storage)    // memory-efficient transpose
+        {
+            Matrix t = Realloc(m.cols, m.rows, ref storage);
             for (int i = 0; i < m.rows; i++)
                 for (int j = 0; j < m.cols; j++)
                     t[j, i] = m[i, j];
@@ -563,6 +663,21 @@ namespace AtmosphereAutopilot
             return result;
         }
 
+        private static Matrix StupidMultiply(Matrix m1, Matrix m2, ref Matrix output)                  // Stupid matrix multiplication
+        {
+            if (m1.cols != m2.rows) throw new MException("Wrong dimensions of matrix!");
+
+            Matrix result = Realloc(m1.rows, m2.cols, ref output);
+            for (int i = 0; i < result.rows; i++)
+                for (int j = 0; j < result.cols; j++)
+                {
+                    result[i, j] = 0.0;
+                    for (int k = 0; k < m1.cols; k++)
+                        result[i, j] += m1[i, k] * m2[k, j];
+                }
+            return result;
+        }
+
         private static Matrix Multiply(Matrix m1, Matrix m2)                         // Matrix multiplication
         {
             if (m1.cols != m2.rows) throw new MException("Wrong dimension of matrix!");
@@ -589,6 +704,14 @@ namespace AtmosphereAutopilot
                 return StupidMultiply(m1, m2);
             }
         }
+
+        // Matrix multiplication (memory-efficient)
+        public static Matrix Multiply(Matrix m1, Matrix m2, ref Matrix output)
+        {
+            if (m1.cols != m2.rows) throw new MException("Wrong dimension of matrix!");
+            return StupidMultiply(m1, m2, ref output);
+        }
+
         private static Matrix Multiply(double n, Matrix m)                          // Multiplication by constant n
         {
             Matrix r = new Matrix(m.rows, m.cols);
@@ -605,6 +728,26 @@ namespace AtmosphereAutopilot
                 for (int j = 0; j < r.cols; j++)
                     r[i, j] = m1[i, j] + m2[i, j];
             return r;
+        }
+
+        public static Matrix Add(Matrix m1, Matrix m2, ref Matrix output)         // Sčítání matic
+        {
+            if (m1.rows != m2.rows || m1.cols != m2.cols) throw new MException("Matrices must have the same dimensions!");
+            Matrix r = Realloc(m1.rows, m1.cols, ref output);
+            for (int i = 0; i < r.rows; i++)
+                for (int j = 0; j < r.cols; j++)
+                    r[i, j] = m1[i, j] + m2[i, j];
+            return r;
+        }
+
+        public Matrix Add(Matrix m2)
+        {
+            Matrix m1 = this;
+            if (m1.rows != m2.rows || m1.cols != m2.cols) throw new MException("Matrices must have the same dimensions!");
+            for (int i = 0; i < m1.rows; i++)
+                for (int j = 0; j < m1.cols; j++)
+                    m1[i, j] = m1[i, j] + m2[i, j];
+            return m1;
         }
 
         public static string NormalizeMatrixString(string matStr)	// From Andy - thank you! :)

@@ -171,12 +171,10 @@ namespace AtmosphereAutopilot
 	/// </summary>
     public static class AutoGUI
     {
-		// collection of string representations for field values
-        static Dictionary<int, string> value_holders = new Dictionary<int, string>();
-
 		// optimization structures
 		static Dictionary<Type, PropertyInfo[]> property_list = new Dictionary<Type, PropertyInfo[]>();
 		static Dictionary<Type, FieldInfo[]> field_list = new Dictionary<Type, FieldInfo[]>();
+        static Dictionary<object, object[]> custom_attrs = new Dictionary<object, object[]>();
 		static Dictionary<Type, MethodInfo> toStringMethods = new Dictionary<Type, MethodInfo>();
 		static Dictionary<Type, MethodInfo> parseMethods = new Dictionary<Type, MethodInfo>();
 		static readonly Type[] formatStrTypes = { typeof(string) };
@@ -282,7 +280,9 @@ namespace AtmosphereAutopilot
 		/// <param name="obj">Object instance</param>
         static void draw_element(object element, object obj)
         {
-            var attributes = GetCustomAttributes(element, typeof(AutoGuiAttr), true);
+            if (!custom_attrs.ContainsKey(element))
+                custom_attrs[element] = GetCustomAttributes(element, typeof(AutoGuiAttr), true);
+            object[] attributes = custom_attrs[element];
             if (attributes == null || attributes.Length <= 0)
                 return;
             var att = attributes[0] as AutoGuiAttr;
@@ -333,15 +333,11 @@ namespace AtmosphereAutopilot
             }
             else
             {
-                int hash = 7 * obj.GetHashCode() + 13 * Name(element).GetHashCode();
                 string val_holder;
-                if (value_holders.ContainsKey(hash))
-                    val_holder = value_holders[hash];
+                if (ToStringFormat != null && att.format != null)
+                    val_holder = (string)ToStringFormat.Invoke(GetValue(element, obj), new[] { att.format });
                 else
-                    if (ToStringFormat != null && att.format != null)
-                        val_holder = (string)ToStringFormat.Invoke(GetValue(element, obj), new[] { att.format });
-                    else
-                        val_holder = GetValue(element, obj).ToString();
+                    val_holder = GetValue(element, obj).ToString();
                 val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);
                 try
                 {
@@ -352,7 +348,6 @@ namespace AtmosphereAutopilot
                         SetValue(element, obj, ParseMethod.Invoke(null, new[] { val_holder }));
                 }
                 catch { }
-                value_holders[hash] = val_holder;
             }
             GUILayout.EndHorizontal();
         }

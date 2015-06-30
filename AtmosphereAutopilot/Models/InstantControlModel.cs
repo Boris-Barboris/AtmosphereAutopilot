@@ -444,13 +444,13 @@ namespace AtmosphereAutopilot
 
         void initialize_ann_tainers()
         {
-            pitch_trainer = new OnlineAnnTrainer(pitch_ann, IMM_BUF_SIZE, new int[] { 7, 7 },
+            pitch_trainer = new OnlineAnnTrainer(pitch_ann, IMM_BUF_SIZE, new int[] { 9, 9 },
                 new double[] { -1.0, -0.3 }, new double[] { 1.0, 0.3 }, pitch_input_method, pitch_output_method);
             trainers[0] = pitch_trainer;
             roll_trainer = new OnlineAnnTrainer(roll_ann, IMM_BUF_SIZE, new int[] { 7, 7, 7 },
                 new double[] { -1.0, -1.0, -2.0 }, new double[] { 1.0, 1.0, 2.0 }, roll_input_method, roll_output_method);
             trainers[1] = roll_trainer;
-            yaw_trainer = new OnlineAnnTrainer(yaw_ann, IMM_BUF_SIZE, new int[] { 7, 7 },
+            yaw_trainer = new OnlineAnnTrainer(yaw_ann, IMM_BUF_SIZE, new int[] { 9, 9 },
                 new double[] { -1.0, -0.3 }, new double[] { 1.0, 0.3 }, yaw_input_method, yaw_output_method);
             trainers[2] = yaw_trainer;
         }
@@ -629,13 +629,13 @@ namespace AtmosphereAutopilot
 			GUILayout.BeginVertical();
 			for (int i = 0; i < 3; i++)
 			{
-				GUILayout.Label(axis_names[i] + " ang vel = " + angular_v_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " ang acc = " + angular_acc_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " AoA = " + (aoa_buf[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label(axis_names[i] + " AngMoment = " + AM[i].ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label("=======" + axis_names[i] + "=======");
+				GUILayout.Label("ang vel = " + angular_v_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label("ang acc = " + angular_acc_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label("AoA = " + (aoa_buf[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label("MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label("AngMoment = " + AM[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 AutoGUI.AutoDrawObject(trainers[i]);
-				GUILayout.Space(5);
 			}
             AutoGUI.AutoDrawObject(this);
 			GUILayout.EndVertical();

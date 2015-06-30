@@ -16,8 +16,8 @@ namespace TestingConsole
         static void Main(string[] args)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
-            simple_ann_test();
-            //Console.ReadKey(true);
+            trainingTest();
+            Console.ReadKey(true);
         }
 
         static void simple_ann_test()
@@ -76,7 +76,7 @@ namespace TestingConsole
         {
             List<double[]> inputs = new List<double[]>();
             List<double> outputs = new List<double>();
-            int set_size = 50;
+            int set_size = 10;
             for (int j = 0; j < set_size; j++)
             {
                 inputs.Add(new double[] { j * 1.0 / (double)set_size });
@@ -88,7 +88,7 @@ namespace TestingConsole
                 new double[] { -10.0 }, new double[] { 10.0 },
                 (arr) => { arr[0] = inputs[i][0]; },
                 () => { return outputs[i]; });
-            BackgroundThread thread = new BackgroundThread();
+            BackgroundThread thread = new BackgroundThread("");
             thread.add_func(() => { trainer.Train(); Console.WriteLine(trainer.ann_performance.ToString("G8")); return false; });
             thread.Start();
             while (i < set_size)

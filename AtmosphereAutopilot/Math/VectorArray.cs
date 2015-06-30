@@ -94,20 +94,20 @@ namespace AtmosphereAutopilot
             public override string ToString()
             {
                 if (source == null)
-                    return "()";
+                    return "{}";
                 else
                 {
                     if (source.data_size == 1)
                         return this[0].ToString("G6");
                     else
                     {
-                        string result = "(";
+                        string result = "{";
                         for (int i = 0; i < source.vector_size; i++)
                             if (i != source.vector_size - 1)
                                 result += this[i].ToString("G6") + ", ";
                             else
                                 result += this[i].ToString("G6");
-                        result += ")";
+                        result += "}";
                         return result;
                     }
                 }
@@ -133,7 +133,7 @@ namespace AtmosphereAutopilot
             public Vector Scale(double s)
             {
                 for (int i = 0; i < source.vector_size; i++)
-                    this[i] /= s;
+                    this[i] *= s;
                 return this;
             }
         }

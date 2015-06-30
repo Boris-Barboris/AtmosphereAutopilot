@@ -14,6 +14,17 @@ namespace AtmosphereAutopilot
 
     public static class Common
     {
+        /// <summary>
+        /// Reallocate array if needed
+        /// </summary>
+        /// <param name="capacity">Required array capacity</param>
+        /// <param name="storage">Storage to try to reuse</param>
+        public static void Realloc<T>(ref T[] storage, int capacity)
+        {
+            if (storage == null || capacity > storage.Length)
+                storage = new T[capacity];
+        }
+
         public static Quaternion normalizeQuaternion(Quaternion quat)
         {
             float n = (float)Math.Sqrt(quat.x * quat.x + quat.y * quat.y + quat.z * quat.z + quat.w * quat.w);
@@ -58,6 +69,25 @@ namespace AtmosphereAutopilot
             foreach (double i in col)
                 sqr_sum += i * i;
             return sqr_sum / col.Count;
+        }
+
+        public static double Meansqr(this ICollection<double> col, int count)
+        {
+            double sqr_sum = 0.0;
+            int r_count = 0;
+            var en = col.GetEnumerator();
+            while (r_count < count)
+            {
+                if (en.MoveNext())
+                {
+                    r_count++;
+                    double val = en.Current;
+                    sqr_sum += val * val;
+                }
+                else
+                    break;
+            }
+            return sqr_sum / (double)r_count;
         }
 
         public static double Clamp(double val, double under, double upper)

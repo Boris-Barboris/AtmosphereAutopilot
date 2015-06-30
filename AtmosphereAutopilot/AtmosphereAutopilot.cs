@@ -78,6 +78,14 @@ namespace AtmosphereAutopilot
             thread = new BackgroundThread(KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot");
         }
 
+        void OnApplicationPause(bool paused)
+        {
+            if (paused)
+                thread.Pause();
+            else
+                thread.Resume();
+        }
+
         void serialize_active_modules()
         {
             if (ActiveVessel == null)

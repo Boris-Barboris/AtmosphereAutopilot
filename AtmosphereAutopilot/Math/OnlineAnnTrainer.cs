@@ -81,9 +81,14 @@ namespace AtmosphereAutopilot
             // Generalization space initialization
             gen_space = new GridSpace<GenStruct>(ann.input_count, gen_cells, l_gen_bound, u_gen_bound);
 			linear_gen_buff = gen_space.Linearized;
-            // Delegate assignment
+            // Delegates assignment
             input_update_dlg = input_method;
             output_update_dlg = output_method;
+            // Preallocate buffers for ann
+            int supercell_size = gen_cells[0];
+            for (int i = 1; i < ann.input_count; i++)
+                supercell_size *= gen_cells[i];
+            ann.preallocate(imm_buf_size + supercell_size);
             // Misc
             batch_size = imm_buf_size;
             coord_vector = new Vector(ann.input_count);
@@ -118,7 +123,7 @@ namespace AtmosphereAutopilot
 
         #region TrainingThread
 
-        SimpleAnn.GaussKoeff gauss = new SimpleAnn.GaussKoeff(1e-3, 0.0, 1e30, 2.0, 1e2);
+        SimpleAnn.GaussKoeff gauss = new SimpleAnn.GaussKoeff(1e-3, 0.0, 1e6, 2.0, 1e2);
 
         [AutoGuiAttr("LM Mu", false, "G8")]
         public double Mu { get { return gauss.mu; } }

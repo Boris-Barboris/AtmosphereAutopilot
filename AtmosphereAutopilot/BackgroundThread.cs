@@ -91,9 +91,10 @@ namespace AtmosphereAutopilot
                     {
                         lock (logger)
                         {
-                            logger.WriteLine("Background thread exception - broken function removed from queue\r\n");
+                            logger.WriteLine("Background thread exception - broken function removed from queue");
                             logger.WriteLine(e.Message);
                             logger.WriteLine(e.StackTrace);
+                            logger.WriteLine();
                             logger.Flush();
                         }
                         remove_func(func);
