@@ -42,7 +42,7 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// While pushing new state to generalization space last CellBatch states will be averaged
         /// </summary>
-        public volatile int cell_batch = 4;
+        public volatile int cell_batch = 2;
 
         // time is used for generalization info aging
         int cur_time = 0;
@@ -118,10 +118,18 @@ namespace AtmosphereAutopilot
 
         #region TrainingThread
 
-        SimpleAnn.GaussKoeff gauss = new SimpleAnn.GaussKoeff(1e-3, 1e-7, 1e6, 2.0, 100.0);
+        SimpleAnn.GaussKoeff gauss = new SimpleAnn.GaussKoeff(1e-3, 0.0, 1e30, 2.0, 1e2);
 
+        [AutoGuiAttr("LM Mu", false, "G8")]
+        public double Mu { get { return gauss.mu; } }
+
+        [AutoGuiAttr("ann batch size", false)]
         public int batch_size;
-        public volatile float batch_weight = 0.15f;
+
+        [AutoGuiAttr("ann batch weight", true)]
+        public volatile float batch_weight = 1.0f;
+
+        [AutoGuiAttr("ann performance", false, "G8")]
         public volatile float ann_performance = float.NaN;
 
         public void Train()
@@ -142,7 +150,7 @@ namespace AtmosphereAutopilot
                 {
                     double new_performance;
                     ann.lm_iterate_batched(ann_input_view, ann_output_view, err_weight_view, Math.Min(batch_size, imm_training_inputs.Size),
-                        batch_weight, gauss, 3, out new_performance);
+                        batch_weight, gauss, 4, out new_performance);
                     ann_performance = (float)new_performance;
                 }
         }
@@ -196,7 +204,8 @@ namespace AtmosphereAutopilot
             err_weight_view = new ListView<double>(imm_error_weights, gen_error_weights);
         }
 
-        public volatile float base_gen_weight = 0.2f;
+        [AutoGuiAttr("ann gener weight", true)]
+        public volatile float base_gen_weight = 0.5f;
 
         void update_weights()
         {
@@ -229,7 +238,10 @@ namespace AtmosphereAutopilot
             }
         }
 
-        public volatile float time_decay = 0.01f;
+        [AutoGuiAttr("ann time decay", true)]
+        public volatile float time_decay = 0.002f;
+
+        [AutoGuiAttr("ann max_age", true)]
         public volatile int max_age = 100000;
 
         const int time_reset = int.MaxValue / 2;

@@ -12,9 +12,9 @@ global_outputs = norm_acc;
 % ANN SECTION
 hidden_count = int16(6);                            % hidden layer neuron count
 input_count = int16(size(global_inputs,1));         % number of network inputs
-mu = 1;
-mu_min = 1e-7;
-mu_max = 1e7;
+mu = 1e-3;
+mu_min = 0;
+mu_max = 1e20;
 tau_inc = 2;         % to move towards newton's method
 tau_dec = 1000;      % to move towards gradient descend
 grad_min = 1e-7;                % target gradient of mean square error
@@ -26,13 +26,13 @@ biases = 2 .* (rand(1, hidden_count + 1) - 0.5);
 
 % TELEMETRY CACHE
 % immediate buffer contains last state vectors
-imm_buf_size = int16(24);
+imm_buf_size = int16(20);
 imm_buf_input = zeros(input_count, imm_buf_size);
 imm_buf_output = zeros(1, imm_buf_size);
 imm_buf_count = 0;
 imm_buf_head = 1;
-imm_batch_size = int16(24);         % immediate buffer is subject to batching
-imm_batch_weight = 0.15;             % batch error is multiplied by this
+imm_batch_size = int16(20);         % immediate buffer is subject to batching
+imm_batch_weight = 0.0;             % batch error is multiplied by this
 % stohastic buffer contains random state vectors, wich left immediate buffer
 stoh_buf_size = int16(0);
 stoh_prob = 1;          % probability of new state vector to be included in stohastic buffer
@@ -44,9 +44,9 @@ stoh_buf_head = 1;
 gen_buf_dims = int16([13, 13]);
 gen_buf_upper = [0.25, 1.1];
 gen_buf_lower = [-0.25, -1.1];
-gen_buf_avg_factor = 4;         % continuous inputs to one cell will be smoothed by this factor
-gen_time_decay = 1;             % importance of old generalization data is decreased by this factor
-gen_importance = 0.2;           % general error weight of generalization space
+gen_buf_avg_factor = 2;         % continuous inputs to one cell will be smoothed by this factor
+gen_time_decay = 0.0;           % importance of old generalization data is decreased by this factor
+gen_importance = 1.0;           % general error weight of generalization space
 temp = cumprod(gen_buf_dims);   % temp array for deriving a linear size of generalization buffer
 gen_buf_size = temp(end);
 gen_buf_input = zeros(input_count, gen_buf_size) + NaN;
@@ -64,7 +64,7 @@ ann_descend_success = zeros(1, length(global_outputs));
 %% commit simulation
 
 % SIMULATION SETTINGS
-cpu_ratio = 1;   % amount of ann training iterations per 1 game physixcs frame
+cpu_ratio = 0.2;   % amount of ann training iterations per 1 game physixcs frame
 cpu_time = 0;      % amount of availiable training iterations. When >= 1, we should train once
 
 % MAIN CYCLE
@@ -95,7 +95,7 @@ for frame = 1:length(global_inputs)
         gen_buf_input(:,gen_linear_index) = global_inputs(:,frame);
         gen_buf_output(:,gen_linear_index) = global_outputs(:,frame);
     end
-    gen_buf_birth(1,gen_linear_index) = frame * 0.02;   % remember the birth time
+    gen_buf_birth(1,gen_linear_index) = frame * 0.03;   % remember the birth time
     % try to apply symmetry assumption
     gen_index_symm = gen_buf_dims - gen_index + 1;
     gen_linear_index_symm = coord2index(gen_index_symm, gen_buf_dims);
@@ -162,7 +162,7 @@ for frame = 1:length(global_inputs)
 
             % prepare input weights vector
             if j > 0
-                cur_time = frame * 0.02;
+                cur_time = frame * 0.03;
                 gen_imm_ratio = j / double(imm_buf_count + stoh_buf_count);
                 % base undecayed importance of generalization data point:
                 base_gen_weight = gen_importance / gen_imm_ratio;

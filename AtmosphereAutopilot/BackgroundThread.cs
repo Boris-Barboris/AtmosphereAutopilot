@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using System.Text;
 using System.Threading;
 //using UnityEngine;
@@ -13,17 +14,17 @@ namespace AtmosphereAutopilot
     /// </summary>
     public class BackgroundThread : IDisposable
     {
-        int idle_pause;
-
         List<Func<bool>> execution_que = new List<Func<bool>>();
 
         Thread thread;
         ManualResetEvent sema = new ManualResetEvent(true);
 
-        public BackgroundThread(int idle_pause = 1)
+        TextWriter logger;
+
+        public BackgroundThread(string log_folder_name)
         {
-            this.idle_pause = idle_pause;
             thread = new Thread(new ThreadStart(cycle));
+            logger = File.CreateText(log_folder_name + "/thread.log");
         }
 
         public void Start()
@@ -31,13 +32,22 @@ namespace AtmosphereAutopilot
             if (stop)
                 throw new InvalidOperationException("Thread was aborted");
             if (!thread.IsAlive)
+            {
                 thread.Start();
+                logger.WriteLine("Starting");
+                logger.Flush();
+            }
         }
 
         public void Stop()
         {
             Resume();
             stop = true;
+            lock (logger)
+            {
+                logger.WriteLine("Stopping");
+                logger.Close();
+            }
         }
 
         public void Dispose()
@@ -79,7 +89,13 @@ namespace AtmosphereAutopilot
                     }
                     catch (Exception e)
                     {
-                        //Debug.Log("Background thread exception - broken function removed from queue\r\n" + e.Message);
+                        lock (logger)
+                        {
+                            logger.WriteLine("Background thread exception - broken function removed from queue\r\n");
+                            logger.WriteLine(e.Message);
+                            logger.WriteLine(e.StackTrace);
+                            logger.Flush();
+                        }
                         remove_func(func);
                     }
                     sema.WaitOne();
@@ -87,25 +103,29 @@ namespace AtmosphereAutopilot
                 if (stop)
                     return;
                 if (!success)
-                    Thread.Sleep(idle_pause);
-                lock (removal_que)
+                    Thread.Sleep(0);
+                if (que_flag)
                 {
-                    // Process removal requests
-                    while (removal_que.Count > 0)
+                    que_flag = false;
+                    lock (removal_que)
                     {
-                        var hndl = removal_que[0];
-                        execution_que.Remove(hndl);
-                        removal_que.RemoveAt(0);
+                        // Process removal requests
+                        while (removal_que.Count > 0)
+                        {
+                            var hndl = removal_que[0];
+                            execution_que.Remove(hndl);
+                            removal_que.RemoveAt(0);
+                        }
                     }
-                }
-                lock (addition_que)
-                {
-                    // Process addition requests
-                    while (addition_que.Count > 0)
+                    lock (addition_que)
                     {
-                        var hndl = addition_que[0];
-                        execution_que.Add(hndl);
-                        addition_que.RemoveAt(0);
+                        // Process addition requests
+                        while (addition_que.Count > 0)
+                        {
+                            var hndl = addition_que[0];
+                            execution_que.Add(hndl);
+                            addition_que.RemoveAt(0);
+                        }
                     }
                 }
             }
@@ -113,11 +133,13 @@ namespace AtmosphereAutopilot
 
         List<Func<bool>> removal_que = new List<Func<bool>>();
         List<Func<bool>> addition_que = new List<Func<bool>>();
+        volatile bool que_flag = false;
 
         public void remove_func(Func<bool> hndl)
         {
             lock (removal_que)
                 removal_que.Add(hndl);
+            que_flag = true;
         }
 
         /// <summary>
@@ -129,6 +151,7 @@ namespace AtmosphereAutopilot
         {
             lock (addition_que)
                 addition_que.Add(hndl);
+            que_flag = true;
         }
     }
 }

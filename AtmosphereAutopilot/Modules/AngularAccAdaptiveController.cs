@@ -57,6 +57,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("angular acc", false, "G8")]
         protected float acc;
 
+        [AutoGuiAttr("model acc", false, "G8")]
+        protected float model_acc;
+
         [AutoGuiAttr("output", false, "G8")]
         protected float output;
 
@@ -68,6 +71,7 @@ namespace AtmosphereAutopilot
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
 		{
             acc = (float)imodel.AngularAcc(axis);
+            model_acc = (float)imodel.model_acc[axis];
             desired_acc = target_value;
             float error = target_value - acc;
 
@@ -76,7 +80,7 @@ namespace AtmosphereAutopilot
                 desire_acc_writer.Write(target_value.ToString("G8") + ',');
                 acc_writer.Write(acc.ToString("G8") + ',');
                 v_writer.Write(imodel.AngularVel(axis).ToString("G8") + ',');
-                prediction_writer.Write(imodel.angular_vel[axis].ToString("G8") + ',');
+                prediction_writer.Write(model_acc.ToString("G8") + ',');
 				aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');
 				airspd_writer.Write((imodel.up_srf_v + imodel.fwd_srf_v).magnitude.ToString("G8") + ',');
 				density_writer.Write(vessel.atmDensity.ToString("G8") + ',');
@@ -92,29 +96,17 @@ namespace AtmosphereAutopilot
 			float prev_input = imodel.ControlInput(axis);
 			float cur_input_raw = ControlUtils.getControlFromState(cntrl, axis);
 			output = cur_input_raw;
-			true_output = far_exponential_blend(true_output, output);
 
 			ControlUtils.set_raw_output(cntrl, axis, output);
 
             if (write_telemetry)
-				controlWriter.Write(true_output.ToString("G8") + ',');
+				controlWriter.Write(csurf_output.ToString("G8") + ',');
 
             return output;
 		}
 
-		[AutoGuiAttr("True output", false, "G8")]
-		protected float true_output = 0.0f;
-
-		float far_exponential_blend(float prev, float desire)
-		{
-			float error = desire - prev;
-			if (Math.Abs(error * 20.0f) > 0.1)
-			{
-				return prev + Common.Clampf(error * TimeWarp.fixedDeltaTime / ferramTimeConstant, Math.Abs(0.6f * error));
-			}
-			else
-				return desire;
-		}
+        [AutoGuiAttr("Csurf output", false, "G8")]
+        protected float csurf_output { get { return imodel.ControlSurfPos(axis); } }
 
         [AutoGuiAttr("Write telemetry", true)]
         protected bool write_telemetry 
@@ -160,21 +152,6 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("DEBUG desired acc", false, "G8")]
         internal float desired_acc { get; private set; }
-
-		[AutoGuiAttr("FAR csurf time constant", false, "G6")]
-		protected float ferramTimeConstant
-		{
-			get
-			{
-				return (float)ferram4.FARControllableSurface.timeConstant;
-			}
-		}
-
-        [AutoGuiAttr("Position", false, "G8")]
-        public float coord { get { return vessel.vesselTransform.position[axis]; } }
-
-        [AutoGuiAttr("Velocity", false, "G8")]
-        public float vel { get { return vessel.rootPart.rb.velocity[axis]; } }
 
 		#endregion
 	}

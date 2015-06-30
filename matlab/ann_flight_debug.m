@@ -17,7 +17,7 @@ plot(linspace(-0.2,0.2,99), anneval_large([linspace(-0.2,0.2,99); zeros(1,99)],.
 xlabel('aoa');
 ylabel('acc');
 %% cumulative acceleration graph
-frame = 650;
+frame = 120;
 l = 32;
 x = 1:l;
 y = zeros(1,l);

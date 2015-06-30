@@ -17,7 +17,7 @@ namespace TestingConsole
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
             simple_ann_test();
-            Console.ReadKey(true);
+            //Console.ReadKey(true);
         }
 
         static void simple_ann_test()
@@ -26,7 +26,10 @@ namespace TestingConsole
             SimpleAnn ann = new SimpleAnn(3);
             foreach (var i in ann_inputs)
             {
-                double output = ann.eval((Vector)i);
+                double output = 0.0;
+                for (int j = 0; j < 1000; j++)
+                    output += ann.eval(i);
+                output /= 1000.0;
                 Console.Write(output.ToString("G8") + " ");
             }
         }

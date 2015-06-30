@@ -67,7 +67,6 @@ namespace AtmosphereAutopilot
             original.parameters.CopyTo(parameters, 0);
             original.n1.CopyTo(n1, 0);
             original.a1.CopyTo(a1, 0);
-            a2 = original.a2;
         }
 
         /// <summary>
@@ -91,9 +90,6 @@ namespace AtmosphereAutopilot
 
         // scalar outputs of hidden layer neurons
         double[] a1;
-
-        // scalar output of output layer, wich is equal to it's net output
-        double a2;
 
         // Parameter indexers
         int hidden_weight(int neuron, int input)
@@ -126,7 +122,25 @@ namespace AtmosphereAutopilot
 
         double eval(Vector inputs, double[] pars)
         {
-            a2 = 0.0;
+            double a2 = 0.0;
+            for (int n = 0; n < hidden_count; n++)
+            {
+                // propagate through hidden layer
+                double n1 = 0.0;
+                for (int i = 0; i < input_count; i++)
+                    n1 += inputs[i] * pars[hidden_weight(n, i)];
+                n1 += pars[hidden_bias(n)];
+                double a1 = Math.Tanh(n1);
+                // go to output layer
+                a2 += pars[output_weight(n)] * a1;
+            }
+            a2 += pars[output_bias()];
+            return a2;
+        }
+
+        double eval(Vector inputs, double[] pars, double[] n1, double[] a1)
+        {
+            double a2 = 0.0;
             for (int n = 0; n < hidden_count; n++)
             {
                 // propagate through hidden layer
@@ -265,20 +279,20 @@ namespace AtmosphereAutopilot
 
             // Evaluate error vector and jacobian
             double[] weighted_errors = new double[error_count];
-            for (int i = 0; i < inputs.Count; i++)                          // iterate over algorithm inputs
+            for (int i = 0; i < inputs.Count; i++)                              // iterate over algorithm inputs
             {
                 // errors
-                double ann_output = eval(inputs[i]);
+                double ann_output = eval(inputs[i], parameters, n1, a1);
                 weighted_errors[i] = (ann_output - outputs[i]) * error_weights[i];
                 // jacobian
-                jacob[i, output_bias()] = 1.0;                              // sensitivity of output neuron bias
-                for (int n = 0; n < hidden_count; n++)                      // iterate over hidden neurons
+                jacob[i, output_bias()] = 1.0;                                  // sensitivity of output neuron bias
+                for (int n = 0; n < hidden_count; n++)                          // iterate over hidden neurons
                 {
-                    jacob[i, output_weight(n)] = a1[n];                     // output weight partial deriv
-                    double transf_deriv = tanh_deriv(n1[n]);                // this neuron transfer function deriv
-                    for (int p = 0; p < input_count; p++)                   // iterate over network inputs
+                    jacob[i, output_weight(n)] = a1[n];                         // sensitivity of output neuron weight, connected to n'th hidden neuron
+                    double transf_deriv = tanh_deriv(n1[n]);                    // n'th hidden neuron transfer function deriv
+                    double s1 = transf_deriv * parameters[output_weight(n)];    // sensitivity (of net output of n'th hidden neuron)
+                    for (int p = 0; p < input_count; p++)                       // iterate over network inputs
                     {
-                        double s1 = transf_deriv * parameters[output_weight(n)];       // marquardt sensitivity
                         jacob[i, hidden_weight(n, p)] = s1 * inputs[i][p];
                         jacob[i, hidden_bias(n)] = s1;
                     }
@@ -336,8 +350,7 @@ namespace AtmosphereAutopilot
                 if (new_msqrerr < old_msqrerr)
                 {
                     gauss.Success();
-                    double[] old_params = Interlocked.Exchange(ref parameters, new_params);
-                    new_params = old_params;
+                    new_params = Interlocked.Exchange(ref parameters, new_params);
                     return true;
                 }
                 else

@@ -2,10 +2,10 @@
 ksp_plots_path ='D:\Games\Kerbal Space Program 0.90\Resources\';
 
 acc = csvread([ksp_plots_path, 'acc.csv']);
-control = [0.0,0.0,csvread([ksp_plots_path, 'control.csv'])];
+control = csvread([ksp_plots_path, 'control.csv']);
 aoa = [0.0,csvread([ksp_plots_path, 'aoa.csv'])];
 v = [0.0,csvread([ksp_plots_path, 'v.csv'])];
-predict = [0.0,csvread([ksp_plots_path, 'predict.csv'])];
+predict = csvread([ksp_plots_path, 'predict.csv']);
 airspd = [0.0,csvread([ksp_plots_path, 'airspd.csv'])];
 p = [0.0,csvread([ksp_plots_path, 'density.csv'])];
 
@@ -14,7 +14,7 @@ smoothed_acc = sgolayfilt(acc, 2, 11);
 %% cut edges from telemetry and prepare time axis
 max_length = max([length(acc), length(control), length(aoa),...
     length(v), length(airspd), length(p), length(predict)]);
-time = 0:0.02:(0.02 * (max_length - 6));
+time = 0:0.03:(0.03 * (max_length - 6));
 
 acc = [acc,zeros(1, max_length - length(acc))];
 acc = acc(3:max_length - 3);

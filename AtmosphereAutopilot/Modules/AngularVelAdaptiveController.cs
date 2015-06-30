@@ -79,7 +79,7 @@ namespace AtmosphereAutopilot
 		/// <param name="cntrl">Control state to change</param>
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
 		{
-            vel = imodel.AngularVel(axis);				// get angular velocity
+            vel = imodel.AngularVel(axis);				    // get angular velocity
             double accel = imodel.AngularAcc(axis);		    // get angular acceleration
 
             // Adapt KP, so that on max_angular_v it produces max_angular_dv * kp_acc factor output

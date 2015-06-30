@@ -75,7 +75,7 @@ namespace AtmosphereAutopilot
         
         void initialize_thread()
         {
-            thread = new BackgroundThread();
+            thread = new BackgroundThread(KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot");
         }
 
         void serialize_active_modules()
@@ -88,14 +88,20 @@ namespace AtmosphereAutopilot
 
         void OnDestroy()
         {
-            sceneSwitch(GameScenes.CREDITS);
+            serialize_active_modules();
+            AtmosphereAutopilot.Instance.BackgroundThread.Stop();
         }
 
         void sceneSwitch(GameScenes scenes)
         {
             serialize_active_modules();
             if (scenes != GameScenes.FLIGHT)
+            {
                 ActiveVessel = null;
+                AtmosphereAutopilot.Instance.BackgroundThread.Pause();
+            }
+            else
+                AtmosphereAutopilot.Instance.BackgroundThread.Resume();
         }
 
 		void load_manager_for_vessel(Vessel v)
