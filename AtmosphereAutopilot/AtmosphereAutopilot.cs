@@ -45,6 +45,8 @@ namespace AtmosphereAutopilot
             GameEvents.onShowUI.Add(OnShowUI);
             GameEvents.onGUIApplicationLauncherReady.Add(onAppLauncherLoad);
             GameEvents.onGUIApplicationLauncherDestroyed.Add(onAppLauncherDestroy);
+            GameEvents.onGamePause.Add(OnApplicationPause);
+            GameEvents.onGameUnpause.Add(OnApplicationUnpause);
             Instance = this;
 			ActiveVessel = null;
         }
@@ -78,12 +80,14 @@ namespace AtmosphereAutopilot
             thread = new BackgroundThread(KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot");
         }
 
-        void OnApplicationPause(bool paused)
+        void OnApplicationPause()
         {
-            if (paused)
-                thread.Pause();
-            else
-                thread.Resume();
+            thread.Pause();
+        }
+
+        void OnApplicationUnpause()
+        {
+            thread.Resume();
         }
 
         void serialize_active_modules()

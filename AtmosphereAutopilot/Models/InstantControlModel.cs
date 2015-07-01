@@ -433,9 +433,9 @@ namespace AtmosphereAutopilot
 
         public Vector3d model_acc = Vector3d.zero;
 
-        SimpleAnn pitch_ann = new SimpleAnn(6, 2);
-        SimpleAnn roll_ann = new SimpleAnn(6, 3);
-        SimpleAnn yaw_ann = new SimpleAnn(6, 2);
+        SimpleAnn pitch_ann = new SimpleAnn(4, 2);
+        SimpleAnn roll_ann = new SimpleAnn(4, 3);
+        SimpleAnn yaw_ann = new SimpleAnn(4, 2);
 
         const int IMM_BUF_SIZE = 20;
 

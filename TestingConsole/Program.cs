@@ -100,5 +100,33 @@ namespace TestingConsole
             }
             thread.Stop();
         }
+
+        static void trainingPerformanceTest()
+        {
+            List<double[]> inputs = new List<double[]>();
+            List<double> outputs = new List<double>();
+            int set_size = 100;
+            for (int j = 0; j < set_size; j++)
+            {
+                inputs.Add(new double[2] {j * 1.0 / (double)set_size, -j * 0.7 / (double)set_size});
+                outputs.Add(j * 0.5 / (double)set_size);
+            }
+            SimpleAnn ann = new SimpleAnn(6, 2);
+            int i = 0;
+            OnlineAnnTrainer trainer = new OnlineAnnTrainer(ann, 20, new int[2] {9, 9},
+                new double[] {-1.0, -1.0}, new double[] {1.0, 1.0},
+                (arr) => { arr[0] = inputs[i][0]; arr[1] = inputs[i][1]; },
+                () => { return outputs[i]; });            
+            while (i < set_size)
+            {
+                for (int j = 0; j < 5 && i < set_size; j++)
+                {
+                    trainer.UpdateState(0);
+                    i++;
+                }
+                trainer.Train();
+            }
+            Console.WriteLine("finished");
+        }
     }
 }

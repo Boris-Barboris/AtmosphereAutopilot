@@ -334,7 +334,6 @@ namespace AtmosphereAutopilot
 
         public static Matrix SubsForth(Matrix A, Matrix b)          // Function solves Ax = b for A as a lower triangular matrix
         {
-            if (A.L == null || A.old_lu) A.MakeLU();
             int n = A.rows;
             Matrix x = Realloc(n, 1, ref A.subsf_res);
 
@@ -351,7 +350,6 @@ namespace AtmosphereAutopilot
 
         public static Matrix SubsBack(Matrix A, Matrix b)           // Function solves Ax = b for A as an upper triangular matrix
         {
-            if (A.L == null || A.old_lu) A.MakeLU();
             int n = A.rows;
             Matrix x = Realloc(n, 1, ref A.subsb_res);
 
@@ -379,6 +377,20 @@ namespace AtmosphereAutopilot
             for (int i = 0; i < Math.Min(iRows, iCols); i++)
                 matrix[i, i] = init;
             return matrix;
+        }
+
+        /// <summary>
+        /// Multiply matrix with diagonal matrix, represented by IList
+        /// </summary>
+        public Matrix MultOnDiagonal(IList<double> diagonal, int diag_count, ref Matrix storage)
+        {
+            if (cols != diag_count) throw new MException("Matrix dimensions don't agree");
+            if (storage == null)
+                storage = new Matrix(rows, cols);
+            for (int row = 0; row < rows; row++)
+                for (int col = 0; col < cols; col++)
+                    storage[row, col] = this[row, col] * diagonal[col];
+            return storage;
         }
 
         public void Fill(double x)

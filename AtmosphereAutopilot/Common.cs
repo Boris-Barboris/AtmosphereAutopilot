@@ -71,17 +71,22 @@ namespace AtmosphereAutopilot
             return sqr_sum / col.Count;
         }
 
-        public static double Meansqr(this ICollection<double> col, int count)
+        public static double Meansqr(this ICollection<double> col, int count, ICollection<double> weights = null)
         {
             double sqr_sum = 0.0;
             int r_count = 0;
             var en = col.GetEnumerator();
+            IEnumerator<double> wen = null;
+            if (weights != null)
+                wen = weights.GetEnumerator();
             while (r_count < count)
             {
                 if (en.MoveNext())
                 {
                     r_count++;
                     double val = en.Current;
+                    if (wen != null && wen.MoveNext())
+                        val *= wen.Current;             
                     sqr_sum += val * val;
                 }
                 else

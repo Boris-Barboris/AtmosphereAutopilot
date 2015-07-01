@@ -123,7 +123,7 @@ namespace AtmosphereAutopilot
 
         #region TrainingThread
 
-        SimpleAnn.GaussKoeff gauss = new SimpleAnn.GaussKoeff(1e-3, 0.0, 1e6, 2.0, 1e2);
+        SimpleAnn.GaussKoeff gauss = new SimpleAnn.GaussKoeff(1e-3, 1e-7, 1e7, 10.0, 100.0);
 
         [AutoGuiAttr("LM Mu", false, "G8")]
         public double Mu { get { return gauss.mu; } }

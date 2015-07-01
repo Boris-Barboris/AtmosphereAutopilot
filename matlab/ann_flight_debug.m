@@ -6,8 +6,15 @@ ylabel('control');
 zlabel('acc');
 %% plot control sensitivity
 figure('Name','control sensitivity')
-plot(linspace(-1,1,99), anneval_large([zeros(1,99); linspace(-1,1,99)],...
+control_d = linspace(-1,1,99);
+aoa_d = zeros(1,99);
+linmodel = zeros(1, length(control_d));
+for frame = 1:99
+    linmodel(frame) = fittedmodel(aoa_d(frame), control_d(frame));
+end
+plot(control_d, anneval_large([aoa_d; control_d],...
     weights, biases, input_count, hidden_count));
+%plot(control_d, linmodel);
 xlabel('control');
 ylabel('acc');
 %% plot aoa sensitivity

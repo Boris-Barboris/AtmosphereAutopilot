@@ -48,7 +48,7 @@ namespace AtmosphereAutopilot
             // randomise those weights and biases
             Random rand = new Random();
             for (int i = 0; i < parameters.Length; i++)
-                parameters[i] = rand.NextDouble() * 2.0 - 1;
+                parameters[i] = 1.0 * (rand.NextDouble() * 2.0 - 1.0);
         }
 
         /// <summary>
@@ -156,6 +156,7 @@ namespace AtmosphereAutopilot
             return a2;
         }
 
+
         #region Serialization
 
         public override string ToString()
@@ -214,6 +215,9 @@ namespace AtmosphereAutopilot
 
         #endregion
 
+
+        #region Learning
+
         public class GaussKoeff
         {
             public double mu = 1e-3;
@@ -231,23 +235,21 @@ namespace AtmosphereAutopilot
 
             public void Success()
             {
-                if (mu / tau_dec >= mu_min)
-                    mu /= tau_dec;
+                mu = Math.Max(mu / tau_dec, mu_min);
             }
 
             public void Fail()
             {
-                if (mu * tau_inc <= mu_max)
-                    mu *= tau_inc;
+                mu = Math.Min(mu * tau_inc, mu_max);
             }
         }
 
         // Service containers for learning
         double[] new_params, new_errors;
-        double[] weighted_errors;
-        Matrix jacob_storage, jacob_transposed_storage, identity_storage,
-            temp1, temp2, hessian_storage, invert_storage,
-            temp_errors, weight_delta;
+        double[] errors;
+        Matrix J, JtW, identity_storage,
+            hessian, JtWe, JtWJ,
+            temp_errors;
 
         public void preallocate(int expected_input_count)
         {
@@ -255,29 +257,40 @@ namespace AtmosphereAutopilot
             int pl = parameters.Length;
             new_params = new double[pl];
             new_errors = new double[ic];
-            weighted_errors = new double[ic];
-            jacob_storage = new Matrix(ic, pl);
-            jacob_transposed_storage = new Matrix(pl, ic);
+            errors = new double[ic];
+            J = new Matrix(ic, pl);
+            JtW = new Matrix(pl, ic);
             identity_storage = new Matrix(pl, pl);
-            hessian_storage = new Matrix(pl, pl);
-            invert_storage = new Matrix(pl, pl);
-            temp1 = new Matrix(pl, pl);
-            temp2 = new Matrix(pl, ic);
+            JtWJ = new Matrix(pl, pl);
+            hessian = new Matrix(pl, pl);
+            JtWe = new Matrix(pl, 1);
             temp_errors = new Matrix(ic, 1);
-            weight_delta = new Matrix(pl, 1);
         }
 
-        void lm_get_weights(Matrix hessian, Matrix jacob_trans, IList<double> pars, IList<double> new_pars, IList<double> errors, double mu)
+        void lm_get_new_params(IList<double> pars, IList<double> new_pars, IList<double> errors, double mu)
         {
+            // A
             Matrix.IdentityMatrix(pars.Count, pars.Count, ref identity_storage, mu);
-            Matrix.Add(hessian, identity_storage, ref temp1);
-            temp1.Invert(ref invert_storage);
-            Matrix.Multiply(invert_storage, jacob_trans, ref temp2);
-            Matrix.ChangeData(errors, jacob_trans.cols, ref temp_errors, true);
-            Matrix.Multiply(temp2, temp_errors, ref weight_delta);
-
+            Matrix.Add(JtWJ, identity_storage, ref hessian);
+            // b
+            Matrix.ChangeData(errors, JtW.cols, ref temp_errors, true);
+            Matrix.Multiply(JtW, temp_errors, ref JtWe);
+            // get delta
+            Matrix weight_delta = hessian.SolveWith(JtWe);
             for (int i = 0; i < pars.Count; i++)
                 new_pars[i] = pars[i] - weight_delta[i, 0];
+        }
+
+        static double meansqr_tailed(double[] errors, IList<double> weights, double tail_weight, int error_count)
+        {
+            double res = 0;
+            for (int i = 0; i < error_count - 1; i++)
+            {
+                double v = weights[i] * errors[i];
+                res += v * v;
+            }
+            res += errors[error_count - 1] * tail_weight;
+            return res / (double)error_count;
         }
 
         /// <summary>
@@ -286,13 +299,13 @@ namespace AtmosphereAutopilot
         /// <param name="inputs">Training set, vector of network inputs</param>
         /// <param name="outputs">Output for training set</param>
         /// <param name="error_weights">Weights for error_vector, use it to control importance of discrete input points</param>
-        /// <param name="batch_size">From 0 to batch_size-1 inputs will be taken to form batch. Use when need also integral fitting.
+        /// <param name="batch_size">From 0 to batch_size-1 inputs will be taken to form batch. Use when tou also need integral fitting.
         /// Use 0 when no batching is needed.</param>
         /// <param name="batch_weight">Importance of batch error</param>
         /// <param name="gauss">Gaussiness coeffitient</param>
         /// <param name="iter_limit">Descend iteration limit. Will break descend cycle if it's not possible</param>
         /// <param name="new_msqrerr">Get resulting performance index of the net</param>
-        /// <returns></returns>
+        /// <returns>true if maanged to reduce error</returns>
         public bool lm_iterate_batched(IList<Vector> inputs, IList<double> outputs, IList<double> error_weights,
             int batch_size, double batch_weight, GaussKoeff gauss, int iter_limit, out double new_msqrerr)
         {
@@ -301,26 +314,26 @@ namespace AtmosphereAutopilot
             int error_count = inputs.Count + batch_count;
 
             // Allocate jacobian
-            Matrix jacob = Matrix.Realloc(error_count, param_count, ref jacob_storage);
+            Matrix.Realloc(error_count, param_count, ref J);
 
             // Evaluate error vector and jacobian
-            Common.Realloc(ref weighted_errors, error_count);
+            Common.Realloc(ref errors, error_count);
             for (int i = 0; i < inputs.Count; i++)                              // iterate over algorithm inputs
             {
                 // errors
                 double ann_output = eval(inputs[i], parameters, n1, a1);
-                weighted_errors[i] = (ann_output - outputs[i]) * error_weights[i];
+                errors[i] = ann_output - outputs[i];
                 // jacobian
-                jacob[i, output_bias()] = 1.0;                                  // sensitivity of output neuron bias
+                J[i, output_bias()] = 1.0;                                  // sensitivity of output neuron bias
                 for (int n = 0; n < hidden_count; n++)                          // iterate over hidden neurons
                 {
-                    jacob[i, output_weight(n)] = a1[n];                         // sensitivity of output neuron weight, connected to n'th hidden neuron
+                    J[i, output_weight(n)] = a1[n];                         // sensitivity of output neuron weight, connected to n'th hidden neuron
                     double transf_deriv = tanh_deriv(n1[n]);                    // n'th hidden neuron transfer function deriv
                     double s1 = transf_deriv * parameters[output_weight(n)];    // sensitivity (of net output of n'th hidden neuron)
                     for (int p = 0; p < input_count; p++)                       // iterate over network inputs
                     {
-                        jacob[i, hidden_weight(n, p)] = s1 * inputs[i][p];
-                        jacob[i, hidden_bias(n)] = s1;
+                        J[i, hidden_weight(n, p)] = s1 * inputs[i][p];
+                        J[i, hidden_bias(n)] = s1;
                     }
                 }
             }
@@ -328,24 +341,30 @@ namespace AtmosphereAutopilot
             // Evaluate batch error if needed
             if (batch_size > 0)
             {
-                weighted_errors[error_count - 1] = 0.0;
+                errors[error_count - 1] = 0.0;
                 for (int par = 0; par < param_count; par++)
-                    jacob[error_count - 1, par] = 0.0;
+                    J[error_count - 1, par] = 0.0;
                 for (int i = 0; i < batch_size; i++)
                 {
                     for (int par = 0; par < param_count; par++)
-                        jacob[error_count - 1, par] += jacob[i, par];       // summ jacobian rows to get batch row
-                    weighted_errors[error_count - 1] += weighted_errors[i]; // summ errors to get batch error
+                        J[error_count - 1, par] += J[i, par];       // summ jacobian rows to get batch row sensitivities
+                    errors[error_count - 1] += errors[i];           // summ errors to get batch error
                 }
-                weighted_errors[error_count - 1] *= batch_weight;
             }
 
-            // Calculate jacobian transpose and hessian
-            Matrix transpose = Matrix.Transpose(jacob, ref jacob_transposed_storage);
-            Matrix hessian = Matrix.Multiply(transpose, jacob, ref hessian_storage);
+            // Calculate jacobian transpose and multiply it on jacobian itself
+            Matrix.Transpose(J, ref JtW);
+            // Multiply Jt on W (diagonal matrix of weights)
+            for (int col = 0; col < JtW.cols - 1; col++)
+                for (int row = 0; row < JtW.rows; row++)
+                    JtW[row, col] = JtW[row, col] * error_weights[col];
+            // Take batched row of jacobian into account
+            for (int row = 0; row < JtW.rows; row++)
+                JtW[row, error_count-1] = JtW[row, error_count-1] * batch_weight;
+            Matrix.Multiply(JtW, J, ref JtWJ);
 
             // Evaluate meansqrerr if needed
-            double old_msqrerr = weighted_errors.Meansqr(error_count);
+            double old_msqrerr = meansqr_tailed(errors, error_weights, batch_weight, error_count);
             new_msqrerr = old_msqrerr;
 
             // Allocate storage for new params and errors if needed
@@ -358,7 +377,7 @@ namespace AtmosphereAutopilot
             {
                 try
                 {
-                    lm_get_weights(hessian, transpose, parameters, new_params, weighted_errors, gauss.mu);
+                    lm_get_new_params(parameters, new_params, errors, gauss.mu);
                 }
                 catch (MSingularException)
                 {
@@ -379,7 +398,7 @@ namespace AtmosphereAutopilot
                         new_errors[error_count - 1] += new_errors[i];
                     new_errors[error_count - 1] *= batch_weight;
                 }
-                new_msqrerr = new_errors.Meansqr(error_count);
+                new_msqrerr = meansqr_tailed(new_errors, error_weights, batch_weight, error_count);
                 if (new_msqrerr < old_msqrerr)
                 {
                     gauss.Success();
@@ -393,6 +412,9 @@ namespace AtmosphereAutopilot
             new_msqrerr = old_msqrerr;
             return false;
         }
+
+        #endregion
+
     }
 
 }

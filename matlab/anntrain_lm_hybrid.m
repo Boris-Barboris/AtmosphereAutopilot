@@ -13,7 +13,6 @@ function [new_weights, new_biases, old_meansqr] =...
             anneval(inputs(:,i).', weights, biases, input_count, hidden_count);
     end
     errors = raw_old_outputs - outputs;
-    weighted_errors = errors .* input_weights;
     jacob = zeros(size(inputs,2) + 1, param_count);
     % let's fill jacobian matrix
     % cycle over inputs
@@ -36,14 +35,19 @@ function [new_weights, new_biases, old_meansqr] =...
     
     % collapse batch
     jacob(res_size,:) = sum(jacob(1:batch_size, :));
-    weighted_errors = [weighted_errors, batch_weight * sum(weighted_errors(1:batch_size))];
+    errors = [errors, sum(errors(1:batch_size))];
+    
+    % create weight matrix
+    weight_mat = diag([input_weights, batch_weight]);
 
-    old_meansqr = meansqr(weighted_errors);
+    old_meansqr = meansqr(errors .* [input_weights, batch_weight]);
     
     % descend
-    new_params = [weights, biases] -...
-        (inv(mtimes(jacob.',jacob) +...
-        mu .* eye(param_count)) * jacob.' * weighted_errors.').';
+    jtwj = jacob.' * weight_mat * jacob;
+    A = jtwj + mu .* eye(param_count); %diag(diag(jtwj));
+    b = jacob.' * weight_mat * errors.';
+    delta_params = A \ b;
+    new_params = [weights, biases] - delta_params.';
     [new_weights, new_biases] = arr2weights(new_params, length(weights), length(biases));
 end
 
