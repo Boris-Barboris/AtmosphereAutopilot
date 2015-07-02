@@ -136,6 +136,22 @@ namespace AtmosphereAutopilot
                     this[i] *= s;
                 return this;
             }
+
+            public static double SqrLength(Vector a, Vector b)
+            {
+                double res = 0.0;
+                for (int i = 0; i < a.source.vector_size; i++)
+                {
+                    double proj = a[i] - b[i];
+                    res += proj * proj;
+                }
+                return res;
+            }
+
+            public static double Length(Vector a, Vector b)
+            {
+                return Math.Sqrt(SqrLength(a, b));
+            }
         }
     }
     

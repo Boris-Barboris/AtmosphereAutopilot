@@ -4,13 +4,13 @@ run('import_telemetry');
 %% prepare data structures
 
 % GLOBAL TRAINING ENVIRONMENT
-global_inputs = [aoa; control];
+global_inputs = [v; control];
 norm_acc = acc .* 1e4 ./ p ./ airspd.^2;      % divide acceleration by dynamic pressure
 %norm_smoothed_acc = smoothed_acc .* 1e4 ./ p ./ airspd.^2;
 global_outputs = norm_acc;
 
 % ANN SECTION
-hidden_count = int16(3);                            % hidden layer neuron count
+hidden_count = int16(6);                            % hidden layer neuron count
 input_count = int16(size(global_inputs,1));         % number of network inputs
 mu = 0.01;
 mu_min = 1e-10;
@@ -20,24 +20,25 @@ tau_dec = 100;           % to move towards gradient descend
 grad_min_iter_limit = 3;        % exit training after this amount of minimal gradient
 grad_min_iter = 0;
 % create randomized weights and biases
-weights = 0.3 .* (rand(1, hidden_count*(input_count + 1)) - 0.5);
-biases = 0.3 .* (rand(1, hidden_count + 1) - 0.5);
+weights = 0.5 .* (rand(1, hidden_count*(input_count + 1)) - 0.5);
+biases = 0.5 .* (rand(1, hidden_count + 1) - 0.5);
 
 % TELEMETRY CACHE
 % immediate buffer contains last state vectors
-imm_buf_size = int16(12);
+imm_buf_size = int16(16);
 imm_buf_input = zeros(input_count, imm_buf_size);
 imm_buf_output = zeros(1, imm_buf_size);
 imm_buf_count = 0;
 imm_buf_head = 1;
-imm_batch_size = int16(12);         % immediate buffer is subject to batching
+imm_batch_size = int16(16);         % immediate buffer is subject to batching
 imm_batch_weight = 0.0;            % batch error is multiplied by this
 % generalization space is required for reliable ann convergence towards model
-gen_buf_dims = int16([13, 13]);
-gen_buf_upper = [0.25, 1.0];
-gen_buf_lower = [-0.25, -1.0];
-gen_time_decay = 0.2;           % importance of old generalization data is decreased by this factor
-gen_importance = 0.5;           % general error weight of generalization space
+gen_buf_dims = int16([21, 21]);
+gen_buf_upper = [3.0, 1.0];
+gen_buf_lower = [-3.0, -1.0];
+gen_buf_norm = gen_buf_upper - gen_buf_lower;
+gen_time_decay = 1.0;           % importance of old generalization data is decreased by this factor
+gen_importance = 0.1;           % general error weight of generalization space
 temp = cumprod(gen_buf_dims);   % temp array for deriving a linear size of generalization buffer
 gen_buf_size = temp(end);
 gen_buf_input = zeros(input_count, gen_buf_size) + NaN;
@@ -47,6 +48,7 @@ gen_linear_index = 0;
 
 % ANN OUTPUT VECTOR
 ann_global_outputs = zeros(1, length(global_outputs));
+linear_global_outputs = zeros(1, length(global_outputs));
 old_sqr_err = 0;
 new_sqr_err = 0;
 ann_sqr_errors = zeros(1, length(global_outputs));
@@ -56,7 +58,7 @@ mu_values = zeros(1, length(global_outputs));
 %% commit simulation
 
 % SIMULATION SETTINGS
-cpu_ratio = 0.2;   % amount of ann training iterations per 1 game physixcs frame
+cpu_ratio = 0.5;   % amount of ann training iterations per 1 game physixcs frame
 cpu_time = 0;      % amount of availiable training iterations. When >= 1, we should train once
 
 % MAIN CYCLE
@@ -72,20 +74,36 @@ for frame = 1:length(global_inputs)
     end
     
     % update generalization space
-    gen_index = maptocell(global_inputs(:,frame).',...
+    [gen_coord, cell_center] = maptocell(global_inputs(:,frame).',...
         gen_buf_lower, gen_buf_upper, gen_buf_dims);
-    gen_linear_index = coord2index(gen_index, gen_buf_dims);
-    gen_buf_input(:,gen_linear_index) = global_inputs(:,frame);
-    gen_buf_output(:,gen_linear_index) = global_outputs(:,frame);
-    gen_buf_birth(1,gen_linear_index) = frame * 0.03;   % remember the birth time
+    gen_linear_index = coord2index(gen_coord, gen_buf_dims);
+    old_coord = gen_buf_input(:,gen_linear_index);
+    need2write = false;
+    if isnan(old_coord(1))
+        need2write = true;
+    else
+        if (frame * 0.03 - gen_buf_birth(1,gen_linear_index) > 1.0)
+            need2write = true;
+        else
+            if norm((global_inputs(:,frame).' - cell_center) ./ gen_buf_norm) <...
+                    norm((old_coord.' - cell_center) ./ gen_buf_norm)
+                need2write = true;
+            end
+        end
+    end
+    if need2write
+        gen_buf_input(:,gen_linear_index) = global_inputs(:,frame);
+        gen_buf_output(:,gen_linear_index) = global_outputs(:,frame);
+        gen_buf_birth(1,gen_linear_index) = frame * 0.03;   % remember the birth time
+    end
     % try to apply symmetry assumption
-    gen_index_symm = gen_buf_dims - gen_index + 1;
+    gen_index_symm = gen_buf_dims - 1 - gen_coord;
     gen_linear_index_symm = coord2index(gen_index_symm, gen_buf_dims);
     % 
-    if (gen_linear_index_symm ~= gen_linear_index)% && isnan(gen_buf_output(:,gen_linear_index_symm)))
+    if (gen_linear_index_symm ~= gen_linear_index) && isnan(gen_buf_output(1,gen_linear_index_symm))
         gen_buf_input(:,gen_linear_index_symm) = -gen_buf_input(:,gen_linear_index);
         gen_buf_output(:,gen_linear_index_symm) = -gen_buf_output(:,gen_linear_index);
-        gen_buf_birth(1,gen_linear_index_symm) = frame * 0.02;
+        gen_buf_birth(1,gen_linear_index_symm) = frame * 0.03;
     end
 
     % try to perform training iterations
@@ -99,7 +117,7 @@ for frame = 1:length(global_inputs)
         gen_births = zeros(1, gen_buf_size);
         j = 0;
         for i=1:gen_buf_size
-            if ~isnan(gen_buf_output(:,i)) && (i ~= gen_linear_index)
+            if ~isnan(gen_buf_output(1,i))
                 j = j+1;
                 gen_inputs(:,j) = gen_buf_input(:,i);
                 gen_outputs(:,j) = gen_buf_output(:,i);
@@ -130,7 +148,26 @@ for frame = 1:length(global_inputs)
         else
             input_weights  = zeros(1, imm_buf_count) + 1;
         end
+        
+        % fit linear model
+        if frame > 5
+            fittedmodel = fit( [training_input(1,:).', training_input(2,:).'],...
+                training_output(1,:).', 'poly11', 'Weights', input_weights);
+        end
     end
+    % linear model output
+    if frame > 10
+        linear_global_outputs(frame) =...
+                fittedmodel(global_inputs(1,frame),global_inputs(2,frame));
+        if linear_global_outputs(frame) > 5.0
+            linear_global_outputs(frame) = 0.0;
+        else
+            if linear_global_outputs(frame) < -5.0
+                linear_global_outputs(frame) = 0.0;
+            end
+        end
+    end
+        
     grad_min_iter = 0;
     while cpu_time >= 1
         % iterate here
@@ -194,10 +231,9 @@ cumul_error = model_cumul_acc - cumul_acc;
 resulting_ann = anneval_large(global_inputs(:,:), weights,...
         biases, input_count, hidden_count);
 %% linear model
-fittedmodel = fit( [global_inputs(1,:).', global_inputs(2,:).'], global_outputs(1,:).', 'poly11' );
-linear_model = zeros(1, length(global_inputs));
+resulting_linear_model = zeros(1, length(global_inputs));
 for frame = 1:length(global_inputs)
-    linear_model(frame) = fittedmodel(global_inputs(1,frame),global_inputs(2,frame));
+    resulting_linear_model(frame) = fittedmodel(global_inputs(1,frame),global_inputs(2,frame));
 end
 %% plot graphics
 scrsz = get(0,'ScreenSize');
@@ -208,7 +244,7 @@ hold on
 %plot(time, norm_smoothed_acc, 'r:');
 plot(time, ann_global_outputs, 'b');
 plot(time, ann_descend_success .* 0.5, 'k:');
-plot(time, linear_model, 'm');
+plot(time, linear_global_outputs, 'm');
 %plot(time, aoa, 'g');
 %plot(time, control, 'c');
 %plot(time, mu_values, 'k-.');

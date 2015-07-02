@@ -81,6 +81,7 @@ namespace AtmosphereAutopilot
             // Generalization space initialization
             gen_space = new GridSpace<GenStruct>(ann.input_count, gen_cells, l_gen_bound, u_gen_bound);
 			linear_gen_buff = gen_space.Linearized;
+            gen_space.put_criteria = GenBufPutCriteria;
             // Delegates assignment
             input_update_dlg = input_method;
             output_update_dlg = output_method;
@@ -123,7 +124,7 @@ namespace AtmosphereAutopilot
 
         #region TrainingThread
 
-        SimpleAnn.GaussKoeff gauss = new SimpleAnn.GaussKoeff(1e-3, 1e-7, 1e7, 10.0, 100.0);
+        SimpleAnn.GaussKoeff gauss = new SimpleAnn.GaussKoeff(1e-3, 1e-8, 1e8, 10.0, 100.0);
 
         [AutoGuiAttr("LM Mu", false, "G8")]
         public double Mu { get { return gauss.mu; } }
@@ -132,7 +133,7 @@ namespace AtmosphereAutopilot
         public int batch_size;
 
         [AutoGuiAttr("ann batch weight", true)]
-        public volatile float batch_weight = 1.0f;
+        public volatile float batch_weight = 0.0f;
 
         [AutoGuiAttr("ann performance", false, "G8")]
         public volatile float ann_performance = float.NaN;
@@ -210,7 +211,7 @@ namespace AtmosphereAutopilot
         }
 
         [AutoGuiAttr("ann gener weight", true)]
-        public volatile float base_gen_weight = 0.5f;
+        public volatile float base_gen_weight = 0.1f;
 
         void update_weights()
         {
@@ -266,6 +267,22 @@ namespace AtmosphereAutopilot
             int age = Math.Min(cur_time - birth, max_age);
             double result = 1.0 / (time_decay * age + 1.0);
             return result;
+        }
+
+        static void GenBufPutCriteria(GridSpace<GenStruct>.CellValue oldvalue, GenStruct newdata, Vector newcoord, Vector cellCenter)
+        {
+            if (newdata.birth - oldvalue.data.birth > 200)
+            {
+                newcoord.DeepCopy(oldvalue.coord);
+                oldvalue.data = newdata;
+                return;
+            }
+            if (Vector.SqrLength(oldvalue.coord, cellCenter) > Vector.SqrLength(newcoord, cellCenter))
+            {
+                newcoord.DeepCopy(oldvalue.coord);
+                oldvalue.data = newdata;
+                return;
+            }
         }
 
         #endregion

@@ -1,17 +1,18 @@
-function index = maptocell(value, lower, upper, dims)
-    diap = upper - lower;
-    delta = diap ./ double(dims);
-    index = ceil((value - lower) ./ delta);
-    index = int16(clamp_index(index, dims));
+function [coord, cell_center] = maptocell(value, lower, upper, dims)
+    span = upper - lower;
+    cell_size = span ./ double(dims - 1);
+    coord = floor((value - lower + (cell_size ./ 2.0)) ./ cell_size);
+    coord = int16(clamp_index(coord, dims));
+    cell_center = lower + double(coord) .* cell_size;
 end
 
 function cindex = clamp_index(index, limits)
     cindex = index;
     for i = 1:length(index)
-        if cindex(i) < 1
-            cindex(i) = int16(1);
-        elseif cindex(i) > limits(i)
-            cindex(i) = limits(i);
+        if cindex(i) < int16(0)
+            cindex(i) = int16(0);
+        elseif cindex(i) >= limits(i)
+            cindex(i) = limits(i) - 1;
         end
     end
 end

@@ -444,13 +444,13 @@ namespace AtmosphereAutopilot
 
         void initialize_ann_tainers()
         {
-            pitch_trainer = new OnlineAnnTrainer(pitch_ann, IMM_BUF_SIZE, new int[] { 9, 9 },
+            pitch_trainer = new OnlineAnnTrainer(pitch_ann, IMM_BUF_SIZE, new int[] { 21, 21 },
                 new double[] { -1.0, -0.3 }, new double[] { 1.0, 0.3 }, pitch_input_method, pitch_output_method);
             trainers[0] = pitch_trainer;
-            roll_trainer = new OnlineAnnTrainer(roll_ann, IMM_BUF_SIZE, new int[] { 7, 7, 7 },
+            roll_trainer = new OnlineAnnTrainer(roll_ann, IMM_BUF_SIZE, new int[] { 11, 11, 11 },
                 new double[] { -1.0, -1.0, -2.0 }, new double[] { 1.0, 1.0, 2.0 }, roll_input_method, roll_output_method);
             trainers[1] = roll_trainer;
-            yaw_trainer = new OnlineAnnTrainer(yaw_ann, IMM_BUF_SIZE, new int[] { 9, 9 },
+            yaw_trainer = new OnlineAnnTrainer(yaw_ann, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -1.0, -0.3 }, new double[] { 1.0, 0.3 }, yaw_input_method, yaw_output_method);
             trainers[2] = yaw_trainer;
         }
@@ -528,7 +528,7 @@ namespace AtmosphereAutopilot
         int yaw_cpu = 0;
 
         [AutoGuiAttr("CPU per update", true)]
-        int CPU_TIME_FOR_FIXEDUPDATE = 2;
+        int CPU_TIME_FOR_FIXEDUPDATE = 4;
 
         const int DESCEND_COST = 10;
 

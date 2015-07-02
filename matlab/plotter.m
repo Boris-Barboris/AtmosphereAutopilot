@@ -13,6 +13,6 @@ plot(time,aoa,'b','Marker','.','MarkerSize',5)
 plot(time,v,'g')
 hold off
 xlabel('time')
-legend('acc','predict','control','aoa','v');
+legend('acc','model acc','control','aoa','v');
 h = gca;
 set(h, 'Position', [0.025 0.06 0.96 0.92]);

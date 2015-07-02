@@ -17,8 +17,8 @@ namespace AtmosphereAutopilot
         int dim_count;                      // dimension count
         int[] cell_count;                   // amount of cells by dimension
 
-        double[] lower_limits;              // lower bounds of supercell
-        double[] upper_limits;              // upper bounds of supercell
+        double[] lower_limits;
+        double[] upper_limits;
         double[] cell_size;                 // sizes of cells
         double[] region_size;               // sizes of supercells
 
@@ -39,16 +39,25 @@ namespace AtmosphereAutopilot
 
             public Vector coord;
             public T data;
-        }        
+        }
+
+        public Action<CellValue, T, Vector, Vector> put_criteria = defaultPut;
+
+        static void defaultPut(CellValue oldvalue, T newdata, Vector newcoord, Vector cell_center)
+        {
+            newcoord.DeepCopy(oldvalue.coord);
+            oldvalue.data = newdata;
+        }
 
         // Space will be consisting of supercells, each one is divided according to cell_count
-        // and has dimensions according to (upper_limits - lower_limits). Only one supercell is initially created
+        // and has dimensions according to (region_size). Only one supercell is initially created
         // and under normal conditions we won't need more, but if GridSpace user input will be out of bounds we'll need to
         // allocate additional supercells.
         class Supercell
         {
             GridSpace<T> owner;
             public int[] super_index;
+            double[] sc_lower;
 
             public CellValue[] storage;             // linear storage
             public VectorArray coord_storage;       // coordinate storage
@@ -56,15 +65,23 @@ namespace AtmosphereAutopilot
             public Supercell(GridSpace<T> creator, params int[] supercell_index)
             {
                 owner = creator;
-                super_index = supercell_index;
+                super_index = new int[creator.dim_count];
+                supercell_index.CopyTo(super_index, 0);
+                // get supercell dimensions
+                sc_lower = new double[owner.dim_count];
+                for (int i = 0; i < owner.dim_count; i++)
+                    sc_lower[i] = owner.lower_limits[i] + super_index[i] * owner.region_size[i];
                 // allocate storage
                 storage = new CellValue[owner.storage_length];
                 coord_storage = new VectorArray(creator.dim_count, owner.storage_length);
+                cell_center = new Vector(owner.dim_count);
             }
+
+            Vector cell_center;
 
             public void Put(T data, Vector coord)
             {
-                int index = getLinearIndex(coord);
+                int index = getLinearIndex(coord, cell_center);
                 if (storage[index] == null)
                 {
                     storage[index] = new CellValue(data);
@@ -74,8 +91,7 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
-                    coord.DeepCopy(storage[index].coord);
-                    storage[index].data = data;
+                    owner.put_criteria(storage[index], data, coord, cell_center);
                 }
             }
 
@@ -112,11 +128,26 @@ namespace AtmosphereAutopilot
                 return linear_index;
             }
 
+            /// <summary>
+            /// get one-dimensional index of cell from coordinate vector
+            /// </summary>
+            public int getLinearIndex(Vector coord, Vector cell_center)
+            {
+                int linear_index = 0;
+                for (int i = 0; i < owner.dim_count; i++)
+                {
+                    int dim_index = getCellProjection(i, coord[i]);
+                    linear_index += dim_index * owner.index_weight[i];
+                    cell_center[i] = sc_lower[i] + (dim_index + 0.5) * owner.cell_size[i];
+                }
+                return linear_index;
+            }
+
             // get cell index of coord over dim'th dimension
             int getCellProjection(int dim, double coord)
             {
                 int cell = (int)Math.Floor(
-                    (coord - (owner.lower_limits[dim] + super_index[dim] * owner.region_size[dim])) / owner.cell_size[dim]);
+                    (coord - sc_lower[dim]) / owner.cell_size[dim]);
                 return cell;
             }            
         }
@@ -129,18 +160,24 @@ namespace AtmosphereAutopilot
         /// </summary>
         /// <param name="dimensions">number of dimensions</param>
         /// <param name="cells">number of cells for each dimension</param>
-        /// <param name="l_bound">assumed lower bounds for each dimension</param>
-        /// <param name="u_bound">assumed upper bounds for each dimension</param>
-        public GridSpace(int dimensions, int[] cells, double[] l_bound, double[] u_bound)
+        /// <param name="l_cell">lower cell center</param>
+        /// <param name="u_cell">upper cell center</param>
+        public GridSpace(int dimensions, int[] cells, double[] l_cell, double[] u_cell)
         {
             this.dim_count = dimensions;
             cell_count = cells;
-            lower_limits = l_bound;
-            upper_limits = u_bound;
+            lower_limits = l_cell;
+            upper_limits = u_cell;
             // compute cell dimensions
             cell_size = new double[dim_count];
             for (int i = 0; i < dim_count; i++)
-                cell_size[i] = (upper_limits[i] - lower_limits[i]) / cell_count[i];
+                cell_size[i] = (upper_limits[i] - lower_limits[i]) / (double)(cell_count[i] - 1);
+            // recompute limits
+            for (int i = 0; i < dim_count; i++)
+            {
+                lower_limits[i] -= cell_size[i] / 2.0;
+                upper_limits[i] += cell_size[i] / 2.0;
+            }
             // compute supercell dimensions
             region_size = new double[dim_count];
             for (int i = 0; i < dim_count; i++)
@@ -156,6 +193,8 @@ namespace AtmosphereAutopilot
                 index_weight[i] = index_weight[i + 1] * cell_count[i + 1];
             // Initialize base supercell
             space.Add(new Supercell(this, new int[dim_count]));
+            // misc
+            scindex = new int[dimensions];
         }
 
         /// <summary>
@@ -200,9 +239,11 @@ namespace AtmosphereAutopilot
                 return scell.Remove(val);
         }
 
+        int[] scindex;
+
         Supercell GetSupercell(Vector coord, bool create = true)
         {
-            int[] scindex = getSupercellCoord(coord);
+            getSupercellCoord(coord, ref scindex);
 			Supercell sc = space.Find((s) => { return s.super_index.SequenceEqual(scindex); });
             if (sc == null && create)
             {
@@ -213,18 +254,17 @@ namespace AtmosphereAutopilot
             return sc;
         }
 
-        int[] getSupercellCoord(Vector coord)
+        void getSupercellCoord(Vector coord, ref int[] output)
         {
-			int[] output = new int[dim_count];
             for (int i = 0; i < dim_count; i++)
                 output[i] = (int)Math.Floor((coord[i] - lower_limits[i]) / region_size[i]);
-			return output;
         }
 
         public List<CellValue> Linearized
         {
             get { return linear_form; }
         }
+
     }
 
 }
