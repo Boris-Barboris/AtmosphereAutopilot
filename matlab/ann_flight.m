@@ -4,8 +4,8 @@ run('import_telemetry');
 %% prepare data structures
 
 % GLOBAL TRAINING ENVIRONMENT
-global_inputs = [v; control];
-norm_acc = acc .* 1e4 ./ p ./ airspd.^2;      % divide acceleration by dynamic pressure
+global_inputs = [aoa; control];
+norm_acc = acc .* 3e3 ./ p ./ airspd.^2;      % divide acceleration by dynamic pressure
 %norm_smoothed_acc = smoothed_acc .* 1e4 ./ p ./ airspd.^2;
 global_outputs = norm_acc;
 
@@ -20,8 +20,8 @@ tau_dec = 100;           % to move towards gradient descend
 grad_min_iter_limit = 3;        % exit training after this amount of minimal gradient
 grad_min_iter = 0;
 % create randomized weights and biases
-weights = 0.5 .* (rand(1, hidden_count*(input_count + 1)) - 0.5);
-biases = 0.5 .* (rand(1, hidden_count + 1) - 0.5);
+weights = 1.0 .* (rand(1, hidden_count*(input_count + 1)) - 0.5);
+biases = 1.0 .* (rand(1, hidden_count + 1) - 0.5);
 
 % TELEMETRY CACHE
 % immediate buffer contains last state vectors
@@ -34,11 +34,11 @@ imm_batch_size = int16(16);         % immediate buffer is subject to batching
 imm_batch_weight = 0.0;            % batch error is multiplied by this
 % generalization space is required for reliable ann convergence towards model
 gen_buf_dims = int16([21, 21]);
-gen_buf_upper = [3.0, 1.0];
-gen_buf_lower = [-3.0, -1.0];
+gen_buf_upper = [0.1, 0.1];
+gen_buf_lower = [-0.1, -0.1];
 gen_buf_norm = gen_buf_upper - gen_buf_lower;
-gen_time_decay = 1.0;           % importance of old generalization data is decreased by this factor
-gen_importance = 0.1;           % general error weight of generalization space
+gen_time_decay = 0.4;           % importance of old generalization data is decreased by this factor
+gen_importance = 1.0;           % general error weight of generalization space
 temp = cumprod(gen_buf_dims);   % temp array for deriving a linear size of generalization buffer
 gen_buf_size = temp(end);
 gen_buf_input = zeros(input_count, gen_buf_size) + NaN;
@@ -48,7 +48,6 @@ gen_linear_index = 0;
 
 % ANN OUTPUT VECTOR
 ann_global_outputs = zeros(1, length(global_outputs));
-linear_global_outputs = zeros(1, length(global_outputs));
 old_sqr_err = 0;
 new_sqr_err = 0;
 ann_sqr_errors = zeros(1, length(global_outputs));
@@ -58,7 +57,7 @@ mu_values = zeros(1, length(global_outputs));
 %% commit simulation
 
 % SIMULATION SETTINGS
-cpu_ratio = 0.5;   % amount of ann training iterations per 1 game physixcs frame
+cpu_ratio = 0.25;   % amount of ann training iterations per 1 game physixcs frame
 cpu_time = 0;      % amount of availiable training iterations. When >= 1, we should train once
 
 % MAIN CYCLE
@@ -74,6 +73,8 @@ for frame = 1:length(global_inputs)
     end
     
     % update generalization space
+    gen_buf_upper = max(gen_buf_upper, global_inputs(:,frame).'); % stretch
+    gen_buf_lower = min(gen_buf_lower, global_inputs(:,frame).');
     [gen_coord, cell_center] = maptocell(global_inputs(:,frame).',...
         gen_buf_lower, gen_buf_upper, gen_buf_dims);
     gen_linear_index = coord2index(gen_coord, gen_buf_dims);
@@ -137,34 +138,19 @@ for frame = 1:length(global_inputs)
         if j > 0
             cur_time = frame * 0.03;
             gen_imm_ratio = j / double(imm_buf_count);
+            %gen_imm_ratio = 1.0;
             % base undecayed importance of generalization data point:
             base_gen_weight = gen_importance / gen_imm_ratio;
             decayed_gen_weight = zeros(1, j);
             for i=1:j
+                %decayed_gen_weight(i) = base_gen_weight ./...
+                %    (gen_time_decay * (cur_time - gen_births(i)) + 1);
                 decayed_gen_weight(i) = base_gen_weight ./...
-                    (gen_time_decay * (cur_time - gen_births(i)) + 1);
+                    exp(gen_time_decay * (cur_time - gen_births(i)));
             end
             input_weights  = [zeros(1, imm_buf_count) + 1, decayed_gen_weight];
         else
             input_weights  = zeros(1, imm_buf_count) + 1;
-        end
-        
-        % fit linear model
-        if frame > 5
-            fittedmodel = fit( [training_input(1,:).', training_input(2,:).'],...
-                training_output(1,:).', 'poly11', 'Weights', input_weights);
-        end
-    end
-    % linear model output
-    if frame > 10
-        linear_global_outputs(frame) =...
-                fittedmodel(global_inputs(1,frame),global_inputs(2,frame));
-        if linear_global_outputs(frame) > 5.0
-            linear_global_outputs(frame) = 0.0;
-        else
-            if linear_global_outputs(frame) < -5.0
-                linear_global_outputs(frame) = 0.0;
-            end
         end
     end
         
@@ -215,8 +201,6 @@ end
 
 %% regressor performace analysis
 model_error = ann_global_outputs - smoothed_acc .* 1e4 ./ p ./ airspd.^2;
-cut_model_error = model_error(100:end);
-cut_msqr_model_error = meansqr(cut_model_error);
 
 % cumulative acceleration error - diffirence between integrals over predicted and actual acc
 cumul_frame = 20;
@@ -230,11 +214,6 @@ cumul_error = model_cumul_acc - cumul_acc;
 %% resulting ann
 resulting_ann = anneval_large(global_inputs(:,:), weights,...
         biases, input_count, hidden_count);
-%% linear model
-resulting_linear_model = zeros(1, length(global_inputs));
-for frame = 1:length(global_inputs)
-    resulting_linear_model(frame) = fittedmodel(global_inputs(1,frame),global_inputs(2,frame));
-end
 %% plot graphics
 scrsz = get(0,'ScreenSize');
 figure('Name','ANN online regression',...
@@ -244,15 +223,15 @@ hold on
 %plot(time, norm_smoothed_acc, 'r:');
 plot(time, ann_global_outputs, 'b');
 plot(time, ann_descend_success .* 0.5, 'k:');
-plot(time, linear_global_outputs, 'm');
+plot(time, aoa, 'g');
 %plot(time, aoa, 'g');
-%plot(time, control, 'c');
+plot(time, control, 'c');
 %plot(time, mu_values, 'k-.');
 %plot(time, model_error,'k-.');
 %plot(time, cumul_error,'m-.');
 %plot(time, ann_sqr_errors, 'k-.');
 hold off;
 xlabel('time')
-legend('acc', 'ann acc', 'ann descend', 'linear model');
+legend('acc', 'ann acc', 'ann descend', 'aoa', 'control');
 h = gca;
 set(h, 'Position', [0.025 0.06 0.96 0.92]);

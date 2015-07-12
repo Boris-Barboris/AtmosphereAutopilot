@@ -7,12 +7,12 @@ figure('Name','Telemetry Plotter',...
     'Position',[100 50 scrsz(3)*0.9 scrsz(4)*0.8])
 hold on
 plot(time,acc,'r','Marker','.','MarkerSize',5)
-plot(time,predict,'r:','Marker','.','MarkerSize',5)
+%plot(time,predict,'r:','Marker','.','MarkerSize',5)
 plot(time,control,'k','Marker','.','MarkerSize',5)
 plot(time,aoa,'b','Marker','.','MarkerSize',5)
 plot(time,v,'g')
 hold off
 xlabel('time')
-legend('acc','model acc','control','aoa','v');
+legend('acc','control','aoa','v');
 h = gca;
 set(h, 'Position', [0.025 0.06 0.96 0.92]);
