@@ -11,10 +11,9 @@ namespace AtmosphereAutopilot
 
     /// <summary>
     /// Simple single hidden layer artificial neural network with tansig transfer function
-    /// and purelin output transfer function. It's learning and evaluation is thread-safe, 
-    /// but learning must be performed from one thread only.
+    /// and purelin output transfer function.
     /// </summary>
-    public partial class SimpleAnn
+    public class SimpleAnn
     {
         /// <summary>
         /// number of neurons in hidden layer
@@ -65,8 +64,8 @@ namespace AtmosphereAutopilot
             a1 = new double[hidden_count];
             // copy values of arrays
             original.parameters.CopyTo(parameters, 0);
-            original.n1.CopyTo(n1, 0);
-            original.a1.CopyTo(a1, 0);
+            //original.n1.CopyTo(n1, 0);
+            //original.a1.CopyTo(a1, 0);
         }
 
         /// <summary>

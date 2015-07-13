@@ -250,13 +250,6 @@ namespace AtmosphereAutopilot
 					MessageManager.post_status_message(module.ModuleName + (module.Active ? " enabled" : " disabled"));
 				}
 			}
-            // Handle debug drawings
-            if (autopilot_module_lists.ContainsKey(ActiveVessel))
-                if (autopilot_module_lists[ActiveVessel].ContainsKey(typeof(InstantControlModel)))
-                {
-                    var imodel = autopilot_module_lists[ActiveVessel][typeof(InstantControlModel)] as InstantControlModel;
-                    imodel.Update();
-                }
         }
     }
 }

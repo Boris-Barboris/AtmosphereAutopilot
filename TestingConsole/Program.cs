@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Globalization;
 using AtmosphereAutopilot;
+using System.IO;
 
 namespace TestingConsole
 {
@@ -16,7 +17,7 @@ namespace TestingConsole
         static void Main(string[] args)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
-            trainingTest();
+            linear_real_data_training();
             Console.ReadKey(true);
         }
 
@@ -127,6 +128,108 @@ namespace TestingConsole
                 trainer.Train();
             }
             Console.WriteLine("finished");
+        }
+
+        static void trainingPerformanceTest_lin()
+        {
+            List<double> inputs = new List<double>();
+            List<double> outputs = new List<double>();
+            int set_size = 100;
+            for (int j = 0; j < set_size; j++)
+            {
+                inputs.Add(j);
+                outputs.Add(j * 0.5);
+            }
+            for (int j = 0; j < set_size; j++)
+            {
+                inputs.Add(j);
+                outputs.Add(j * 0.5);
+            }
+            LinApprox ann = new LinApprox(1);
+            int i = 0;
+            OnlineLinTrainer trainer = new OnlineLinTrainer(ann, 10, new int[2] { 9, 9 },
+                new double[] { -0.1 }, new double[] { 0.1 },
+                (arr) => { arr[0] = inputs[i]; },
+                () => { return outputs[i]; });
+            while (i < set_size)
+            {
+                for (int j = 0; j < 5 && i < set_size; j++)
+                {
+                    trainer.UpdateState(0);
+                    i++;
+                }
+                trainer.Train();
+            }
+            Console.WriteLine("finished");
+        }
+
+        static void linear_real_data_training()
+        {
+            string game_path = @"D:\Games\Kerbal Space Program 0.90\Resources\";
+
+            StreamReader aoa_reader = new StreamReader(game_path + "aoa.csv");
+            StreamReader control_reader = new StreamReader(game_path + "control.csv");
+            StreamReader acc_reader = new StreamReader(game_path + "acc.csv");
+            StreamReader density_reader = new StreamReader(game_path + "density.csv");
+            StreamReader airspd_reader = new StreamReader(game_path + "airspd.csv");
+
+            var acc = read_and_split(acc_reader);
+            var aoa = read_and_split(aoa_reader);
+            var control = read_and_split(control_reader);
+            var density = read_and_split(density_reader);
+            var airspd = read_and_split(airspd_reader);
+
+            cut(acc, 2, 1);
+            cut(aoa, 1, 2);
+            cut(control, 2, 1);
+            cut(density, 1, 2);
+            cut(airspd, 1, 2);
+
+            StreamWriter model_output = new StreamWriter(game_path + "debug_predict.csv");
+
+            int frame = 0;
+            int frames_count = acc.Count;
+            double cpu_time = 0.0;
+            double cpu_add = 0.5;
+
+            LinApprox model = new LinApprox(2);
+            OnlineLinTrainer trainer = new OnlineLinTrainer(model, 10, new int[2] { 11, 11 },
+                new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 },
+                (arr) => { arr[0] = aoa[frame]; arr[1] = control[frame]; },
+                () => { return acc[frame] / density[frame] / airspd[frame] / airspd[frame] * 2e4; });
+
+            Vector input_vector = new Vector(2);
+
+            for (frame = 0; frame < frames_count; frame++)
+            {
+                trainer.UpdateState(3);
+                if (cpu_time >= 1.0)
+                {
+                    trainer.Train();
+                    cpu_time -= 1.0;
+                }
+                cpu_time += cpu_add;
+                input_vector[0] = aoa[frame];
+                input_vector[1] = control[frame];
+                double model_value = model.eval_training(input_vector);
+                model_output.Write(model_value.ToString("G8") + ',');
+            }
+
+            model_output.Close();
+            Console.WriteLine("finished");
+        }
+
+        static List<double> read_and_split(StreamReader reader)
+        {
+            List<double> res = reader.ReadToEnd().Split(',').Where(s => s.Length > 0).Select(s => double.Parse(s)).ToList();
+            reader.Close();
+            return res;
+        }
+
+        static void cut(List<double> l, int from_start, int from_end)
+        {
+            l.RemoveRange(0, from_start);
+            l.RemoveRange(l.Count - 1 - from_end, from_end);
         }
     }
 }

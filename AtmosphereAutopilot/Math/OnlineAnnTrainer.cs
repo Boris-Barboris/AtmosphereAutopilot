@@ -81,7 +81,7 @@ namespace AtmosphereAutopilot
             // Generalization space initialization
             gen_space = new GridSpace<GenStruct>(ann.input_count, gen_cells, l_gen_bound, u_gen_bound);
 			linear_gen_buff = gen_space.Linearized;
-            gen_space.put_criteria = GenBufPutCriteria;
+            gen_space.put_method = GenBufPutCriteria;
             // Delegates assignment
             input_update_dlg = input_method;
             output_update_dlg = output_method;
@@ -269,17 +269,18 @@ namespace AtmosphereAutopilot
             return result;
         }
 
-        static void GenBufPutCriteria(GridSpace<GenStruct>.CellValue oldvalue, GenStruct newdata, Vector newcoord, Vector cellCenter)
+        static void GenBufPutCriteria(GridSpace<GenStruct>.CellValue oldvalue, GenStruct newdata, Vector new_coord,
+            Vector cell_center, double[] cell_sizes)
         {
             if (newdata.birth - oldvalue.data.birth > 200)
             {
-                newcoord.DeepCopy(oldvalue.coord);
+                new_coord.DeepCopy(oldvalue.coord);
                 oldvalue.data = newdata;
                 return;
             }
-            if (Vector.SqrLength(oldvalue.coord, cellCenter) > Vector.SqrLength(newcoord, cellCenter))
+            if (Vector.SqrLength(oldvalue.coord, cell_center) > Vector.SqrLength(new_coord, cell_center))
             {
-                newcoord.DeepCopy(oldvalue.coord);
+                new_coord.DeepCopy(oldvalue.coord);
                 oldvalue.data = newdata;
                 return;
             }

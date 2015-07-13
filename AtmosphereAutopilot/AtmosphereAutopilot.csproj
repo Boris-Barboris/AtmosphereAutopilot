@@ -37,14 +37,6 @@
       <HintPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="FerramAerospaceResearch">
-      <HintPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\GameData\FerramAerospaceResearch\Plugins\FerramAerospaceResearch.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Scale_Redist">
-      <HintPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\GameData\FerramAerospaceResearch\Plugins\Scale_Redist.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml" />
@@ -68,6 +60,8 @@
     <Compile Include="Controller\PController.cs" />
     <Compile Include="Controller\PIController.cs" />
     <Compile Include="Math\GridSpace.cs" />
+    <Compile Include="Math\LinApprox.cs" />
+    <Compile Include="Math\OnlineLinTrainer.cs" />
     <Compile Include="Math\SimpleAnn.cs" />
     <Compile Include="Math\VectorArray.cs" />
     <Compile Include="Models\MediumFlightModel.cs" />

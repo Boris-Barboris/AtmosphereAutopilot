@@ -258,80 +258,6 @@ namespace AtmosphereAutopilot
             angular_vel = -Common.divideVector(partial_AM, partial_MOI);
         }
 
-        [AutoGuiAttr("DEBUG Moments", true)]
-        internal bool test_outputs = false;
-
-        // Draw debug vectors here
-        internal void Update()
-        {
-            if (test_outputs)
-            {
-                using (var writer = System.IO.File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/moments.txt"))
-                {
-                    Quaternion world_to_root = vessel.rootPart.partTransform.rotation.Inverse();     // from world to root part rotation
-                    writer.WriteLine("world_to_root = " + world_to_root.ToString("G6"));
-                    Vector3 moi = Vector3.zero;
-                    Vector3 am = Vector3.zero;
-                    Vector3 com = vessel.findWorldCenterOfMass();
-                    Vector3 world_v = vessel.rootPart.rb.velocity;
-                    writer.WriteLine("com = " + com.ToString("G6"));
-                    writer.WriteLine("world_v = " + world_v.ToString("G6"));
-                    sum_mass = 0.0f;
-                    foreach (var part in vessel.parts)
-                    {
-                        if (part.physicalSignificance == Part.PhysicalSignificance.NONE)
-                            continue;
-                        Quaternion part_to_root = part.partTransform.rotation * world_to_root;   // from part to root part rotation
-                        if (part.rb != null)
-                        {
-                            writer.WriteLine("\r\nprocessing part " + part.partName);
-                            float mass = part.rb.mass;
-                            writer.WriteLine("mass = " + mass.ToString("G6"));
-                            sum_mass += mass;
-                            Vector3 world_pv = part.rb.worldCenterOfMass - com;
-                            writer.WriteLine("part.rb.worldCenterOfMass = " + part.rb.worldCenterOfMass.ToString("G6"));
-                            writer.WriteLine("world_pv = " + world_pv.ToString("G6"));
-                            Vector3 pv = world_to_root * world_pv;
-                            writer.WriteLine("pv = " + pv.ToString("G6"));
-                            Vector3 impulse = mass * (world_to_root * (part.rb.velocity - world_v));
-                            writer.WriteLine("part.rb.velocity = " + part.rb.velocity.ToString("G6"));
-                            writer.WriteLine("impulse = " + impulse.ToString("G6"));
-                            // from part.rb principal frame to root part rotation
-                            Quaternion principal_to_root = part.rb.inertiaTensorRotation * part_to_root;
-                            writer.WriteLine("part.rb.inertiaTensorRotation = " + part.rb.inertiaTensorRotation.ToString("G6"));
-                            writer.WriteLine("principal_to_root = " + principal_to_root.ToString("G6"));
-                            // part as offsetted material point
-                            var dmoi = mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
-                            moi += dmoi;
-                            writer.WriteLine("dmoi = " + dmoi.ToString("G6"));
-                            // part as rigid body moi over part CoM
-                            Vector3 rotated_moi = get_rotated_moi(part.rb.inertiaTensor, principal_to_root);
-                            moi += rotated_moi;
-                            writer.WriteLine("rotated_moi = " + rotated_moi.ToString("G6"));
-                            // part moment as offsetted material point
-                            var dam = Vector3.Cross(pv, impulse);
-                            am += dam;
-                            writer.WriteLine("dam = " + dam.ToString("G6"));
-                            // part moment as rotating rigid body over part CoM
-                            var self_am = world_to_root * part.rb.angularVelocity;
-                            var d_self_am = Vector3.Scale(rotated_moi, self_am);
-                            writer.WriteLine("self_am = " + self_am.ToString("G6"));
-                            writer.WriteLine("d_self_am = " + d_self_am.ToString("G6"));
-                            am += d_self_am;
-                        }
-                    }
-                    MOI = moi;
-                    AM = am;
-                    angular_vel = Common.divideVector(AM, MOI);
-                    writer.WriteLine();
-                    writer.WriteLine("MOI = " + MOI.ToString("G6"));
-                    writer.WriteLine("AngMoment = " + AM.ToString("G6"));
-                    writer.WriteLine("angular_vel = " + angular_vel.ToString("G6"));
-                }
-                test_outputs = false;
-            }
-        }
-
         static Vector3 get_rotated_moi(Vector3 inertia_tensor, Quaternion rotation)
         {
             Matrix4x4 inert_matrix = Matrix4x4.zero;
@@ -433,25 +359,29 @@ namespace AtmosphereAutopilot
 
         public Vector3d model_acc = Vector3d.zero;
 
-        SimpleAnn pitch_ann = new SimpleAnn(4, 2);
-        SimpleAnn roll_ann = new SimpleAnn(4, 3);
-        SimpleAnn yaw_ann = new SimpleAnn(4, 2);
+        //SimpleAnn pitch_ann = new SimpleAnn(4, 2);
+        //SimpleAnn roll_ann = new SimpleAnn(4, 3);
+        //SimpleAnn yaw_ann = new SimpleAnn(4, 2);
 
-        const int IMM_BUF_SIZE = 20;
+        LinApprox pitch_model = new LinApprox(2);
+        LinApprox roll_model = new LinApprox(3);
+        LinApprox yaw_model = new LinApprox(2);
 
-        OnlineAnnTrainer pitch_trainer, roll_trainer, yaw_trainer;
-        OnlineAnnTrainer[] trainers = new OnlineAnnTrainer[3];
+        const int IMM_BUF_SIZE = 10;
+
+        OnlineLinTrainer pitch_trainer, roll_trainer, yaw_trainer;
+        OnlineLinTrainer[] trainers = new OnlineLinTrainer[3];
 
         void initialize_ann_tainers()
         {
-            pitch_trainer = new OnlineAnnTrainer(pitch_ann, IMM_BUF_SIZE, new int[] { 21, 21 },
-                new double[] { -1.0, -0.3 }, new double[] { 1.0, 0.3 }, pitch_input_method, pitch_output_method);
+            pitch_trainer = new OnlineLinTrainer(pitch_model, IMM_BUF_SIZE, new int[] { 11, 11 },
+                new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, pitch_input_method, pitch_output_method);
             trainers[0] = pitch_trainer;
-            roll_trainer = new OnlineAnnTrainer(roll_ann, IMM_BUF_SIZE, new int[] { 11, 11, 11 },
-                new double[] { -1.0, -1.0, -2.0 }, new double[] { 1.0, 1.0, 2.0 }, roll_input_method, roll_output_method);
+            roll_trainer = new OnlineLinTrainer(roll_model, IMM_BUF_SIZE, new int[] { 7, 7, 7 },
+                new double[] { -0.1, -0.1, -0.1 }, new double[] { 0.1, 0.1, 0.1 }, roll_input_method, roll_output_method);
             trainers[1] = roll_trainer;
-            yaw_trainer = new OnlineAnnTrainer(yaw_ann, IMM_BUF_SIZE, new int[] { 11, 11 },
-                new double[] { -1.0, -0.3 }, new double[] { 1.0, 0.3 }, yaw_input_method, yaw_output_method);
+            yaw_trainer = new OnlineLinTrainer(yaw_model, IMM_BUF_SIZE, new int[] { 11, 11 },
+                new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, yaw_input_method, yaw_output_method);
             trainers[2] = yaw_trainer;
         }
 
@@ -472,7 +402,7 @@ namespace AtmosphereAutopilot
         {
             v[0] = csurf_buf[ROLL].getLast();
             v[1] = csurf_buf[YAW].getLast();
-            v[2] = angular_v_buf[ROLL].getFromTail(1) / Math.PI / 2.0;
+            v[2] = angular_v_buf[ROLL].getFromTail(1);
         }
 
         double roll_output_method()
@@ -491,29 +421,18 @@ namespace AtmosphereAutopilot
             return angular_acc_buf[YAW].getLast() / dyn_pressure * 1e4;
         }
 
-        // Training uinputs updating
-        int cur_time = 0;
-        int last_updated = 0;
-        const int time_reset = int.MaxValue / 2;
-
+        // Training inputs updating
         void update_training_inputs()
         {
-            cur_time += (int)Math.Round(Time.fixedDeltaTime * 100.0f);
-            if (cur_time >= time_reset)
-            {
-                cur_time -= time_reset;
-                last_updated -= time_reset;
-            }
+            int dt = (int)Math.Round(Time.fixedDeltaTime * 100.0f);
             if (!vessel.LandedOrSplashed)
             {
-                dyn_pressure = vessel.atmDensity * (up_srf_v + fwd_srf_v).sqrMagnitude;
+                dyn_pressure = vessel.atmDensity * vessel.srf_velocity.sqrMagnitude;
                 if (dyn_pressure < 10.0)
                     return;
-                int time_elapsed = cur_time - last_updated;
-                last_updated = cur_time;
-                pitch_trainer.UpdateState(time_elapsed);
-                roll_trainer.UpdateState(time_elapsed);
-                yaw_trainer.UpdateState(time_elapsed);
+                pitch_trainer.UpdateState(dt);
+                roll_trainer.UpdateState(dt);
+                yaw_trainer.UpdateState(dt);
             }
         }
 
@@ -528,7 +447,7 @@ namespace AtmosphereAutopilot
         int yaw_cpu = 0;
 
         [AutoGuiAttr("CPU per update", true)]
-        int CPU_TIME_FOR_FIXEDUPDATE = 4;
+        int CPU_TIME_FOR_FIXEDUPDATE = 5;
 
         const int DESCEND_COST = 10;
 
@@ -572,17 +491,20 @@ namespace AtmosphereAutopilot
             return false;
         }
 
-        // Ann evaluation
+        // Model evaluation
         Vector temp_v2 = new Vector(2);
         Vector temp_v3 = new Vector(3);
         void update_model_acc()
         {
             pitch_input_method(temp_v2);
-            model_acc[0] = pitch_ann.eval(temp_v2) / 1e4 * dyn_pressure;
+            pitch_model.update_from_training();
+            model_acc[PITCH] = pitch_model.eval(temp_v2) / 1e4 * dyn_pressure;
             roll_input_method(temp_v3);
-            model_acc[1] = roll_ann.eval(temp_v3) / 1e4 * dyn_pressure;
+            roll_model.update_from_training();
+            model_acc[ROLL] = roll_model.eval(temp_v3) / 1e4 * dyn_pressure;
             yaw_input_method(temp_v2);
-            model_acc[2] = yaw_ann.eval(temp_v2) / 1e4 * dyn_pressure;
+            yaw_model.update_from_training();
+            model_acc[YAW] = yaw_model.eval(temp_v2) / 1e4 * dyn_pressure;
         }
 
 		#endregion
@@ -591,31 +513,31 @@ namespace AtmosphereAutopilot
 
 		#region Serialization
 
-        protected override void OnDeserialize(ConfigNode node, Type attribute_type)
-        {
-            if (attribute_type == typeof(VesselSerializable))
-            {
-                SimpleAnn pann = SimpleAnn.DeserializeFromNode(node, "pitch_ann");
-                if (pann != null)
-                    pitch_ann = pann;
-                SimpleAnn rann = SimpleAnn.DeserializeFromNode(node, "roll_ann");
-                if (rann != null)
-                    roll_ann = rann;
-                SimpleAnn yann = SimpleAnn.DeserializeFromNode(node, "yaw_ann");
-                if (yann != null)
-                    yaw_ann = yann;
-            }
-        }
+        //protected override void OnDeserialize(ConfigNode node, Type attribute_type)
+        //{
+        //    if (attribute_type == typeof(VesselSerializable))
+        //    {
+        //        SimpleAnn pann = SimpleAnn.DeserializeFromNode(node, "pitch_ann");
+        //        if (pann != null)
+        //            pitch_ann = pann;
+        //        SimpleAnn rann = SimpleAnn.DeserializeFromNode(node, "roll_ann");
+        //        if (rann != null)
+        //            roll_ann = rann;
+        //        SimpleAnn yann = SimpleAnn.DeserializeFromNode(node, "yaw_ann");
+        //        if (yann != null)
+        //            yaw_ann = yann;
+        //    }
+        //}
 
-        protected override void OnSerialize(ConfigNode node, Type attribute_type)
-        {
-            if (attribute_type == typeof(VesselSerializable))
-            {
-                pitch_ann.SerializeToNode(node, "pitch_ann");
-                roll_ann.SerializeToNode(node, "roll_ann");
-                yaw_ann.SerializeToNode(node, "yaw_ann");
-            }
-        }
+        //protected override void OnSerialize(ConfigNode node, Type attribute_type)
+        //{
+        //    if (attribute_type == typeof(VesselSerializable))
+        //    {
+        //        pitch_ann.SerializeToNode(node, "pitch_ann");
+        //        roll_ann.SerializeToNode(node, "roll_ann");
+        //        yaw_ann.SerializeToNode(node, "yaw_ann");
+        //    }
+        //}
 
         #endregion
 

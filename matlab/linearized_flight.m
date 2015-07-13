@@ -1,10 +1,12 @@
 %% import telemetry
 run('import_telemetry');
+%debug_acc = csvread([ksp_plots_path, 'debug_predict.csv']);
+%debug_acc = debug_acc(1:length(debug_acc)-1);
 
 %% prepare data structures
 
 % GLOBAL TRAINING ENVIRONMENT
-global_inputs = [aoa; control];
+global_inputs = [v; control];
 norm_acc = acc .* 2e4 ./ p ./ airspd.^2;      % divide acceleration by dynamic pressure
 %norm_smoothed_acc = smoothed_acc .* 1e4 ./ p ./ airspd.^2;
 global_outputs = norm_acc;
@@ -22,17 +24,18 @@ imm_buf_output = zeros(1, imm_buf_size);
 imm_buf_count = 0;
 imm_buf_head = 1;
 % generalization space is required for reliable ann convergence towards model
-gen_buf_dims = int16([15, 15]);
+gen_buf_dims = int16([11, 11]);
 gen_buf_upper_start = [0.1, 0.1];
 gen_buf_upper = gen_buf_upper_start;
 gen_buf_lower_start = [-0.1, -0.1];
 gen_buf_lower = gen_buf_lower_start;
 gen_bound_decay = 0.1;
-gen_time_decay = 1.0;           % importance of old generalization data is decreased by this factor
-gen_time_decay_linear = 5.0;
+gen_time_decay = 2.0;           % importance of old generalization data is decreased by this factor
+gen_time_decay_linear = 2.0;
 gen_time_decay_nonlinear = 50.0;
+max_age = 30.0;
 gen_importance = 0.1;           % general error weight of generalization space
-gen_min_weight = 0.005;
+gen_min_weight = 0.015;
 temp = cumprod(gen_buf_dims);   % temp array for deriving a linear size of generalization buffer
 gen_buf_size = temp(end);
 gen_buf_input = zeros(input_count, gen_buf_size) + NaN;
@@ -42,8 +45,9 @@ gen_linear_index = 0;
 gen_count = 0;
 
 % linearization chech settings
-linear_err_criteria = 0.1;
-max_global_output = 0.0;
+linear_err_criteria = 0.002;
+max_global_output = 0.01;
+max_global_output_decay = 0.2;
 
 % MODEL OUTPUT VECTOR
 lin_global_outputs = zeros(1, length(global_outputs));
@@ -53,7 +57,7 @@ gen_count_stat = zeros(1, length(global_outputs));
 %% commit simulation
 
 % SIMULATION SETTINGS
-cpu_ratio = 0.25;   % amount of training iterations per 1 game physixcs frame
+cpu_ratio = 0.5;    % amount of training iterations per 1 game physixcs frame
 cpu_time = 0;       % amount of availiable training iterations. When >= 1, we should train once
 
 % MAIN CYCLE
@@ -68,30 +72,21 @@ for frame = 1:length(global_inputs)
         imm_buf_head = 1;
     end
     
-    % adapt time_decay and check linearization
-    max_global_output = max(max_global_output, abs(global_outputs(:,frame)));
-    imm_lin_outputs = [zeros(imm_buf_count,1) + 1.0, imm_buf_input(:,1:imm_buf_count).'] * lin_params.';
-    new_sqr_err = meansqr((imm_lin_outputs.' - imm_buf_output(1:imm_buf_count)) ./...
-        linear_err_criteria);
-    if new_sqr_err < linear_err_criteria
-        gen_time_decay = gen_time_decay_linear;
-        linear_bool(frame) = 0.1;
-    else
-        gen_time_decay = gen_time_decay_nonlinear;
-        linear_bool(frame) = 0.0;
-    end
+    % adapt time_decay
+    max_global_output = max_global_output * (1 - max_global_output_decay * 0.03);
+    max_global_output = max([max_global_output, abs(global_outputs(:,frame)), 0.01]);
     
     % update generalization space
     % stretch gen space if needed
     gen_buf_upper = max(gen_buf_upper, global_inputs(:,frame).');
     gen_buf_lower = min(gen_buf_lower, global_inputs(:,frame).');
     % gen space decay over time
-    gen_buf_upper = max(global_inputs(:,frame).' +...
-        (1.0 - 0.03 * gen_bound_decay) .* (gen_buf_upper - global_inputs(:,frame).'),...
-        gen_buf_upper_start);
-    gen_buf_lower = min(global_inputs(:,frame).' +...
-        (1.0 - 0.03 * gen_bound_decay) .* (gen_buf_lower - global_inputs(:,frame).'),...
-        gen_buf_lower_start);
+    gen_buf_upper = global_inputs(:,frame).' +...
+        max((1.0 - 0.03 * gen_bound_decay) .* (gen_buf_upper - global_inputs(:,frame).'),...
+        (gen_buf_upper_start - gen_buf_lower_start) ./ 2.0);
+    gen_buf_lower = global_inputs(:,frame).' +...
+        min((1.0 - 0.03 * gen_bound_decay) .* (gen_buf_lower - global_inputs(:,frame).'),...
+        (gen_buf_upper_start - gen_buf_lower_start) ./ -2.0);
     % insert data
     [gen_coord, cell_center] = maptocell(global_inputs(:,frame).',...
         gen_buf_lower, gen_buf_upper, gen_buf_dims);
@@ -116,9 +111,20 @@ for frame = 1:length(global_inputs)
         gen_buf_output(:,gen_linear_index) = global_outputs(:,frame);
         gen_buf_birth(1,gen_linear_index) = frame * 0.03;   % remember the birth time
     end
+    
+    % check linearization
+    imm_lin_outputs = [zeros(imm_buf_count,1) + 1.0, imm_buf_input(:,1:imm_buf_count).'] * lin_params.';
+    new_sqr_err = meansqr((imm_lin_outputs.' - imm_buf_output(1:imm_buf_count)) ./...
+        max_global_output);
+    if new_sqr_err < linear_err_criteria
+        gen_time_decay = gen_time_decay_linear;
+        linear_bool(frame) = 0.1;
+    else
+        gen_time_decay = gen_time_decay_nonlinear;
+        linear_bool(frame) = 0.0;
+    end
 
     % try to perform training iterations
-    cpu_time = cpu_time + cpu_ratio;    
     if (cpu_time >= 1)
         % we'll iterate this frame so we need to prepare training data
         cur_time = frame * 0.03;
@@ -131,7 +137,7 @@ for frame = 1:length(global_inputs)
         gen_count = 0;
         for i=1:gen_buf_size
             if ~isnan(gen_buf_output(1,i))
-                decayed_weight = 1.0 / (gen_time_decay * (cur_time - gen_buf_birth(i)) + 1.0);
+                decayed_weight = 1.0 / (gen_time_decay * min(cur_time - gen_buf_birth(i), max_age) + 1.0);
                 if decayed_weight > gen_min_weight
                     gen_count = gen_count+1;
                     gen_decayed_weights(gen_count) = decayed_weight;
@@ -190,10 +196,10 @@ for frame = 1:length(global_inputs)
         for i = 1:input_count
             if input_changed(i)
                 X = [X, training_input(i,:).'];
-            else
-                Y = Y - lin_params(i+1) .* training_input(i,:).';
+            %else
+            %    Y = Y - lin_params(i+1) .* training_input(i,:).';
             end
-        end                
+        end 
         % solve linear weighted least squares
         x_w = X.' * diag(input_weights);
         new_lin_params = (x_w * X) \ (x_w * Y);
@@ -204,12 +210,14 @@ for frame = 1:length(global_inputs)
             if input_changed(i)
                 lin_params(i+1) = new_lin_params(j);
                 j = j + 1;
+            else
+                lin_params(i+1) = 0.0;
             end
         end
         cpu_time = cpu_time - 1.0;
     end
     lin_global_outputs(frame) = sum(lin_params .* [1.0, global_inputs(:,frame).']);
-    gen_count_stat(frame) = double(gen_count) / double(gen_buf_size);
+    gen_count_stat(frame) = double(gen_count) / double(gen_buf_size);  
     
     cpu_time = cpu_time + cpu_ratio;
 end
@@ -221,6 +229,7 @@ plot(time, norm_acc, 'r');
 hold on
 %plot(time, norm_smoothed_acc, 'r:');
 plot(time, lin_global_outputs, 'b');
+%plot(time, debug_acc, 'b-.');
 plot(time, aoa, 'g');
 %plot(time, aoa, 'g');
 plot(time, control, 'c');
@@ -234,4 +243,4 @@ hold off;
 xlabel('time')
 legend('acc', 'lin model acc', 'aoa', 'control', 'is linear', 'gen count');
 h = gca;
-set(h, 'Position', [0.025 0.06 0.96 0.92]);
+set(h, 'Position', [0.035 0.06 0.96 0.92]);

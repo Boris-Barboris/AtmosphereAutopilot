@@ -137,12 +137,42 @@ namespace AtmosphereAutopilot
                 return this;
             }
 
+            public Vector InverseScale(IList<double> s)
+            {
+                for (int i = 0; i < source.vector_size; i++)
+                    this[i] /= s[i];
+                return this;
+            }
+
             public static double SqrLength(Vector a, Vector b)
             {
                 double res = 0.0;
                 for (int i = 0; i < a.source.vector_size; i++)
                 {
                     double proj = a[i] - b[i];
+                    res += proj * proj;
+                }
+                return res;
+            }
+
+            public static void Add(Vector a, Vector b, Vector res)
+            {
+                for (int i = 0; i < a.source.vector_size; i++)
+                    res[i] = a[i] + b[i];
+            }
+
+            public static void Sub(Vector a, Vector b, Vector res)
+            {
+                for (int i = 0; i < a.source.vector_size; i++)
+                    res[i] = a[i] - b[i];
+            }
+
+            public double SqrLength()
+            {
+                double res = 0.0;
+                for (int i = 0; i < source.vector_size; i++)
+                {
+                    double proj = this[i];
                     res += proj * proj;
                 }
                 return res;

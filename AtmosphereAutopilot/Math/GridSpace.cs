@@ -17,18 +17,15 @@ namespace AtmosphereAutopilot
         int dim_count;                      // dimension count
         int[] cell_count;                   // amount of cells by dimension
 
-        double[] lower_limits;
-        double[] upper_limits;
+        public double[] lower_cell;         // center of lowest cell
+        public double[] upper_cell;         // center of highest cell
+        double[] lower_border;              // lower region border
         double[] cell_size;                 // sizes of cells
-        double[] region_size;               // sizes of supercells
 
         int storage_length;                 // length of main linear storage of supercell
         int[] index_weight;                 // weight of each index in space when linearizing it to 1-dimensional array
 
-        List<Supercell> space = new List<Supercell>();
         List<CellValue> linear_form = new List<CellValue>();
-
-        # region InternalTypes
 
         public class CellValue
         {
@@ -41,119 +38,92 @@ namespace AtmosphereAutopilot
             public T data;
         }
 
-        public Action<CellValue, T, Vector, Vector> put_criteria = defaultPut;
+        public delegate void PutCriteria(CellValue oldvalue, T newdata, Vector new_coord, Vector cell_center, double[] cell_sizes);
 
-        static void defaultPut(CellValue oldvalue, T newdata, Vector newcoord, Vector cell_center)
+        public PutCriteria put_method = defaultPutCriteria;
+
+        public static void defaultPutCriteria(CellValue oldvalue, T newdata, Vector new_coord, Vector cell_center, double[] cell_sizes)
         {
-            newcoord.DeepCopy(oldvalue.coord);
+            new_coord.DeepCopy(oldvalue.coord);
             oldvalue.data = newdata;
         }
 
-        // Space will be consisting of supercells, each one is divided according to cell_count
-        // and has dimensions according to (region_size). Only one supercell is initially created
-        // and under normal conditions we won't need more, but if GridSpace user input will be out of bounds we'll need to
-        // allocate additional supercells.
-        class Supercell
+        CellValue[] storage;             // linear storage
+        VectorArray coord_storage;       // coordinate storage
+
+        Vector cell_center;
+
+        public void Put(T data, Vector coord)
         {
-            GridSpace<T> owner;
-            public int[] super_index;
-            double[] sc_lower;
-
-            public CellValue[] storage;             // linear storage
-            public VectorArray coord_storage;       // coordinate storage
-
-            public Supercell(GridSpace<T> creator, params int[] supercell_index)
+            int index = getLinearIndex(coord, cell_center);
+            if (storage[index] == null)
             {
-                owner = creator;
-                super_index = new int[creator.dim_count];
-                supercell_index.CopyTo(super_index, 0);
-                // get supercell dimensions
-                sc_lower = new double[owner.dim_count];
-                for (int i = 0; i < owner.dim_count; i++)
-                    sc_lower[i] = owner.lower_limits[i] + super_index[i] * owner.region_size[i];
-                // allocate storage
-                storage = new CellValue[owner.storage_length];
-                coord_storage = new VectorArray(creator.dim_count, owner.storage_length);
-                cell_center = new Vector(owner.dim_count);
+                storage[index] = new CellValue(data);
+                storage[index].coord = coord_storage[index];
+                coord.DeepCopy(storage[index].coord);
+                linear_form.Add(storage[index]);
             }
-
-            Vector cell_center;
-
-            public void Put(T data, Vector coord)
+            else
             {
-                int index = getLinearIndex(coord, cell_center);
-                if (storage[index] == null)
-                {
-                    storage[index] = new CellValue(data);
-                    storage[index].coord = coord_storage[index];
-                    coord.DeepCopy(storage[index].coord);
-                    owner.linear_form.Add(storage[index]);
-                }
-                else
-                {
-                    owner.put_criteria(storage[index], data, coord, cell_center);
-                }
+                put_method(storage[index], data, coord, cell_center, cell_size);
             }
-
-			public CellValue Get(Vector coord)
-            {
-                int index = getLinearIndex(coord);
-				return storage[index];
-            }
-
-            public bool Remove(CellValue val)
-            {
-                int index = Array.IndexOf(storage, val);
-                if (index == -1)
-                    return false;
-                else
-                {
-                    storage[index] = null;
-                    owner.linear_form.Remove(val);
-                    return true;
-                }
-            }
-
-            /// <summary>
-			/// get one-dimensional index of cell from coordinate vector
-            /// </summary>
-            public int getLinearIndex(Vector coord)
-            {
-                int linear_index = 0;
-                for (int i = 0; i < owner.dim_count; i++)
-                {
-                    int dim_index = getCellProjection(i, coord[i]);
-                    linear_index += dim_index * owner.index_weight[i];
-                }
-                return linear_index;
-            }
-
-            /// <summary>
-            /// get one-dimensional index of cell from coordinate vector
-            /// </summary>
-            public int getLinearIndex(Vector coord, Vector cell_center)
-            {
-                int linear_index = 0;
-                for (int i = 0; i < owner.dim_count; i++)
-                {
-                    int dim_index = getCellProjection(i, coord[i]);
-                    linear_index += dim_index * owner.index_weight[i];
-                    cell_center[i] = sc_lower[i] + (dim_index + 0.5) * owner.cell_size[i];
-                }
-                return linear_index;
-            }
-
-            // get cell index of coord over dim'th dimension
-            int getCellProjection(int dim, double coord)
-            {
-                int cell = (int)Math.Floor(
-                    (coord - sc_lower[dim]) / owner.cell_size[dim]);
-                return cell;
-            }            
         }
 
-        #endregion
+		public CellValue Get(Vector coord)
+        {
+            int index = getLinearIndex(coord);
+			return storage[index];
+        }
 
+        public bool Remove(CellValue val)
+        {
+            int index = Array.IndexOf(storage, val);
+            if (index == -1)
+                return false;
+            else
+            {
+                storage[index] = null;
+                linear_form.Remove(val);
+                return true;
+            }
+        }
+
+        /// <summary>
+		/// get one-dimensional index of cell from coordinate vector
+        /// </summary>
+        public int getLinearIndex(Vector coord)
+        {
+            int linear_index = 0;
+            for (int i = 0; i < dim_count; i++)
+            {
+                int dim_index = getCellProjection(i, coord[i]);
+                linear_index += dim_index * index_weight[i];
+            }
+            return linear_index;
+        }
+
+        /// <summary>
+        /// get one-dimensional index of cell from coordinate vector
+        /// </summary>
+        int getLinearIndex(Vector coord, Vector cell_center)
+        {
+            int linear_index = 0;
+            for (int i = 0; i < dim_count; i++)
+            {
+                int dim_index = getCellProjection(i, coord[i]);
+                linear_index += dim_index * index_weight[i];
+                cell_center[i] = dim_index * cell_size[i] + lower_cell[i];
+            }
+            return linear_index;
+        }
+
+        // get cell index of coord over dim'th dimension
+        int getCellProjection(int dim, double coord)
+        {
+            int cell = (int)Math.Floor(
+                (coord - lower_border[dim]) / cell_size[dim]);
+            return Common.Clamp(cell, 0, cell_count[dim]-1);
+        }            
 
         /// <summary>
         /// Create new instance of GridSpace
@@ -166,98 +136,37 @@ namespace AtmosphereAutopilot
         {
             this.dim_count = dimensions;
             cell_count = cells;
-            lower_limits = l_cell;
-            upper_limits = u_cell;
-            // compute cell dimensions
+            lower_cell = l_cell;
+            upper_cell = u_cell;
+            // compute dimensions
             cell_size = new double[dim_count];
-            for (int i = 0; i < dim_count; i++)
-                cell_size[i] = (upper_limits[i] - lower_limits[i]) / (double)(cell_count[i] - 1);
-            // recompute limits
-            for (int i = 0; i < dim_count; i++)
-            {
-                lower_limits[i] -= cell_size[i] / 2.0;
-                upper_limits[i] += cell_size[i] / 2.0;
-            }
-            // compute supercell dimensions
-            region_size = new double[dim_count];
-            for (int i = 0; i < dim_count; i++)
-                region_size[i] = upper_limits[i] - lower_limits[i];
+            lower_border = new double[dim_count];
+            recompute_region();
             // compute required storage
             storage_length = cells[0];
             for (int i = 1; i < dimensions; i++)
-                storage_length *= cells[i];            
+                storage_length *= cells[i];           
             // Prechached index weights for faster linearization
             index_weight = new int[dim_count];
             index_weight[dim_count - 1] = 1;
             for (int i = dim_count - 2; i >= 0; i--)
                 index_weight[i] = index_weight[i + 1] * cell_count[i + 1];
-            // Initialize base supercell
-            space.Add(new Supercell(this, new int[dim_count]));
-            // misc
-            scindex = new int[dimensions];
+            // allocate storage
+            storage = new CellValue[storage_length];
+            coord_storage = new VectorArray(dim_count, storage_length);
+            cell_center = new Vector(dim_count);
         }
 
         /// <summary>
-        /// Put new data point into space
+        /// Recompute service dimensions. Call this after manually changing upper_cell or lower_cell
         /// </summary>
-        /// <param name="data">Data to put</param>
-        /// <param name="coord">coordinate of new data point</param>
-        public void Put(T data, Vector coord)
-        {
-            Supercell scell = GetSupercell(coord);
-            scell.Put(data, coord);
-        }
-
-        public CellValue Get(Vector coord)
-        {
-            Supercell scell = GetSupercell(coord, false);
-			if (scell == null)
-				return null;
-			else
-				return scell.Get(coord);
-        }
-
-        public int getCellIdForCoord(Vector coord)
-        {
-            Supercell scell = GetSupercell(coord, false);
-            if (scell == null)
-                return -1;
-            else
-            {
-                int index = space.IndexOf(scell) * storage_length;
-                index += scell.getLinearIndex(coord);
-                return index;
-            }
-        }
-
-        public bool Remove(CellValue val)
-        {
-            Supercell scell = GetSupercell(val.coord, false);
-            if (scell == null)
-                return false;
-            else
-                return scell.Remove(val);
-        }
-
-        int[] scindex;
-
-        Supercell GetSupercell(Vector coord, bool create = true)
-        {
-            getSupercellCoord(coord, ref scindex);
-			Supercell sc = space.Find((s) => { return s.super_index.SequenceEqual(scindex); });
-            if (sc == null && create)
-            {
-                // need to create new supercell
-                sc = new Supercell(this, scindex);
-                space.Add(sc);
-            }
-            return sc;
-        }
-
-        void getSupercellCoord(Vector coord, ref int[] output)
+        public void recompute_region()
         {
             for (int i = 0; i < dim_count; i++)
-                output[i] = (int)Math.Floor((coord[i] - lower_limits[i]) / region_size[i]);
+            {
+                cell_size[i] = (upper_cell[i] - lower_cell[i]) / (double)(cell_count[i] - 1);
+                lower_border[i] = lower_cell[i] - cell_size[i] * 0.5;
+            }
         }
 
         public List<CellValue> Linearized

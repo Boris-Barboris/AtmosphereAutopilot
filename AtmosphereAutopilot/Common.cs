@@ -95,6 +95,15 @@ namespace AtmosphereAutopilot
             return sqr_sum / (double)r_count;
         }
 
+        public static int Clamp(int val, int under, int upper)
+        {
+            if (under > val)
+                return under;
+            if (upper < val)
+                return upper;
+            return val;
+        }
+
         public static double Clamp(double val, double under, double upper)
         {
             if (under > val)
