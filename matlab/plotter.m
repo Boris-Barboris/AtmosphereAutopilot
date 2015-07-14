@@ -1,4 +1,5 @@
 %% data
+delta_time = 0.025;
 run('import_telemetry');
 %% plot
 

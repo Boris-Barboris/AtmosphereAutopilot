@@ -14,7 +14,10 @@ smoothed_acc = sgolayfilt(acc, 2, 11);
 %% cut edges from telemetry and prepare time axis
 max_length = max([length(acc), length(control), length(aoa),...
     length(v), length(airspd), length(p), length(predict)]);
-time = 0:0.03:(0.03 * (max_length - 6));
+if ~exist('delta_time', 'var')
+    delta_time = 0.025;
+end
+time = 0:delta_time:(delta_time * (max_length - 6));
 
 acc = [acc,zeros(1, max_length - length(acc))];
 acc = acc(3:max_length - 3);

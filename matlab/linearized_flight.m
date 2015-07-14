@@ -1,4 +1,5 @@
 %% import telemetry
+delta_time = 0.025;
 run('import_telemetry');
 %debug_acc = csvread([ksp_plots_path, 'debug_predict.csv']);
 %debug_acc = debug_acc(1:length(debug_acc)-1);
@@ -73,7 +74,7 @@ for frame = 1:length(global_inputs)
     end
     
     % adapt time_decay
-    max_global_output = max_global_output * (1 - max_global_output_decay * 0.03);
+    max_global_output = max_global_output * (1 - max_global_output_decay * delta_time);
     max_global_output = max([max_global_output, abs(global_outputs(:,frame)), 0.01]);
     
     % update generalization space
@@ -82,10 +83,10 @@ for frame = 1:length(global_inputs)
     gen_buf_lower = min(gen_buf_lower, global_inputs(:,frame).');
     % gen space decay over time
     gen_buf_upper = global_inputs(:,frame).' +...
-        max((1.0 - 0.03 * gen_bound_decay) .* (gen_buf_upper - global_inputs(:,frame).'),...
+        max((1.0 - delta_time * gen_bound_decay) .* (gen_buf_upper - global_inputs(:,frame).'),...
         (gen_buf_upper_start - gen_buf_lower_start) ./ 2.0);
     gen_buf_lower = global_inputs(:,frame).' +...
-        min((1.0 - 0.03 * gen_bound_decay) .* (gen_buf_lower - global_inputs(:,frame).'),...
+        min((1.0 - delta_time * gen_bound_decay) .* (gen_buf_lower - global_inputs(:,frame).'),...
         (gen_buf_upper_start - gen_buf_lower_start) ./ -2.0);
     % insert data
     [gen_coord, cell_center] = maptocell(global_inputs(:,frame).',...
@@ -96,7 +97,7 @@ for frame = 1:length(global_inputs)
     if isnan(old_coord(1))
         need2write = true;
     else
-        if (frame * 0.03 - gen_buf_birth(1,gen_linear_index) > 1.0)
+        if (frame * delta_time - gen_buf_birth(1,gen_linear_index) > 1.0)
             need2write = true;
         else
             gen_buf_norm = gen_buf_upper - gen_buf_lower;
@@ -109,7 +110,7 @@ for frame = 1:length(global_inputs)
     if need2write
         gen_buf_input(:,gen_linear_index) = global_inputs(:,frame);
         gen_buf_output(:,gen_linear_index) = global_outputs(:,frame);
-        gen_buf_birth(1,gen_linear_index) = frame * 0.03;   % remember the birth time
+        gen_buf_birth(1,gen_linear_index) = frame * delta_time;   % remember the birth time
     end
     
     % check linearization
@@ -127,7 +128,7 @@ for frame = 1:length(global_inputs)
     % try to perform training iterations
     if (cpu_time >= 1)
         % we'll iterate this frame so we need to prepare training data
-        cur_time = frame * 0.03;
+        cur_time = frame * delta_time;
         
         % get all not NaN generalization outputs
         gen_inputs = zeros(input_count, gen_buf_size);
@@ -165,7 +166,7 @@ for frame = 1:length(global_inputs)
             j = imm_buf_size;
         end
         for i=1:imm_buf_count
-            decayed_imm_weight(j) = 1.0 / (gen_time_decay * (double(i)-1.0) * 0.03 + 1.0);
+            decayed_imm_weight(j) = 1.0 / (gen_time_decay * (double(i)-1.0) * delta_time + 1.0);
             j = j - 1;
             if j < 1
                 j = imm_buf_size;
