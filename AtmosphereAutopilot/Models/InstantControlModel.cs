@@ -364,7 +364,7 @@ namespace AtmosphereAutopilot
         //SimpleAnn yaw_ann = new SimpleAnn(4, 2);
 
         LinApprox pitch_model = new LinApprox(2);
-        LinApprox roll_model = new LinApprox(3);
+        LinApprox roll_model = new LinApprox(4);
         LinApprox yaw_model = new LinApprox(2);
 
         const int IMM_BUF_SIZE = 10;
@@ -377,8 +377,8 @@ namespace AtmosphereAutopilot
             pitch_trainer = new OnlineLinTrainer(pitch_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, pitch_input_method, pitch_output_method);
             trainers[0] = pitch_trainer;
-            roll_trainer = new OnlineLinTrainer(roll_model, IMM_BUF_SIZE, new int[] { 7, 7, 7 },
-                new double[] { -0.1, -0.1, -0.1 }, new double[] { 0.1, 0.1, 0.1 }, roll_input_method, roll_output_method);
+            roll_trainer = new OnlineLinTrainer(roll_model, IMM_BUF_SIZE, new int[] { 5, 5, 5, 5 },
+                new double[] { -0.1, -0.1, -0.1, -0.05 }, new double[] { 0.1, 0.1, 0.1, 0.05 }, roll_input_method, roll_output_method);
             trainers[1] = roll_trainer;
             yaw_trainer = new OnlineLinTrainer(yaw_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, yaw_input_method, yaw_output_method);
@@ -403,6 +403,7 @@ namespace AtmosphereAutopilot
             v[0] = csurf_buf[ROLL].getLast();
             v[1] = csurf_buf[YAW].getLast();
             v[2] = angular_v_buf[ROLL].getFromTail(1);
+            v[3] = aoa_buf[YAW].getFromTail(1);
         }
 
         double roll_output_method()
@@ -494,14 +495,15 @@ namespace AtmosphereAutopilot
         // Model evaluation
         Vector temp_v2 = new Vector(2);
         Vector temp_v3 = new Vector(3);
+        Vector temp_v4 = new Vector(4);
         void update_model_acc()
         {
             pitch_input_method(temp_v2);
             pitch_model.update_from_training();
             model_acc[PITCH] = pitch_model.eval(temp_v2) / 1e4 * dyn_pressure;
-            roll_input_method(temp_v3);
+            roll_input_method(temp_v4);
             roll_model.update_from_training();
-            model_acc[ROLL] = roll_model.eval(temp_v3) / 1e4 * dyn_pressure;
+            model_acc[ROLL] = roll_model.eval(temp_v4) / 1e4 * dyn_pressure;
             yaw_input_method(temp_v2);
             yaw_model.update_from_training();
             model_acc[YAW] = yaw_model.eval(temp_v2) / 1e4 * dyn_pressure;
