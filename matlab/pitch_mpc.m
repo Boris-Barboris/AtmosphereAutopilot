@@ -40,7 +40,7 @@ B = zeros(3, 1);
 C = zeros(3, 1);
 %% run simulation
 init_aoa = -0.25;
-init_ang_vel = 0.2;
+init_ang_vel = 0.3;
 init_csurf = 0.0;
 init_pitch = 0.0;
 
@@ -67,7 +67,7 @@ Ci = C;
 
 % user meta-variables
 u = init_csurf;                     % current input vector
-desired_v = 1.0;
+desired_v = 0.0;
 
 simul_time = 15.0;
 simul_length = int16(simul_time / dt);
@@ -88,7 +88,7 @@ res_max_aoa = max_aoa;
 res_max_v = max_v;
 % find balanced state for steady turn on 1.0 input
 % it is also a maximum controllable aoa
-steady_input_turn_x_pos = max(Ai \ (- Bi .* 1.0 - Ci), Ai \ (Bi .* 1.0 - Ci));
+steady_input_turn_x = max(Ai \ (- Bi .* 1.0 - Ci), Ai \ (Bi .* 1.0 - Ci));
 res_max_aoa = min(res_max_aoa, abs(steady_input_turn_x(1)));
 res_max_v = min(res_max_v, abs(steady_input_turn_x(2)));
 % find angular velocity on steady turn with max_g g-force
@@ -169,16 +169,16 @@ aoa(1) = init_aoa;
 ang_vel(1) = init_ang_vel;
 csurf(1) = init_csurf;
 input(1) = u;
-desired_ang_v_arr(1) = desired_v;
+desired_ang_v_arr(1) = abs(steady_input_turn_x(2));
 
 % Acc control section
 dx_bias = zeros(3,1);
 first_cycle = true;
 
 % bias of moder error
-k0 = k0 + 0.01;
-k1 = k1 - 100.0;
-k2 = k2 - 200.0;
+%k0 = k0 + 0.01;
+%k1 = k1 - 100.0;
+%k2 = k2 - 200.0;
 
 % do simulate
 for frame = 2:simul_length+1
