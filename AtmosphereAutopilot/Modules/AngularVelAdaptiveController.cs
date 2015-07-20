@@ -265,7 +265,7 @@ namespace AtmosphereAutopilot
             {
                 float scaled_restrained_v;
                 float normalized_des_v = des_v / MaxVConstruction;
-                if (des_v >= vel)
+                if (des_v >= 0.0f)
                 {
                     scaled_aoa = (res_max_aoa - imodel.AoA(axis)) / 2.0f / res_max_aoa;
                     scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + equilibr_max_v * (1.0f - scaled_aoa),

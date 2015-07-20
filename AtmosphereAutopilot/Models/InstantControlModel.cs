@@ -41,9 +41,7 @@ namespace AtmosphereAutopilot
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_pitch_lift);
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_yaw_lift);
             pitch_lift_trainer.linear_err_criteria = 0.05f;
-            pitch_lift_trainer.base_gen_weight = 0.5f;
             yaw_lift_trainer.linear_err_criteria = 0.05f;
-            yaw_lift_trainer.base_gen_weight = 0.5f;
             AtmosphereAutopilot.Instance.BackgroundThread.Start();
 		}
 

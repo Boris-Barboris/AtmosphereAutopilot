@@ -248,7 +248,7 @@ namespace AtmosphereAutopilot
 
         // Linearity criteria
         [AutoGuiAttr("linear criteria", true)]
-        public volatile float linear_err_criteria = 0.01f;
+        public volatile float linear_err_criteria = 0.005f;
 
         [AutoGuiAttr("linear", false)]
         public volatile bool linear = false;
