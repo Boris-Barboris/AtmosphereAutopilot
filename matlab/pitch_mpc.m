@@ -23,7 +23,7 @@ engine_torque = 10.0;
 
 % control and aoa aothority
 k0 = 0.0;
-k1 = 500.0;
+k1 = -500.0;
 k2 = 1000.0;
 
 % limits
@@ -101,10 +101,14 @@ steady_aoa_turn_v = (Cl * res_max_aoa / mass - g * cos(cur_pitch)) / airspd;
 res_max_v = min(res_max_v, steady_aoa_turn_v);
 
 % Controller gains
-Kacc = 1.0;
+Kacc = 0.1;
 dyn_max_v = max_v;
 
-mpc_dt = 0.05;
+% let's try naive value of dyn_max_v
+dyn_max_v = 1.0 * sqrt(res_max_aoa * (k0 + k1 * res_max_aoa / 2.0 + k2 + sas_torque) / moi);
+C(1,1) = 0.0;
+
+mpc_dt = 0.025;
 v_eps = 1e-2;
 % tune dyn_max_v with relaxation simulation
 while true
@@ -112,27 +116,26 @@ while true
     x_sim = [res_max_aoa; -dyn_max_v; 0.0];     % start on max_aoa with minimum angvel
     u_sim = 0.0;
     under_zero = 0;
-    iter_limit = 200;   % 10 seconds simulation frame
+    iter_limit = 1000;   % 10 seconds simulation frame
     iter = 0;
     cur_pitch_sim = cur_pitch;
     while true
-        desired_acc = -Kacc * x_sim(2);     % relaxate to v = 0.0
-        % get predicted state derivative
-        pr_dx = (Ai * x_sim + Bi * u_sim + Ci) .* mpc_dt;
-        cntrl_auth = Bi(2);     % supposed authority of control
-        pr_acc = pr_dx(2);      % predicted acc
-        acc_err = desired_acc - pr_acc;
-        acc_sat = 1.0;          % how fast we want to converge to desired_acc
-        new_u = max(-1.0, min(1.0, u_sim + acc_err / cntrl_auth / mpc_dt * acc_sat));
-        delta_u = new_u - u_sim;
-        x_sim = x_sim + (Ai * x_sim + Bi * new_u + Ci) .* mpc_dt;    % predicted x
-        % apply control
-        u_sim = new_u;
-        
         aoa(iter+1) = x_sim(1);
         ang_vel(iter+1) = x_sim(2);
         csurf(iter+1) = x_sim(3);
         input(iter+1) = u_sim;
+        
+        desired_acc = -Kacc * x_sim(2) / mpc_dt;     % relaxate to v = 0.0
+        % get predicted state derivative
+        pr_dx = Ai * x_sim + Bi * u_sim + Ci;
+        cntrl_auth = Bi(2);     % supposed authority of control
+        pr_acc = pr_dx(2);      % predicted acc
+        acc_err = desired_acc - pr_acc;
+        acc_sat = 1.0;          % how fast we want to converge to desired_acc
+        new_u = max(-1.0, min(1.0, u_sim + acc_err / cntrl_auth * acc_sat));
+        x_sim = x_sim + (Ai * x_sim + Bi * new_u + Ci) .* mpc_dt;    % predicted x
+        % apply control
+        u_sim = new_u;
 
         % nonlinear pitch transfer
         cur_pitch_sim = cur_pitch_sim + (Cl * x_sim(1) / mass - g * cos(cur_pitch_sim)) / airspd * mpc_dt;
@@ -210,7 +213,7 @@ for frame = 2:simul_length+1
     res_max_aoa = min(res_max_aoa, abs(steady_input_turn_x(1)));
     res_max_v = min(res_max_v, abs(steady_input_turn_x(2)));
     % find angular velocity on steady turn with max_g g-force
-    steady_g_turn_aoa = (max_g + g * cos(cur_pitch)) * mass / Cl;
+    steady_g_turn_aoa = max_g * mass / Cl;
     res_max_aoa = min(res_max_aoa, abs(steady_g_turn_aoa));
     res_max_v = min(res_max_v, steady_g_turn_v);
     % find balanced angular velocity for steady turn on res_max_aoa
@@ -229,7 +232,7 @@ for frame = 2:simul_length+1
         scaled_restrained_v = max(dyn_desired_v,...
             dyn_desired_v * scaled_aoa - res_max_v * (1.0 - scaled_aoa));
     end    
-    desired_acc = -Kacc * (x(2) - scaled_restrained_v);
+    desired_acc = -Kacc * (x(2) - scaled_restrained_v) / dt;
     
     % ANGULAR ACC Controller
     
@@ -239,15 +242,15 @@ for frame = 2:simul_length+1
     end
     first_cycle = false;
     % get predicted state derivative
-    pr_dx = (Ai * x + Bi * u + Ci) .* dt;
+    pr_dx = Ai * x + Bi * u + Ci;
     cntrl_auth = Bi(2);     % supposed authority of control
     pr_acc = pr_dx(2);      % predicted acc
     acc_err = desired_acc - pr_acc;
     acc_sat = 1.0;          % how fast we want to converge to desired_acc
-    new_u = max(-1.0, min(1.0, u + acc_err / cntrl_auth / dt * acc_sat));
+    new_u = max(-1.0, min(1.0, u + acc_err / cntrl_auth * acc_sat));
     delta_u = new_u - u;
     pr_x = x + (Ai * x + Bi * new_u + Ci) .* dt;    % predicted x
-    pr_dx = pr_dx + delta_u * cntrl_auth * dt;
+    pr_dx = pr_dx + delta_u * cntrl_auth;
     % apply control
     u = new_u;
     

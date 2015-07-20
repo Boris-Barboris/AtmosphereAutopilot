@@ -318,6 +318,13 @@ namespace AtmosphereAutopilot
                 return;
             }
 
+            if (element_type == typeof(string))
+            {
+                // it's a toggle button
+                GUILayout.Label(att.value_name + ": " + (string)GetValue(element, obj));
+                return;
+            }
+
             GUILayout.BeginHorizontal();
             GUILayout.Label(att.value_name, GUIStyles.labelStyleLeft);
 

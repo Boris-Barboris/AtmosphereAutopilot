@@ -10,24 +10,12 @@ namespace AtmosphereAutopilot
 	/// <summary>
 	/// Controls angular velocity
 	/// </summary>
-	public abstract class AngularVelAdaptiveController : SIMOController
+	public abstract class AngularVelAdaptiveController : SISOController
 	{
 		protected int axis;
 
         protected InstantControlModel imodel;
-        protected MediumFlightModel mmodel;
 		protected AngularAccAdaptiveController acc_controller;
-
-
-		PController pid = new PController();
-
-		#region ControllerProperties
-
-		[AutoGuiAttr("KP", false, "G8")]
-		internal double KP { get { return pid.KP; } }
-
-		#endregion
-
 
 		/// <summary>
 		/// Create controller instance
@@ -48,20 +36,17 @@ namespace AtmosphereAutopilot
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
 		{
 			this.imodel = modules[typeof(InstantControlModel)] as InstantControlModel;
-			this.mmodel = modules[typeof(MediumFlightModel)] as MediumFlightModel;
 		}
 
 		protected override void OnActivate() 
         {
             imodel.Activate();
-            mmodel.Activate();
             acc_controller.Activate();
         }
 
         protected override void OnDeactivate()
         {
             imodel.Deactivate();
-            mmodel.Deactivate();
             acc_controller.Deactivate();
         }
 
@@ -70,8 +55,11 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("angular vel", false, "G8")]
         protected float vel;
 
-        [AutoGuiAttr("output", false, "G8")]
-        protected float output;
+        [AutoGuiAttr("output acceleration", false, "G8")]
+        protected float output_acc;
+
+        [AutoGuiAttr("Kp", true, "G8")]
+        protected float Kp = 1.0f;
 
 		/// <summary>
 		/// Main control function
@@ -80,29 +68,33 @@ namespace AtmosphereAutopilot
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
 		{
             vel = imodel.AngularVel(axis);				    // get angular velocity
-            double accel = imodel.AngularAcc(axis);		    // get angular acceleration
 
-            // Adapt KP, so that on max_angular_v it produces max_angular_dv * kp_acc factor output
-            if (mmodel.MaxAngularSpeed(axis) != 0.0)
-                pid.KP = kp_acc_factor * mmodel.MaxAngularAcc(axis) / mmodel.MaxAngularSpeed(axis);
+            float user_input = ControlUtils.get_neutralized_user_input(cntrl, axis);
 
-            double user_input = ControlUtils.get_neutralized_user_input(cntrl, axis);
+            // Moderate desired v by constructional limits
+            // max_v_construction = TODO
+            MaxVConstruction = max_v_construction * max_v_construction_k;
+
             if (user_input != 0.0)
-                desired_v = (float)(fbw_v_k * user_input * mmodel.MaxAngularSpeed(axis));      // user is interfering with control
+            {
+                // user is interfering with control
+                desired_v = user_input * MaxVConstruction;
+            }
             else
-                desired_v = target_value;                                           // control from above
+            {
+                // control from above
+                desired_v = Common.Clampf(target_value, MaxVConstruction);
+            }
             
-            desired_v = moderate_desired_v(desired_v);      // moderation stage
+            if (imodel.dyn_pressure >= 10.0)
+                desired_v = moderate_desired_v(desired_v);      // moderation stage
 
-            output = (float)Common.Clamp(pid.Control(vel, desired_v), fbw_dv_k * mmodel.MaxAngularAcc(axis));
-
-            float error = desired_v - vel;
-            proport = error * pid.KP;
+            output_acc = Kp * (desired_v - vel) / TimeWarp.fixedDeltaTime;            // produce output
 
 			// check if we're stable on given input value
             if (AutoTrim)
             {
-                if (Math.Abs(vel) < 5e-3)
+                if (Math.Abs(vel) < 5e-3f)
                 {
                     time_in_regime += TimeWarp.fixedDeltaTime;
                 }
@@ -111,39 +103,31 @@ namespace AtmosphereAutopilot
                     time_in_regime = 0.0;
                 }
 
-                if (time_in_regime >= 5.0)
+                if (time_in_regime >= 3.0)
                     ControlUtils.set_trim(cntrl, axis, imodel);
             }
 
-            acc_controller.ApplyControl(cntrl, output);
+            acc_controller.ApplyControl(cntrl, output_acc);
 
-            return output;
+            return output_acc;
 		}
+
+        protected float max_v_construction = 0.5f;
+
+        [VesselSerializable("max_v_construction_k")]
+        [AutoGuiAttr("Max v construct mult", true, "G8")]
+        protected float max_v_construction_k = 1.0f;
+
+        [AutoGuiAttr("Max V construct", false, "G8")]
+        public float MaxVConstruction { get; private set; }
 
         protected virtual float moderate_desired_v(float des_v) { return des_v; }
 
 
 		#region Parameters
 
-		[GlobalSerializable("fbw_v_k")]
-        [VesselSerializable("fbw_v_k")]
-        [AutoGuiAttr("moderation v k", true, "G6")]
-        protected float fbw_v_k = 1.0f;
-
-        [GlobalSerializable("fbw_dv_k")]
-        [VesselSerializable("fbw_dv_k")]
-        [AutoGuiAttr("moderation dv k", true, "G6")]
-        protected float fbw_dv_k = 1.0f;
-
-        [AutoGuiAttr("DEBUG proport", false, "G8")]
-        internal double proport { get; private set; }
-
         [AutoGuiAttr("DEBUG desired_v", false, "G8")]
         protected float desired_v;
-
-		[GlobalSerializable("kp_acc_factor")]
-		[AutoGuiAttr("KP acceleration factor", true, "G6")]
-        protected float kp_acc_factor = 0.5f;
 
         [GlobalSerializable("AutoTrim")]
         [AutoGuiAttr("AutoTrim", true, null)]
@@ -170,63 +154,164 @@ namespace AtmosphereAutopilot
 			this.acc_controller = modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
 		}
 
+        Matrix in_eq_A = new Matrix(2, 2);
+        Matrix in_eq_b = new Matrix(2, 1);
+        Matrix in_eq_x;
+
+        const float dgr2rad = (float)(Math.PI / 180.0);
+
+        [AutoGuiAttr("controllable_aoa", false, "G8")]
+        float controllable_aoa;
+
+        [AutoGuiAttr("controllable_v", false, "G8")]
+        float controllable_v;
+
+        [AutoGuiAttr("max_g_aoa", false, "G8")]
+        float max_g_aoa;
+
+        [AutoGuiAttr("max_g_v", false, "G8")]
+        float max_g_v;
+
+        [AutoGuiAttr("max_aoa_g", false, "G8")]
+        float max_aoa_g;
+
+        [AutoGuiAttr("max_aoa_v", false, "G8")]
+        float max_aoa_v;
+
         protected override float moderate_desired_v(float des_v)
         {
-            // limit it due to g-force limitations
-            float cur_g = (float)mmodel.GForce;
-            if (des_v * imodel.AoA(PITCH) > 0.0)
+            res_max_aoa = max_aoa * dgr2rad;
+            equilibr_max_v = MaxVConstruction;
+            float aoa = Math.Abs(imodel.AoA(axis));
+            if (moderate_aoa)
             {
-                // user is trying to increase AoA
-                max_g = fbw_g_k * 10.0f;
-                float g_relation = 1.0f;
-                float aoa_relation = 1.0f;
-                if (moderate_g)
-                    if (max_g > 1e-3f && cur_g >= 0.0f)
+                if (aoa < 0.26f)
+                {
+                    // get equilibrium aoa and angular_v for 1.0 input
+                    in_eq_A[0, 0] = imodel.pitch_rot_model.A[0, 0];
+                    in_eq_A[0, 1] = imodel.pitch_rot_model.A[0, 1];
+                    in_eq_A[1, 0] = imodel.pitch_rot_model.A[1, 0];
+                    in_eq_b[0, 0] = -imodel.pitch_rot_model.C[0, 0];
+                    in_eq_b[1, 0] = -imodel.pitch_rot_model.A[1, 2] - imodel.pitch_rot_model.B[1, 0] - imodel.pitch_rot_model.C[1, 0];
+                    in_eq_A.old_lu = true;
+                    try
                     {
-                        float stasis_angular_spd = max_g / (float)vessel.srfSpeed;
-                        float k = 1.0f - Common.Clampf(stasis_angular_spd / des_v, 0.0f, 1.0f);
-                        g_relation = k * cur_g / max_g;
+                        in_eq_x = in_eq_A.SolveWith(in_eq_b);
+                        if (in_eq_x != null)
+                        {
+                            res_max_aoa = Common.Clampf(res_max_aoa, (float)in_eq_x[0, 0]);
+                            equilibr_max_v = Common.Clampf(equilibr_max_v, (float)in_eq_x[1, 0]);
+                            controllable_aoa = Math.Abs((float)in_eq_x[0, 0]);
+                            controllable_v = Math.Abs((float)in_eq_x[1, 0]);
+                        }
                     }
-                if (moderate_aoa)
-                    if (fbw_max_aoa > 2.0)
+                    catch (MSingularException e)
                     {
-                        const float dgr_to_rad = (float)Math.PI / 180.0f;
-                        float max_aoa_rad = fbw_max_aoa * dgr_to_rad;
-                        aoa_relation = Math.Abs(imodel.AoA(PITCH)) / max_aoa_rad;
+                        // we won't try to moderate
+                        Debug.Log(e.Message + " " + e.StackTrace);
                     }
-                float max_k = Math.Max(aoa_relation, g_relation);
-                fbw_modifier = Common.Clampf(1.0f - max_k, 1.0f);
-                des_v *= fbw_modifier;
+                    
+                    // get equilibrium v for max_aoa aoa
+                    max_aoa_g = (float)(imodel.pitch_coeffs.Cl0 + imodel.pitch_coeffs.Cl1 * max_aoa * dgr2rad + imodel.pitch_gravity_acc);
+                    max_aoa_v = max_aoa_g / (float)vessel.srfSpeed;
+                }                
+                equilibr_max_v = Math.Min(equilibr_max_v, max_aoa_v);
+            }
+            if (moderate_g)
+            {
+                // get equilibrium aoa and angular v for max_g g-force
+                if (imodel.pitch_coeffs.Cl1 != 0.0)
+                {
+                    max_g_v = (max_g * 9.81f + (float)imodel.pitch_gravity_acc) / (float)vessel.srfSpeed;
+                    max_g_aoa = (float)((max_g * 9.81f - imodel.pitch_coeffs.Cl0) / imodel.pitch_coeffs.Cl1);
+                    res_max_aoa = Common.Clampf(res_max_aoa, max_g_aoa);
+                    equilibr_max_v = Math.Min(equilibr_max_v, max_g_v);
+                }                
+            }
+
+            // now get dynamical non-overshooting max v value
+            transit_max_v = MaxVConstruction;
+            if (aoa < 0.26f)
+            {
+                float new_dyn_max_v = Math.Min(
+                    (float)Math.Sqrt(res_max_aoa * (imodel.pitch_coeffs.k0 +
+                    imodel.pitch_coeffs.k1 * res_max_aoa / 2.0 + imodel.pitch_coeffs.k2 +
+                    imodel.reaction_torque[PITCH] / imodel.MOI[PITCH])),
+                    MaxVConstruction);
+                if (float.IsNaN(new_dyn_max_v))
+                {
+                    transit_max_v = old_dyn_max_v;
+                    Debug.Log("NaN in new_dyn_max_v, res_max_aoa = " + res_max_aoa.ToString("G8") +
+                        "; imodel.pitch_coeffs.k0 = " + imodel.pitch_coeffs.k0.ToString("G8") +
+                        "; imodel.pitch_coeffs.k1 = " + imodel.pitch_coeffs.k1.ToString("G8") +
+                        "; imodel.pitch_coeffs.k2 = " + imodel.pitch_coeffs.k2.ToString("G8") + 
+                        "; imodel.reaction_torque[PITCH] / imodel.MOI[PITCH] = " + 
+                        (imodel.reaction_torque[PITCH] / imodel.MOI[PITCH]).ToString("G8"));
+                }
+                else
+                {
+                    transit_max_v = new_dyn_max_v;
+                    old_dyn_max_v = transit_max_v;
+                }
+            }
+            else
+                if (old_dyn_max_v != 0.0f)
+                    transit_max_v = old_dyn_max_v;
+                else
+                    old_dyn_max_v = MaxVConstruction;
+
+            // Now saturate desired_v if needed
+            if ((moderate_g || moderate_aoa) && res_max_aoa != 0.0f)
+            {
+                float scaled_restrained_v;
+                float normalized_des_v = des_v / MaxVConstruction;
+                if (des_v >= vel)
+                {
+                    scaled_aoa = (res_max_aoa - imodel.AoA(axis)) / 2.0f / res_max_aoa;
+                    scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + equilibr_max_v * (1.0f - scaled_aoa),
+                        transit_max_v * normalized_des_v);
+                }
+                else
+                {
+                    scaled_aoa = (res_max_aoa + imodel.AoA(axis)) / 2.0f / res_max_aoa;
+                    scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa - equilibr_max_v * (1.0f - scaled_aoa),
+                        transit_max_v * normalized_des_v);
+                }
+                des_v = scaled_restrained_v;
             }
             return des_v;
         }
 
+        [AutoGuiAttr("transit_max_v", false, "G8")]
+        float transit_max_v;
+        
+        float old_dyn_max_v;
+
+        [AutoGuiAttr("model max aoa", false, "G8")]
+        public float res_max_aoa;
+
+        [AutoGuiAttr("equilibrium max v", false, "G8")]
+        public float equilibr_max_v;
+
+        [AutoGuiAttr("DEBUG scaled_aoa", false, "G8")]
+        float scaled_aoa;
+
         #region ModerationParameters
 
-        [GlobalSerializable("moderate_aoa")]
         [VesselSerializable("moderate_aoa")]
         [AutoGuiAttr("Moderate AoA", true, null)]
         public bool moderate_aoa = true;
 
-        [GlobalSerializable("moderate_g")]
         [VesselSerializable("moderate_g")]
         [AutoGuiAttr("Moderate G-force", true, null)]
         public bool moderate_g = true;
 
-        [VesselSerializable("fbw_g_k")]
-        [AutoGuiAttr("max g-force k", true, "G6")]
-        float fbw_g_k = 1.0f;
+        [VesselSerializable("max_aoa")]
+        [AutoGuiAttr("max AoA", true, "G6")]
+        float max_aoa = 15.0f;
 
-        [GlobalSerializable("fbw_max_aoa")]
-        [VesselSerializable("fbw_max_aoa")]
-        [AutoGuiAttr("max AoA degrees", true, "G6")]
-        float fbw_max_aoa = 15.0f;
-
-        [AutoGuiAttr("DEBUG g_fwb_modifier", false, "G8")]
-        float fbw_modifier;
-
-        [AutoGuiAttr("DEBUG max_g", false, "G8")]
-        float max_g;
+        [AutoGuiAttr("max G-force", true, "G8")]
+        float max_g = 12.0f;
 
         #endregion
     }

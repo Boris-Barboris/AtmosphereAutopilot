@@ -5,10 +5,9 @@ using System.Text;
 
 namespace AtmosphereAutopilot
 {
-    public sealed class SideslipController : SIMOController
+    public sealed class SideslipController : SISOController
     {
         InstantControlModel imodel;
-        MediumFlightModel mmodel;
         YawAngularVelocityController v_controller;
 
         PController pid = new PController();
@@ -19,31 +18,28 @@ namespace AtmosphereAutopilot
         public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
         {
             imodel = modules[typeof(InstantControlModel)] as InstantControlModel;
-            mmodel = modules[typeof(MediumFlightModel)] as MediumFlightModel;
             v_controller = modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
         }
 
         protected override void OnActivate()
         {
             imodel.Activate();
-            mmodel.Activate();
             v_controller.Activate();
         }
 
         protected override void OnDeactivate()
         {
             imodel.Deactivate();
-            mmodel.Deactivate();
             v_controller.Deactivate();
         }
 
         double time_in_regime = 0.0;
 
         [AutoGuiAttr("sideslip angle", false, "G8")]
-        protected float sideslip;
+        float sideslip;
 
         [AutoGuiAttr("output vel", false, "G8")]
-        protected float output;
+        float output;
 
         /// <summary>
         /// Main control function
@@ -55,12 +51,6 @@ namespace AtmosphereAutopilot
 
             sideslip = -imodel.AoA(YAW);
 
-            // Adapt KP, so that on max_angular_v it produces max_angular_dv * kp_acc factor output
-            if (mmodel.MaxAngularSpeed(YAW) != 0.0)
-            {
-                pid.KP = kp_vel_factor * fbw_max_sideslip / mmodel.MaxAngularSpeed(YAW);
-            }
-
             double user_input = ControlUtils.get_neutralized_user_input(cntrl, YAW);
             if (user_input != 0.0)
                 desired_sideslip = (float)(user_input * fbw_max_sideslip * degree_to_rad);
@@ -68,8 +58,6 @@ namespace AtmosphereAutopilot
                 desired_sideslip = target_value;
 
             desired_v = (float)pid.Control(sideslip, desired_sideslip);
-
-            output = Common.Clampf(desired_v, (float)mmodel.MaxAngularSpeed(YAW));
 
             float error = desired_sideslip - sideslip;
 

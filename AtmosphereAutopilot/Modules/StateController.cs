@@ -26,9 +26,9 @@ namespace AtmosphereAutopilot
 	/// <summary>
 	/// Flight control state controller with SIMO base class
 	/// </summary>
-	public abstract class SIMOController : AutopilotModule
+	public abstract class SISOController : AutopilotModule
 	{
-		protected SIMOController(Vessel cur_vessel, string module_name, int wnd_id)
+		protected SISOController(Vessel cur_vessel, string module_name, int wnd_id)
 			: base(cur_vessel, wnd_id, module_name)
 		{ }
 

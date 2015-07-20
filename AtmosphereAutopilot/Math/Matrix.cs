@@ -59,7 +59,7 @@ namespace AtmosphereAutopilot
             mat = new double[rows * cols];
         }
 
-        bool old_lu = false;
+        public bool old_lu = false;
 
         public static Matrix Realloc(int iRows, int iCols, ref Matrix storage)
         {
@@ -71,6 +71,7 @@ namespace AtmosphereAutopilot
                     storage.mat = new double[iRows * iCols];
                 storage.rows = iRows;
                 storage.cols = iCols;
+                storage.Fill(0.0);
                 storage.old_lu = true;
             }            
             return storage;

@@ -38,6 +38,12 @@ namespace AtmosphereAutopilot
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_pitch_ann);
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_roll_ann);
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_yaw_ann);
+            AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_pitch_lift);
+            AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_yaw_lift);
+            pitch_lift_trainer.linear_err_criteria = 0.05f;
+            pitch_lift_trainer.base_gen_weight = 0.5f;
+            yaw_lift_trainer.linear_err_criteria = 0.05f;
+            yaw_lift_trainer.base_gen_weight = 0.5f;
             AtmosphereAutopilot.Instance.BackgroundThread.Start();
 		}
 
@@ -48,6 +54,8 @@ namespace AtmosphereAutopilot
             AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_pitch_ann);
             AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_roll_ann);
             AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_yaw_ann);
+            AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_pitch_lift);
+            AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_yaw_lift);
 		}
 
 		static readonly int BUFFER_SIZE = 8;
@@ -127,24 +135,33 @@ namespace AtmosphereAutopilot
             update_moments();
 			update_velocity_acc();
             update_aoa();
+            update_dynamics();
             if (angular_acc_buf[0].Size > 0)
             {
                 update_model_acc();
                 update_training_inputs();
                 update_cpu();
             }
+            update_pitch_rot_model();
+            update_yaw_rot_model();
 		}
 
 
 
 		#region RotationUpdate
 
-        Vector3 angular_vel = Vector3.zero;
-        Vector3 MOI = Vector3.zero;
-        Vector3 AM = Vector3.zero;
-        Vector3 CoM = Vector3.zero;
+        public Vector3 angular_vel = Vector3.zero;
+        
+        [AutoGuiAttr("MOI", false, "G6")]
+        public Vector3 MOI = Vector3.zero;
 
-        [AutoGuiAttr("mass", false, "G6")]
+        public Vector3 AM = Vector3.zero;
+        public Vector3 CoM = Vector3.zero;
+
+        [AutoGuiAttr("Reaction wheels", false, "G6")]
+        public Vector3 reaction_torque = Vector3.zero;
+
+        [AutoGuiAttr("Vessel mass", false, "G6")]
         float sum_mass = 0.0f;
 
         // It's too expensive to iterate over all parts every physics frame, so we'll stick with 20 most massive
@@ -170,15 +187,31 @@ namespace AtmosphereAutopilot
         Vector3 partial_AM = Vector3.zero;
 
         const int FullMomentFreq = 40;
-        int cycle_counter = 0;
+        int moments_cycle_counter = 0;
 
         void update_moments()
         {
-            if (cycle_counter == 0)
+            if (moments_cycle_counter == 0)
+            {
                 get_moments(true);
+                reaction_torque = get_sas_authority();
+            }
             else
                 get_moments(false);
-            cycle_counter = (cycle_counter + 1) % FullMomentFreq;
+            moments_cycle_counter = (moments_cycle_counter + 1) % FullMomentFreq;
+        }
+
+        Vector3 get_sas_authority()
+        {
+            Vector3 res = Vector3.zero;
+            foreach (var rw in vessel.FindPartModulesImplementing<ModuleReactionWheel>())
+                if (rw.isEnabled)
+                {
+                    res.x += rw.PitchTorque;
+                    res.y += rw.RollTorque;
+                    res.z += rw.YawTorque;
+                }
+            return res;
         }
 
         void get_moments(bool all_parts)
@@ -203,7 +236,7 @@ namespace AtmosphereAutopilot
                     continue;
                 if (!part.isAttached || part.State == PartStates.DEAD)
                 {
-                    cycle_counter = 0;      // iterating over old part list
+                    moments_cycle_counter = 0;      // iterating over old part list
                     continue;
                 }
                 Quaternion part_to_root = part.partTransform.rotation * world_to_root;   // from part to root part rotation
@@ -280,6 +313,7 @@ namespace AtmosphereAutopilot
 							angular_v_buf[i].getLast(),
 							TimeWarp.fixedDeltaTime));
 			}
+            // update surface velocity
 		}
 
         public Vector3 up_srf_v;		// velocity, projected to vessel up direction
@@ -340,7 +374,7 @@ namespace AtmosphereAutopilot
             }
 		}
 
-        float far_exponential_blend(float prev, float desire)
+        public static float far_exponential_blend(float prev, float desire)
         {
             float error = desire - prev;
             if (Math.Abs(error * 20.0f) > 0.1f)
@@ -355,115 +389,180 @@ namespace AtmosphereAutopilot
 
 
 
-		#region ModelIdentification
+        #region DynamicsUpdate
+
+        [AutoGuiAttr("Lift acc", false, "G8")]
+        public double lift_acc = 0.0;
+
+        [AutoGuiAttr("Slide acc", false, "G8")]
+        public double slide_acc = 0.0;
+
+        Vector3d vess2planet;
+        double g_acc;
+
+        public double pitch_gravity_acc;
+        public double yaw_gravity_acc;
+
+        void update_dynamics()
+        {
+            dyn_pressure = vessel.atmDensity * vessel.srfSpeed * vessel.srfSpeed;
+
+            vess2planet = vessel.mainBody.position - vessel.GetWorldPos3D();
+            g_acc = vessel.mainBody.gMagnitudeAtCenter / vess2planet.sqrMagnitude;
+            double pitch_projection = Vector3d.Dot(-vessel.transform.forward, vess2planet.normalized);
+            double pitch_total_acc = Vector3d.Dot(vessel.acceleration, -vessel.transform.forward);
+            pitch_gravity_acc = g_acc * pitch_projection;
+            lift_acc = pitch_total_acc - pitch_gravity_acc;
+            double yaw_projection = Vector3d.Dot(vessel.transform.right, vess2planet.normalized);
+            double yaw_total_acc = Vector3d.Dot(vessel.acceleration, vessel.transform.right);
+            yaw_gravity_acc = g_acc * yaw_projection;
+            slide_acc = yaw_total_acc - yaw_gravity_acc;
+        }
+
+        #endregion
+
+
+
+        #region ModelIdentification
 
         public Vector3d model_acc = Vector3d.zero;
 
-        //SimpleAnn pitch_ann = new SimpleAnn(4, 2);
-        //SimpleAnn roll_ann = new SimpleAnn(4, 3);
-        //SimpleAnn yaw_ann = new SimpleAnn(4, 2);
-
-        LinApprox pitch_model = new LinApprox(2);
-        LinApprox roll_model = new LinApprox(4);
-        LinApprox yaw_model = new LinApprox(2);
+        LinApprox pitch_torque_model = new LinApprox(2);
+        LinApprox roll_torque_model = new LinApprox(4);
+        LinApprox yaw_torque_model = new LinApprox(2);
+        LinApprox pitch_lift_model = new LinApprox(1);
+        LinApprox yaw_lift_model = new LinApprox(1);
 
         const int IMM_BUF_SIZE = 10;
 
         OnlineLinTrainer pitch_trainer, roll_trainer, yaw_trainer;
+        OnlineLinTrainer pitch_lift_trainer, yaw_lift_trainer;
         OnlineLinTrainer[] trainers = new OnlineLinTrainer[3];
 
         void initialize_ann_tainers()
         {
-            pitch_trainer = new OnlineLinTrainer(pitch_model, IMM_BUF_SIZE, new int[] { 11, 11 },
+            pitch_trainer = new OnlineLinTrainer(pitch_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, pitch_input_method, pitch_output_method);
             trainers[0] = pitch_trainer;
-            roll_trainer = new OnlineLinTrainer(roll_model, IMM_BUF_SIZE, new int[] { 5, 5, 5, 5 },
+            roll_trainer = new OnlineLinTrainer(roll_torque_model, IMM_BUF_SIZE, new int[] { 5, 5, 5, 5 },
                 new double[] { -0.1, -0.1, -0.1, -0.05 }, new double[] { 0.1, 0.1, 0.1, 0.05 }, roll_input_method, roll_output_method);
             trainers[1] = roll_trainer;
-            yaw_trainer = new OnlineLinTrainer(yaw_model, IMM_BUF_SIZE, new int[] { 11, 11 },
+            yaw_trainer = new OnlineLinTrainer(yaw_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, yaw_input_method, yaw_output_method);
             trainers[2] = yaw_trainer;
+            pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11 },
+                new double[] { -0.1 }, new double[] { 0.1 }, pitch_lift_input_method, pitch_lift_output_method);
+            yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11 },
+                new double[] { -0.1 }, new double[] { 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
         }
 
-        double dyn_pressure = 1.0;
+        public double dyn_pressure = 1.0;
 
         void pitch_input_method(Vector v)
         {
-            v[0] = csurf_buf[PITCH].getLast();
-            v[1] = aoa_buf[PITCH].getFromTail(1);
+            v[0] = aoa_buf[PITCH].getFromTail(1);
+            v[1] = csurf_buf[PITCH].getLast();
         }
 
         double pitch_output_method()
         {
-            return angular_acc_buf[PITCH].getLast() / dyn_pressure * 1e4;
+            return (angular_acc_buf[PITCH].getLast() - reaction_torque[PITCH] * input_buf[PITCH].getLast() / MOI[PITCH]) / dyn_pressure * 1e4;
         }
 
         void roll_input_method(Vector v)
         {
-            v[0] = csurf_buf[ROLL].getLast();
-            v[1] = csurf_buf[YAW].getLast();
-            v[2] = angular_v_buf[ROLL].getFromTail(1);
-            v[3] = aoa_buf[YAW].getFromTail(1);
+            v[0] = aoa_buf[YAW].getFromTail(1);
+            v[1] = angular_v_buf[ROLL].getFromTail(1);
+            v[2] = csurf_buf[YAW].getLast();
+            v[3] = csurf_buf[ROLL].getLast();
         }
 
         double roll_output_method()
         {
-            return angular_acc_buf[ROLL].getLast() / dyn_pressure * 1e4;
+            return (angular_acc_buf[ROLL].getLast() - reaction_torque[ROLL] * input_buf[ROLL].getLast() / MOI[ROLL]) / dyn_pressure * 1e4;
         }
 
         void yaw_input_method(Vector v)
         {
-            v[0] = csurf_buf[YAW].getLast();
-            v[1] = aoa_buf[YAW].getFromTail(1);
+            v[0] = aoa_buf[YAW].getFromTail(1);
+            v[1] = csurf_buf[YAW].getLast();            
         }
 
         double yaw_output_method()
         {
-            return angular_acc_buf[YAW].getLast() / dyn_pressure * 1e4;
+            return (angular_acc_buf[YAW].getLast() - reaction_torque[YAW] * input_buf[YAW].getLast() / MOI[YAW]) / dyn_pressure * 1e4;
+        }
+
+        void pitch_lift_input_method(Vector v)
+        {
+            v[0] = aoa_buf[PITCH].getFromTail(1);
+        }
+
+        double pitch_lift_output_method()
+        {
+            return lift_acc / dyn_pressure * 1e3 * sum_mass;
+        }
+
+        void yaw_lift_input_method(Vector v)
+        {
+            v[0] = aoa_buf[YAW].getFromTail(1);
+        }
+
+        double yaw_lift_output_method()
+        {
+            return slide_acc / dyn_pressure * 1e3 * sum_mass;
         }
 
         // Training inputs updating
         void update_training_inputs()
         {
             int dt = (int)Math.Round(Time.fixedDeltaTime * 100.0f);
-            if (!vessel.LandedOrSplashed)
+            if (!vessel.LandedOrSplashed && dyn_pressure >= 10.0)
             {
-                dyn_pressure = vessel.atmDensity * vessel.srf_velocity.sqrMagnitude;
-                if (dyn_pressure < 10.0)
-                    return;
                 pitch_trainer.UpdateState(dt);
                 roll_trainer.UpdateState(dt);
                 yaw_trainer.UpdateState(dt);
+                pitch_lift_trainer.UpdateState(dt);
+                yaw_lift_trainer.UpdateState(dt);
             }
         }
 
         // Training methods
-        [AutoGuiAttr("pitch_cpu", false)]
+        //[AutoGuiAttr("pitch_cpu", false)]
         int pitch_cpu = 0;
 
-        [AutoGuiAttr("roll_cpu", false)]
-        int roll_cpu = 0;
+        //[AutoGuiAttr("roll_cpu", false)]
+        int roll_cpu = 5;
 
-        [AutoGuiAttr("yaw_cpu", false)]
+        //[AutoGuiAttr("yaw_cpu", false)]
         int yaw_cpu = 0;
 
-        [AutoGuiAttr("CPU per update", true)]
+        //[AutoGuiAttr("pitch_lift_cpu", false)]
+        int pitch_lift_cpu = 0;
+
+        //[AutoGuiAttr("yaw_lift_cpu", false)]
+        int yaw_lift_cpu = 5;
+
+        //[AutoGuiAttr("CPU per update", true)]
         int CPU_TIME_FOR_FIXEDUPDATE = 5;
 
-        const int DESCEND_COST = 10;
+        const int TORQUE_DESCEND_COST = 10;
+        const int LIFT_DESCEND_COST = 30;
 
         void update_cpu()
         {
             Interlocked.Add(ref pitch_cpu, CPU_TIME_FOR_FIXEDUPDATE);
             Interlocked.Add(ref roll_cpu, CPU_TIME_FOR_FIXEDUPDATE);
             Interlocked.Add(ref yaw_cpu, CPU_TIME_FOR_FIXEDUPDATE);
+            Interlocked.Add(ref pitch_lift_cpu, CPU_TIME_FOR_FIXEDUPDATE);
+            Interlocked.Add(ref yaw_lift_cpu, CPU_TIME_FOR_FIXEDUPDATE);
         }
 
         bool train_pitch_ann()
         {
-            if (pitch_cpu >= DESCEND_COST)
+            if (pitch_cpu >= TORQUE_DESCEND_COST)
             {
-                Interlocked.Add(ref pitch_cpu, -DESCEND_COST);
+                Interlocked.Add(ref pitch_cpu, -TORQUE_DESCEND_COST);
                 pitch_trainer.Train();
                 return true;
             }
@@ -472,9 +571,9 @@ namespace AtmosphereAutopilot
 
         bool train_roll_ann()
         {
-            if (roll_cpu >= DESCEND_COST)
+            if (roll_cpu >= TORQUE_DESCEND_COST)
             {
-                Interlocked.Add(ref roll_cpu, -DESCEND_COST);
+                Interlocked.Add(ref roll_cpu, -TORQUE_DESCEND_COST);
                 roll_trainer.Train();
                 return true;
             }
@@ -483,37 +582,146 @@ namespace AtmosphereAutopilot
 
         bool train_yaw_ann()
         {
-            if (yaw_cpu >= DESCEND_COST)
+            if (yaw_cpu >= TORQUE_DESCEND_COST)
             {
-                Interlocked.Add(ref yaw_cpu, -DESCEND_COST);
+                Interlocked.Add(ref yaw_cpu, -TORQUE_DESCEND_COST);
                 yaw_trainer.Train();
                 return true;
             }
             return false;
         }
 
+        bool train_pitch_lift()
+        {
+            if (pitch_lift_cpu >= LIFT_DESCEND_COST)
+            {
+                Interlocked.Add(ref pitch_lift_cpu, -LIFT_DESCEND_COST);
+                pitch_lift_trainer.Train();
+                return true;
+            }
+            return false;
+        }
+
+        bool train_yaw_lift()
+        {
+            if (yaw_lift_cpu >= LIFT_DESCEND_COST)
+            {
+                Interlocked.Add(ref yaw_lift_cpu, -LIFT_DESCEND_COST);
+                yaw_lift_trainer.Train();
+                return true;
+            }
+            return false;
+        }
+
         // Model evaluation
+        //Vector temp_v1 = new Vector(1);
         Vector temp_v2 = new Vector(2);
-        Vector temp_v3 = new Vector(3);
+        //Vector temp_v3 = new Vector(3);
         Vector temp_v4 = new Vector(4);
         void update_model_acc()
         {
             pitch_input_method(temp_v2);
-            pitch_model.update_from_training();
-            model_acc[PITCH] = pitch_model.eval(temp_v2) / 1e4 * dyn_pressure;
+            pitch_torque_model.update_from_training();
+            model_acc[PITCH] = pitch_torque_model.eval(temp_v2) / 1e4 * dyn_pressure;
             roll_input_method(temp_v4);
-            roll_model.update_from_training();
-            model_acc[ROLL] = roll_model.eval(temp_v4) / 1e4 * dyn_pressure;
+            roll_torque_model.update_from_training();
+            model_acc[ROLL] = roll_torque_model.eval(temp_v4) / 1e4 * dyn_pressure;
             yaw_input_method(temp_v2);
-            yaw_model.update_from_training();
-            model_acc[YAW] = yaw_model.eval(temp_v2) / 1e4 * dyn_pressure;
+            yaw_torque_model.update_from_training();
+            model_acc[YAW] = yaw_torque_model.eval(temp_v2) / 1e4 * dyn_pressure;
+            pitch_lift_model.update_from_training();
+            yaw_lift_model.update_from_training();
         }
 
 		#endregion
 
 
 
-		#region Serialization
+        #region RotationModels
+
+        public readonly LinearSystemModel pitch_rot_model = new LinearSystemModel(3, 1);
+        //public readonly LinearSystemModel roll_rot_model = new LinearSystemModel(3, 1);
+        public readonly LinearSystemModel yaw_rot_model = new LinearSystemModel(3, 1);
+
+        public struct LiftTorqCoeff
+        {
+            public double k0, k1, k2;
+            public double Cl0, Cl1;
+        }
+
+        public LiftTorqCoeff pitch_coeffs, yaw_coeffs;
+
+        void update_pitch_rot_model()
+        {
+            // Fill coeff structs
+            pitch_coeffs.Cl0 = pitch_lift_model.pars[0] / 1e3 * dyn_pressure / sum_mass;
+            pitch_coeffs.Cl1 = pitch_lift_model.pars[1] / 1e3 * dyn_pressure / sum_mass;
+            pitch_coeffs.k0 = pitch_torque_model.pars[0] / 1e4 * dyn_pressure;
+            pitch_coeffs.k1 = pitch_torque_model.pars[1] / 1e4 * dyn_pressure;
+            pitch_coeffs.k2 = pitch_torque_model.pars[2] / 1e4 * dyn_pressure;
+
+            // Fill linear model
+            Matrix A = pitch_rot_model.A;            
+            if (dyn_pressure >= 10.0)
+                A[0, 0] = -pitch_coeffs.Cl1 / vessel.srfSpeed;
+            else
+                A[0, 0] = 0.0;
+            A[0, 1] = 1.0;
+            A[1, 0] = pitch_coeffs.k1;
+            A[1, 2] = pitch_coeffs.k2 * (1.0 - 4.0);
+            A[2, 2] = -4.0;
+            Matrix B = pitch_rot_model.B;
+            B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.k2 * 4.0;
+            B[2, 0] = 4.0;
+            Matrix C = pitch_rot_model.C;
+            if (dyn_pressure >= 10.0)
+            {
+                C[0, 0] = -(pitch_gravity_acc + pitch_coeffs.Cl0) / vessel.srfSpeed;
+                C[1, 0] = pitch_coeffs.k0;
+            }
+            else
+            {
+                C[0, 0] = 0.0;
+                C[1, 0] = 0.0;
+            }
+            //Debug.Log("A =\r\n" + A.ToString() + "B =\r\n" + B.ToString() + "C =\r\n" + C.ToString());
+        }
+
+        void update_yaw_rot_model()
+        {
+            // Fill coeff structs
+            yaw_coeffs.Cl0 = yaw_lift_model.pars[0] / 1e3 * dyn_pressure / sum_mass;
+            yaw_coeffs.Cl1 = yaw_lift_model.pars[1] / 1e3 * dyn_pressure / sum_mass;
+            yaw_coeffs.k0 = yaw_torque_model.pars[0] / 1e4 * dyn_pressure;
+            yaw_coeffs.k1 = yaw_torque_model.pars[1] / 1e4 * dyn_pressure;
+            yaw_coeffs.k2 = yaw_torque_model.pars[2] / 1e4 * dyn_pressure;
+
+            // Fill linear model
+            Matrix A = yaw_rot_model.A;
+            if (dyn_pressure >= 10.0)
+                A[0, 0] = -yaw_coeffs.Cl1 / vessel.srfSpeed;
+            else
+                A[0, 0] = 0.0;
+            A[0, 1] = 1.0;
+            A[1, 0] = yaw_coeffs.k1;
+            A[1, 2] = yaw_coeffs.k2 * (1.0 - 4.0);
+            A[2, 2] = -4.0;
+            Matrix B = yaw_rot_model.B;
+            B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.k2 * 4.0;
+            B[2, 0] = 4.0;
+            Matrix C = yaw_rot_model.C;
+            if (dyn_pressure >= 10.0)
+                C[0, 0] = -(yaw_gravity_acc + yaw_coeffs.Cl0) / vessel.srfSpeed;
+            else
+                C[0, 0] = 0.0;
+            C[1, 0] = yaw_coeffs.k0;
+        }
+
+        #endregion
+
+
+
+        #region Serialization
 
         //protected override void OnDeserialize(ConfigNode node, Type attribute_type)
         //{
@@ -557,10 +765,17 @@ namespace AtmosphereAutopilot
 				GUILayout.Label("ang vel = " + angular_v_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label("ang acc = " + angular_acc_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label("AoA = " + (aoa_buf[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label("MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label("AngMoment = " + AM[i].ToString("G8"), GUIStyles.labelStyleLeft);
+                //GUILayout.Label("MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
+                //GUILayout.Label("AngMoment = " + AM[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 AutoGUI.AutoDrawObject(trainers[i]);
 			}
+            GUILayout.Space(5.0f);
+            GUILayout.Label("Pitch lift trainer", GUIStyles.labelStyleLeft);
+            AutoGUI.AutoDrawObject(pitch_lift_trainer);
+            GUILayout.Space(5.0f);
+            GUILayout.Label("Yaw lift trainer", GUIStyles.labelStyleLeft);
+            AutoGUI.AutoDrawObject(yaw_lift_trainer);
+            GUILayout.Space(5.0f);
             AutoGUI.AutoDrawObject(this);
 			GUILayout.EndVertical();
 			GUI.DragWindow();

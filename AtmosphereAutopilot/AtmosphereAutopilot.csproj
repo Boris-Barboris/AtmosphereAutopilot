@@ -64,8 +64,8 @@
     <Compile Include="Math\OnlineLinTrainer.cs" />
     <Compile Include="Math\SimpleAnn.cs" />
     <Compile Include="Math\VectorArray.cs" />
-    <Compile Include="Models\MediumFlightModel.cs" />
     <Compile Include="Math\OnlineAnnTrainer.cs" />
+    <Compile Include="Models\LinearSystemModel.cs" />
     <Compile Include="Modules\AngularAccAdaptiveController.cs" />
     <Compile Include="Models\InstantControlModel.cs" />
     <Compile Include="GUI\GUIStyles.cs" />

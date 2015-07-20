@@ -10,12 +10,11 @@ namespace AtmosphereAutopilot
 	/// <summary>
     /// Controls angular acceleration. Meant to be used by AngularVelAdaptiveController
 	/// </summary>
-	public abstract class AngularAccAdaptiveController : SIMOController
+	public abstract class AngularAccAdaptiveController : SISOController
 	{
 		protected int axis;
 
-		InstantControlModel imodel;
-        MediumFlightModel mmodel;
+		protected InstantControlModel imodel;
 
 		// Telemetry writers
 		StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, 
@@ -38,20 +37,17 @@ namespace AtmosphereAutopilot
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
 		{
 			this.imodel = modules[typeof(InstantControlModel)] as InstantControlModel;
-			this.mmodel = modules[typeof(MediumFlightModel)] as MediumFlightModel;
 		}
 
 		protected override void OnActivate()
 		{
             imodel.Activate();
-            mmodel.Activate();
 		}
 
         protected override void OnDeactivate()
         {
 			write_telemetry = false;
             imodel.Deactivate();
-            mmodel.Deactivate();
         }
 
         [AutoGuiAttr("angular acc", false, "G8")]
@@ -73,7 +69,6 @@ namespace AtmosphereAutopilot
             acc = (float)imodel.AngularAcc(axis);
             model_acc = (float)imodel.model_acc[axis];
             desired_acc = target_value;
-            float error = target_value - acc;
 
             if (write_telemetry)
             {
@@ -86,15 +81,7 @@ namespace AtmosphereAutopilot
 				density_writer.Write(vessel.atmDensity.ToString("G8") + ',');
             }
 
-			//float current_raw = output;
-			//float predicted_diff = desired_acc - imodel.prediction[axis];
-			//float required_control_diff = predicted_diff / (k_auth != 0.0f ? k_auth : 1.0f) / imodel.MOI[axis];
-
-			//output = Common.Clampf(current_raw + Common.Clampf(required_control_diff, max_input_deriv), 1.0f);
-            //ControlUtils.set_raw_output(cntrl, axis, output);
-
-			float prev_input = imodel.ControlInput(axis);
-			float cur_input_raw = ControlUtils.getControlFromState(cntrl, axis);
+            float cur_input_raw = get_required_input(cntrl, desired_acc);
 			output = cur_input_raw;
 
 			ControlUtils.set_raw_output(cntrl, axis, output);
@@ -104,6 +91,11 @@ namespace AtmosphereAutopilot
 
             return output;
 		}
+
+        protected virtual float get_required_input(FlightCtrlState cntrl, float target_value)
+        {
+            return ControlUtils.getControlFromState(cntrl, axis);
+        }
 
         [AutoGuiAttr("Csurf output", false, "G8")]
         protected float csurf_output { get { return imodel.ControlSurfPos(axis); } }
@@ -145,15 +137,12 @@ namespace AtmosphereAutopilot
                     }					
 				}
 			}
-		}
-		bool _write_telemetry = false;
-
-		#region Parameters
+		}		
+        bool _write_telemetry = false;
 
         [AutoGuiAttr("DEBUG desired acc", false, "G8")]
         internal float desired_acc { get; private set; }
 
-		#endregion
 	}
 
 
@@ -166,6 +155,29 @@ namespace AtmosphereAutopilot
         internal PitchAngularAccController(Vessel vessel)
             : base(vessel, "Adaptive elavator trimmer accel", 77821329, PITCH)
         { }
+
+        Matrix model_deriv;
+        Matrix cur_state = new Matrix(3, 1);
+        Matrix input_mat = new Matrix(1, 1);
+
+        [AutoGuiAttr("model_predicted_acc", false, "G8")]
+        double model_predicted_acc;
+
+        protected override float get_required_input(FlightCtrlState cntrl, float target_value)
+        {
+            if (imodel.pitch_rot_model.B[1, 0] == 0.0)
+                return base.get_required_input(cntrl, target_value);
+            cur_state[0, 0] = imodel.AoA(PITCH);
+            cur_state[1, 0] = imodel.AngularVel(PITCH);
+            cur_state[2, 0] = imodel.ControlSurfPos(PITCH);
+            input_mat[0, 0] = imodel.ControlInput(PITCH);
+            imodel.pitch_rot_model.eval(cur_state, input_mat, ref model_deriv);
+            model_predicted_acc = model_deriv[1, 0];
+            double acc_error = target_value - model_predicted_acc;
+            float new_input = (float)(input_mat[0, 0] + acc_error / imodel.pitch_rot_model.B[1, 0]);
+            new_input = Common.Clampf(new_input, 1.0f);
+            return new_input;
+        }
     }
 
 	public sealed class RollAngularAccController : AngularAccAdaptiveController

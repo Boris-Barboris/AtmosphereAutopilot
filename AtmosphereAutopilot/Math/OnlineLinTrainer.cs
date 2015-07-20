@@ -144,12 +144,12 @@ namespace AtmosphereAutopilot
                 if (input_view == null)
                     create_views();
                 update_singularity();
+                if (input_view != null)
+                    if (input_view.Count > 0)
+                    {
+                        linmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
+                    }
             }
-            if (input_view != null)
-                if (input_view.Count > 0)
-                {
-                    linmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
-                }
         }
 
         double max_output_value = 0.01;         // maximum absolute value of model output reached in past
@@ -248,7 +248,7 @@ namespace AtmosphereAutopilot
 
         // Linearity criteria
         [AutoGuiAttr("linear criteria", true)]
-        public volatile float linear_err_criteria = 0.002f;
+        public volatile float linear_err_criteria = 0.01f;
 
         [AutoGuiAttr("linear", false)]
         public volatile bool linear = false;
