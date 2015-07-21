@@ -192,8 +192,8 @@ namespace AtmosphereAutopilot
                     in_eq_A[0, 0] = imodel.pitch_rot_model.A[0, 0];
                     in_eq_A[0, 1] = imodel.pitch_rot_model.A[0, 1];
                     in_eq_A[1, 0] = imodel.pitch_rot_model.A[1, 0];
-                    in_eq_b[0, 0] = imodel.pitch_coeffs.Cl0 / vessel.srfSpeed;
-                    in_eq_b[1, 0] = -imodel.pitch_rot_model.A[1, 2] - imodel.pitch_rot_model.B[1, 0] - imodel.pitch_rot_model.C[1, 0];
+                    in_eq_b[0, 0] = - imodel.pitch_rot_model.C[0, 0];
+                    in_eq_b[1, 0] = - imodel.pitch_rot_model.A[1, 2] - imodel.pitch_rot_model.B[1, 0] - imodel.pitch_rot_model.C[1, 0];
                     in_eq_A.old_lu = true;
                     try
                     {
