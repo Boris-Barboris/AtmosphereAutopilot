@@ -59,7 +59,7 @@ namespace AtmosphereAutopilot
         protected float output_acc;
 
         [AutoGuiAttr("Kp", true, "G8")]
-        protected float Kp = 1.0f;
+        protected float Kp = 0.1f;
 
 		/// <summary>
 		/// Main control function
@@ -240,13 +240,16 @@ namespace AtmosphereAutopilot
                     MaxVConstruction);
                 if (float.IsNaN(new_dyn_max_v))
                 {
-                    transit_max_v = old_dyn_max_v;
-                    Debug.Log("NaN in new_dyn_max_v, res_max_aoa = " + res_max_aoa.ToString("G8") +
-                        "; imodel.pitch_coeffs.k0 = " + imodel.pitch_coeffs.k0.ToString("G8") +
-                        "; imodel.pitch_coeffs.k1 = " + imodel.pitch_coeffs.k1.ToString("G8") +
-                        "; imodel.pitch_coeffs.k2 = " + imodel.pitch_coeffs.k2.ToString("G8") + 
-                        "; imodel.reaction_torque[PITCH] / imodel.MOI[PITCH] = " + 
-                        (imodel.reaction_torque[PITCH] / imodel.MOI[PITCH]).ToString("G8"));
+                    if (old_dyn_max_v != 0.0f)
+                        transit_max_v = old_dyn_max_v;
+                    else
+                        old_dyn_max_v = MaxVConstruction;
+                    //Debug.Log("NaN in new_dyn_max_v, res_max_aoa = " + res_max_aoa.ToString("G8") +
+                    //    "; imodel.pitch_coeffs.k0 = " + imodel.pitch_coeffs.k0.ToString("G8") +
+                    //    "; imodel.pitch_coeffs.k1 = " + imodel.pitch_coeffs.k1.ToString("G8") +
+                    //    "; imodel.pitch_coeffs.k2 = " + imodel.pitch_coeffs.k2.ToString("G8") + 
+                    //    "; imodel.reaction_torque[PITCH] / imodel.MOI[PITCH] = " + 
+                    //    (imodel.reaction_torque[PITCH] / imodel.MOI[PITCH]).ToString("G8"));
                 }
                 else
                 {

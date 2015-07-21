@@ -40,7 +40,7 @@ B = zeros(3, 1);
 C = zeros(3, 1);
 %% run simulation
 init_aoa = -0.25;
-init_ang_vel = 0.3;
+init_ang_vel = 0.2;
 init_csurf = 0.0;
 init_pitch = 0.0;
 
@@ -54,9 +54,9 @@ cur_pitch = init_pitch;         % non-linear pitch angle
 A(1,1) = - Cl / mass / airspd;
 A(1,2) = 1.0;
 A(2,1) = k1 / moi;
-A(2,3) = k2 * (1.0 - 1.0 / csurf_exp_factor) / moi;
+A(2,3) = k2 * (1.0 - dt / csurf_exp_factor) / moi;
 A(3,3) = -1.0 / csurf_exp_factor;
-B(2,1) = (sas_torque + k2 / csurf_exp_factor) / moi;
+B(2,1) = (sas_torque + dt / csurf_exp_factor) / moi;
 B(3,1) = 1.0 / csurf_exp_factor;
 C(1,1) = g * cos(cur_pitch) / airspd;
 C(2,1) = k0 / moi;
@@ -101,7 +101,7 @@ steady_aoa_turn_v = (Cl * res_max_aoa / mass - g * cos(cur_pitch)) / airspd;
 res_max_v = min(res_max_v, steady_aoa_turn_v);
 
 % Controller gains
-Kacc = 0.1;
+Kacc = 0.2;
 dyn_max_v = max_v;
 
 % let's try naive value of dyn_max_v
@@ -186,17 +186,17 @@ first_cycle = true;
 % do simulate
 for frame = 2:simul_length+1
     % noise
-    k0_noise = (rand(1) - 0.5) * 0.005;
-    k1_noise = (rand(1) - 0.5) * 20.0;
-    k2_noise = (rand(1) - 0.5) * 30.0;
-    Cl_moise = (rand(1) - 0.5) * 300.0;
+    k0_noise = 0.0 * (rand(1) - 0.5) * 0.005;
+    k1_noise = 0.0 * (rand(1) - 0.5) * 10.0;
+    k2_noise = 0.0 * (rand(1) - 0.5) * 20.0;
+    Cl_moise = 0.0 * (rand(1) - 0.5) * 200.0;
     % update transfer matrixes
     A(1,1) = - (Cl + Cl_moise) / mass / airspd;
     A(1,2) = 1.0;
     A(2,1) = (k1 + k1_noise) / moi;
-    A(2,3) = (k2 + k2_noise) * (1.0 - 1.0 / csurf_exp_factor) / moi;
+    A(2,3) = (k2 + k2_noise) * (1.0 - dt / csurf_exp_factor) / moi;
     A(3,3) = -1.0 / csurf_exp_factor;
-    B(2,1) = (sas_torque + (k2 + k2_noise) / csurf_exp_factor) / moi;
+    B(2,1) = (sas_torque + (k2 + k2_noise) * dt / csurf_exp_factor) / moi;
     B(3,1) = 1.0 / csurf_exp_factor;
     C(1,1) = g * cos(cur_pitch) / airspd;
     C(2,1) = (k0 + k0_noise) / moi;
@@ -242,14 +242,14 @@ for frame = 2:simul_length+1
     end
     first_cycle = false;
     % get predicted state derivative
-    pr_dx = Ai * x + Bi * u + Ci;
-    cntrl_auth = Bi(2);     % supposed authority of control
+    pr_dx = A * x + B * u + Ci;
+    cntrl_auth = B(2);     % supposed authority of control
     pr_acc = pr_dx(2);      % predicted acc
     acc_err = desired_acc - pr_acc;
     acc_sat = 1.0;          % how fast we want to converge to desired_acc
     new_u = max(-1.0, min(1.0, u + acc_err / cntrl_auth * acc_sat));
     delta_u = new_u - u;
-    pr_x = x + (Ai * x + Bi * new_u + Ci) .* dt;    % predicted x
+    pr_x = x + (A * x + B * new_u + C) .* dt;    % predicted x
     pr_dx = pr_dx + delta_u * cntrl_auth;
     % apply control
     u = new_u;

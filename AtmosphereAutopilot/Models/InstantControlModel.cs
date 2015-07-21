@@ -42,6 +42,8 @@ namespace AtmosphereAutopilot
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_yaw_lift);
             pitch_lift_trainer.linear_err_criteria = 0.05f;
             yaw_lift_trainer.linear_err_criteria = 0.05f;
+            pitch_lift_trainer.base_gen_weight = 1.0f;
+            yaw_lift_trainer.base_gen_weight = 1.0f;
             AtmosphereAutopilot.Instance.BackgroundThread.Start();
 		}
 
@@ -203,7 +205,7 @@ namespace AtmosphereAutopilot
         {
             Vector3 res = Vector3.zero;
             foreach (var rw in vessel.FindPartModulesImplementing<ModuleReactionWheel>())
-                if (rw.isEnabled)
+                if (rw.isEnabled && rw.wheelState == ModuleReactionWheel.WheelState.Active)
                 {
                     res.x += rw.PitchTorque;
                     res.y += rw.RollTorque;
@@ -545,7 +547,7 @@ namespace AtmosphereAutopilot
         int CPU_TIME_FOR_FIXEDUPDATE = 5;
 
         const int TORQUE_DESCEND_COST = 10;
-        const int LIFT_DESCEND_COST = 30;
+        const int LIFT_DESCEND_COST = 10;
 
         void update_cpu()
         {
@@ -666,10 +668,10 @@ namespace AtmosphereAutopilot
                 A[0, 0] = 0.0;
             A[0, 1] = 1.0;
             A[1, 0] = pitch_coeffs.k1;
-            A[1, 2] = pitch_coeffs.k2 * (1.0 - 4.0);
+            A[1, 2] = pitch_coeffs.k2 * (1.0 - 4.0 * TimeWarp.fixedDeltaTime);
             A[2, 2] = -4.0;
             Matrix B = pitch_rot_model.B;
-            B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.k2 * 4.0;
+            B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.k2 * 4.0 * TimeWarp.fixedDeltaTime;
             B[2, 0] = 4.0;
             Matrix C = pitch_rot_model.C;
             if (dyn_pressure >= 10.0)
@@ -702,10 +704,10 @@ namespace AtmosphereAutopilot
                 A[0, 0] = 0.0;
             A[0, 1] = 1.0;
             A[1, 0] = yaw_coeffs.k1;
-            A[1, 2] = yaw_coeffs.k2 * (1.0 - 4.0);
+            A[1, 2] = yaw_coeffs.k2 * (1.0 - 4.0 * TimeWarp.fixedDeltaTime);
             A[2, 2] = -4.0;
             Matrix B = yaw_rot_model.B;
-            B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.k2 * 4.0;
+            B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.k2 * 4.0 * TimeWarp.fixedDeltaTime;
             B[2, 0] = 4.0;
             Matrix C = yaw_rot_model.C;
             if (dyn_pressure >= 10.0)
@@ -765,7 +767,8 @@ namespace AtmosphereAutopilot
                 GUILayout.Label("AoA = " + (aoa_buf[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
                 //GUILayout.Label("MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 //GUILayout.Label("AngMoment = " + AM[i].ToString("G8"), GUIStyles.labelStyleLeft);
-                AutoGUI.AutoDrawObject(trainers[i]);
+                if (i == 0)
+                    AutoGUI.AutoDrawObject(trainers[i]);
 			}
             GUILayout.Space(5.0f);
             GUILayout.Label("Pitch lift trainer", GUIStyles.labelStyleLeft);

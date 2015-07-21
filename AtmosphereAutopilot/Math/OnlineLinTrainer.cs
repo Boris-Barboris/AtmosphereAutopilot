@@ -184,8 +184,8 @@ namespace AtmosphereAutopilot
         // initial values for generalization space bounds
         readonly double[] init_lower_cell;
         readonly double[] init_upper_cell;
-        
-        [AutoGuiAttr("gen region decay", true)]
+
+        [AutoGuiAttr("gen region decay", true, "G8")]
         public volatile float gen_limits_decay = 0.002f;     // how fast generalization space is shrinking by itself
 
         void update_gen_space()
@@ -229,7 +229,7 @@ namespace AtmosphereAutopilot
             weight_view = new ListView<double>(imm_error_weights, gen_error_weights);
         }
 
-        [AutoGuiAttr("base gen weight", true)]
+        [AutoGuiAttr("base gen weight", true, "G8")]
         public volatile float base_gen_weight = 0.1f;
 
         // Age decay factors for weights of inputs
@@ -237,17 +237,17 @@ namespace AtmosphereAutopilot
         //[AutoGuiAttr("weight decay factor", false)]
         public volatile float weight_time_decay = 0.02f;
 
-        //[AutoGuiAttr("linear decay factor", true)]
+        [AutoGuiAttr("linear decay factor", true, "G8")]
         public volatile float linear_time_decay = 0.02f;
 
-        //[AutoGuiAttr("nonlinear decay factor", true)]
+        [AutoGuiAttr("nonlinear decay factor", true, "G8")]
         public volatile float nonlin_time_decay = 0.5f;
 
-        [AutoGuiAttr("min gen weight", true)]
+        [AutoGuiAttr("min gen weight", true, "G8")]
         public volatile float min_gen_weight = 0.015f;
 
         // Linearity criteria
-        [AutoGuiAttr("linear criteria", true)]
+        [AutoGuiAttr("linear criteria", true, "G8")]
         public volatile float linear_err_criteria = 0.005f;
 
         [AutoGuiAttr("linear", false)]
