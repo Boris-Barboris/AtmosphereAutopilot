@@ -101,7 +101,7 @@ steady_aoa_turn_v = (Cl * res_max_aoa / mass - g * cos(cur_pitch)) / airspd;
 res_max_v = min(res_max_v, steady_aoa_turn_v);
 
 % Controller gains
-Kacc = 0.2;
+Kacc = 1.0;
 dyn_max_v = max_v;
 
 % let's try naive value of dyn_max_v

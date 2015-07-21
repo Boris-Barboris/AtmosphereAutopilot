@@ -188,21 +188,31 @@ namespace AtmosphereAutopilot
                 if (aoa < 0.26f)
                 {
                     // get equilibrium aoa and angular_v for 1.0 input
+                    // assumption is made that engine and gravity is not interfering with aoa'
                     in_eq_A[0, 0] = imodel.pitch_rot_model.A[0, 0];
                     in_eq_A[0, 1] = imodel.pitch_rot_model.A[0, 1];
                     in_eq_A[1, 0] = imodel.pitch_rot_model.A[1, 0];
-                    in_eq_b[0, 0] = -imodel.pitch_rot_model.C[0, 0];
+                    in_eq_b[0, 0] = imodel.pitch_coeffs.Cl0 / vessel.srfSpeed;
                     in_eq_b[1, 0] = -imodel.pitch_rot_model.A[1, 2] - imodel.pitch_rot_model.B[1, 0] - imodel.pitch_rot_model.C[1, 0];
                     in_eq_A.old_lu = true;
                     try
                     {
                         in_eq_x = in_eq_A.SolveWith(in_eq_b);
-                        if (in_eq_x != null)
+                        if (in_eq_x[0, 0] < 0.0)
                         {
-                            res_max_aoa = Common.Clampf(res_max_aoa, (float)in_eq_x[0, 0]);
-                            equilibr_max_v = Common.Clampf(equilibr_max_v, (float)in_eq_x[1, 0]);
-                            controllable_aoa = Math.Abs((float)in_eq_x[0, 0]);
-                            controllable_v = Math.Abs((float)in_eq_x[1, 0]);
+                            // plane is unstable
+                            res_max_aoa = Math.Min(res_max_aoa, -0.9f * (float)in_eq_x[0, 0]);
+                            equilibr_max_v = Math.Min(equilibr_max_v, -0.9f * (float)in_eq_x[1, 0]);
+                            controllable_aoa = -0.9f * (float)in_eq_x[0, 0];
+                            controllable_v = -0.9f * (float)in_eq_x[1, 0];
+                        }
+                        else
+                        {
+                            // plane is stable
+                            res_max_aoa = Math.Min(res_max_aoa, (float)in_eq_x[0, 0]);
+                            equilibr_max_v = Math.Min(equilibr_max_v, (float)in_eq_x[1, 0]);
+                            controllable_aoa = (float)in_eq_x[0, 0];
+                            controllable_v = (float)in_eq_x[1, 0];
                         }
                     }
                     catch (MSingularException e)

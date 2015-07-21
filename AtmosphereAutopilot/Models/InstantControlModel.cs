@@ -133,6 +133,7 @@ namespace AtmosphereAutopilot
 		void OnPreAutopilot(FlightCtrlState state)		// workhorse function
 		{
             update_moments();
+            //update_engine_moments();
 			update_velocity_acc();
             update_aoa();
             update_dynamics();
@@ -195,6 +196,7 @@ namespace AtmosphereAutopilot
             {
                 get_moments(true);
                 reaction_torque = get_sas_authority();
+                get_engines();
             }
             else
                 get_moments(false);
@@ -214,10 +216,12 @@ namespace AtmosphereAutopilot
             return res;
         }
 
+        Quaternion world_to_root;
+
         void get_moments(bool all_parts)
         {
-            Quaternion world_to_root = vessel.rootPart.partTransform.rotation.Inverse();     // from world to root part rotation
-            CoM = vessel.findWorldCenterOfMass();
+            world_to_root = vessel.rootPart.partTransform.rotation.Inverse();     // from world to root part rotation
+            CoM = vessel.CoM;
             Vector3 world_v = vessel.rootPart.rb.velocity;
             if (all_parts)
             {
@@ -299,6 +303,72 @@ namespace AtmosphereAutopilot
             Matrix4x4 rot_matrix = Common.rotationMatrix(rotation);
             Matrix4x4 new_inert = (rot_matrix * inert_matrix) * rot_matrix.transpose;
             return new Vector3(new_inert[0, 0], new_inert[1, 1], new_inert[2, 2]);
+        }
+
+        class EngineMoment
+        {
+            public EngineMoment(ModuleEngines m)
+            {
+                engine = m;
+            }
+            public ModuleEngines engine;
+            public Vector3 moment;
+        }
+
+        List<EngineMoment> engines = new List<EngineMoment>();
+
+        void get_engines()
+        {
+            var eng_list = vessel.FindPartModulesImplementing<ModuleEngines>();
+            engines.Clear();
+            foreach (var eng in eng_list)
+            {
+                if (eng.isOperational || eng.finalThrust != 0.0f)
+                {
+                    engines.Add(new EngineMoment(eng));
+                }
+            }
+            engines_torque = Vector3.zero;
+            engines_thrust = Vector3.zero;
+            for (int i = 0; i < engines.Count; i++)
+            {
+                //engines[i].engine.OnCenterOfThrustQuery(quer);
+                Vector3 tpos = Vector3.zero;
+                Vector3 tdir = Vector3.zero;
+                foreach (var trans in engines[i].engine.thrustTransforms)
+                {
+                    tpos += trans.position - CoM;
+                    tdir -= trans.forward;
+                }
+                int tcount = engines[i].engine.thrustTransforms.Count;
+                tpos /= (float)tcount;
+                tdir /= (float)tcount;
+                tdir.Normalize();
+                Vector3 torque_moment = -Vector3.Cross(tpos, tdir);
+                engines[i].moment = new Vector3(
+                    Vector3.Dot(vessel.transform.right, torque_moment),
+                    Vector3.Dot(vessel.transform.up, torque_moment),
+                    Vector3.Dot(vessel.transform.forward, torque_moment));
+                engines_torque += engines[i].moment * engines[i].engine.finalThrust;
+                engines_thrust += engines[i].engine.finalThrust * tdir;
+            }
+            thrust_pitch_proj
+        }
+
+        //CenterOfThrustQuery quer = new CenterOfThrustQuery();
+
+        [AutoGuiAttr("engines torque", false, "G5")]
+        public Vector3 engines_torque;
+
+        [AutoGuiAttr("engines thrust", false, "G5")]
+        public Vector3 engines_thrust;
+
+        public float thrust_pitch_proj;
+        public float thrust_yaw_proj;
+
+        void update_engine_moments()
+        {
+            
         }
 
         void update_velocity_acc()
@@ -391,17 +461,26 @@ namespace AtmosphereAutopilot
 
         #region DynamicsUpdate
 
-        [AutoGuiAttr("Lift acc", false, "G8")]
+        [AutoGuiAttr("Lift acc", false, "G6")]
         public double lift_acc = 0.0;
 
-        [AutoGuiAttr("Slide acc", false, "G8")]
+        //[AutoGuiAttr("Slide acc", false, "G8")]
         public double slide_acc = 0.0;
 
         Vector3d vess2planet;
         double g_acc;
 
+        [AutoGuiAttr("pitch_gravity_acc", false, "G6")]
         public double pitch_gravity_acc;
+
+        [AutoGuiAttr("pitch_engine_acc", false, "G6")]
+        public double pitch_engine_acc;
+
+        //[AutoGuiAttr("yaw_gravity_acc", false, "G8")]
         public double yaw_gravity_acc;
+
+        //[AutoGuiAttr("yaw_engine_acc", false, "G8")]
+        public double yaw_engine_acc;
 
         void update_dynamics()
         {
@@ -409,14 +488,17 @@ namespace AtmosphereAutopilot
 
             vess2planet = vessel.mainBody.position - vessel.GetWorldPos3D();
             g_acc = vessel.mainBody.gMagnitudeAtCenter / vess2planet.sqrMagnitude;
-            double pitch_projection = Vector3d.Dot(-vessel.transform.forward, vess2planet.normalized);
-            double pitch_total_acc = Vector3d.Dot(vessel.acceleration, -vessel.transform.forward);
-            pitch_gravity_acc = g_acc * pitch_projection;
-            lift_acc = pitch_total_acc - pitch_gravity_acc;
-            double yaw_projection = Vector3d.Dot(vessel.transform.right, vess2planet.normalized);
+            Vector3d tangent_axis = -vessel.transform.forward;
+            double pitch_g_projection = Vector3d.Dot(tangent_axis, vess2planet.normalized);
+            double pitch_total_acc = Vector3d.Dot(vessel.acceleration, tangent_axis);
+            pitch_gravity_acc = g_acc * pitch_g_projection;
+            pitch_engine_acc = Vector3d.Dot(engines_thrust / sum_mass, tangent_axis);
+            lift_acc = pitch_total_acc - pitch_gravity_acc - pitch_engine_acc;
+            double yaw_g_projection = Vector3d.Dot(vessel.transform.right, vess2planet.normalized);
             double yaw_total_acc = Vector3d.Dot(vessel.acceleration, vessel.transform.right);
-            yaw_gravity_acc = g_acc * yaw_projection;
-            slide_acc = yaw_total_acc - yaw_gravity_acc;
+            yaw_gravity_acc = g_acc * yaw_g_projection;
+            yaw_engine_acc = Vector3d.Dot(engines_thrust / sum_mass, vessel.transform.right);
+            slide_acc = yaw_total_acc - yaw_gravity_acc - yaw_engine_acc;
         }
 
         #endregion
@@ -466,7 +548,8 @@ namespace AtmosphereAutopilot
 
         double pitch_output_method()
         {
-            return (angular_acc_buf[PITCH].getLast() - reaction_torque[PITCH] * input_buf[PITCH].getLast() / MOI[PITCH]) / dyn_pressure * 1e4;
+            return (angular_acc_buf[PITCH].getLast() - 
+                (reaction_torque[PITCH] * input_buf[PITCH].getLast() + engines_torque[PITCH]) / MOI[PITCH]) / dyn_pressure * 1e4;
         }
 
         void roll_input_method(Vector v)
@@ -479,7 +562,8 @@ namespace AtmosphereAutopilot
 
         double roll_output_method()
         {
-            return (angular_acc_buf[ROLL].getLast() - reaction_torque[ROLL] * input_buf[ROLL].getLast() / MOI[ROLL]) / dyn_pressure * 1e4;
+            return (angular_acc_buf[ROLL].getLast() -
+                (reaction_torque[ROLL] * input_buf[ROLL].getLast() + engines_torque[ROLL]) / MOI[ROLL]) / dyn_pressure * 1e4;
         }
 
         void yaw_input_method(Vector v)
@@ -490,7 +574,8 @@ namespace AtmosphereAutopilot
 
         double yaw_output_method()
         {
-            return (angular_acc_buf[YAW].getLast() - reaction_torque[YAW] * input_buf[YAW].getLast() / MOI[YAW]) / dyn_pressure * 1e4;
+            return (angular_acc_buf[YAW].getLast() -
+                (reaction_torque[YAW] * input_buf[YAW].getLast() + engines_torque[YAW]) / MOI[YAW]) / dyn_pressure * 1e4;
         }
 
         void pitch_lift_input_method(Vector v)
@@ -676,13 +761,13 @@ namespace AtmosphereAutopilot
             Matrix C = pitch_rot_model.C;
             if (dyn_pressure >= 10.0)
             {
-                C[0, 0] = -(pitch_gravity_acc + pitch_coeffs.Cl0) / vessel.srfSpeed;
-                C[1, 0] = pitch_coeffs.k0;
+                C[0, 0] = -(pitch_gravity_acc + pitch_coeffs.Cl0 + pitch_engine_acc) / vessel.srfSpeed;
+                C[1, 0] = pitch_coeffs.k0 + engines_torque[PITCH] / MOI[PITCH];
             }
             else
             {
                 C[0, 0] = 0.0;
-                C[1, 0] = 0.0;
+                C[1, 0] = engines_torque[PITCH] / MOI[PITCH];
             }
             //Debug.Log("A =\r\n" + A.ToString() + "B =\r\n" + B.ToString() + "C =\r\n" + C.ToString());
         }
@@ -711,7 +796,7 @@ namespace AtmosphereAutopilot
             B[2, 0] = 4.0;
             Matrix C = yaw_rot_model.C;
             if (dyn_pressure >= 10.0)
-                C[0, 0] = -(yaw_gravity_acc + yaw_coeffs.Cl0) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_coeffs.Cl0 + yaw_engine_acc) / vessel.srfSpeed;
             else
                 C[0, 0] = 0.0;
             C[1, 0] = yaw_coeffs.k0;
@@ -774,9 +859,9 @@ namespace AtmosphereAutopilot
             GUILayout.Label("Pitch lift trainer", GUIStyles.labelStyleLeft);
             AutoGUI.AutoDrawObject(pitch_lift_trainer);
             GUILayout.Space(5.0f);
-            GUILayout.Label("Yaw lift trainer", GUIStyles.labelStyleLeft);
-            AutoGUI.AutoDrawObject(yaw_lift_trainer);
-            GUILayout.Space(5.0f);
+            //GUILayout.Label("Yaw lift trainer", GUIStyles.labelStyleLeft);
+            //AutoGUI.AutoDrawObject(yaw_lift_trainer);
+            //GUILayout.Space(5.0f);
             AutoGUI.AutoDrawObject(this);
 			GUILayout.EndVertical();
 			GUI.DragWindow();
