@@ -151,12 +151,12 @@ namespace AtmosphereAutopilot
 
         Vector3 angular_vel = Vector3.zero;
         
-        [AutoGuiAttr("MOI", false, "G6")]
+        //[AutoGuiAttr("MOI", false, "G6")]
         public Vector3 MOI = Vector3.zero;
 
         public Vector3 AM = Vector3.zero;
 
-        [AutoGuiAttr("CoM", false, "G6")]
+        //[AutoGuiAttr("CoM", false, "G6")]
         public Vector3 CoM = Vector3.zero;
 
         [AutoGuiAttr("Vessel mass", false, "G6")]
@@ -187,7 +187,7 @@ namespace AtmosphereAutopilot
         const int FullMomentFreq = 40;      // with standard 0.025 sec fixedDeltaTime it gives freq around 1 Hz
         int moments_cycle_counter = 0;
 
-        [AutoGuiAttr("Reaction wheels", false, "G6")]
+        //[AutoGuiAttr("Reaction wheels", false, "G6")]
         public Vector3 reaction_torque = Vector3.zero;
 
         void update_moments()
@@ -445,10 +445,10 @@ namespace AtmosphereAutopilot
             }
         }
 
-        [AutoGuiAttr("engines torque", false, "G5")]
+        //[AutoGuiAttr("engines torque", false, "G5")]
         public Vector3 engines_torque;
 
-        [AutoGuiAttr("engines thrust", false, "G5")]
+        //[AutoGuiAttr("engines thrust", false, "G5")]
         public Vector3 engines_thrust;
 
         float abs_thrust;
@@ -486,10 +486,10 @@ namespace AtmosphereAutopilot
 
         Vector3 prev_engines_torque;
 
-        [AutoGuiAttr("engines_torque_k0", false, "G6")]
+        //[AutoGuiAttr("engines_torque_k0", false, "G6")]
         Vector3 engines_torque_k0;
 
-        [AutoGuiAttr("engines_torque_k1", false, "G6")]
+        //[AutoGuiAttr("engines_torque_k1", false, "G6")]
         Vector3 engines_torque_k1;
 
         // Stupid linear authority of gimbals
@@ -513,7 +513,7 @@ namespace AtmosphereAutopilot
                     }
                     else
                     {
-                        float k1 = engines_torque_k1[axis];
+                        float k1 = engines_torque_k1[axis] / abs_thrust;
                         float k0 = scaled_cur_torque[axis] - cur_cntrl * k1;
                         engines_torque_k0[axis] = k0 * abs_thrust;
                     }
@@ -537,7 +537,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Lift acc", false, "G6")]
         public double lift_acc = 0.0;
 
-        [AutoGuiAttr("Slide acc", false, "G8")]
+        //[AutoGuiAttr("Slide acc", false, "G8")]
         public double slide_acc = 0.0;
 
         Vector3d vess2planet;
@@ -607,10 +607,22 @@ namespace AtmosphereAutopilot
             trainers[2] = yaw_trainer;
             pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11 },
                 new double[] { -0.1 }, new double[] { 0.1 }, pitch_lift_input_method, pitch_lift_output_method);
-            pitch_lift_trainer.base_gen_weight = 1.0f;
+            pitch_lift_trainer.base_gen_weight = 10.0f;
+            pitch_lift_trainer.max_value_decay = 0.0002f;
+            pitch_lift_trainer.gen_limits_decay = 0.0005f;
+            pitch_lift_trainer.linear_time_decay = 0.003f;
+            pitch_lift_trainer.nonlin_time_decay = 0.05f;
+            pitch_lift_trainer.min_gen_weight = 0.05f;
+            pitch_lift_trainer.linear_err_criteria = 0.5f;
             yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11 },
                 new double[] { -0.1 }, new double[] { 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
-            yaw_lift_trainer.base_gen_weight = 1.0f;
+            yaw_lift_trainer.base_gen_weight = 10.0f;
+            yaw_lift_trainer.max_value_decay = 0.0002f;
+            yaw_lift_trainer.gen_limits_decay = 0.0005f;
+            yaw_lift_trainer.linear_time_decay = 0.003f;
+            yaw_lift_trainer.nonlin_time_decay = 0.05f;
+            yaw_lift_trainer.min_gen_weight = 0.05f;
+            yaw_lift_trainer.linear_err_criteria = 0.5f;
         }
 
         /// <summary>
@@ -941,10 +953,10 @@ namespace AtmosphereAutopilot
                 //if (i == 0)
                 //    AutoGUI.AutoDrawObject(trainers[i]);
 			}
-            //GUILayout.Space(5.0f);
-            //GUILayout.Label("Pitch lift trainer", GUIStyles.labelStyleLeft);
-            //AutoGUI.AutoDrawObject(pitch_lift_trainer);
-            //GUILayout.Space(5.0f);
+            GUILayout.Space(5.0f);
+            GUILayout.Label("Pitch lift trainer", GUIStyles.labelStyleLeft);
+            AutoGUI.AutoDrawObject(pitch_lift_trainer);
+            GUILayout.Space(5.0f);
             //GUILayout.Label("Yaw lift trainer", GUIStyles.labelStyleLeft);
             //AutoGUI.AutoDrawObject(yaw_lift_trainer);
             //GUILayout.Space(5.0f);
