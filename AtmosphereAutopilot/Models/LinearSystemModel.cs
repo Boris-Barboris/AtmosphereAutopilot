@@ -43,5 +43,16 @@ namespace AtmosphereAutopilot
             Matrix.Add(Ax, Bu, ref AxBu);
             Matrix.Add(AxBu, C, ref state_deriv);
         }
+
+        public double eval_row(int row, Matrix state, Matrix input)
+        {
+            double res = 0.0;
+            for (int i = 0; i < A.cols; i++)
+                res += A[row, i] * state[i, 0];
+            for (int i = 0; i < B.cols; i++)
+                res += B[row, i] * input[i, 0];
+            res += C[row, 0];
+            return res;
+        }
     }
 }

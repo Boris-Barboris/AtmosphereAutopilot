@@ -186,7 +186,7 @@ namespace AtmosphereAutopilot
         readonly double[] init_upper_cell;
 
         [AutoGuiAttr("gen region decay", true, "G8")]
-        public volatile float gen_limits_decay = 0.002f;     // how fast generalization space is shrinking by itself
+        public volatile float gen_limits_decay = 0.001f;     // how fast generalization space is shrinking by itself
 
         void update_gen_space()
         {
@@ -244,11 +244,11 @@ namespace AtmosphereAutopilot
         public volatile float nonlin_time_decay = 0.5f;
 
         [AutoGuiAttr("min gen weight", true, "G8")]
-        public volatile float min_gen_weight = 0.015f;
+        public volatile float min_gen_weight = 0.005f;
 
         // Linearity criteria
         [AutoGuiAttr("linear criteria", true, "G8")]
-        public volatile float linear_err_criteria = 0.005f;
+        public volatile float linear_err_criteria = 0.05f;
 
         [AutoGuiAttr("linear", false)]
         public volatile bool linear = false;
@@ -257,17 +257,16 @@ namespace AtmosphereAutopilot
         {
             if (imm_training_inputs.Size > 0)
             {
-                double total_error = 0.0;
+                double max_error = 0.0;
                 for (int i = 0; i < imm_training_inputs.Size; i++)
                 {
                     Vector input = imm_training_inputs[i];
                     double true_output = imm_training_outputs[i];
                     double lin_output = linmodel.eval_training(input);
                     double scaled_err = (lin_output - true_output) / max_output_value;
-                    total_error += scaled_err * scaled_err;
+                    max_error = Math.Max(max_error, Math.Abs(scaled_err));
                 }
-                total_error /= (double)imm_training_inputs.Size;
-                linear = total_error < linear_err_criteria;
+                linear = max_error < linear_err_criteria;
                 if (linear)
                     weight_time_decay = linear_time_decay;
                 else

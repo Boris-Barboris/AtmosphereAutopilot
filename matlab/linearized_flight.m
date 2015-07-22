@@ -7,7 +7,7 @@ run('import_telemetry');
 %% prepare data structures
 
 % GLOBAL TRAINING ENVIRONMENT
-global_inputs = [v; control];
+global_inputs = [aoa; control];
 norm_acc = acc .* 2e4 ./ p ./ airspd.^2;      % divide acceleration by dynamic pressure
 %norm_smoothed_acc = smoothed_acc .* 1e4 ./ p ./ airspd.^2;
 global_outputs = norm_acc;
@@ -36,7 +36,7 @@ gen_time_decay_linear = 2.0;
 gen_time_decay_nonlinear = 50.0;
 max_age = 30.0;
 gen_importance = 0.1;           % general error weight of generalization space
-gen_min_weight = 0.015;
+gen_min_weight = 0.005;
 temp = cumprod(gen_buf_dims);   % temp array for deriving a linear size of generalization buffer
 gen_buf_size = temp(end);
 gen_buf_input = zeros(input_count, gen_buf_size) + NaN;
@@ -46,7 +46,7 @@ gen_linear_index = 0;
 gen_count = 0;
 
 % linearization chech settings
-linear_err_criteria = 0.002;
+linear_err_criteria = 0.05;
 max_global_output = 0.01;
 max_global_output_decay = 0.2;
 
@@ -117,7 +117,9 @@ for frame = 1:length(global_inputs)
     imm_lin_outputs = [zeros(imm_buf_count,1) + 1.0, imm_buf_input(:,1:imm_buf_count).'] * lin_params.';
     new_sqr_err = meansqr((imm_lin_outputs.' - imm_buf_output(1:imm_buf_count)) ./...
         max_global_output);
-    if new_sqr_err < linear_err_criteria
+    new_max_abs_error = max(abs((imm_lin_outputs.' - imm_buf_output(1:imm_buf_count)) ./...
+        max_global_output));
+    if new_max_abs_error < linear_err_criteria
         gen_time_decay = gen_time_decay_linear;
         linear_bool(frame) = 0.1;
     else

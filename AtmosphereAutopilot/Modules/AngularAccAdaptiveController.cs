@@ -50,13 +50,13 @@ namespace AtmosphereAutopilot
             imodel.Deactivate();
         }
 
-        [AutoGuiAttr("angular acc", false, "G8")]
+        [AutoGuiAttr("angular acc", false, "G6")]
         protected float acc;
 
         //[AutoGuiAttr("model acc", false, "G8")]
         //protected float model_acc;
 
-        [AutoGuiAttr("output", false, "G8")]
+        [AutoGuiAttr("output", false, "G6")]
         protected float output;
 
 		/// <summary>
@@ -97,7 +97,7 @@ namespace AtmosphereAutopilot
             return ControlUtils.getControlFromState(cntrl, axis);
         }
 
-        [AutoGuiAttr("Csurf output", false, "G8")]
+        [AutoGuiAttr("Csurf output", false, "G6")]
         protected float csurf_output { get { return imodel.ControlSurfPos(axis); } }
 
         [AutoGuiAttr("Write telemetry", true)]
@@ -153,10 +153,9 @@ namespace AtmosphereAutopilot
     public sealed class PitchAngularAccController : AngularAccAdaptiveController
     {
         internal PitchAngularAccController(Vessel vessel)
-            : base(vessel, "Adaptive elavator trimmer accel", 77821329, PITCH)
+            : base(vessel, "Pitch ang acc controller", 77821329, PITCH)
         { }
 
-        Matrix model_deriv;
         Matrix cur_state = new Matrix(3, 1);
         Matrix input_mat = new Matrix(1, 1);
 
@@ -165,17 +164,21 @@ namespace AtmosphereAutopilot
 
         protected override float get_required_input(FlightCtrlState cntrl, float target_value)
         {
-            if (imodel.pitch_rot_model.B[1, 0] == 0.0)
-                return base.get_required_input(cntrl, target_value);
+            double authority = imodel.pitch_rot_model.B[1, 0];
+            // check if we have inadequate model authority
+            if (Math.Abs(authority) < 1e-4)
+                return cntrl.pitch;
+
             cur_state[0, 0] = imodel.AoA(PITCH);
             cur_state[1, 0] = imodel.AngularVel(PITCH);
             cur_state[2, 0] = imodel.ControlSurfPos(PITCH);
             input_mat[0, 0] = imodel.ControlInput(PITCH);
-            imodel.pitch_rot_model.eval(cur_state, input_mat, ref model_deriv);
-            model_predicted_acc = model_deriv[1, 0];
-            double acc_error = target_value - model_predicted_acc;
-            float new_input = (float)(input_mat[0, 0] + acc_error / imodel.pitch_rot_model.B[1, 0]);
+            double cur_acc_prediction = imodel.pitch_rot_model.eval_row(1, cur_state, input_mat);
+            double acc_error = target_value - cur_acc_prediction;
+            float new_input = (float)(input_mat[0, 0] + acc_error / authority);
             new_input = Common.Clampf(new_input, 1.0f);
+            model_predicted_acc = cur_acc_prediction + authority * (new_input - input_mat[0, 0]);
+
             return new_input;
         }
     }
@@ -183,14 +186,14 @@ namespace AtmosphereAutopilot
 	public sealed class RollAngularAccController : AngularAccAdaptiveController
 	{
 		internal RollAngularAccController(Vessel vessel)
-			: base(vessel, "Adaptive roll trimmer accel", 77821330, ROLL)
+            : base(vessel, "Roll ang acc controller", 77821330, ROLL)
 		{ }
 	}
 
 	public sealed class YawAngularAccController : AngularAccAdaptiveController
 	{
 		internal YawAngularAccController(Vessel vessel)
-			: base(vessel, "Adaptive yaw trimmer accel", 77821331, YAW)
+            : base(vessel, "Yaw ang acc controller", 77821331, YAW)
 		{ }
 	}
 
