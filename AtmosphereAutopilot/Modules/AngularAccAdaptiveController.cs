@@ -53,8 +53,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("angular acc", false, "G8")]
         protected float acc;
 
-        [AutoGuiAttr("model acc", false, "G8")]
-        protected float model_acc;
+        //[AutoGuiAttr("model acc", false, "G8")]
+        //protected float model_acc;
 
         [AutoGuiAttr("output", false, "G8")]
         protected float output;
@@ -67,7 +67,7 @@ namespace AtmosphereAutopilot
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
 		{
             acc = (float)imodel.AngularAcc(axis);
-            model_acc = (float)imodel.model_acc[axis];
+            //model_acc = (float)imodel.model_acc[axis];
             desired_acc = target_value;
 
             if (write_telemetry)
@@ -75,7 +75,7 @@ namespace AtmosphereAutopilot
                 desire_acc_writer.Write(target_value.ToString("G8") + ',');
                 acc_writer.Write(acc.ToString("G8") + ',');
                 v_writer.Write(imodel.AngularVel(axis).ToString("G8") + ',');
-                prediction_writer.Write(model_acc.ToString("G8") + ',');
+                //prediction_writer.Write(model_acc.ToString("G8") + ',');
 				aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');
 				airspd_writer.Write((imodel.up_srf_v + imodel.fwd_srf_v).magnitude.ToString("G8") + ',');
 				density_writer.Write(vessel.atmDensity.ToString("G8") + ',');
@@ -114,7 +114,7 @@ namespace AtmosphereAutopilot
                         v_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/v.csv");
                         acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/acc.csv");
                         desire_acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/desire.csv");
-                        prediction_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/predict.csv");
+                        //prediction_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/predict.csv");
 						aoa_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/aoa.csv");
 						airspd_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/airspd.csv");
 						density_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/density.csv");
@@ -129,7 +129,7 @@ namespace AtmosphereAutopilot
                         v_writer.Close();
                         acc_writer.Close();
                         desire_acc_writer.Close();
-                        prediction_writer.Close();
+                        //prediction_writer.Close();
 						aoa_writer.Close();
 						airspd_writer.Close();
 						density_writer.Close();
