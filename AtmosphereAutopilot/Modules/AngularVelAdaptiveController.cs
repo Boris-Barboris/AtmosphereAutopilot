@@ -224,7 +224,7 @@ namespace AtmosphereAutopilot
             res_equilibr_v_lower = -MaxVConstruction;
             float cur_aoa = Math.Abs(imodel.AoA(axis));
 
-            if (moderate_aoa && imodel.dyn_pressure > 10.0)
+            if (moderate_aoa && imodel.dyn_pressure > 100.0)
             {
                 bool stability_region = false;
                 res_max_aoa = rad_max_aoa;
@@ -311,7 +311,7 @@ namespace AtmosphereAutopilot
                 }
             }
 
-            if (moderate_g && imodel.dyn_pressure > 10.0)
+            if (moderate_g && imodel.dyn_pressure > 100.0)
             {
                 if (imodel.pitch_rot_model.A[0, 0] != 0.0 && cur_aoa < 0.26)
                 {
@@ -355,7 +355,7 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
-                    transit_max_v = new_dyn_max_v / 2.0f;
+                    transit_max_v = new_dyn_max_v / 4.0f;
                     old_dyn_max_v = transit_max_v;
                 }
             }
@@ -423,7 +423,7 @@ namespace AtmosphereAutopilot
         float max_aoa = 15.0f;
 
         [AutoGuiAttr("max G-force", true, "G6")]
-        float max_g_force = 12.0f;
+        float max_g_force = 10.0f;
 
         #endregion
     }

@@ -617,14 +617,24 @@ namespace AtmosphereAutopilot
         void initialize_ann_tainers()
         {
             pitch_trainer = new OnlineLinTrainer(pitch_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
-                new double[] { -0.1, -0.2 }, new double[] { 0.1, 0.2 }, pitch_input_method, pitch_output_method);
+                new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, pitch_input_method, pitch_output_method);
+            pitch_trainer.base_gen_weight = 5.0f;
+            pitch_trainer.max_value_decay = 0.0005f;
+            pitch_trainer.gen_limits_decay = 0.0005f;
+            pitch_trainer.linear_time_decay = 0.003f;
+            pitch_trainer.nonlin_time_decay = 0.05f;
+            pitch_trainer.min_gen_weight = 0.05f;
+            pitch_trainer.linear_err_criteria = 0.5f;
             trainers[0] = pitch_trainer;
+
             roll_trainer = new OnlineLinTrainer(roll_torque_model, IMM_BUF_SIZE, new int[] { 5, 5, 5, 5 },
                 new double[] { -0.1, -0.1, -0.1, -0.05 }, new double[] { 0.1, 0.1, 0.1, 0.05 }, roll_input_method, roll_output_method);
             trainers[1] = roll_trainer;
+
             yaw_trainer = new OnlineLinTrainer(yaw_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.2 }, new double[] { 0.1, 0.2 }, yaw_input_method, yaw_output_method);
             trainers[2] = yaw_trainer;
+
             pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11 },
                 new double[] { -0.1 }, new double[] { 0.1 }, pitch_lift_input_method, pitch_lift_output_method);
             pitch_lift_trainer.base_gen_weight = 10.0f;
@@ -634,6 +644,7 @@ namespace AtmosphereAutopilot
             pitch_lift_trainer.nonlin_time_decay = 0.05f;
             pitch_lift_trainer.min_gen_weight = 0.05f;
             pitch_lift_trainer.linear_err_criteria = 0.5f;
+
             yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11 },
                 new double[] { -0.1 }, new double[] { 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
             yaw_lift_trainer.base_gen_weight = 10.0f;
