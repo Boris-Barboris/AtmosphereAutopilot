@@ -93,7 +93,7 @@ namespace AtmosphereAutopilot
                 }
 
                 if (time_in_regime >= 5.0)
-                    ControlUtils.set_trim(cntrl, YAW, imodel);
+                    ControlUtils.set_trim(YAW, imodel.ControlInputHistory(YAW).Average());
             }
 
             return output;

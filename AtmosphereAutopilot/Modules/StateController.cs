@@ -110,30 +110,18 @@ namespace AtmosphereAutopilot
             }
         }
 
-        public static void set_trim(FlightCtrlState state, int axis, InstantControlModel model)
+        public static void set_trim(int axis, float value)
         {
-            //switch (axis)
-            //{
-            //    case PITCH:
-            //        FlightInputHandler.state.pitchTrim = model.ControlInputHistory(PITCH).Average();
-            //        break;
-            //    case ROLL:
-            //        FlightInputHandler.state.rollTrim = model.ControlInputHistory(ROLL).Average();
-            //        break;
-            //    case YAW:
-            //        FlightInputHandler.state.yawTrim = model.ControlInputHistory(YAW).Average();
-            //        break;
-            //}
             switch (axis)
             {
                 case PITCH:
-                    state.pitchTrim = model.ControlInputHistory(PITCH).Average();
+                    FlightInputHandler.state.pitchTrim = value;
                     break;
                 case ROLL:
-                    state.rollTrim = model.ControlInputHistory(ROLL).Average();
+                    FlightInputHandler.state.rollTrim = value;
                     break;
                 case YAW:
-                    state.yawTrim = model.ControlInputHistory(YAW).Average();
+                    FlightInputHandler.state.yawTrim = value;
                     break;
             }
         }

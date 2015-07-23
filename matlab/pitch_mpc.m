@@ -23,8 +23,8 @@ engine_torque = 10.0;
 
 % control and aoa aothority
 k0 = 0.0;
-k1 = -500.0;
-k2 = 1000.0;
+k1 = -100.0;
+k2 = 800.0;
 
 % limits
 max_aoa = 0.25;
@@ -101,17 +101,16 @@ steady_aoa_turn_v = (Cl * res_max_aoa / mass - g * cos(cur_pitch)) / airspd;
 res_max_v = min(res_max_v, steady_aoa_turn_v);
 
 % Controller gains
-Kacc = 1.0;
-dyn_max_v = max_v;
+Kacc = 8.0;
 
 % let's try naive value of dyn_max_v
-dyn_max_v = 1.0 * sqrt(res_max_aoa * (k0 + k1 * res_max_aoa / 2.0 + k2 + sas_torque) / moi);
+dyn_max_v = 0.5 * sqrt(res_max_aoa * (k0 + k1 * res_max_aoa / 2.0 + k2 + sas_torque) / moi);
 C(1,1) = 0.0;
 
 mpc_dt = 0.025;
 v_eps = 1e-2;
 % tune dyn_max_v with relaxation simulation
-while true
+while false
     % perform simulation
     x_sim = [res_max_aoa; -dyn_max_v; 0.0];     % start on max_aoa with minimum angvel
     u_sim = 0.0;
@@ -125,7 +124,7 @@ while true
         csurf(iter+1) = x_sim(3);
         input(iter+1) = u_sim;
         
-        desired_acc = -Kacc * x_sim(2) / mpc_dt;     % relaxate to v = 0.0
+        desired_acc = -Kacc * x_sim(2);     % relaxate to v = 0.0
         % get predicted state derivative
         pr_dx = Ai * x_sim + Bi * u_sim + Ci;
         cntrl_auth = Bi(2);     % supposed authority of control
@@ -172,7 +171,7 @@ aoa(1) = init_aoa;
 ang_vel(1) = init_ang_vel;
 csurf(1) = init_csurf;
 input(1) = u;
-desired_ang_v_arr(1) = abs(steady_input_turn_x(2));
+desired_ang_v_arr(1) = desired_v;
 
 % Acc control section
 dx_bias = zeros(3,1);
@@ -232,7 +231,9 @@ for frame = 2:simul_length+1
         scaled_restrained_v = max(dyn_desired_v,...
             dyn_desired_v * scaled_aoa - res_max_v * (1.0 - scaled_aoa));
     end    
-    desired_acc = -Kacc * (x(2) - scaled_restrained_v) / dt;
+    v_error = x(2) - scaled_restrained_v;
+    %Kacc = sqrt(abs(B(2, 1) / v_error));
+    desired_acc = -Kacc * v_error;
     
     % ANGULAR ACC Controller
     
