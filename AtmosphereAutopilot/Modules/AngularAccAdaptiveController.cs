@@ -159,8 +159,11 @@ namespace AtmosphereAutopilot
         Matrix cur_state = new Matrix(3, 1);
         Matrix input_mat = new Matrix(1, 1);
 
-        [AutoGuiAttr("model_predicted_acc", false, "G8")]
+        [AutoGuiAttr("model_predicted_acc", false, "G6")]
         double model_predicted_acc;
+
+        [AutoGuiAttr("acc_correction", false, "G6")]
+        double acc_correction;
 
         protected override float get_required_input(FlightCtrlState cntrl, float target_value)
         {
@@ -169,15 +172,28 @@ namespace AtmosphereAutopilot
             if (Math.Abs(authority) < 1e-4)
                 return cntrl.pitch;
 
+            // get model prediction for next frame
             cur_state[0, 0] = imodel.AoA(PITCH);
             cur_state[1, 0] = imodel.AngularVel(PITCH);
             cur_state[2, 0] = imodel.ControlSurfPos(PITCH);
             input_mat[0, 0] = imodel.ControlInput(PITCH);
             double cur_acc_prediction = imodel.pitch_rot_model.eval_row(1, cur_state, input_mat);
-            double acc_error = target_value - cur_acc_prediction;
+
+            double cur_model_acc = acc;
+            if (imodel.ControlSurfPosHistory(PITCH).Size > 1)
+            {
+                // get model acceleration for current frame
+                cur_state[0, 0] = imodel.AoAHistory(PITCH).getFromTail(1);
+                cur_state[1, 0] = imodel.AngularVelHistory(PITCH).getFromTail(1);
+                cur_state[2, 0] = imodel.ControlSurfPosHistory(PITCH).getFromTail(1);
+                cur_model_acc = imodel.pitch_rot_model.eval_row(1, cur_state, input_mat);
+            }
+            acc_correction = acc - cur_model_acc;
+
+            double acc_error = target_value - (cur_acc_prediction + acc_correction);
             float new_input = (float)(input_mat[0, 0] + acc_error / authority);
             new_input = Common.Clampf(new_input, 1.0f);
-            model_predicted_acc = cur_acc_prediction + authority * (new_input - input_mat[0, 0]);
+            model_predicted_acc = cur_acc_prediction + acc_correction + authority * (new_input - input_mat[0, 0]);
 
             return new_input;
         }

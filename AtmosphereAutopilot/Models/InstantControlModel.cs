@@ -87,6 +87,10 @@ namespace AtmosphereAutopilot
         public float ControlInput(int axis) { return input_buf[axis].getLast(); }
 
         /// <summary>
+        /// Lagged control surface position history for pitch, roll or yaw. [-1.0, 1.0].
+        /// </summary>
+        public CircularBuffer<float> ControlSurfPosHistory(int axis) { return csurf_buf[axis]; }
+        /// <summary>
         /// Lagged control surface position for pitch, roll or yaw. [-1.0, 1.0].
         /// </summary>
         public float ControlSurfPos(int axis) { return csurf_buf[axis].getLast(); }
@@ -597,13 +601,13 @@ namespace AtmosphereAutopilot
         void initialize_ann_tainers()
         {
             pitch_trainer = new OnlineLinTrainer(pitch_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
-                new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, pitch_input_method, pitch_output_method);
+                new double[] { -0.1, -0.2 }, new double[] { 0.1, 0.2 }, pitch_input_method, pitch_output_method);
             trainers[0] = pitch_trainer;
             roll_trainer = new OnlineLinTrainer(roll_torque_model, IMM_BUF_SIZE, new int[] { 5, 5, 5, 5 },
                 new double[] { -0.1, -0.1, -0.1, -0.05 }, new double[] { 0.1, 0.1, 0.1, 0.05 }, roll_input_method, roll_output_method);
             trainers[1] = roll_trainer;
             yaw_trainer = new OnlineLinTrainer(yaw_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
-                new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, yaw_input_method, yaw_output_method);
+                new double[] { -0.1, -0.2 }, new double[] { 0.1, 0.2 }, yaw_input_method, yaw_output_method);
             trainers[2] = yaw_trainer;
             pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11 },
                 new double[] { -0.1 }, new double[] { 0.1 }, pitch_lift_input_method, pitch_lift_output_method);
@@ -950,8 +954,8 @@ namespace AtmosphereAutopilot
                 GUILayout.Label("AoA = " + (aoa_buf[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
                 //GUILayout.Label("MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 //GUILayout.Label("AngMoment = " + AM[i].ToString("G8"), GUIStyles.labelStyleLeft);
-                //if (i == 0)
-                //    AutoGUI.AutoDrawObject(trainers[i]);
+                if (i == 0)
+                    AutoGUI.AutoDrawObject(trainers[i]);
 			}
             GUILayout.Space(5.0f);
             GUILayout.Label("Pitch lift trainer", GUIStyles.labelStyleLeft);

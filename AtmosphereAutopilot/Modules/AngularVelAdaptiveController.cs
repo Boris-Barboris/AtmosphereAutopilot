@@ -339,7 +339,7 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
-                    transit_max_v = new_dyn_max_v / 4.0f;
+                    transit_max_v = new_dyn_max_v / 2.0f;
                     old_dyn_max_v = transit_max_v;
                 }
             }
@@ -357,13 +357,13 @@ namespace AtmosphereAutopilot
             float normalized_des_v = des_v / MaxVConstruction;
             if (des_v >= 0.0f)
             {
-                scaled_aoa = Common.Clampf((res_max_aoa - imodel.AoA(axis)) / 2.0f / res_max_aoa, 1.0f);
+                scaled_aoa = Common.Clampf((res_max_aoa - imodel.AoA(axis)) / res_max_aoa, 1.0f);
                 scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_upper * (1.0f - scaled_aoa),
                     transit_max_v * normalized_des_v);
             }
             else
             {
-                scaled_aoa = Common.Clampf((res_min_aoa - imodel.AoA(axis)) / 2.0f / res_min_aoa, 1.0f);
+                scaled_aoa = Common.Clampf((res_min_aoa - imodel.AoA(axis)) / res_min_aoa, 1.0f);
                 scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_lower * (1.0f - scaled_aoa),
                     transit_max_v * normalized_des_v);
             }
