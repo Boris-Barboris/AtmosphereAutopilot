@@ -46,7 +46,7 @@ namespace AtmosphereAutopilot
 			: base(vessel, module_name, wnd_id)
 		{
 			this.axis = axis;
-            AutoTrim = true;
+            AutoTrim = false;
 		}
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
@@ -74,8 +74,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("output acceleration", false, "G8")]
         protected float output_acc;
 
-        [AutoGuiAttr("Kp", true, "G8")]
-        protected float Kp = 8.0f;
+        //[AutoGuiAttr("Kp", true, "G8")]
+        float Kp = 8.0f;
 
 		/// <summary>
 		/// Main control function
@@ -105,7 +105,7 @@ namespace AtmosphereAutopilot
             if (imodel.dyn_pressure >= 10.0)
                 desired_v = moderate_desired_v(desired_v);      // moderation stage
 
-            output_acc = Kp * (desired_v - vel);                // produce output
+            output_acc = get_desired_acc(desired_v);            // produce output
 
 			// check if we're stable on given input value
             if (AutoTrim)
@@ -120,7 +120,7 @@ namespace AtmosphereAutopilot
                 }
 
                 if (time_in_regime >= 5.0)
-                    ControlUtils.set_trim(axis, imodel.ControlInputHistory(axis).Average());
+                    ControlUtils.set_trim(axis, imodel.ControlSurfPosHistory(axis).Average());
             }
 
             acc_controller.ApplyControl(cntrl, output_acc);
@@ -138,6 +138,8 @@ namespace AtmosphereAutopilot
         public float MaxVConstruction { get; private set; }
 
         protected virtual float moderate_desired_v(float des_v) { return des_v; }
+
+        protected virtual float get_desired_acc(float des_v) { return Kp * (desired_v - vel); }
 
 
 		#region Parameters
@@ -386,6 +388,52 @@ namespace AtmosphereAutopilot
             des_v = scaled_restrained_v;
 
             return des_v;
+        }
+
+        [AutoGuiAttr("Kp", true, "G6")]
+        float Kp = 0.2f;
+
+        [AutoGuiAttr("kacc_quadr", false, "G6")]
+        float kacc_quadr;
+        bool first_quadr = true;
+
+        [AutoGuiAttr("kacc_smoothing", true, "G5")]
+        float kacc_smoothing = 10.0f;
+
+        [AutoGuiAttr("relaxation_k", true, "G5")]
+        float relaxation_k = 2.0f;
+
+        protected override float get_desired_acc(float des_v)
+        {
+            float new_kacc_quadr = (float)(Kp * imodel.pitch_rot_model.A[1, 2] * imodel.pitch_rot_model.B[2, 0]);
+            if (first_quadr)
+                kacc_quadr = new_kacc_quadr;
+            else
+                kacc_quadr = (kacc_smoothing * kacc_quadr + new_kacc_quadr) / (kacc_smoothing + 1.0f);
+            if (kacc_quadr < 1e-3)
+                return base.get_desired_acc(des_v);
+            first_quadr = false;
+            float v_error = vel - des_v;
+            double quadr_x;
+            float desired_deriv;
+            float dt = TimeWarp.fixedDeltaTime;
+            if (v_error >= 0.0)
+            {
+                quadr_x = -Math.Sqrt(v_error / kacc_quadr);
+                if (quadr_x >= -relaxation_k * dt)
+                    desired_deriv = base.get_desired_acc(des_v);
+                else
+                    desired_deriv = (float)(kacc_quadr * Math.Pow(quadr_x + dt, 2.0) - kacc_quadr * quadr_x * quadr_x) / dt;
+            }
+            else
+            {
+                quadr_x = -Math.Sqrt(v_error / -kacc_quadr);
+                if (quadr_x >= -relaxation_k * dt)
+                    desired_deriv = base.get_desired_acc(des_v);
+                else
+                    desired_deriv = (float)(-kacc_quadr * Math.Pow(quadr_x + dt, 2.0) + kacc_quadr * quadr_x * quadr_x) / dt;
+            }            
+            return desired_deriv;
         }
 
         [AutoGuiAttr("transit_max_v", false, "G6")]

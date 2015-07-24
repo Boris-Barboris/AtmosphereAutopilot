@@ -33,7 +33,7 @@ namespace AtmosphereAutopilot
 		protected InstantControlModel imodel;
 
 		// Telemetry writers
-		StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, 
+		protected StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, 
 			desire_acc_writer, aoa_writer, airspd_writer, density_writer;
 
 		/// <summary>
@@ -91,7 +91,7 @@ namespace AtmosphereAutopilot
                 desire_acc_writer.Write(target_value.ToString("G8") + ',');
                 acc_writer.Write(acc.ToString("G8") + ',');
                 v_writer.Write(imodel.AngularVel(axis).ToString("G8") + ',');
-                //prediction_writer.Write(model_acc.ToString("G8") + ',');
+                //prediction_writer.Write(target_value.ToString("G8") + ',');
 				aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');
 				airspd_writer.Write((imodel.up_srf_v + imodel.fwd_srf_v).magnitude.ToString("G8") + ',');
 				density_writer.Write(vessel.atmDensity.ToString("G8") + ',');
@@ -130,7 +130,7 @@ namespace AtmosphereAutopilot
                         v_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/v.csv");
                         acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/acc.csv");
                         desire_acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/desire.csv");
-                        //prediction_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/predict.csv");
+                        prediction_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/predict.csv");
 						aoa_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/aoa.csv");
 						airspd_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/airspd.csv");
 						density_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/density.csv");
@@ -145,7 +145,7 @@ namespace AtmosphereAutopilot
                         v_writer.Close();
                         acc_writer.Close();
                         desire_acc_writer.Close();
-                        //prediction_writer.Close();
+                        prediction_writer.Close();
 						aoa_writer.Close();
 						airspd_writer.Close();
 						density_writer.Close();
@@ -181,6 +181,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("acc_correction", false, "G6")]
         double acc_correction;
 
+        [AutoGuiAttr("use_correction", true)]
+        bool use_correction = true;
+
         protected override float get_required_input(FlightCtrlState cntrl, float target_value)
         {
             double authority = imodel.pitch_rot_model.B[1, 0];
@@ -206,10 +209,15 @@ namespace AtmosphereAutopilot
             }
             acc_correction = acc - cur_model_acc;
 
-            double acc_error = target_value - (cur_acc_prediction + acc_correction);
+            double acc_error = target_value - (cur_acc_prediction + (use_correction ? acc_correction : 0.0));
             float new_input = (float)(input_mat[0, 0] + acc_error / authority);
             new_input = Common.Clampf(new_input, 1.0f);
-            model_predicted_acc = cur_acc_prediction + acc_correction + authority * (new_input - input_mat[0, 0]);
+            model_predicted_acc = cur_acc_prediction + (use_correction ? acc_correction : 0.0) + authority * (new_input - input_mat[0, 0]);
+
+            if (write_telemetry)
+            {
+                prediction_writer.Write(model_predicted_acc.ToString("G8") + ',');
+            }
 
             return new_input;
         }

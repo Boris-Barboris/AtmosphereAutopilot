@@ -4,8 +4,8 @@ ksp_plots_path ='D:\Games\Kerbal Space Program 0.90\Resources\';
 acc = csvread([ksp_plots_path, 'acc.csv']);
 control = csvread([ksp_plots_path, 'control.csv']);
 aoa = [0.0,csvread([ksp_plots_path, 'aoa.csv'])];
-v = [0.0,csvread([ksp_plots_path, 'v.csv'])];
-predict = csvread([ksp_plots_path, 'predict.csv']);
+v = csvread([ksp_plots_path, 'v.csv']);
+predict = [0.0, csvread([ksp_plots_path, 'predict.csv'])];
 airspd = [0.0,csvread([ksp_plots_path, 'airspd.csv'])];
 p = [0.0,csvread([ksp_plots_path, 'density.csv'])];
 

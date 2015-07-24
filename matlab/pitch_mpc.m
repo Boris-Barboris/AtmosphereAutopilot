@@ -232,8 +232,23 @@ for frame = 2:simul_length+1
             dyn_desired_v * scaled_aoa - res_max_v * (1.0 - scaled_aoa));
     end    
     v_error = x(2) - scaled_restrained_v;
+    % let's descend by quadratic function
+    kacc_quadr = 0.2 * A(2,3) * B(3,1);
+    %kacc_quadr = 0.1;
+    if v_error >= 0.0
+        quadr_x = -sqrt(v_error / kacc_quadr);
+        desired_deriv = (kacc_quadr * (quadr_x + dt)^2 - kacc_quadr * quadr_x^2) / dt;
+    else
+        quadr_x = -sqrt(v_error / -kacc_quadr);
+        %desired_deriv = -quadr_x * 2.0 * kacc_quadr;
+        desired_deriv = (-kacc_quadr * (quadr_x + dt)^2 + kacc_quadr * quadr_x^2) / dt;
+    end
+    if abs(quadr_x) <= dt
+        desired_deriv = -v_error / dt;
+    end
     %Kacc = sqrt(abs(B(2, 1) / v_error));
-    desired_acc = -Kacc * v_error;
+    %desired_acc = -Kacc * v_error;
+    desired_acc = desired_deriv;
     
     % ANGULAR ACC Controller
     

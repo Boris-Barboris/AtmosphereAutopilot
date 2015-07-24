@@ -80,22 +80,6 @@ namespace AtmosphereAutopilot
             //ControlUtils.neutralize_user_input(cntrl, YAW);
             v_controller.ApplyControl(cntrl, output);
 
-            // check if we're stable on given input value
-            if (AutoTrim)
-            {
-                if (Math.Abs(sideslip) < 5e-3)
-                {
-                    time_in_regime += TimeWarp.fixedDeltaTime;
-                }
-                else
-                {
-                    time_in_regime = 0.0;
-                }
-
-                if (time_in_regime >= 5.0)
-                    ControlUtils.set_trim(YAW, imodel.ControlInputHistory(YAW).Average());
-            }
-
             return output;
         }
 
