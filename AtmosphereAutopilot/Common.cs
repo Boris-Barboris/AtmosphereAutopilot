@@ -73,6 +73,11 @@ namespace AtmosphereAutopilot
             return mat;
         }
 
+		public static double simple_filter(double new_value, double old_value, double k)
+		{
+			return (old_value * k + new_value) / (k + 1.0);
+		}
+
         public static Vector3 divideVector(Vector3 lhs, Vector3 rhs)
         {
             Vector3 result = new Vector3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);

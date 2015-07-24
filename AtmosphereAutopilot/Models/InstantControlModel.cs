@@ -618,7 +618,7 @@ namespace AtmosphereAutopilot
         {
             pitch_trainer = new OnlineLinTrainer(pitch_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, pitch_input_method, pitch_output_method);
-            pitch_trainer.base_gen_weight = 0.5f;
+            pitch_trainer.base_gen_weight = 1.0f;
             pitch_trainer.max_value_decay = 0.0005f;
             pitch_trainer.gen_limits_decay = 0.0005f;
             pitch_trainer.linear_time_decay = 0.004f;

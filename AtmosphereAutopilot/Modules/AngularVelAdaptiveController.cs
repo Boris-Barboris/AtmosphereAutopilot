@@ -214,6 +214,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("min_aoa_v", false, "G6")]
         float min_aoa_v;
 
+		[AutoGuiAttr("moder_filter", true, "G6")]
+		float moder_filter = 4.0f;
+
         Matrix state_mat = new Matrix(3, 1);
         Matrix input_mat = new Matrix(1, 1);
 
@@ -237,9 +240,12 @@ namespace AtmosphereAutopilot
                     // We're in linear regime so we can update our limitations
 
                     // get equilibrium v for max_aoa
-                    max_aoa_g = -(float)((imodel.pitch_rot_model.C[0, 0] + imodel.pitch_rot_model.A[0, 0] * rad_max_aoa) * vessel.srfSpeed);
+					float new_max_aoa_g =
+						-(float)((imodel.pitch_rot_model.C[0, 0] + imodel.pitch_rot_model.A[0, 0] * rad_max_aoa) * vessel.srfSpeed);
+					max_aoa_g = (float)Common.simple_filter(new_max_aoa_g, max_aoa_g, moder_filter);
                     max_aoa_v = max_aoa_g / (float)vessel.srfSpeed;
-                    min_aoa_g = max_aoa_g + (float)(2.0 * imodel.pitch_rot_model.A[0, 0] * rad_max_aoa * vessel.srfSpeed);
+					float new_min_aoa_g = new_max_aoa_g + (float)(2.0 * imodel.pitch_rot_model.A[0, 0] * rad_max_aoa * vessel.srfSpeed);
+					min_aoa_g = (float)Common.simple_filter(new_min_aoa_g, min_aoa_g, moder_filter);
                     min_aoa_v = min_aoa_g / (float)vessel.srfSpeed;
 
                     // Check if model is adequate and we have at least some authority
@@ -258,14 +264,14 @@ namespace AtmosphereAutopilot
                             if (in_eq_x[0, 0] < 0.0)
                             {
                                 // plane is statically unstable, in_eq_x solution is equilibrium on it's minimal stable aoa
-                                min_input_aoa = 0.95f * (float)in_eq_x[0, 0];
-                                min_input_v = 0.95f * (float)in_eq_x[1, 0];
+                                min_input_aoa = (float)Common.simple_filter(0.95 * in_eq_x[0, 0], min_input_aoa, moder_filter);
+                                min_input_v = (float)Common.simple_filter(0.95 * in_eq_x[1, 0], min_input_v, moder_filter);
                             }
                             else
                             {
                                 // plane is statically stable, in_eq_x solution is equilibrium on it's maximal stable aoa
-                                max_input_aoa = (float)in_eq_x[0, 0];
-                                max_input_v = (float)in_eq_x[1, 0];
+								max_input_aoa = (float)Common.simple_filter(in_eq_x[0, 0], max_input_aoa, moder_filter);
+								max_input_v = (float)Common.simple_filter(in_eq_x[1, 0], max_input_v, moder_filter);
                             }
 
                             // get equilibrium aoa and angular_v for -1.0 input
@@ -274,14 +280,14 @@ namespace AtmosphereAutopilot
                             if (in_eq_x[0, 0] >= 0.0)
                             {
                                 // plane is statically unstable, in_eq_x solution is equilibrium on it's maximal stable aoa
-                                max_input_aoa = 0.95f * (float)in_eq_x[0, 0];
-                                max_input_v = 0.95f * (float)in_eq_x[1, 0];
+								max_input_aoa = (float)Common.simple_filter(0.95 * in_eq_x[0, 0], max_input_aoa, moder_filter);
+								max_input_v = (float)Common.simple_filter(0.95 * in_eq_x[1, 0], max_input_v, moder_filter);
                             }
                             else
                             {
                                 // plane is statically stable, in_eq_x solution is equilibrium on it's minimal stable aoa
-                                min_input_aoa = (float)in_eq_x[0, 0];
-                                min_input_v = (float)in_eq_x[1, 0];
+								min_input_aoa = (float)Common.simple_filter(in_eq_x[0, 0], min_input_aoa, moder_filter);
+								min_input_v = (float)Common.simple_filter(in_eq_x[1, 0], min_input_v, moder_filter);
                             }
                             stability_region = true;    // we didn't fail on computing stability region, horay!
                         }
@@ -318,10 +324,18 @@ namespace AtmosphereAutopilot
                 if (imodel.pitch_rot_model.A[0, 0] != 0.0 && cur_aoa < 0.26)
                 {
                     // get equilibrium aoa and angular v for max_g g-force
-                    max_g_v_upper = (max_g_force * 9.81f + (float)imodel.pitch_gravity_acc) / (float)vessel.srfSpeed;
-                    max_g_aoa_upper = (float)(-(max_g_v_upper + imodel.pitch_rot_model.C[0, 0]) / imodel.pitch_rot_model.A[0, 0]);
-                    max_g_v_lower = (-max_g_force * 9.81f + (float)imodel.pitch_gravity_acc) / (float)vessel.srfSpeed;
-                    max_g_aoa_lower = (float)(-(max_g_v_lower + imodel.pitch_rot_model.C[0, 0]) / imodel.pitch_rot_model.A[0, 0]);
+					max_g_v_upper = (float)Common.simple_filter(
+						(max_g_force * 9.81 + imodel.pitch_gravity_acc) / vessel.srfSpeed,
+						max_g_v_upper, moder_filter);
+					max_g_aoa_upper = (float)Common.simple_filter(
+						-(max_g_v_upper + imodel.pitch_rot_model.C[0, 0]) / imodel.pitch_rot_model.A[0, 0],
+						max_g_aoa_upper, moder_filter);
+					max_g_v_lower = (float)Common.simple_filter(
+						(-max_g_force * 9.81 + imodel.pitch_gravity_acc) / vessel.srfSpeed,
+						max_g_v_lower, moder_filter);
+                    max_g_aoa_lower = (float)Common.simple_filter(
+						-(max_g_v_lower + imodel.pitch_rot_model.C[0, 0]) / imodel.pitch_rot_model.A[0, 0],
+						max_g_aoa_lower, moder_filter);
                 }
                 // apply g-force moderation
                 if (max_g_aoa_upper < res_max_aoa)
@@ -357,7 +371,7 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
-                    transit_max_v = new_dyn_max_v / 3.0f;
+					transit_max_v = (float)Common.simple_filter(new_dyn_max_v / 3.0f, transit_max_v, moder_filter);
                     old_dyn_max_v = transit_max_v;
                 }
             }
