@@ -100,7 +100,7 @@ namespace AtmosphereAutopilot
             float cur_input_raw = get_required_input(cntrl, desired_acc);
 			output = cur_input_raw;
 
-			//ControlUtils.set_raw_output(cntrl, axis, output);
+			ControlUtils.set_raw_output(cntrl, axis, output);
 
             if (write_telemetry)
 				controlWriter.Write(csurf_output.ToString("G8") + ',');
@@ -228,7 +228,7 @@ namespace AtmosphereAutopilot
 
             if (write_telemetry)
             {
-                prediction_writer.Write(model_predicted_acc.ToString("G8") + ',');
+                prediction_writer.Write(cur_model_acc.ToString("G8") + ',');
             }
 
             return new_input;

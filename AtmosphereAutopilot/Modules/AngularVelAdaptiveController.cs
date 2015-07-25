@@ -410,8 +410,8 @@ namespace AtmosphereAutopilot
             return des_v;
         }
 
-        [AutoGuiAttr("Kp", true, "G6")]
-        float Kp = 0.2f;
+        [AutoGuiAttr("quadr Kp", true, "G6")]
+        float quadr_Kp = 0.2f;
 
         [AutoGuiAttr("kacc_quadr", false, "G6")]
         float kacc_quadr;
@@ -421,15 +421,24 @@ namespace AtmosphereAutopilot
         float kacc_smoothing = 10.0f;
 
         [AutoGuiAttr("relaxation_k", true, "G5")]
-        float relaxation_k = 2.0f;
+        float relaxation_k = 1.0f;
+
+        [AutoGuiAttr("relaxation_Kp", true, "G5")]
+        float relaxation_Kp = 0.1f;
+
+        [AutoGuiAttr("relaxation_frame", true)]
+        int relaxation_frame = 8;
+
+        [AutoGuiAttr("relaxation_frame", false)]
+        int relax_count = 0;
 
         protected override float get_desired_acc(float des_v)
         {
-            float new_kacc_quadr = (float)(Kp * imodel.pitch_rot_model.A[1, 2] * imodel.pitch_rot_model.B[2, 0]);
+            float new_kacc_quadr = (float)(quadr_Kp * imodel.pitch_rot_model.A[1, 2] * imodel.pitch_rot_model.B[2, 0]);
             if (first_quadr)
                 kacc_quadr = new_kacc_quadr;
             else
-                kacc_quadr = (kacc_smoothing * kacc_quadr + new_kacc_quadr) / (kacc_smoothing + 1.0f);
+                kacc_quadr = (float)Common.simple_filter(new_kacc_quadr, kacc_quadr, kacc_smoothing);
             if (kacc_quadr < 1e-3)
                 return base.get_desired_acc(des_v);
             first_quadr = false;
@@ -441,17 +450,47 @@ namespace AtmosphereAutopilot
             {
                 quadr_x = -Math.Sqrt(v_error / kacc_quadr);
                 if (quadr_x >= -relaxation_k * dt)
-                    desired_deriv = base.get_desired_acc(des_v);
+                {
+                    if (++relax_count >= relaxation_frame)
+                    {
+                        float avg_vel = 0.0f;
+                        for (int i = 0; i < relaxation_frame; i++)
+                            avg_vel += imodel.AngularVelHistory(PITCH).getFromTail(i);
+                        avg_vel /= (float)relaxation_frame;
+                        v_error = avg_vel - des_v;
+                        if (relax_count > relaxation_frame * 2)
+                            relax_count--;
+                    }
+                    desired_deriv = (float)(relaxation_Kp * v_error / quadr_x);
+                }
                 else
+                {
+                    relax_count = 0;
                     desired_deriv = (float)(kacc_quadr * Math.Pow(quadr_x + dt, 2.0) - kacc_quadr * quadr_x * quadr_x) / dt;
+                }
             }
             else
             {
                 quadr_x = -Math.Sqrt(v_error / -kacc_quadr);
                 if (quadr_x >= -relaxation_k * dt)
-                    desired_deriv = base.get_desired_acc(des_v);
+                {
+                    if (++relax_count >= relaxation_frame)
+                    {
+                        float avg_vel = 0.0f;
+                        for (int i = 0; i < relaxation_frame; i++)
+                            avg_vel += imodel.AngularVelHistory(PITCH).getFromTail(i);
+                        avg_vel /= (float)relaxation_frame;
+                        v_error = avg_vel - des_v;
+                        if (relax_count > relaxation_frame * 2)
+                            relax_count--;
+                    }
+                    desired_deriv = (float)(relaxation_Kp * v_error / quadr_x);
+                }
                 else
+                {
                     desired_deriv = (float)(-kacc_quadr * Math.Pow(quadr_x + dt, 2.0) + kacc_quadr * quadr_x * quadr_x) / dt;
+                    relax_count = 0;
+                }
             }            
             return desired_deriv;
         }

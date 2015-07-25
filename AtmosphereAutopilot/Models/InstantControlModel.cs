@@ -654,13 +654,13 @@ namespace AtmosphereAutopilot
         {
             pitch_trainer = new OnlineLinTrainer(pitch_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, pitch_input_method, pitch_output_method);
-            pitch_trainer.base_gen_weight = 1.0f;
+            pitch_trainer.base_gen_weight = 5.0f;
             pitch_trainer.max_value_decay = 0.0005f;
             pitch_trainer.gen_limits_decay = 0.0005f;
-            pitch_trainer.linear_time_decay = 0.004f;
+            pitch_trainer.linear_time_decay = 0.008f;
             pitch_trainer.nonlin_time_decay = 0.05f;
-            pitch_trainer.min_gen_weight = 0.05f;
-            pitch_trainer.linear_err_criteria = 0.3f;
+            pitch_trainer.min_gen_weight = 0.02f;
+            pitch_trainer.linear_err_criteria = 0.2f;
             trainers[0] = pitch_trainer;
 
             roll_trainer = new OnlineLinTrainer(roll_torque_model, IMM_BUF_SIZE, new int[] { 5, 5, 5, 5 },
@@ -676,10 +676,10 @@ namespace AtmosphereAutopilot
             pitch_lift_trainer.base_gen_weight = 5.0f;
             pitch_lift_trainer.max_value_decay = 0.0002f;
             pitch_lift_trainer.gen_limits_decay = 0.0005f;
-            pitch_lift_trainer.linear_time_decay = 0.004f;
+            pitch_lift_trainer.linear_time_decay = 0.008f;
             pitch_lift_trainer.nonlin_time_decay = 0.05f;
-            pitch_lift_trainer.min_gen_weight = 0.05f;
-            pitch_lift_trainer.linear_err_criteria = 0.3f;
+            pitch_lift_trainer.min_gen_weight = 0.02f;
+            pitch_lift_trainer.linear_err_criteria = 0.2f;
 
             yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11 },
                 new double[] { -0.1 }, new double[] { 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
