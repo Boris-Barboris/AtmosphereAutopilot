@@ -87,19 +87,15 @@ namespace AtmosphereAutopilot
 
             float user_input = ControlUtils.get_neutralized_user_input(cntrl, axis);
 
-            // Moderate desired v by constructional limits
-            // max_v_construction = TODO
-            MaxVConstruction = max_v_construction * max_v_construction_k;
-
             if (user_input != 0.0)
             {
                 // user is interfering with control
-                desired_v = user_input * MaxVConstruction;
+                desired_v = user_input * max_v_construction;
             }
             else
             {
                 // control from above
-                desired_v = Common.Clampf(target_value, MaxVConstruction);
+                desired_v = Common.Clampf(target_value, max_v_construction);
             }
             
             if (imodel.dyn_pressure >= 10.0)
@@ -128,14 +124,10 @@ namespace AtmosphereAutopilot
             return output_acc;
 		}
 
-        protected float max_v_construction = 0.5f;
-
-        [VesselSerializable("max_v_construction_k")]
-        [AutoGuiAttr("Max v construct mult", true, "G8")]
-        protected float max_v_construction_k = 0.5f;
-
-        [AutoGuiAttr("Max V construct", false, "G8")]
-        public float MaxVConstruction { get; private set; }
+        [VesselSerializable("max_v_construction")]
+        [GlobalSerializable("max_v_construction")]
+        [AutoGuiAttr("Max v construction", true, "G8")]
+        public float max_v_construction = 0.5f;
 
         protected virtual float moderate_desired_v(float des_v) { return des_v; }
 
@@ -225,8 +217,8 @@ namespace AtmosphereAutopilot
             float rad_max_aoa = max_aoa * dgr2rad;
             res_max_aoa = 100.0f;
             res_min_aoa = -100.0f;
-            res_equilibr_v_upper = MaxVConstruction;
-            res_equilibr_v_lower = -MaxVConstruction;
+            res_equilibr_v_upper = max_v_construction;
+            res_equilibr_v_lower = -max_v_construction;
             float cur_aoa = Math.Abs(imodel.AoA(axis));
 
             if (moderate_aoa && imodel.dyn_pressure > 100.0)
@@ -373,7 +365,7 @@ namespace AtmosphereAutopilot
                     if (old_dyn_max_v != 0.0f)
                         transit_max_v = old_dyn_max_v;
                     else
-                        old_dyn_max_v = MaxVConstruction;
+                        old_dyn_max_v = max_v_construction;
                 }
                 else
                 {
@@ -386,13 +378,13 @@ namespace AtmosphereAutopilot
                     transit_max_v = old_dyn_max_v;
                 else
                 {
-                    old_dyn_max_v = MaxVConstruction;
-                    transit_max_v = MaxVConstruction;
+                    old_dyn_max_v = max_v_construction;
+                    transit_max_v = max_v_construction;
                 }
 
             // desired_v moderation section
             float scaled_restrained_v;
-            float normalized_des_v = des_v / MaxVConstruction;
+            float normalized_des_v = des_v / max_v_construction;
             if (des_v >= 0.0f)
             {
                 scaled_aoa = Common.Clampf((res_max_aoa - imodel.AoA(axis)) / 2.0f / res_max_aoa, 1.0f);
@@ -546,6 +538,144 @@ namespace AtmosphereAutopilot
 			base.InitializeDependencies(modules);
 			this.acc_controller = modules[typeof(RollAngularAccController)] as RollAngularAccController;
 		}
+
+        [AutoGuiAttr("moder_filter", true, "G6")]
+        float moder_filter = 4.0f;
+
+        Matrix state_mat = new Matrix(3, 1);
+        Matrix input_mat = new Matrix(1, 1);
+
+        protected override float moderate_desired_v(float des_v)
+        {
+            float cur_aoa = imodel.AoA(YAW);
+            // let's get non-overshooting max v value, let's call it transit_max_v
+            // we start on 0.0 v and 0.0 yaw aoa and we have stopping_time seconds
+            // to accelerate. Resulting speed will be our transit
+            if (cur_aoa < 0.26f && imodel.dyn_pressure > 10.0)
+            {
+                state_mat[0, 0] = 0.0;
+                state_mat[2, 0] = 1.0;
+                input_mat[0, 0] = 1.0;
+                double acc = imodel.roll_rot_model.eval_row(1, state_mat, input_mat);
+                float new_dyn_max_v = (float)(stopping_time * Math.Abs(acc));
+                transit_max_v = (float)Common.simple_filter(new_dyn_max_v / 3.0f, transit_max_v, moder_filter);
+                old_dyn_max_v = transit_max_v;
+            }
+            else
+                if (old_dyn_max_v != 0.0f)
+                    transit_max_v = old_dyn_max_v;
+                else
+                {
+                    old_dyn_max_v = max_v_construction;
+                    transit_max_v = max_v_construction;
+                }
+
+            // desired_v moderation section
+            float normalized_des_v = des_v / max_v_construction;
+            float scaled_restrained_v = Math.Min(transit_max_v, max_v_construction);
+            des_v = normalized_des_v * scaled_restrained_v;
+
+            return des_v;
+        }
+
+        [AutoGuiAttr("quadr Kp", true, "G6")]
+        float quadr_Kp = 0.2f;
+
+        [AutoGuiAttr("kacc_quadr", false, "G6")]
+        float kacc_quadr;
+        bool first_quadr = true;
+
+        [AutoGuiAttr("kacc_smoothing", true, "G5")]
+        float kacc_smoothing = 10.0f;
+
+        [AutoGuiAttr("relaxation_k", true, "G5")]
+        float relaxation_k = 1.0f;
+
+        [AutoGuiAttr("relaxation_Kp", true, "G5")]
+        float relaxation_Kp = 0.1f;
+
+        [AutoGuiAttr("relaxation_frame", true)]
+        int relaxation_frame = 8;
+
+        [AutoGuiAttr("relaxation_frame", false)]
+        int relax_count = 0;
+
+        protected override float get_desired_acc(float des_v)
+        {
+            float new_kacc_quadr = (float)(quadr_Kp * imodel.roll_rot_model.A[1, 2] * imodel.roll_rot_model.B[2, 0]);
+            if (first_quadr)
+                kacc_quadr = new_kacc_quadr;
+            else
+                kacc_quadr = (float)Common.simple_filter(new_kacc_quadr, kacc_quadr, kacc_smoothing);
+            if (kacc_quadr < 1e-3)
+                return base.get_desired_acc(des_v);
+            first_quadr = false;
+            float v_error = vel - des_v;
+            double quadr_x;
+            float desired_deriv;
+            float dt = TimeWarp.fixedDeltaTime;
+            if (v_error >= 0.0)
+            {
+                quadr_x = -Math.Sqrt(v_error / kacc_quadr);
+                if (quadr_x >= -relaxation_k * dt)
+                {
+                    if (++relax_count >= relaxation_frame)
+                    {
+                        float avg_vel = 0.0f;
+                        for (int i = 0; i < relaxation_frame; i++)
+                            avg_vel += imodel.AngularVelHistory(ROLL).getFromTail(i);
+                        avg_vel /= (float)relaxation_frame;
+                        v_error = avg_vel - des_v;
+                        if (relax_count > relaxation_frame * 2)
+                            relax_count--;
+                    }
+                    desired_deriv = (float)(relaxation_Kp * v_error / quadr_x);
+                }
+                else
+                {
+                    relax_count = 0;
+                    desired_deriv = (float)(kacc_quadr * Math.Pow(quadr_x + dt, 2.0) - kacc_quadr * quadr_x * quadr_x) / dt;
+                }
+            }
+            else
+            {
+                quadr_x = -Math.Sqrt(v_error / -kacc_quadr);
+                if (quadr_x >= -relaxation_k * dt)
+                {
+                    if (++relax_count >= relaxation_frame)
+                    {
+                        float avg_vel = 0.0f;
+                        for (int i = 0; i < relaxation_frame; i++)
+                            avg_vel += imodel.AngularVelHistory(ROLL).getFromTail(i);
+                        avg_vel /= (float)relaxation_frame;
+                        v_error = avg_vel - des_v;
+                        if (relax_count > relaxation_frame * 2)
+                            relax_count--;
+                    }
+                    desired_deriv = (float)(relaxation_Kp * v_error / quadr_x);
+                }
+                else
+                {
+                    desired_deriv = (float)(-kacc_quadr * Math.Pow(quadr_x + dt, 2.0) + kacc_quadr * quadr_x * quadr_x) / dt;
+                    relax_count = 0;
+                }
+            }
+            return desired_deriv;
+        }
+
+        [AutoGuiAttr("transit_max_v", false, "G6")]
+        float transit_max_v;
+
+        float old_dyn_max_v;
+
+        #region ModerationParameters
+
+        [VesselSerializable("stopping_time")]
+        [GlobalSerializable("stopping_time")]
+        [AutoGuiAttr("stopping_time", true, null)]
+        public float stopping_time = 1.0f;
+
+        #endregion
 	}
 
 	public sealed class YawAngularVelocityController : AngularVelAdaptiveController
