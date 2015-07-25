@@ -261,35 +261,41 @@ namespace AtmosphereAutopilot
                         try
                         {
                             in_eq_x = in_eq_A.SolveWith(in_eq_b);
-                            if (in_eq_x[0, 0] < 0.0)
+                            if (!double.IsInfinity(in_eq_x[0, 0]))
                             {
-                                // plane is statically unstable, in_eq_x solution is equilibrium on it's minimal stable aoa
-                                min_input_aoa = (float)Common.simple_filter(0.95 * in_eq_x[0, 0], min_input_aoa, moder_filter);
-                                min_input_v = (float)Common.simple_filter(0.95 * in_eq_x[1, 0], min_input_v, moder_filter);
-                            }
-                            else
-                            {
-                                // plane is statically stable, in_eq_x solution is equilibrium on it's maximal stable aoa
-								max_input_aoa = (float)Common.simple_filter(in_eq_x[0, 0], max_input_aoa, moder_filter);
-								max_input_v = (float)Common.simple_filter(in_eq_x[1, 0], max_input_v, moder_filter);
-                            }
+                                if (in_eq_x[0, 0] < 0.0)
+                                {
+                                    // plane is statically unstable, in_eq_x solution is equilibrium on it's minimal stable aoa
+                                    min_input_aoa = (float)Common.simple_filter(0.8 * in_eq_x[0, 0], min_input_aoa, moder_filter);
+                                    min_input_v = (float)Common.simple_filter(0.8 * in_eq_x[1, 0], min_input_v, moder_filter);
+                                }
+                                else
+                                {
+                                    // plane is statically stable, in_eq_x solution is equilibrium on it's maximal stable aoa
+                                    max_input_aoa = (float)Common.simple_filter(in_eq_x[0, 0], max_input_aoa, moder_filter);
+                                    max_input_v = (float)Common.simple_filter(in_eq_x[1, 0], max_input_v, moder_filter);
+                                }
 
-                            // get equilibrium aoa and angular_v for -1.0 input
-                            in_eq_b[1, 0] = imodel.pitch_rot_model.A[1, 2] + imodel.pitch_rot_model.B[1, 0] - imodel.pitch_rot_model.C[1, 0];
-                            in_eq_x = in_eq_A.SolveWith(in_eq_b);
-                            if (in_eq_x[0, 0] >= 0.0)
-                            {
-                                // plane is statically unstable, in_eq_x solution is equilibrium on it's maximal stable aoa
-								max_input_aoa = (float)Common.simple_filter(0.95 * in_eq_x[0, 0], max_input_aoa, moder_filter);
-								max_input_v = (float)Common.simple_filter(0.95 * in_eq_x[1, 0], max_input_v, moder_filter);
+                                // get equilibrium aoa and angular_v for -1.0 input
+                                in_eq_b[1, 0] = imodel.pitch_rot_model.A[1, 2] + imodel.pitch_rot_model.B[1, 0] - imodel.pitch_rot_model.C[1, 0];
+                                in_eq_x = in_eq_A.SolveWith(in_eq_b);
+                                if (!double.IsInfinity(in_eq_x[0, 0]))
+                                {
+                                    if (in_eq_x[0, 0] >= 0.0)
+                                    {
+                                        // plane is statically unstable, in_eq_x solution is equilibrium on it's maximal stable aoa
+                                        max_input_aoa = (float)Common.simple_filter(0.8 * in_eq_x[0, 0], max_input_aoa, moder_filter);
+                                        max_input_v = (float)Common.simple_filter(0.8 * in_eq_x[1, 0], max_input_v, moder_filter);
+                                    }
+                                    else
+                                    {
+                                        // plane is statically stable, in_eq_x solution is equilibrium on it's minimal stable aoa
+                                        min_input_aoa = (float)Common.simple_filter(in_eq_x[0, 0], min_input_aoa, moder_filter);
+                                        min_input_v = (float)Common.simple_filter(in_eq_x[1, 0], min_input_v, moder_filter);
+                                    }
+                                    stability_region = true;    // we didn't fail on computing stability region, horay!
+                                }
                             }
-                            else
-                            {
-                                // plane is statically stable, in_eq_x solution is equilibrium on it's minimal stable aoa
-								min_input_aoa = (float)Common.simple_filter(in_eq_x[0, 0], min_input_aoa, moder_filter);
-								min_input_v = (float)Common.simple_filter(in_eq_x[1, 0], min_input_v, moder_filter);
-                            }
-                            stability_region = true;    // we didn't fail on computing stability region, horay!
                         }
                         catch (MSingularException)
                         {

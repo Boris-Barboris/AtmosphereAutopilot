@@ -179,6 +179,8 @@ namespace AtmosphereAutopilot
         //[AutoGuiAttr("CoM", false, "G6")]
         public Vector3 CoM = Vector3.zero;
 
+        Vector3 partial_CoM = Vector3.zero;
+
         [AutoGuiAttr("Vessel mass", false, "G6")]
         public float sum_mass = 0.0f;
 
@@ -204,7 +206,7 @@ namespace AtmosphereAutopilot
         Vector3 partial_MOI = Vector3.zero;
         Vector3 partial_AM = Vector3.zero;
 
-        const int FullMomentFreq = 40;      // with standard 0.025 sec fixedDeltaTime it gives freq around 1 Hz
+        const int FullMomentFreq = 160;      // with standard 0.025 sec fixedDeltaTime it gives freq around 0.25 Hz
         int moments_cycle_counter = 0;
 
         [AutoGuiAttr("Reaction wheels", false, "G6")]
@@ -236,6 +238,29 @@ namespace AtmosphereAutopilot
             return res;
         }
 
+        Vector3 findPartialWorldCoM()
+        {
+            Vector3 result = Vector3.zero;
+            float mass = 0.0f;
+            foreach (var pm in massive_parts)
+            {
+                if (pm.part.rb != null)
+                {
+                    result += pm.part.rb.worldCenterOfMass * pm.part.rb.mass;
+                    mass += pm.part.rb.mass;
+                }
+                else
+                {
+                    mass += pm.part.mass + pm.part.GetResourceMass();
+                    result += (pm.part.partTransform.position + pm.part.partTransform.rotation * pm.part.CoMOffset) *
+                        (pm.part.mass + pm.part.GetResourceMass());
+                }
+            }
+            if (mass > 0.0f)
+                result /= mass;
+            return result;
+        }
+
         // Rotations of the currently controlling part of the vessel
         Quaternion world_to_cntrl_part;
         Quaternion cntrl_part_to_world;
@@ -244,17 +269,23 @@ namespace AtmosphereAutopilot
         {
             cntrl_part_to_world = vessel.transform.rotation;
             world_to_cntrl_part = cntrl_part_to_world.Inverse();            // from world to root part rotation
-            CoM = vessel.findWorldCenterOfMass();               // vessel.CoM unfortunately lags by one physics frame
+            CoM = vessel.findWorldCenterOfMass();                       // vessel.CoM unfortunately lags by one physics frame
             Vector3 world_v = vessel.rootPart.rb.velocity;
+            Vector3 cur_CoM;
             if (all_parts)
             {
                 MOI = Vector3.zero;
                 AM = Vector3.zero;
                 massive_parts.Clear();
                 sum_mass = 0.0f;
+                cur_CoM = CoM;
             }
-            partial_MOI = Vector3.zero;
-            partial_AM = Vector3.zero;
+            else
+            {
+                partial_MOI = Vector3.zero;
+                partial_AM = Vector3.zero;
+                cur_CoM = partial_CoM = findPartialWorldCoM();
+            }
             int indexing = all_parts ? vessel.parts.Count : massive_parts.Count;
             for (int pi = 0; pi < indexing; pi++)
             {
@@ -266,18 +297,18 @@ namespace AtmosphereAutopilot
                     moments_cycle_counter = 0;      // iterating over old part list
                     continue;
                 }
-                Quaternion part_to_root = part.partTransform.rotation * world_to_cntrl_part;   // from part to root part rotation
+                Quaternion part_to_cntrl = part.partTransform.rotation * world_to_cntrl_part;   // from part to root part rotation
                 Vector3 moi = Vector3.zero;
                 Vector3 am = Vector3.zero;
                 float mass = 0.0f;
                 if (part.rb != null)
                 {
                     mass = part.rb.mass;
-                    Vector3 world_pv = part.rb.worldCenterOfMass - CoM;
+                    Vector3 world_pv = part.rb.worldCenterOfMass - cur_CoM;
                     Vector3 pv = world_to_cntrl_part * world_pv;
                     Vector3 impulse = mass * (world_to_cntrl_part * (part.rb.velocity - world_v));
                     // from part.rb principal frame to root part rotation
-                    Quaternion principal_to_root = part.rb.inertiaTensorRotation * part_to_root;
+                    Quaternion principal_to_root = part.rb.inertiaTensorRotation * part_to_cntrl;
                     // MOI of part as offsetted material point
                     moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
                     // MOI of part as rigid body
@@ -291,7 +322,7 @@ namespace AtmosphereAutopilot
                 else
                 {
                     mass = part.mass + part.GetResourceMass();
-                    Vector3 world_pv = part.partTransform.position + part.partTransform.rotation * part.CoMOffset - CoM;
+                    Vector3 world_pv = part.partTransform.position + part.partTransform.rotation * part.CoMOffset - cur_CoM;
                     Vector3 pv = world_to_cntrl_part * world_pv;
                     Vector3 impulse = mass * (world_to_cntrl_part * (part.vel - world_v));
                     // MOI of part as offsetted material point
@@ -303,19 +334,24 @@ namespace AtmosphereAutopilot
                 {
                     massive_parts.Add(new PartMass(part, mass));
                     MOI += moi;
-                    AM += am;
+                    AM -= am;
                     sum_mass += mass;
                 }
-                partial_MOI += moi;
-                partial_AM -= am;           // minus because fucking left handed unity
+                else
+                {
+                    partial_MOI += moi;
+                    partial_AM -= am;           // minus because fucking left handed unity
+                }
             }
             if (all_parts)
             {
                 massive_parts.Sort(PartMass.Comparison);
                 if (massive_parts.Count > PartsMax)
-                    massive_parts.RemoveRange(PartsMax, massive_parts.Count - 1);
+                    massive_parts.RemoveRange(PartsMax, massive_parts.Count - PartsMax);
+                angular_vel = Common.divideVector(AM, MOI);
             }
-            angular_vel = Common.divideVector(partial_AM, partial_MOI);
+            else
+                angular_vel = Common.divideVector(partial_AM, partial_MOI);
         }
 
         static Vector3 get_rotated_moi(Vector3 inertia_tensor, Quaternion rotation)
@@ -977,6 +1013,7 @@ namespace AtmosphereAutopilot
 			{
                 GUILayout.Label("=======" + axis_names[i] + "=======");
 				GUILayout.Label("ang vel = " + angular_v_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label("ang vel part = " + vessel.angularVelocity[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label("ang acc = " + angular_acc_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label("AoA = " + (aoa_buf[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
                 //GUILayout.Label("MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
