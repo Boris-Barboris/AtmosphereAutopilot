@@ -100,7 +100,7 @@ namespace AtmosphereAutopilot
             float cur_input_raw = get_required_input(cntrl, desired_acc);
 			output = cur_input_raw;
 
-			ControlUtils.set_raw_output(cntrl, axis, output);
+			//ControlUtils.set_raw_output(cntrl, axis, output);
 
             if (write_telemetry)
 				controlWriter.Write(csurf_output.ToString("G8") + ',');
@@ -181,6 +181,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("acc_correction", false, "G6")]
         double acc_correction;
 
+        double cur_model_acc;
+
         [AutoGuiAttr("use_correction", true)]
         bool use_correction = true;
 
@@ -198,7 +200,6 @@ namespace AtmosphereAutopilot
             input_mat[0, 0] = imodel.ControlInput(PITCH);
             double cur_acc_prediction = imodel.pitch_rot_model.eval_row(1, cur_state, input_mat);
 
-            double cur_model_acc = acc;
             if (imodel.ControlSurfPosHistory(PITCH).Size > 1)
             {
                 // get model acceleration for current frame
@@ -207,12 +208,23 @@ namespace AtmosphereAutopilot
                 cur_state[2, 0] = imodel.ControlSurfPosHistory(PITCH).getFromTail(1);
                 cur_model_acc = imodel.pitch_rot_model.eval_row(1, cur_state, input_mat);
             }
-            acc_correction = acc - cur_model_acc;
+            if (imodel.ControlSurfPosHistory(PITCH).Size > 2 && use_correction)
+            {
+                // get model acceleration for previous frame
+                cur_state[0, 0] = imodel.AoAHistory(PITCH).getFromTail(2);
+                cur_state[1, 0] = imodel.AngularVelHistory(PITCH).getFromTail(2);
+                cur_state[2, 0] = imodel.ControlSurfPosHistory(PITCH).getFromTail(2);
+                input_mat[0, 0] = imodel.ControlInputHistory(PITCH).getFromTail(1);
+                double prev_model_acc = imodel.pitch_rot_model.eval_row(1, cur_state, input_mat);
+                acc_correction = (acc - cur_model_acc + imodel.AngularAccHistory(PITCH).getFromTail(1) - prev_model_acc) / 2.0;
+            }
+            else
+                acc_correction = 0.0;
 
-            double acc_error = target_value - (cur_acc_prediction + (use_correction ? acc_correction : 0.0));
-            float new_input = (float)(input_mat[0, 0] + acc_error / authority);
+            double acc_error = target_value - (cur_acc_prediction + acc_correction);
+            float new_input = (float)(imodel.ControlInput(PITCH) + acc_error / authority);
             new_input = Common.Clampf(new_input, 1.0f);
-            model_predicted_acc = cur_acc_prediction + (use_correction ? acc_correction : 0.0) + authority * (new_input - input_mat[0, 0]);
+            model_predicted_acc = cur_acc_prediction + acc_correction + authority * (new_input - imodel.ControlInput(PITCH));
 
             if (write_telemetry)
             {

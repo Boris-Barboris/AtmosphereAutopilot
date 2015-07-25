@@ -542,10 +542,10 @@ namespace AtmosphereAutopilot
 
         Vector3 prev_engines_torque;
 
-        //[AutoGuiAttr("engines_torque_k0", false, "G6")]
+        [AutoGuiAttr("engines_torque_k0", false, "G6")]
         Vector3 engines_torque_k0;
 
-        //[AutoGuiAttr("engines_torque_k1", false, "G6")]
+        [AutoGuiAttr("engines_torque_k1", false, "G6")]
         Vector3 engines_torque_k1;
 
         // Stupid linear authority of gimbals
@@ -1013,7 +1013,7 @@ namespace AtmosphereAutopilot
 			{
                 GUILayout.Label("=======" + axis_names[i] + "=======");
 				GUILayout.Label("ang vel = " + angular_v_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                GUILayout.Label("ang vel part = " + vessel.angularVelocity[i].ToString("G8"), GUIStyles.labelStyleLeft);
+                //GUILayout.Label("ang vel part = " + vessel.angularVelocity[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label("ang acc = " + angular_acc_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label("AoA = " + (aoa_buf[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
                 //GUILayout.Label("MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
