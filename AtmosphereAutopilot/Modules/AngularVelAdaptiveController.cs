@@ -99,7 +99,7 @@ namespace AtmosphereAutopilot
             }
             
             if (imodel.dyn_pressure >= 10.0)
-                desired_v = moderate_desired_v(desired_v);      // moderation stage
+                desired_v = moderate_desired_v(desired_v, user_input != 0.0);      // moderation stage
 
             output_acc = get_desired_acc(desired_v);            // produce output
 
@@ -129,7 +129,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Max v construction", true, "G8")]
         public float max_v_construction = 0.5f;
 
-        protected virtual float moderate_desired_v(float des_v) { return des_v; }
+        protected virtual float moderate_desired_v(float des_v, bool user_input) { return des_v; }
 
         protected virtual float get_desired_acc(float des_v) { return Kp * (desired_v - vel); }
 
@@ -152,74 +152,70 @@ namespace AtmosphereAutopilot
 	// Three realizations
 	//
 
-    public sealed class PitchAngularVelocityController : AngularVelAdaptiveController
+    public abstract class PitchYawAngularVelocityController : AngularVelAdaptiveController
     {
-        internal PitchAngularVelocityController(Vessel vessel)
-            : base(vessel, "Pitch ang vel controller", 1234444, PITCH)
+        protected PitchYawAngularVelocityController(Vessel vessel, string module_name,
+            int wnd_id, int axis)
+            : base(vessel, module_name, wnd_id, axis)
         { }
 
-		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
-		{
-			base.InitializeDependencies(modules);
-			this.acc_controller = modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
-		}
-
-        Matrix in_eq_A = new Matrix(2, 2);
-        Matrix in_eq_b = new Matrix(2, 1);
-        Matrix in_eq_x;
-
-        const float dgr2rad = (float)(Math.PI / 180.0);
+        protected Matrix in_eq_A = new Matrix(2, 2);
+        protected Matrix in_eq_b = new Matrix(2, 1);
+        protected Matrix in_eq_x;
 
         [AutoGuiAttr("max_input_aoa", false, "G6")]
-        float max_input_aoa;
+        protected float max_input_aoa;
 
         [AutoGuiAttr("max_input_v", false, "G6")]
-        float max_input_v;
+        protected float max_input_v;
 
         [AutoGuiAttr("min_input_aoa", false, "G6")]
-        float min_input_aoa;
+        protected float min_input_aoa;
 
         [AutoGuiAttr("min_input_v", false, "G6")]
-        float min_input_v;
+        protected float min_input_v;
 
         [AutoGuiAttr("max_g_aoa_upper", false, "G6")]
-        float max_g_aoa_upper;
+        protected float max_g_aoa_upper;
 
         [AutoGuiAttr("max_g_aoa_lower", false, "G6")]
-        float max_g_aoa_lower;
+        protected float max_g_aoa_lower;
 
         [AutoGuiAttr("max_g_v_upper", false, "G6")]
-        float max_g_v_upper;
+        protected float max_g_v_upper;
 
         [AutoGuiAttr("max_g_v_lower", false, "G6")]
-        float max_g_v_lower;
+        protected float max_g_v_lower;
 
         [AutoGuiAttr("max_aoa_g", false, "G6")]
-        float max_aoa_g;
+        protected float max_aoa_g;
 
         [AutoGuiAttr("max_aoa_v", false, "G6")]
-        float max_aoa_v;
+        protected float max_aoa_v;
 
         [AutoGuiAttr("min_aoa_g", false, "G6")]
-        float min_aoa_g;
+        protected float min_aoa_g;
 
         [AutoGuiAttr("min_aoa_v", false, "G6")]
-        float min_aoa_v;
+        protected float min_aoa_v;
 
-		[AutoGuiAttr("moder_filter", true, "G6")]
-		float moder_filter = 4.0f;
+        [AutoGuiAttr("moder_filter", true, "G6")]
+        protected float moder_filter = 4.0f;
 
-        Matrix state_mat = new Matrix(3, 1);
-        Matrix input_mat = new Matrix(1, 1);
+        protected Matrix state_mat = new Matrix(3, 1);
+        protected Matrix input_mat = new Matrix(1, 1);
 
-        protected override float moderate_desired_v(float des_v)
+        protected LinearSystemModel lin_model;
+
+        protected override float moderate_desired_v(float des_v, bool user_input)
         {
             float rad_max_aoa = max_aoa * dgr2rad;
             res_max_aoa = 100.0f;
             res_min_aoa = -100.0f;
             res_equilibr_v_upper = max_v_construction;
             res_equilibr_v_lower = -max_v_construction;
-            float cur_aoa = Math.Abs(imodel.AoA(axis));
+            float cur_aoa = imodel.AoA(axis);
+            float abs_cur_aoa = Math.Abs(cur_aoa);
 
             if (moderate_aoa && imodel.dyn_pressure > 100.0)
             {
@@ -227,28 +223,28 @@ namespace AtmosphereAutopilot
                 res_max_aoa = rad_max_aoa;
                 res_min_aoa = -rad_max_aoa;
 
-                if (cur_aoa < 0.26f)
+                if (abs_cur_aoa < 0.26f)
                 {
                     // We're in linear regime so we can update our limitations
 
                     // get equilibrium v for max_aoa
-					float new_max_aoa_g =
-						-(float)((imodel.pitch_rot_model.C[0, 0] + imodel.pitch_rot_model.A[0, 0] * rad_max_aoa) * vessel.srfSpeed);
-					max_aoa_g = (float)Common.simple_filter(new_max_aoa_g, max_aoa_g, moder_filter);
+                    float new_max_aoa_g =
+                        -(float)((lin_model.C[0, 0] + lin_model.A[0, 0] * rad_max_aoa) * vessel.srfSpeed);
+                    max_aoa_g = (float)Common.simple_filter(new_max_aoa_g, max_aoa_g, moder_filter);
                     max_aoa_v = max_aoa_g / (float)vessel.srfSpeed;
-					float new_min_aoa_g = new_max_aoa_g + (float)(2.0 * imodel.pitch_rot_model.A[0, 0] * rad_max_aoa * vessel.srfSpeed);
-					min_aoa_g = (float)Common.simple_filter(new_min_aoa_g, min_aoa_g, moder_filter);
+                    float new_min_aoa_g = new_max_aoa_g + (float)(2.0 * lin_model.A[0, 0] * rad_max_aoa * vessel.srfSpeed);
+                    min_aoa_g = (float)Common.simple_filter(new_min_aoa_g, min_aoa_g, moder_filter);
                     min_aoa_v = min_aoa_g / (float)vessel.srfSpeed;
 
                     // Check if model is adequate and we have at least some authority
-                    if (imodel.pitch_rot_model.B[1, 0] > 1e-4)
+                    if (lin_model.B[1, 0] > 1e-4)
                     {
                         // get equilibrium aoa and angular_v for 1.0 input
-                        in_eq_A[0, 0] = imodel.pitch_rot_model.A[0, 0];
-                        in_eq_A[0, 1] = imodel.pitch_rot_model.A[0, 1];
-                        in_eq_A[1, 0] = imodel.pitch_rot_model.A[1, 0];
-                        in_eq_b[0, 0] = -imodel.pitch_rot_model.C[0, 0];
-                        in_eq_b[1, 0] = -imodel.pitch_rot_model.A[1, 2] - imodel.pitch_rot_model.B[1, 0] - imodel.pitch_rot_model.C[1, 0];
+                        in_eq_A[0, 0] = lin_model.A[0, 0];
+                        in_eq_A[0, 1] = lin_model.A[0, 1];
+                        in_eq_A[1, 0] = lin_model.A[1, 0];
+                        in_eq_b[0, 0] = -lin_model.C[0, 0];
+                        in_eq_b[1, 0] = -lin_model.A[1, 2] - lin_model.B[1, 0] - lin_model.C[1, 0];
                         in_eq_A.old_lu = true;
                         try
                         {
@@ -269,9 +265,9 @@ namespace AtmosphereAutopilot
                                 }
 
                                 // get equilibrium aoa and angular_v for -1.0 input
-                                in_eq_b[1, 0] = imodel.pitch_rot_model.A[1, 2] + imodel.pitch_rot_model.B[1, 0] - imodel.pitch_rot_model.C[1, 0];
+                                in_eq_b[1, 0] = lin_model.A[1, 2] + lin_model.B[1, 0] - lin_model.C[1, 0];
                                 in_eq_x = in_eq_A.SolveWith(in_eq_b);
-                                if (!double.IsInfinity(in_eq_x[0, 0]))
+                                if (!double.IsInfinity(in_eq_x[0, 0]) && !double.IsNaN(in_eq_x[0, 0]))
                                 {
                                     if (in_eq_x[0, 0] >= 0.0)
                                     {
@@ -319,21 +315,34 @@ namespace AtmosphereAutopilot
 
             if (moderate_g && imodel.dyn_pressure > 100.0)
             {
-                if (imodel.pitch_rot_model.A[0, 0] != 0.0 && cur_aoa < 0.26)
+                if (lin_model.A[0, 0] != 0.0 && abs_cur_aoa < 0.26)
                 {
+                    double gravity_acc = 0.0;
+                    switch (axis)
+                    {
+                        case PITCH:
+                            gravity_acc = imodel.pitch_gravity_acc;
+                            break;
+                        case YAW:
+                            gravity_acc = imodel.yaw_gravity_acc;
+                            break;
+                        default:
+                            gravity_acc = 0.0;
+                            break;
+                    }
                     // get equilibrium aoa and angular v for max_g g-force
-					max_g_v_upper = (float)Common.simple_filter(
-						(max_g_force * 9.81 + imodel.pitch_gravity_acc) / vessel.srfSpeed,
-						max_g_v_upper, moder_filter);
-					max_g_aoa_upper = (float)Common.simple_filter(
-						-(max_g_v_upper + imodel.pitch_rot_model.C[0, 0]) / imodel.pitch_rot_model.A[0, 0],
-						max_g_aoa_upper, moder_filter);
-					max_g_v_lower = (float)Common.simple_filter(
-						(-max_g_force * 9.81 + imodel.pitch_gravity_acc) / vessel.srfSpeed,
-						max_g_v_lower, moder_filter);
+                    max_g_v_upper = (float)Common.simple_filter(
+                        (max_g_force * 9.81 + gravity_acc) / vessel.srfSpeed,
+                        max_g_v_upper, moder_filter);
+                    max_g_aoa_upper = (float)Common.simple_filter(
+                        -(max_g_v_upper + lin_model.C[0, 0]) / lin_model.A[0, 0],
+                        max_g_aoa_upper, moder_filter);
+                    max_g_v_lower = (float)Common.simple_filter(
+                        (-max_g_force * 9.81 + gravity_acc) / vessel.srfSpeed,
+                        max_g_v_lower, moder_filter);
                     max_g_aoa_lower = (float)Common.simple_filter(
-						-(max_g_v_lower + imodel.pitch_rot_model.C[0, 0]) / imodel.pitch_rot_model.A[0, 0],
-						max_g_aoa_lower, moder_filter);
+                        -(max_g_v_lower + lin_model.C[0, 0]) / lin_model.A[0, 0],
+                        max_g_aoa_lower, moder_filter);
                 }
                 // apply g-force moderation
                 if (max_g_aoa_upper < res_max_aoa)
@@ -351,13 +360,13 @@ namespace AtmosphereAutopilot
             // let's get non-overshooting max v value, let's call it transit_max_v
             // we start on 0.0 aoa with transit_max_v and we must not overshoot res_max_aoa
             // while applying -1.0 input all the time
-            if (cur_aoa < 0.26f && imodel.dyn_pressure > 10.0)
+            if (abs_cur_aoa < 0.26f && imodel.dyn_pressure > 10.0)
             {
                 double transit_max_aoa = Math.Min(rad_max_aoa, res_max_aoa);
                 state_mat[0, 0] = transit_max_aoa / 2.0;
                 state_mat[2, 0] = -1.0;
                 input_mat[0, 0] = -1.0;
-                double acc = imodel.pitch_rot_model.eval_row(1, state_mat, input_mat);
+                double acc = lin_model.eval_row(1, state_mat, input_mat);
                 float new_dyn_max_v =
                     (float)Math.Sqrt(transit_max_aoa * (-acc));
                 if (float.IsNaN(new_dyn_max_v))
@@ -369,7 +378,7 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
-					transit_max_v = (float)Common.simple_filter(new_dyn_max_v / 3.0f, transit_max_v, moder_filter);
+                    transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
                     old_dyn_max_v = transit_max_v;
                 }
             }
@@ -384,16 +393,19 @@ namespace AtmosphereAutopilot
 
             // desired_v moderation section
             float scaled_restrained_v;
-            float normalized_des_v = des_v / max_v_construction;
+            float normalized_des_v = user_input ? des_v / max_v_construction : des_v / transit_max_v;
+            if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
+                normalized_des_v = 0.0f;
+            normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
             if (des_v >= 0.0f)
             {
-                scaled_aoa = Common.Clampf((res_max_aoa - imodel.AoA(axis)) / 2.0f / res_max_aoa, 1.0f);
+                scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) / 2.0f / res_max_aoa, 1.0f);
                 scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_upper * (1.0f - scaled_aoa),
                     transit_max_v * normalized_des_v);
             }
             else
             {
-                scaled_aoa = Common.Clampf((res_min_aoa - imodel.AoA(axis)) / 2.0f / res_min_aoa, 1.0f);
+                scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) / 2.0f / res_min_aoa, 1.0f);
                 scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_lower * (1.0f - scaled_aoa),
                     transit_max_v * normalized_des_v);
             }
@@ -403,30 +415,30 @@ namespace AtmosphereAutopilot
         }
 
         [AutoGuiAttr("quadr Kp", true, "G6")]
-        float quadr_Kp = 0.2f;
+        protected float quadr_Kp = 0.2f;
 
         [AutoGuiAttr("kacc_quadr", false, "G6")]
-        float kacc_quadr;
-        bool first_quadr = true;
+        protected float kacc_quadr;
+        protected bool first_quadr = true;
 
         [AutoGuiAttr("kacc_smoothing", true, "G5")]
-        float kacc_smoothing = 10.0f;
+        protected float kacc_smoothing = 10.0f;
 
         [AutoGuiAttr("relaxation_k", true, "G5")]
-        float relaxation_k = 1.0f;
+        protected float relaxation_k = 2.0f;
 
         [AutoGuiAttr("relaxation_Kp", true, "G5")]
-        float relaxation_Kp = 0.1f;
+        protected float relaxation_Kp = 0.2f;
 
         [AutoGuiAttr("relaxation_frame", true)]
-        int relaxation_frame = 4;
+        protected int relaxation_frame = 4;
 
         [AutoGuiAttr("relaxation_frame", false)]
-        int relax_count = 0;
+        protected int relax_count = 0;
 
         protected override float get_desired_acc(float des_v)
         {
-            float new_kacc_quadr = (float)(quadr_Kp * imodel.pitch_rot_model.A[1, 2] * imodel.pitch_rot_model.B[2, 0]);
+            float new_kacc_quadr = (float)(quadr_Kp * lin_model.A[1, 2] * lin_model.B[2, 0]);
             if (first_quadr)
                 kacc_quadr = new_kacc_quadr;
             else
@@ -447,7 +459,7 @@ namespace AtmosphereAutopilot
                     {
                         float avg_vel = 0.0f;
                         for (int i = 0; i < relaxation_frame; i++)
-                            avg_vel += imodel.AngularVelHistory(PITCH).getFromTail(i);
+                            avg_vel += imodel.AngularVelHistory(axis).getFromTail(i);
                         avg_vel /= (float)relaxation_frame;
                         v_error = avg_vel - des_v;
                         if (relax_count > relaxation_frame * 2)
@@ -471,7 +483,7 @@ namespace AtmosphereAutopilot
                     {
                         float avg_vel = 0.0f;
                         for (int i = 0; i < relaxation_frame; i++)
-                            avg_vel += imodel.AngularVelHistory(PITCH).getFromTail(i);
+                            avg_vel += imodel.AngularVelHistory(axis).getFromTail(i);
                         avg_vel /= (float)relaxation_frame;
                         v_error = avg_vel - des_v;
                         if (relax_count > relaxation_frame * 2)
@@ -485,14 +497,14 @@ namespace AtmosphereAutopilot
                     double leftover_dt = Math.Min(dt, -quadr_x);
                     desired_deriv = (float)(-kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) + kacc_quadr * quadr_x * quadr_x) / dt;
                 }
-            }            
+            }
             return desired_deriv;
         }
 
         [AutoGuiAttr("transit_max_v", false, "G6")]
-        float transit_max_v;
-        
-        float old_dyn_max_v;
+        public float transit_max_v;
+
+        protected float old_dyn_max_v;
 
         [AutoGuiAttr("res_max_aoa", false, "G6")]
         public float res_max_aoa;
@@ -507,7 +519,7 @@ namespace AtmosphereAutopilot
         public float res_equilibr_v_lower;
 
         [AutoGuiAttr("DEBUG scaled_aoa", false, "G6")]
-        float scaled_aoa;
+        protected float scaled_aoa;
 
         #region ModerationParameters
 
@@ -521,12 +533,26 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("max_aoa")]
         [AutoGuiAttr("max AoA", true, "G6")]
-        float max_aoa = 15.0f;
+        protected float max_aoa = 15.0f;
 
         [AutoGuiAttr("max G-force", true, "G6")]
-        float max_g_force = 10.0f;
+        protected float max_g_force = 10.0f;
 
         #endregion
+    }
+
+    public sealed class PitchAngularVelocityController : PitchYawAngularVelocityController
+    {
+        internal PitchAngularVelocityController(Vessel vessel)
+            : base(vessel, "Pitch ang vel controller", 1234444, PITCH)
+        { }
+
+		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+		{
+			base.InitializeDependencies(modules);
+			this.acc_controller = modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
+            this.lin_model = imodel.pitch_rot_model;
+		}
     }
 
 	public sealed class RollAngularVelocityController : AngularVelAdaptiveController
@@ -553,7 +579,7 @@ namespace AtmosphereAutopilot
         Matrix state_mat = new Matrix(3, 1);
         Matrix input_mat = new Matrix(1, 1);
 
-        protected override float moderate_desired_v(float des_v)
+        protected override float moderate_desired_v(float des_v, bool user_input)
         {
             float cur_aoa = imodel.AoA(YAW);
             
@@ -564,40 +590,32 @@ namespace AtmosphereAutopilot
                     (float)((imodel.roll_rot_model.C[1, 0] + imodel.roll_rot_model_undelayed.B[1, 0]) / -imodel.roll_rot_model.A[1, 1]);
                 float new_min_input_v =
                     (float)((imodel.roll_rot_model.C[1, 0] - imodel.roll_rot_model_undelayed.B[1, 0]) / -imodel.roll_rot_model.A[1, 1]);
-                if (!float.IsInfinity(new_max_input_v) && new_max_input_v > 0.0f && new_min_input_v < 0.0f)
+                if (!float.IsInfinity(new_max_input_v) && !float.IsInfinity(new_min_input_v))
                 {
                     max_input_v = (float)Common.simple_filter(new_max_input_v, max_input_v, moder_filter);
                     min_input_v = (float)Common.simple_filter(new_min_input_v, min_input_v, moder_filter);
                 }
             }
 
-            // let's get non-overshooting max v value, let's call it transit_max_v
-            // we start on 0.0 v and 0.0 yaw aoa and max_input_v / 2.0 and we have stopping_time seconds
-            // to accelerate. Resulting speed will be our transit speed
-            if (!((cur_aoa > 0.26f) && (imodel.dyn_pressure > 10.0)))
+            // desired_v moderation section
+            if (des_v >= 0.0f)
             {
-                state_mat[0, 0] = 0.0;
-                state_mat[1, 0] = max_input_v / 2.0;
-                state_mat[2, 0] = 1.0;
-                input_mat[0, 0] = 1.0;
-                double acc = imodel.roll_rot_model.eval_row(1, state_mat, input_mat);
-                float new_dyn_max_v = (float)(stopping_time * Math.Abs(acc));
-                transit_max_v = (float)Common.simple_filter(new_dyn_max_v / 3.0f, transit_max_v, moder_filter);
-                old_dyn_max_v = transit_max_v;
+                float normalized_des_v = user_input ? des_v / max_v_construction : des_v / max_input_v;
+                if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
+                    normalized_des_v = 0.0f;
+                normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
+                float scaled_restrained_v = Math.Min(max_input_v, max_v_construction);
+                des_v = normalized_des_v * scaled_restrained_v;
             }
             else
-                if (old_dyn_max_v != 0.0f)
-                    transit_max_v = old_dyn_max_v;
-                else
-                {
-                    old_dyn_max_v = max_v_construction;
-                    transit_max_v = max_v_construction;
-                }
-
-            // desired_v moderation section
-            float normalized_des_v = des_v / max_v_construction;
-            float scaled_restrained_v = Math.Min(transit_max_v, max_v_construction);
-            des_v = normalized_des_v * scaled_restrained_v;
+            {
+                float normalized_des_v = user_input ? des_v / -max_v_construction : des_v / min_input_v;
+                if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
+                    normalized_des_v = 0.0f;
+                normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
+                float scaled_restrained_v = Math.Max(min_input_v, -max_v_construction);
+                des_v = normalized_des_v * scaled_restrained_v;
+            }
 
             return des_v;
         }
@@ -613,10 +631,10 @@ namespace AtmosphereAutopilot
         float kacc_smoothing = 10.0f;
 
         [AutoGuiAttr("relaxation_k", true, "G5")]
-        float relaxation_k = 1.0f;
+        float relaxation_k = 2.0f;
 
         [AutoGuiAttr("relaxation_Kp", true, "G5")]
-        float relaxation_Kp = 0.1f;
+        float relaxation_Kp = 0.2f;
 
         [AutoGuiAttr("relaxation_frame", true)]
         int relaxation_frame = 4;
@@ -688,23 +706,9 @@ namespace AtmosphereAutopilot
             }
             return desired_deriv;
         }
-
-        [AutoGuiAttr("transit_max_v", false, "G6")]
-        float transit_max_v;
-
-        float old_dyn_max_v;
-
-        #region ModerationParameters
-
-        [VesselSerializable("stopping_time")]
-        [GlobalSerializable("stopping_time")]
-        [AutoGuiAttr("stopping_time", true, null)]
-        public float stopping_time = 1.0f;
-
-        #endregion
 	}
 
-	public sealed class YawAngularVelocityController : AngularVelAdaptiveController
+    public sealed class YawAngularVelocityController : PitchYawAngularVelocityController
 	{
 		internal YawAngularVelocityController(Vessel vessel)
             : base(vessel, "Yaw ang vel controller", 1234446, YAW)
@@ -714,6 +718,7 @@ namespace AtmosphereAutopilot
 		{
 			base.InitializeDependencies(modules);
 			this.acc_controller = modules[typeof(YawAngularAccController)] as YawAngularAccController;
+            this.lin_model = imodel.yaw_rot_model;
 		}
 	}
 

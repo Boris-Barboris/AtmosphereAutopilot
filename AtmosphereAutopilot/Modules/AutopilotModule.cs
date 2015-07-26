@@ -35,6 +35,9 @@ namespace AtmosphereAutopilot
 		public const int ROLL = 1;
 		public const int YAW = 2;
 
+        public const float rad2dgr = (float)(180.0 / Math.PI);
+        public const float dgr2rad = (float)(Math.PI / 180.0);
+
         protected Vessel vessel = null;
         protected bool enabled = false;
         protected string module_name;

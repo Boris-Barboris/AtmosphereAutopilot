@@ -72,7 +72,7 @@
     <Compile Include="Math\Matrix.cs" />
     <Compile Include="Modules\AngularVelAdaptiveController.cs" />
     <Compile Include="Modules\AutopilotModule.cs" />
-    <Compile Include="Modules\SideslipController.cs" />
+    <Compile Include="Modules\AoAController.cs" />
     <Compile Include="Modules\StandardFlyByWire.cs" />
     <Compile Include="Modules\StateController.cs" />
     <Compile Include="Common.cs" />

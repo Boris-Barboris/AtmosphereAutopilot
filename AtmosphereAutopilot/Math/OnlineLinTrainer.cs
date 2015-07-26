@@ -275,16 +275,16 @@ namespace AtmosphereAutopilot
             {
                 if (output_view != null)
                     max_output_value = Math.Max(output_view.Max(v => Math.Abs(v)), 0.01);
-                double max_error = 0.0;
+                double sum_error = 0.0;
                 for (int i = 0; i < imm_training_inputs.Size; i++)
                 {
                     Vector input = imm_training_inputs[i];
                     double true_output = imm_training_outputs[i];
                     double lin_output = linmodel.eval_training(input);
                     double scaled_err = (lin_output - true_output) / max_output_value;
-                    max_error = Math.Max(max_error, Math.Abs(scaled_err));
+                    sum_error += Math.Abs(scaled_err);
                 }
-                linear = max_error < linear_err_criteria;
+                linear = (sum_error / (double)imm_training_inputs.Size) < linear_err_criteria;
                 if (linear)
                     weight_time_decay = linear_time_decay;
                 else

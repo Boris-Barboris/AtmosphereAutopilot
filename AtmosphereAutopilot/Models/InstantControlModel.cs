@@ -245,6 +245,8 @@ namespace AtmosphereAutopilot
             float mass = 0.0f;
             foreach (var pm in massive_parts)
             {
+                if (pm.part.State == PartStates.DEAD || !pm.part.isAttached)
+                    continue;
                 if (pm.part.rb != null)
                 {
                     result += pm.part.rb.worldCenterOfMass * pm.part.rb.mass;
@@ -387,14 +389,14 @@ namespace AtmosphereAutopilot
         void update_aoa()
         {
             // thx ferram
-            up_srf_v = vessel.ReferenceTransform.up * Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity);
-            fwd_srf_v = vessel.ReferenceTransform.forward * Vector3.Dot(vessel.ReferenceTransform.forward, vessel.srf_velocity);
-            right_srf_v = vessel.ReferenceTransform.right * Vector3.Dot(vessel.ReferenceTransform.right, vessel.srf_velocity);
+            up_srf_v = Vector3.Project(vessel.srf_velocity, vessel.ReferenceTransform.up);
+            fwd_srf_v = Vector3.Project(vessel.srf_velocity, vessel.ReferenceTransform.forward);
+            right_srf_v = Vector3.Project(vessel.srf_velocity, vessel.ReferenceTransform.right);
 
 			Vector3 projected_vel = up_srf_v + fwd_srf_v;
 			if (projected_vel.sqrMagnitude > 1.0f)
 			{
-				float aoa_p = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, projected_vel.normalized), 1.0f));
+				float aoa_p = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward, projected_vel.normalized), 1.0f));
 				if (Vector3.Dot(projected_vel, vessel.ReferenceTransform.up) < 0.0)
 					aoa_p = (float)Math.PI - aoa_p;
 				aoa_buf[PITCH].Put(aoa_p);
@@ -405,7 +407,7 @@ namespace AtmosphereAutopilot
 			projected_vel = up_srf_v + right_srf_v;
 			if (projected_vel.sqrMagnitude > 1.0f)
 			{
-				float aoa_y = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.right.normalized, projected_vel.normalized), 1.0f));
+				float aoa_y = (float)Math.Asin(Common.Clampf(Vector3.Dot(-vessel.ReferenceTransform.right, projected_vel.normalized), 1.0f));
 				if (Vector3.Dot(projected_vel, vessel.ReferenceTransform.up) < 0.0)
 					aoa_y = (float)Math.PI - aoa_y;
 				aoa_buf[YAW].Put(aoa_y);
@@ -416,7 +418,7 @@ namespace AtmosphereAutopilot
 			projected_vel = right_srf_v + fwd_srf_v;
 			if (projected_vel.sqrMagnitude > 1.0f)
 			{
-				float aoa_r = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward.normalized, projected_vel.normalized), 1.0f));
+				float aoa_r = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward, projected_vel.normalized), 1.0f));
 				if (Vector3.Dot(projected_vel, vessel.ReferenceTransform.right) < 0.0)
 					aoa_r = (float)Math.PI - aoa_r;
 				aoa_buf[ROLL].Put(aoa_r);
@@ -599,11 +601,12 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Lift acc", false, "G6")]
         public double lift_acc = 0.0;
 
-        //[AutoGuiAttr("Slide acc", false, "G8")]
+        [AutoGuiAttr("Slide acc", false, "G8")]
         public double slide_acc = 0.0;
 
-        Vector3d vess2planet;
-        double g_acc;
+        //Vector3d vess2planet;
+        Vector3d gravity_acc, noninert_acc;
+        Vector3d sum_acc;
 
         [AutoGuiAttr("pitch_gravity_acc", false, "G6")]
         public double pitch_gravity_acc;
@@ -611,29 +614,47 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("pitch_engine_acc", false, "G6")]
         public double pitch_engine_acc;
 
-        //[AutoGuiAttr("yaw_gravity_acc", false, "G8")]
+        [AutoGuiAttr("pitch_noninert_acc", false, "G6")]
+        public double pitch_noninert_acc;
+
+        [AutoGuiAttr("yaw_gravity_acc", false, "G8")]
         public double yaw_gravity_acc;
 
-        //[AutoGuiAttr("yaw_engine_acc", false, "G8")]
+        [AutoGuiAttr("yaw_engine_acc", false, "G8")]
         public double yaw_engine_acc;
+
+        [AutoGuiAttr("yaw_noninert_acc", false, "G6")]
+        public double yaw_noninert_acc;
+
+        Vector3d prev_orb_vel;
 
         void update_dynamics()
         {
             dyn_pressure = vessel.atmDensity * vessel.srfSpeed * vessel.srfSpeed;
 
-            vess2planet = vessel.mainBody.position - vessel.transform.position;
-            g_acc = vessel.mainBody.gMagnitudeAtCenter / vess2planet.sqrMagnitude;
+            //vess2planet = vessel.mainBody.position - vessel.transform.position;
+            //gravity_acc = vess2planet.normalized * (vessel.mainBody.gMagnitudeAtCenter / vess2planet.sqrMagnitude);
+            gravity_acc = vessel.flightIntegrator.gForce;
+            noninert_acc = vessel.flightIntegrator.CoriolisAcc + vessel.flightIntegrator.CentrifugalAcc;
+            Vector3d orb_vel = vessel.obt_velocity;
+            sum_acc = (orb_vel - prev_orb_vel) / TimeWarp.fixedDeltaTime;
+            prev_orb_vel = orb_vel;
+            
+            // pitch
             Vector3d tangent_axis = Vector3.Cross(vessel.srf_velocity, vessel.ReferenceTransform.right).normalized;
-            double pitch_g_projection = Vector3d.Dot(tangent_axis, vess2planet.normalized);
-            double pitch_total_acc = Vector3d.Dot(vessel.acceleration, tangent_axis);
-            pitch_gravity_acc = g_acc * pitch_g_projection;
+            double pitch_total_acc = Vector3d.Dot(sum_acc, tangent_axis);
+            pitch_gravity_acc = Vector3d.Dot(gravity_acc, tangent_axis);
+            pitch_noninert_acc = Vector3d.Dot(noninert_acc, tangent_axis);
             pitch_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust / sum_mass, tangent_axis);
-            lift_acc = pitch_total_acc - pitch_gravity_acc - pitch_engine_acc;
-            double yaw_g_projection = Vector3d.Dot(vessel.transform.right, vess2planet.normalized);
-            double yaw_total_acc = Vector3d.Dot(vessel.acceleration, vessel.transform.right);
-            yaw_gravity_acc = g_acc * yaw_g_projection;
-            yaw_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust / sum_mass, vessel.transform.right);
-            slide_acc = yaw_total_acc - yaw_gravity_acc - yaw_engine_acc;
+            lift_acc = pitch_total_acc - pitch_noninert_acc - pitch_gravity_acc - pitch_engine_acc;
+
+            // yaw
+            tangent_axis = Vector3.Cross(vessel.srf_velocity, vessel.ReferenceTransform.forward).normalized;
+            double yaw_total_acc = Vector3d.Dot(sum_acc, tangent_axis);
+            yaw_gravity_acc = Vector3d.Dot(gravity_acc, tangent_axis);
+            yaw_noninert_acc = Vector3d.Dot(noninert_acc, tangent_axis);
+            yaw_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust / sum_mass, tangent_axis);
+            slide_acc = yaw_total_acc - pitch_noninert_acc - yaw_gravity_acc - yaw_engine_acc;
         }
 
         #endregion
@@ -909,7 +930,7 @@ namespace AtmosphereAutopilot
         public readonly LinearSystemModel roll_rot_model_undelayed = new LinearSystemModel(2, 1);
         public readonly LinearSystemModel yaw_rot_model_undelayed = new LinearSystemModel(2, 1);
 
-        public struct PitchYawCoeffs
+        public class PitchYawCoeffs
         {
             public double k0;
             public double k1;
@@ -920,7 +941,7 @@ namespace AtmosphereAutopilot
             public double et1;
         }
 
-        public struct RollCoeffs
+        public class RollCoeffs
         {
             public double k0;
             public double k1;
@@ -930,8 +951,9 @@ namespace AtmosphereAutopilot
             public double et1;
         }
 
-        public PitchYawCoeffs pitch_coeffs, yaw_coeffs;
-        public RollCoeffs roll_coeffs;
+        public PitchYawCoeffs pitch_coeffs = new PitchYawCoeffs();
+        public PitchYawCoeffs yaw_coeffs = new PitchYawCoeffs();
+        public RollCoeffs roll_coeffs = new RollCoeffs();
 
         void update_pitch_rot_model()
         {
@@ -960,7 +982,7 @@ namespace AtmosphereAutopilot
             Matrix C = pitch_rot_model.C;
             if (dyn_pressure >= 10.0)
             {
-                C[0, 0] = -(pitch_gravity_acc + pitch_coeffs.Cl0 - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc + pitch_coeffs.Cl0 - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = pitch_coeffs.k0 + pitch_coeffs.et0;
             }
             else
@@ -982,7 +1004,7 @@ namespace AtmosphereAutopilot
             C = pitch_rot_model_undelayed.C;
             if (dyn_pressure >= 10.0)
             {
-                C[0, 0] = -(pitch_gravity_acc + pitch_coeffs.Cl0 - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc + pitch_coeffs.Cl0 - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = pitch_coeffs.k0 + pitch_coeffs.et0;
             }
             else
@@ -1037,14 +1059,16 @@ namespace AtmosphereAutopilot
             // Fill coeff structs
             yaw_coeffs.Cl0 = yaw_lift_model.pars[0] / 1e3 * dyn_pressure / sum_mass;
             yaw_coeffs.Cl1 = yaw_lift_model.pars[1] / 1e3 * dyn_pressure / sum_mass;
+            yaw_coeffs.et0 = engines_torque_k0[YAW] / MOI[YAW];
+            yaw_coeffs.et1 = engines_torque_k1[YAW] / MOI[YAW];
             yaw_coeffs.k0 = yaw_aero_torque_model.pars[0] / 1e4 * dyn_pressure;
             yaw_coeffs.k1 = yaw_aero_torque_model.pars[1] / 1e4 * dyn_pressure;
             yaw_coeffs.k2 = yaw_aero_torque_model.pars[2] / 1e4 * dyn_pressure;
 
-            // Fill linear model
+            // Fill yaw_rot_model
             Matrix A = yaw_rot_model.A;
             if (dyn_pressure >= 10.0)
-                A[0, 0] = -yaw_coeffs.Cl1 / vessel.srfSpeed;
+                A[0, 0] = -(yaw_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
             else
                 A[0, 0] = 0.0;
             A[0, 1] = 1.0;
@@ -1052,14 +1076,43 @@ namespace AtmosphereAutopilot
             A[1, 2] = yaw_coeffs.k2 * (1.0 - 4.0 * TimeWarp.fixedDeltaTime);
             A[2, 2] = -4.0;
             Matrix B = yaw_rot_model.B;
-            B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.k2 * 4.0 * TimeWarp.fixedDeltaTime;
+            B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.k2 * 4.0 * TimeWarp.fixedDeltaTime + yaw_coeffs.et1;
             B[2, 0] = 4.0;
             Matrix C = yaw_rot_model.C;
             if (dyn_pressure >= 10.0)
-                C[0, 0] = -(yaw_gravity_acc + yaw_coeffs.Cl0 + yaw_engine_acc) / vessel.srfSpeed;
+            {
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[1, 0] = yaw_coeffs.k0 + yaw_coeffs.et0;
+            }
             else
+            {
                 C[0, 0] = 0.0;
-            C[1, 0] = yaw_coeffs.k0;
+                C[1, 0] = yaw_coeffs.et0;
+            }
+
+            // Fill yaw_rot_model_undelayed
+            A = yaw_rot_model_undelayed.A;
+            if (dyn_pressure >= 10.0)
+                A[0, 0] = -(yaw_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
+            else
+                A[0, 0] = 0.0;
+            A[0, 1] = 1.0;
+            A[1, 0] = yaw_coeffs.k1;
+            B = yaw_rot_model_undelayed.B;
+            B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.k2 + yaw_coeffs.et1;
+            C = yaw_rot_model_undelayed.C;
+            if (dyn_pressure >= 10.0)
+            {
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[1, 0] = yaw_coeffs.k0 + yaw_coeffs.et0;
+            }
+            else
+            {
+                C[0, 0] = 0.0;
+                C[1, 0] = yaw_coeffs.et0;
+            }
+
+            //Debug.Log("A =\r\n" + A.ToString() + "B =\r\n" + B.ToString() + "C =\r\n" + C.ToString());
         }
 
         #endregion
@@ -1113,16 +1166,13 @@ namespace AtmosphereAutopilot
                 GUILayout.Label("AoA = " + (aoa_buf[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
                 //GUILayout.Label("MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 //GUILayout.Label("AngMoment = " + AM[i].ToString("G8"), GUIStyles.labelStyleLeft);
-                if (i < 2)
-                    AutoGUI.AutoDrawObject(trainers[i]);
+                //if (i < 2)
+                AutoGUI.AutoDrawObject(trainers[i]);
 			}
-            GUILayout.Space(5.0f);
-            GUILayout.Label("Pitch lift trainer", GUIStyles.labelStyleLeft);
+            GUILayout.Label("===Pitch lift trainer===", GUIStyles.labelStyleLeft);
             AutoGUI.AutoDrawObject(pitch_lift_trainer);
-            GUILayout.Space(5.0f);
-            //GUILayout.Label("Yaw lift trainer", GUIStyles.labelStyleLeft);
-            //AutoGUI.AutoDrawObject(yaw_lift_trainer);
-            //GUILayout.Space(5.0f);
+            GUILayout.Label("===Yaw lift trainer===", GUIStyles.labelStyleLeft);
+            AutoGUI.AutoDrawObject(yaw_lift_trainer);
             AutoGUI.AutoDrawObject(this);
 			GUILayout.EndVertical();
 			GUI.DragWindow();
