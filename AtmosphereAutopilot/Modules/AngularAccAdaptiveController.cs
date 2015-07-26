@@ -213,11 +213,12 @@ namespace AtmosphereAutopilot
                     cur_model_acc = imodel.pitch_rot_model_undelayed.eval_row(1, cur_state, input_mat);
                 else
                     cur_model_acc = imodel.pitch_rot_model.eval_row(1, cur_state, input_mat);
+                //acc_correction = acc - cur_model_acc;
             }
             if (imodel.ControlSurfPosHistory(PITCH).Size > 2 && use_correction)
             {
                 // get model acceleration for previous frame
-                float last_input = imodel.ControlInputHistory(PITCH).getFromTail(1); 
+                float last_input = imodel.ControlInputHistory(PITCH).getFromTail(1);
                 float prelast_csurf = imodel.ControlSurfPosHistory(PITCH).getFromTail(2);
                 cur_state[0, 0] = imodel.AoAHistory(PITCH).getFromTail(2);
                 cur_state[1, 0] = imodel.AngularVelHistory(PITCH).getFromTail(2);
@@ -276,9 +277,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("use_correction", true)]
         bool use_correction = true;
 
-        [AutoGuiAttr("exp_collapse", false)]
-        bool exp_collapse = false;
-
         protected override float get_required_input(FlightCtrlState cntrl, float target_value)
         {
             double authority = imodel.roll_rot_model.B[1, 0];
@@ -306,30 +304,29 @@ namespace AtmosphereAutopilot
                     cur_model_acc = imodel.roll_rot_model_undelayed.eval_row(1, cur_state, input_mat);
                 else
                     cur_model_acc = imodel.roll_rot_model.eval_row(1, cur_state, input_mat);
-                acc_correction = acc - cur_model_acc;
+                //acc_correction = acc - cur_model_acc;
             }
-            //if (imodel.ControlSurfPosHistory(ROLL).Size > 2 && use_correction)
-            //{
-            //    // get model acceleration for previous frame
-            //    float last_input = imodel.ControlInputHistory(ROLL).getFromTail(1);
-            //    float prelast_csurf = imodel.ControlSurfPosHistory(ROLL).getFromTail(2);
-            //    cur_state[0, 0] = imodel.AoAHistory(YAW).getFromTail(2);
-            //    cur_state[1, 0] = imodel.AngularVelHistory(ROLL).getFromTail(2);
-            //    cur_state[2, 0] = prelast_csurf;
-            //    input_mat[0, 0] = last_input;
-            //    if (InstantControlModel.far_blend_collapse(prelast_csurf, last_input))
-            //        prev_model_acc = imodel.roll_rot_model_undelayed.eval_row(1, cur_state, input_mat);
-            //    else
-            //        prev_model_acc = imodel.roll_rot_model.eval_row(1, cur_state, input_mat);
-            //    acc_correction = (acc - cur_model_acc + imodel.AngularAccHistory(ROLL).getFromTail(1) - prev_model_acc) / 2.0;
-            //}
+            if (imodel.ControlSurfPosHistory(ROLL).Size > 2 && use_correction)
+            {
+                // get model acceleration for previous frame
+                float last_input = imodel.ControlInputHistory(ROLL).getFromTail(1);
+                float prelast_csurf = imodel.ControlSurfPosHistory(ROLL).getFromTail(2);
+                cur_state[0, 0] = imodel.AoAHistory(YAW).getFromTail(2);
+                cur_state[1, 0] = imodel.AngularVelHistory(ROLL).getFromTail(2);
+                cur_state[2, 0] = prelast_csurf;
+                input_mat[0, 0] = last_input;
+                if (InstantControlModel.far_blend_collapse(prelast_csurf, last_input))
+                    prev_model_acc = imodel.roll_rot_model_undelayed.eval_row(1, cur_state, input_mat);
+                else
+                    prev_model_acc = imodel.roll_rot_model.eval_row(1, cur_state, input_mat);
+                acc_correction = (acc - cur_model_acc + imodel.AngularAccHistory(ROLL).getFromTail(1) - prev_model_acc) / 2.0;
+            }
             else
                 acc_correction = 0.0;
 
             double acc_error = target_value - (cur_acc_prediction + acc_correction);
             float new_input = (float)(imodel.ControlSurfPos(ROLL) + acc_error / authority);
             new_input = Common.Clampf(new_input, 1.0f);
-            exp_collapse = false;
 
             // Exponential blend can mess with rotation model, let's check it
             if (InstantControlModel.far_blend_collapse(imodel.ControlSurfPos(ROLL), new_input))
@@ -338,7 +335,6 @@ namespace AtmosphereAutopilot
                 authority = imodel.roll_rot_model_undelayed.B[1, 0];
                 new_input = (float)(imodel.ControlSurfPos(ROLL) + acc_error / authority);
                 new_input = Common.Clampf(new_input, 1.0f);
-                exp_collapse = true;
             }
 
             model_predicted_acc = cur_acc_prediction + acc_correction + authority * (new_input - imodel.ControlSurfPos(ROLL));

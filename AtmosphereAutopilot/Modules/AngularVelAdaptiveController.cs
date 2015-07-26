@@ -419,7 +419,7 @@ namespace AtmosphereAutopilot
         float relaxation_Kp = 0.1f;
 
         [AutoGuiAttr("relaxation_frame", true)]
-        int relaxation_frame = 8;
+        int relaxation_frame = 4;
 
         [AutoGuiAttr("relaxation_frame", false)]
         int relax_count = 0;
@@ -443,7 +443,7 @@ namespace AtmosphereAutopilot
                 quadr_x = -Math.Sqrt(v_error / kacc_quadr);
                 if (quadr_x >= -relaxation_k * dt)
                 {
-                    if (++relax_count >= relaxation_frame)
+                    if (++relax_count > relaxation_frame)
                     {
                         float avg_vel = 0.0f;
                         for (int i = 0; i < relaxation_frame; i++)
@@ -453,12 +453,13 @@ namespace AtmosphereAutopilot
                         if (relax_count > relaxation_frame * 2)
                             relax_count--;
                     }
-                    desired_deriv = (float)(relaxation_Kp * v_error / quadr_x);
+                    desired_deriv = (float)(relaxation_Kp * -v_error / (Math.Ceiling(relaxation_k) * dt));
                 }
                 else
                 {
                     relax_count = 0;
-                    desired_deriv = (float)(kacc_quadr * Math.Pow(quadr_x + dt, 2.0) - kacc_quadr * quadr_x * quadr_x) / dt;
+                    double leftover_dt = Math.Min(dt, -quadr_x);
+                    desired_deriv = (float)(kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) - kacc_quadr * quadr_x * quadr_x) / dt;
                 }
             }
             else
@@ -466,7 +467,7 @@ namespace AtmosphereAutopilot
                 quadr_x = -Math.Sqrt(v_error / -kacc_quadr);
                 if (quadr_x >= -relaxation_k * dt)
                 {
-                    if (++relax_count >= relaxation_frame)
+                    if (++relax_count > relaxation_frame)
                     {
                         float avg_vel = 0.0f;
                         for (int i = 0; i < relaxation_frame; i++)
@@ -476,12 +477,13 @@ namespace AtmosphereAutopilot
                         if (relax_count > relaxation_frame * 2)
                             relax_count--;
                     }
-                    desired_deriv = (float)(relaxation_Kp * v_error / quadr_x);
+                    desired_deriv = (float)(relaxation_Kp * -v_error / (Math.Ceiling(relaxation_k) * dt));
                 }
                 else
                 {
-                    desired_deriv = (float)(-kacc_quadr * Math.Pow(quadr_x + dt, 2.0) + kacc_quadr * quadr_x * quadr_x) / dt;
                     relax_count = 0;
+                    double leftover_dt = Math.Min(dt, -quadr_x);
+                    desired_deriv = (float)(-kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) + kacc_quadr * quadr_x * quadr_x) / dt;
                 }
             }            
             return desired_deriv;
@@ -539,6 +541,12 @@ namespace AtmosphereAutopilot
 			this.acc_controller = modules[typeof(RollAngularAccController)] as RollAngularAccController;
 		}
 
+        [AutoGuiAttr("max_input_v", false, "G6")]
+        float max_input_v;
+
+        [AutoGuiAttr("min_input_v", false, "G6")]
+        float min_input_v;
+
         [AutoGuiAttr("moder_filter", true, "G6")]
         float moder_filter = 4.0f;
 
@@ -548,12 +556,28 @@ namespace AtmosphereAutopilot
         protected override float moderate_desired_v(float des_v)
         {
             float cur_aoa = imodel.AoA(YAW);
+            
+            // let's find maximum angular v on 0.0 AoA from model
+            if (cur_aoa < 0.26 && imodel.dyn_pressure > 10.0)
+            {
+                float new_max_input_v = 
+                    (float)((imodel.roll_rot_model.C[1, 0] + imodel.roll_rot_model_undelayed.B[1, 0]) / -imodel.roll_rot_model.A[1, 1]);
+                float new_min_input_v =
+                    (float)((imodel.roll_rot_model.C[1, 0] - imodel.roll_rot_model_undelayed.B[1, 0]) / -imodel.roll_rot_model.A[1, 1]);
+                if (!float.IsInfinity(new_max_input_v) && new_max_input_v > 0.0f && new_min_input_v < 0.0f)
+                {
+                    max_input_v = (float)Common.simple_filter(new_max_input_v, max_input_v, moder_filter);
+                    min_input_v = (float)Common.simple_filter(new_min_input_v, min_input_v, moder_filter);
+                }
+            }
+
             // let's get non-overshooting max v value, let's call it transit_max_v
-            // we start on 0.0 v and 0.0 yaw aoa and we have stopping_time seconds
-            // to accelerate. Resulting speed will be our transit
-            if (cur_aoa < 0.26f && imodel.dyn_pressure > 10.0)
+            // we start on 0.0 v and 0.0 yaw aoa and max_input_v / 2.0 and we have stopping_time seconds
+            // to accelerate. Resulting speed will be our transit speed
+            if (!((cur_aoa > 0.26f) && (imodel.dyn_pressure > 10.0)))
             {
                 state_mat[0, 0] = 0.0;
+                state_mat[1, 0] = max_input_v / 2.0;
                 state_mat[2, 0] = 1.0;
                 input_mat[0, 0] = 1.0;
                 double acc = imodel.roll_rot_model.eval_row(1, state_mat, input_mat);
@@ -595,7 +619,7 @@ namespace AtmosphereAutopilot
         float relaxation_Kp = 0.1f;
 
         [AutoGuiAttr("relaxation_frame", true)]
-        int relaxation_frame = 8;
+        int relaxation_frame = 4;
 
         [AutoGuiAttr("relaxation_frame", false)]
         int relax_count = 0;
@@ -619,7 +643,7 @@ namespace AtmosphereAutopilot
                 quadr_x = -Math.Sqrt(v_error / kacc_quadr);
                 if (quadr_x >= -relaxation_k * dt)
                 {
-                    if (++relax_count >= relaxation_frame)
+                    if (++relax_count > relaxation_frame)
                     {
                         float avg_vel = 0.0f;
                         for (int i = 0; i < relaxation_frame; i++)
@@ -629,12 +653,13 @@ namespace AtmosphereAutopilot
                         if (relax_count > relaxation_frame * 2)
                             relax_count--;
                     }
-                    desired_deriv = (float)(relaxation_Kp * v_error / quadr_x);
+                    desired_deriv = (float)(relaxation_Kp * -v_error / (Math.Ceiling(relaxation_k) * dt));
                 }
                 else
                 {
                     relax_count = 0;
-                    desired_deriv = (float)(kacc_quadr * Math.Pow(quadr_x + dt, 2.0) - kacc_quadr * quadr_x * quadr_x) / dt;
+                    double leftover_dt = Math.Min(dt, -quadr_x);
+                    desired_deriv = (float)(kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) - kacc_quadr * quadr_x * quadr_x) / dt;
                 }
             }
             else
@@ -642,7 +667,7 @@ namespace AtmosphereAutopilot
                 quadr_x = -Math.Sqrt(v_error / -kacc_quadr);
                 if (quadr_x >= -relaxation_k * dt)
                 {
-                    if (++relax_count >= relaxation_frame)
+                    if (++relax_count > relaxation_frame)
                     {
                         float avg_vel = 0.0f;
                         for (int i = 0; i < relaxation_frame; i++)
@@ -652,11 +677,12 @@ namespace AtmosphereAutopilot
                         if (relax_count > relaxation_frame * 2)
                             relax_count--;
                     }
-                    desired_deriv = (float)(relaxation_Kp * v_error / quadr_x);
+                    desired_deriv = (float)(relaxation_Kp * -v_error / (Math.Ceiling(relaxation_k) * dt));
                 }
                 else
                 {
-                    desired_deriv = (float)(-kacc_quadr * Math.Pow(quadr_x + dt, 2.0) + kacc_quadr * quadr_x * quadr_x) / dt;
+                    double leftover_dt = Math.Min(dt, -quadr_x);
+                    desired_deriv = (float)(-kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) + kacc_quadr * quadr_x * quadr_x) / dt;
                     relax_count = 0;
                 }
             }

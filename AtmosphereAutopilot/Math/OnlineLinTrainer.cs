@@ -189,7 +189,7 @@ namespace AtmosphereAutopilot
                     imm_buf_inputs.Get().DeepCopy(writing_cell);
                     imm_training_inputs.Put(writing_cell);
                     double new_output = imm_buf_outputs.Get();
-                    max_output_value = max_output_value * (1.0 - max_value_decay * last_time_elapsed);
+                    //max_output_value = max_output_value * (1.0 - max_value_decay * last_time_elapsed);
                     max_output_value = Math.Max(Math.Max(max_output_value, Math.Abs(new_output)), 0.01);
                     imm_training_outputs.Put(new_output);
                     count--;
@@ -273,6 +273,8 @@ namespace AtmosphereAutopilot
         {
             if (imm_training_inputs.Size > 0)
             {
+                if (output_view != null)
+                    max_output_value = Math.Max(output_view.Max(v => Math.Abs(v)), 0.01);
                 double max_error = 0.0;
                 for (int i = 0; i < imm_training_inputs.Size; i++)
                 {

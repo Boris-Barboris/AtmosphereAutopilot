@@ -666,7 +666,7 @@ namespace AtmosphereAutopilot
             pitch_trainer.linear_time_decay = 0.008f;
             pitch_trainer.nonlin_time_decay = 0.05f;
             pitch_trainer.min_gen_weight = 0.02f;
-            pitch_trainer.linear_err_criteria = 0.2f;
+            pitch_trainer.linear_err_criteria = 0.25f;
             trainers[0] = pitch_trainer;
 
             roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, IMM_BUF_SIZE, new int[] { 7, 11, 7 },
@@ -677,11 +677,18 @@ namespace AtmosphereAutopilot
             roll_trainer.linear_time_decay = 0.008f;
             roll_trainer.nonlin_time_decay = 0.05f;
             roll_trainer.min_gen_weight = 0.02f;
-            roll_trainer.linear_err_criteria = 0.2f;
+            roll_trainer.linear_err_criteria = 0.25f;
             trainers[1] = roll_trainer;
 
             yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.2 }, new double[] { 0.1, 0.2 }, yaw_input_method, yaw_output_method);
+            yaw_trainer.base_gen_weight = 5.0f;
+            yaw_trainer.max_value_decay = 0.0005f;
+            yaw_trainer.gen_limits_decay = 0.0005f;
+            yaw_trainer.linear_time_decay = 0.008f;
+            yaw_trainer.nonlin_time_decay = 0.05f;
+            yaw_trainer.min_gen_weight = 0.02f;
+            yaw_trainer.linear_err_criteria = 0.25f;
             trainers[2] = yaw_trainer;
 
             pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11 },
@@ -692,17 +699,17 @@ namespace AtmosphereAutopilot
             pitch_lift_trainer.linear_time_decay = 0.004f;
             pitch_lift_trainer.nonlin_time_decay = 0.05f;
             pitch_lift_trainer.min_gen_weight = 0.02f;
-            pitch_lift_trainer.linear_err_criteria = 0.2f;
+            pitch_lift_trainer.linear_err_criteria = 0.25f;
 
             yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11 },
                 new double[] { -0.1 }, new double[] { 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
             yaw_lift_trainer.base_gen_weight = 1.0f;
             yaw_lift_trainer.max_value_decay = 0.0002f;
             yaw_lift_trainer.gen_limits_decay = 0.0005f;
-            yaw_lift_trainer.linear_time_decay = 0.003f;
+            yaw_lift_trainer.linear_time_decay = 0.004f;
             yaw_lift_trainer.nonlin_time_decay = 0.05f;
-            yaw_lift_trainer.min_gen_weight = 0.05f;
-            yaw_lift_trainer.linear_err_criteria = 0.5f;
+            yaw_lift_trainer.min_gen_weight = 0.02f;
+            yaw_lift_trainer.linear_err_criteria = 0.25f;
         }
 
         /// <summary>
