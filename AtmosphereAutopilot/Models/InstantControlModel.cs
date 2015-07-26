@@ -682,7 +682,7 @@ namespace AtmosphereAutopilot
             pitch_trainer = new OnlineLinTrainer(pitch_aero_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, pitch_input_method, pitch_output_method);
             pitch_trainer.base_gen_weight = 5.0f;
-            pitch_trainer.max_value_decay = 0.0005f;
+            //pitch_trainer.max_value_decay = 0.0005f;
             pitch_trainer.gen_limits_decay = 0.0005f;
             pitch_trainer.linear_time_decay = 0.008f;
             pitch_trainer.nonlin_time_decay = 0.05f;
@@ -693,7 +693,7 @@ namespace AtmosphereAutopilot
             roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, IMM_BUF_SIZE, new int[] { 7, 11, 7 },
                 new double[] { -0.1, -0.05, -0.1 }, new double[] { 0.1, 0.05, 0.1 }, roll_input_method, roll_output_method);
             roll_trainer.base_gen_weight = 5.0f;
-            roll_trainer.max_value_decay = 0.0005f;
+            //roll_trainer.max_value_decay = 0.0005f;
             roll_trainer.gen_limits_decay = 0.0005f;
             roll_trainer.linear_time_decay = 0.008f;
             roll_trainer.nonlin_time_decay = 0.05f;
@@ -704,7 +704,7 @@ namespace AtmosphereAutopilot
             yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.2 }, new double[] { 0.1, 0.2 }, yaw_input_method, yaw_output_method);
             yaw_trainer.base_gen_weight = 5.0f;
-            yaw_trainer.max_value_decay = 0.0005f;
+            //yaw_trainer.max_value_decay = 0.0005f;
             yaw_trainer.gen_limits_decay = 0.0005f;
             yaw_trainer.linear_time_decay = 0.008f;
             yaw_trainer.nonlin_time_decay = 0.05f;
@@ -715,7 +715,7 @@ namespace AtmosphereAutopilot
             pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11 },
                 new double[] { -0.1 }, new double[] { 0.1 }, pitch_lift_input_method, pitch_lift_output_method);
             pitch_lift_trainer.base_gen_weight = 1.0f;
-            pitch_lift_trainer.max_value_decay = 0.0002f;
+            //pitch_lift_trainer.max_value_decay = 0.0002f;
             pitch_lift_trainer.gen_limits_decay = 0.0005f;
             pitch_lift_trainer.linear_time_decay = 0.004f;
             pitch_lift_trainer.nonlin_time_decay = 0.05f;
@@ -725,7 +725,7 @@ namespace AtmosphereAutopilot
             yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11 },
                 new double[] { -0.1 }, new double[] { 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
             yaw_lift_trainer.base_gen_weight = 1.0f;
-            yaw_lift_trainer.max_value_decay = 0.0002f;
+            //yaw_lift_trainer.max_value_decay = 0.0002f;
             yaw_lift_trainer.gen_limits_decay = 0.0005f;
             yaw_lift_trainer.linear_time_decay = 0.004f;
             yaw_lift_trainer.nonlin_time_decay = 0.05f;
@@ -1167,7 +1167,7 @@ namespace AtmosphereAutopilot
                 //GUILayout.Label("MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 //GUILayout.Label("AngMoment = " + AM[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 //if (i < 2)
-                AutoGUI.AutoDrawObject(trainers[i]);
+                //AutoGUI.AutoDrawObject(trainers[i]);
 			}
             GUILayout.Label("===Pitch lift trainer===", GUIStyles.labelStyleLeft);
             AutoGUI.AutoDrawObject(pitch_lift_trainer);

@@ -173,7 +173,7 @@ namespace AtmosphereAutopilot
         int added_to_imm = 0;                   // how many inputs where added to training imm_buf during last Train() call
 
         //[AutoGuiAttr("max value decay", true)]
-        public volatile float max_value_decay = 0.001f;
+        //public volatile float max_value_decay = 0.001f;
 
         void update_imm_train_buf()
         {
