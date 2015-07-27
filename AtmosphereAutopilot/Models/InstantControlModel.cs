@@ -45,7 +45,10 @@ namespace AtmosphereAutopilot
                 aoa_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
 			}
             initialize_ann_tainers();
+            integrator = vessel.GetComponent<FlightIntegrator>();
 		}
+
+        FlightIntegrator integrator;
 
 		protected override void OnActivate()
 		{
@@ -642,7 +645,12 @@ namespace AtmosphereAutopilot
         public double slide_acc = 0.0;
 
         //Vector3d vess2planet;
-        Vector3d gravity_acc, noninert_acc;
+        //[AutoGuiAttr("gravity_acc acc", false, "G6")]
+        Vector3d gravity_acc;
+
+        //[AutoGuiAttr("noninert_acc", false, "G6")]
+        Vector3d noninert_acc;
+
         Vector3d sum_acc;
 
         [AutoGuiAttr("pitch_gravity_acc", false, "G6")]
@@ -663,7 +671,13 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("yaw_noninert_acc", false, "G6")]
         public double yaw_noninert_acc;
 
-        Vector3d prev_orb_vel, prev_cntrl_vel;
+        //[AutoGuiAttr("pitch_tangent", false, "G6")]
+        Vector3d pitch_tangent;
+
+        //[AutoGuiAttr("yaw_tangent", false, "G6")]
+        Vector3d yaw_tangent;
+
+        Vector3d prev_orb_vel;
 
         void update_dynamics()
         {
@@ -671,30 +685,28 @@ namespace AtmosphereAutopilot
 
             //vess2planet = vessel.mainBody.position - vessel.transform.position;
             //gravity_acc = vess2planet.normalized * (vessel.mainBody.gMagnitudeAtCenter / vess2planet.sqrMagnitude);
-            gravity_acc = vessel.flightIntegrator.gForce;
-            noninert_acc = vessel.flightIntegrator.CoriolisAcc + vessel.flightIntegrator.CentrifugalAcc;
+            gravity_acc = integrator.gForce;
+            noninert_acc = integrator.CoriolisAcc + integrator.CentrifugalAcc;
 
-            Vector3d orb_vel = world_v;//vessel.rootPart.rb.GetPointVelocity(CoM) + Krakensbane.GetFrameVelocity();
-            Vector3 cntrl_vel = -Vector3.Cross(vessel.transform.position - CoM, cntrl_part_to_world * angular_vel);
+            Vector3d orb_vel = world_v;
 
             sum_acc = (orb_vel - prev_orb_vel) / TimeWarp.fixedDeltaTime;
             prev_orb_vel = orb_vel;
-            prev_cntrl_vel = cntrl_vel;
             
             // pitch
-            Vector3d tangent_axis = Vector3.Cross(vessel.srf_velocity, vessel.ReferenceTransform.right).normalized;
-            double pitch_total_acc = Vector3d.Dot(sum_acc, tangent_axis);
-            pitch_gravity_acc = Vector3d.Dot(gravity_acc, tangent_axis);
-            pitch_noninert_acc = Vector3d.Dot(noninert_acc, tangent_axis);
-            pitch_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust / sum_mass, tangent_axis);
+            pitch_tangent = Vector3.Cross(vessel.srf_velocity, vessel.ReferenceTransform.right).normalized;
+            double pitch_total_acc = Vector3d.Dot(sum_acc, pitch_tangent);
+            pitch_gravity_acc = Vector3d.Dot(gravity_acc, pitch_tangent);
+            pitch_noninert_acc = Vector3d.Dot(noninert_acc, pitch_tangent);
+            pitch_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust / sum_mass, pitch_tangent);
             lift_acc = pitch_total_acc - pitch_noninert_acc - pitch_gravity_acc - pitch_engine_acc;
 
             // yaw
-            tangent_axis = Vector3.Cross(vessel.srf_velocity, vessel.ReferenceTransform.forward).normalized;
-            double yaw_total_acc = Vector3d.Dot(sum_acc, tangent_axis);
-            yaw_gravity_acc = Vector3d.Dot(gravity_acc, tangent_axis);
-            yaw_noninert_acc = Vector3d.Dot(noninert_acc, tangent_axis);
-            yaw_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust / sum_mass, tangent_axis);
+            yaw_tangent = Vector3.Cross(vessel.srf_velocity, vessel.ReferenceTransform.forward).normalized;
+            double yaw_total_acc = Vector3d.Dot(sum_acc, yaw_tangent);
+            yaw_gravity_acc = Vector3d.Dot(gravity_acc, yaw_tangent);
+            yaw_noninert_acc = Vector3d.Dot(noninert_acc, yaw_tangent);
+            yaw_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust / sum_mass, yaw_tangent);
             slide_acc = yaw_total_acc - pitch_noninert_acc - yaw_gravity_acc - yaw_engine_acc;
         }
 
@@ -728,7 +740,7 @@ namespace AtmosphereAutopilot
             pitch_trainer.linear_time_decay = 0.008f;
             pitch_trainer.nonlin_time_decay = 0.05f;
             pitch_trainer.min_gen_weight = 0.02f;
-            pitch_trainer.linear_err_criteria = 0.25f;
+            pitch_trainer.linear_err_criteria = 0.2f;
             trainers[0] = pitch_trainer;
 
             roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, IMM_BUF_SIZE, new int[] { 7, 7, 7 },
@@ -739,7 +751,7 @@ namespace AtmosphereAutopilot
             roll_trainer.linear_time_decay = 0.008f;
             roll_trainer.nonlin_time_decay = 0.05f;
             roll_trainer.min_gen_weight = 0.02f;
-            roll_trainer.linear_err_criteria = 0.25f;
+            roll_trainer.linear_err_criteria = 0.2f;
             trainers[1] = roll_trainer;
 
             yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
@@ -750,7 +762,7 @@ namespace AtmosphereAutopilot
             yaw_trainer.linear_time_decay = 0.008f;
             yaw_trainer.nonlin_time_decay = 0.05f;
             yaw_trainer.min_gen_weight = 0.02f;
-            yaw_trainer.linear_err_criteria = 0.25f;
+            yaw_trainer.linear_err_criteria = 0.2f;
             trainers[2] = yaw_trainer;
 
             pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11, 7 },
@@ -761,7 +773,7 @@ namespace AtmosphereAutopilot
             pitch_lift_trainer.linear_time_decay = 0.004f;
             pitch_lift_trainer.nonlin_time_decay = 0.05f;
             pitch_lift_trainer.min_gen_weight = 0.02f;
-            pitch_lift_trainer.linear_err_criteria = 0.25f;
+            pitch_lift_trainer.linear_err_criteria = 0.2f;
 
             yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11, 7 },
                 new double[] { -0.05, -0.1 }, new double[] { 0.05, 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
@@ -771,7 +783,7 @@ namespace AtmosphereAutopilot
             yaw_lift_trainer.linear_time_decay = 0.004f;
             yaw_lift_trainer.nonlin_time_decay = 0.05f;
             yaw_lift_trainer.min_gen_weight = 0.02f;
-            yaw_lift_trainer.linear_err_criteria = 0.25f;
+            yaw_lift_trainer.linear_err_criteria = 0.2f;
         }
 
         /// <summary>
@@ -1231,10 +1243,10 @@ namespace AtmosphereAutopilot
                 //if (i < 2)
                 //AutoGUI.AutoDrawObject(trainers[i]);
 			}
-            GUILayout.Label("===Pitch lift trainer===", GUIStyles.labelStyleLeft);
-            AutoGUI.AutoDrawObject(pitch_lift_trainer);
-            GUILayout.Label("===Yaw lift trainer===", GUIStyles.labelStyleLeft);
-            AutoGUI.AutoDrawObject(yaw_lift_trainer);
+            //GUILayout.Label("===Pitch lift trainer===", GUIStyles.labelStyleLeft);
+            //AutoGUI.AutoDrawObject(pitch_lift_trainer);
+            //GUILayout.Label("===Yaw lift trainer===", GUIStyles.labelStyleLeft);
+            //AutoGUI.AutoDrawObject(yaw_lift_trainer);
             AutoGUI.AutoDrawObject(this);
 			GUILayout.EndVertical();
 			GUI.DragWindow();

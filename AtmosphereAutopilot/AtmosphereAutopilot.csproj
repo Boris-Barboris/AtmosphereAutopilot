@@ -25,23 +25,23 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\GameData\AtmosphereAutopilot\</OutputPath>
+    <OutputPath>..\..\..\..\..\Games\Kerbal Space Program 1.04\GameData\AtmosphereAutopilot\</OutputPath>
     <DefineConstants>
     </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>..\..\..\..\..\Games\Kerbal Space Program 0.90\GameData\AtmosphereAutopilot\AtmosphereAutopilot.XML</DocumentationFile>
+    <DocumentationFile>..\..\..\..\..\Games\Kerbal Space Program 1.04\GameData\AtmosphereAutopilot\AtmosphereAutopilot.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\..\..\Games\Kerbal Space Program 1.04\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\KSP_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\..\..\Games\Kerbal Space Program 1.04\KSP_Data\Managed\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
@@ -50,7 +50,7 @@
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="BackgroundThread.cs" />
     <Compile Include="Controller\PDController.cs" />
-    <Compile Include="FixedKrakensbane.cs" />
+    <None Include="FixedKrakensbane.cs" />
     <Compile Include="ListSelector.cs" />
     <Compile Include="ListView.cs" />
     <Compile Include="Math\GradientDescend.cs" />

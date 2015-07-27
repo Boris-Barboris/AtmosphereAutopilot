@@ -77,6 +77,13 @@ namespace AtmosphereAutopilot
         //[AutoGuiAttr("Kp", true, "G8")]
         float Kp = 8.0f;
 
+        [GlobalSerializable("user_input_deriv_clamp")]
+        [AutoGuiAttr("Smoothing", true, "G6")]
+        public float user_input_deriv_clamp = 3.0f;
+
+        [AutoGuiAttr("prev_input", false, "G6")]
+        protected float prev_input;
+
 		/// <summary>
 		/// Main control function
 		/// </summary>
@@ -90,6 +97,12 @@ namespace AtmosphereAutopilot
             if (user_input != 0.0f || user_controlled)
             {
                 // user is interfering with control
+                float clamp = FlightInputHandler.fetch.precisionMode ?
+                    0.2f * user_input_deriv_clamp * TimeWarp.fixedDeltaTime :
+                    user_input_deriv_clamp * TimeWarp.fixedDeltaTime;
+                float delta_input = Common.Clampf(user_input - prev_input, clamp);
+                user_input = prev_input + delta_input;
+                prev_input = user_input;
                 desired_v = user_input * max_v_construction;
                 user_controlled = true;
             }

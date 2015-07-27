@@ -168,14 +168,18 @@ namespace AtmosphereAutopilot
 		#region AppLauncherSection
 
 		ApplicationLauncherButton launcher_btn;
+        bool app_launcher_loaded = false;
 
         // Called when applauncher is ready for population
         void onAppLauncherLoad()
         {
-            GameEvents.onGUIApplicationLauncherReady.Remove(onAppLauncherLoad);
-            launcher_btn = ApplicationLauncher.Instance.AddModApplication(
-				OnALTrue, OnALFalse, OnHover, OnALUnHover, null, null, ApplicationLauncher.AppScenes.FLIGHT,
-                GameDatabase.Instance.GetTexture("AtmosphereAutopilot/icon", false));
+            if (ApplicationLauncher.Ready && !app_launcher_loaded)
+            {
+                launcher_btn = ApplicationLauncher.Instance.AddModApplication(
+                    OnALTrue, OnALFalse, OnHover, OnALUnHover, null, null, ApplicationLauncher.AppScenes.FLIGHT,
+                    GameDatabase.Instance.GetTexture("AtmosphereAutopilot/icon", false));
+                app_launcher_loaded = true;
+            }
         }
 
         void onAppLauncherDestroy()
