@@ -87,10 +87,11 @@ namespace AtmosphereAutopilot
 
             float user_input = ControlUtils.get_neutralized_user_input(cntrl, axis);
 
-            if (user_input != 0.0)
+            if (user_input != 0.0f || user_controlled)
             {
                 // user is interfering with control
                 desired_v = user_input * max_v_construction;
+                user_controlled = true;
             }
             else
             {
@@ -99,7 +100,7 @@ namespace AtmosphereAutopilot
             }
             
             if (imodel.dyn_pressure >= 10.0)
-                desired_v = moderate_desired_v(desired_v, user_input != 0.0);      // moderation stage
+                desired_v = moderate_desired_v(desired_v, user_controlled);      // moderation stage
 
             output_acc = get_desired_acc(desired_v);            // produce output
 
@@ -243,7 +244,7 @@ namespace AtmosphereAutopilot
                         in_eq_A[0, 0] = lin_model.A[0, 0];
                         in_eq_A[0, 1] = lin_model.A[0, 1];
                         in_eq_A[1, 0] = lin_model.A[1, 0];
-                        in_eq_b[0, 0] = -lin_model.C[0, 0];
+                        in_eq_b[0, 0] = -lin_model.C[0, 0] - lin_model.A[0, 2];
                         in_eq_b[1, 0] = -lin_model.A[1, 2] - lin_model.B[1, 0] - lin_model.C[1, 0];
                         in_eq_A.old_lu = true;
                         try
@@ -265,6 +266,7 @@ namespace AtmosphereAutopilot
                                 }
 
                                 // get equilibrium aoa and angular_v for -1.0 input
+                                in_eq_b[0, 0] = -lin_model.C[0, 0] + lin_model.A[0, 2];
                                 in_eq_b[1, 0] = lin_model.A[1, 2] + lin_model.B[1, 0] - lin_model.C[1, 0];
                                 in_eq_x = in_eq_A.SolveWith(in_eq_b);
                                 if (!double.IsInfinity(in_eq_x[0, 0]) && !double.IsNaN(in_eq_x[0, 0]))
@@ -390,6 +392,19 @@ namespace AtmosphereAutopilot
                     old_dyn_max_v = max_v_construction;
                     transit_max_v = max_v_construction;
                 }
+            
+            // if the user is inputting, let's hold surface pitch angle
+            float v_offset = 0.0f;
+            if (user_input && imodel.dyn_pressure > 10.0 && vessel.obt_velocity.sqrMagnitude > 1.0)
+            {
+                if (FlightUIController.speedDisplayMode == FlightUIController.SpeedDisplayModes.Surface)
+                {
+                    Vector3 planet2vessel = vessel.transform.position - vessel.mainBody.position;
+                    Vector3 still_ang_v = Vector3.Cross(vessel.obt_velocity, planet2vessel) / planet2vessel.sqrMagnitude;
+                    Vector3 principal_still_ang_v = imodel.world_to_cntrl_part * still_ang_v;
+                    v_offset = principal_still_ang_v[axis];
+                }
+            }
 
             // desired_v moderation section
             float scaled_restrained_v;
@@ -400,14 +415,14 @@ namespace AtmosphereAutopilot
             if (des_v >= 0.0f)
             {
                 scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) / 2.0f / res_max_aoa, 1.0f);
-                scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_upper * (1.0f - scaled_aoa),
-                    transit_max_v * normalized_des_v);
+                scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + v_offset + res_equilibr_v_upper * (1.0f - scaled_aoa),
+                    transit_max_v * normalized_des_v + v_offset);
             }
             else
             {
                 scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) / 2.0f / res_min_aoa, 1.0f);
-                scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_lower * (1.0f - scaled_aoa),
-                    transit_max_v * normalized_des_v);
+                scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa + v_offset + res_equilibr_v_lower * (1.0f - scaled_aoa),
+                    transit_max_v * normalized_des_v + v_offset);
             }
             des_v = scaled_restrained_v;
 

@@ -173,14 +173,17 @@ namespace AtmosphereAutopilot
         Vector3 angular_vel = Vector3.zero;
         
         [AutoGuiAttr("MOI", false, "G6")]
-        public Vector3 MOI = Vector3.zero;
+        public Vector3 MOI;
 
-        public Vector3 AM = Vector3.zero;
+        public Vector3 AM;
 
         //[AutoGuiAttr("CoM", false, "G6")]
-        public Vector3 CoM = Vector3.zero;
+        public Vector3 CoM;
 
-        Vector3 partial_CoM = Vector3.zero;
+        Vector3 partial_CoM;
+        Vector3 cur_CoM;
+
+        Vector3d world_v;
 
         [AutoGuiAttr("Vessel mass", false, "G6")]
         public float sum_mass = 0.0f;
@@ -265,20 +268,18 @@ namespace AtmosphereAutopilot
         }
 
         // Rotations of the currently controlling part of the vessel
-        Quaternion world_to_cntrl_part;
-        Quaternion cntrl_part_to_world;
+        public Quaternion world_to_cntrl_part;
+        public Quaternion cntrl_part_to_world;
 
         void get_moments(bool all_parts)
         {
             cntrl_part_to_world = vessel.transform.rotation;
             world_to_cntrl_part = cntrl_part_to_world.Inverse();            // from world to root part rotation
-            CoM = vessel.findWorldCenterOfMass();                       // vessel.CoM unfortunately lags by one physics frame
-            Vector3 world_v = vessel.rootPart.rb.velocity;
-            Vector3 cur_CoM;
+            CoM = vessel.findWorldCenterOfMass();                           // vessel.CoM unfortunately lags by one physics frame
             if (all_parts)
             {
-                MOI = Vector3.zero;
-                AM = Vector3.zero;
+                MOI = Vector3d.zero;
+                AM = Vector3d.zero;
                 massive_parts.Clear();
                 sum_mass = 0.0f;
                 cur_CoM = CoM;
@@ -289,7 +290,39 @@ namespace AtmosphereAutopilot
                 partial_AM = Vector3.zero;
                 cur_CoM = partial_CoM = findPartialWorldCoM();
             }
+
             int indexing = all_parts ? vessel.parts.Count : massive_parts.Count;
+
+            // Get velocity
+            world_v = Vector3d.zero;
+            Vector3d v_impulse = Vector3d.zero;
+            double v_mass = 0.0;
+            for (int pi = 0; pi < indexing; pi++)
+            {
+                Part part = all_parts ? vessel.parts[pi] : massive_parts[pi].part;
+                if (part.physicalSignificance == Part.PhysicalSignificance.NONE)
+                    continue;
+                if (!part.isAttached || part.State == PartStates.DEAD)
+                {
+                    moments_cycle_counter = 0;      // iterating over old part list
+                    continue;
+                }
+                float mass = 0.0f;
+                if (part.rb != null)
+                {
+                    mass = part.rb.mass;
+                    v_impulse += part.rb.velocity * mass;
+                }
+                else
+                {
+                    mass = part.mass + part.GetResourceMass();
+                    v_impulse += part.vel * mass;
+                }
+                v_mass += mass;
+            }
+            world_v = v_impulse / v_mass;
+
+            // Get angular velocity
             for (int pi = 0; pi < indexing; pi++)
             {
                 Part part = all_parts ? vessel.parts[pi] : massive_parts[pi].part;
@@ -354,7 +387,11 @@ namespace AtmosphereAutopilot
                 angular_vel = Common.divideVector(AM, MOI);
             }
             else
+            {
                 angular_vel = Common.divideVector(partial_AM, partial_MOI);
+                world_v -= Vector3.Cross(cur_CoM - CoM, cntrl_part_to_world * angular_vel);
+            }
+            world_v += Krakensbane.GetFrameVelocity();
         }
 
         static Vector3 get_rotated_moi(Vector3 inertia_tensor, Quaternion rotation)
@@ -626,7 +663,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("yaw_noninert_acc", false, "G6")]
         public double yaw_noninert_acc;
 
-        Vector3d prev_orb_vel;
+        Vector3d prev_orb_vel, prev_cntrl_vel;
 
         void update_dynamics()
         {
@@ -636,9 +673,13 @@ namespace AtmosphereAutopilot
             //gravity_acc = vess2planet.normalized * (vessel.mainBody.gMagnitudeAtCenter / vess2planet.sqrMagnitude);
             gravity_acc = vessel.flightIntegrator.gForce;
             noninert_acc = vessel.flightIntegrator.CoriolisAcc + vessel.flightIntegrator.CentrifugalAcc;
-            Vector3d orb_vel = vessel.obt_velocity;
+
+            Vector3d orb_vel = world_v;//vessel.rootPart.rb.GetPointVelocity(CoM) + Krakensbane.GetFrameVelocity();
+            Vector3 cntrl_vel = -Vector3.Cross(vessel.transform.position - CoM, cntrl_part_to_world * angular_vel);
+
             sum_acc = (orb_vel - prev_orb_vel) / TimeWarp.fixedDeltaTime;
             prev_orb_vel = orb_vel;
+            prev_cntrl_vel = cntrl_vel;
             
             // pitch
             Vector3d tangent_axis = Vector3.Cross(vessel.srf_velocity, vessel.ReferenceTransform.right).normalized;
@@ -668,8 +709,8 @@ namespace AtmosphereAutopilot
         LinApprox pitch_aero_torque_model = new LinApprox(2);
         LinApprox roll_aero_torque_model = new LinApprox(3);
         LinApprox yaw_aero_torque_model = new LinApprox(2);
-        LinApprox pitch_lift_model = new LinApprox(1);
-        LinApprox yaw_lift_model = new LinApprox(1);
+        LinApprox pitch_lift_model = new LinApprox(2);
+        LinApprox yaw_lift_model = new LinApprox(2);
 
         const int IMM_BUF_SIZE = 10;
 
@@ -690,7 +731,7 @@ namespace AtmosphereAutopilot
             pitch_trainer.linear_err_criteria = 0.25f;
             trainers[0] = pitch_trainer;
 
-            roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, IMM_BUF_SIZE, new int[] { 7, 11, 7 },
+            roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, IMM_BUF_SIZE, new int[] { 7, 7, 7 },
                 new double[] { -0.1, -0.05, -0.1 }, new double[] { 0.1, 0.05, 0.1 }, roll_input_method, roll_output_method);
             roll_trainer.base_gen_weight = 5.0f;
             //roll_trainer.max_value_decay = 0.0005f;
@@ -712,9 +753,9 @@ namespace AtmosphereAutopilot
             yaw_trainer.linear_err_criteria = 0.25f;
             trainers[2] = yaw_trainer;
 
-            pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11 },
-                new double[] { -0.1 }, new double[] { 0.1 }, pitch_lift_input_method, pitch_lift_output_method);
-            pitch_lift_trainer.base_gen_weight = 1.0f;
+            pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11, 7 },
+                new double[] { -0.05, -0.1 }, new double[] { 0.05, 0.1 }, pitch_lift_input_method, pitch_lift_output_method);
+            pitch_lift_trainer.base_gen_weight = 4.0f;
             //pitch_lift_trainer.max_value_decay = 0.0002f;
             pitch_lift_trainer.gen_limits_decay = 0.0005f;
             pitch_lift_trainer.linear_time_decay = 0.004f;
@@ -722,9 +763,9 @@ namespace AtmosphereAutopilot
             pitch_lift_trainer.min_gen_weight = 0.02f;
             pitch_lift_trainer.linear_err_criteria = 0.25f;
 
-            yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11 },
-                new double[] { -0.1 }, new double[] { 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
-            yaw_lift_trainer.base_gen_weight = 1.0f;
+            yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11, 7 },
+                new double[] { -0.05, -0.1 }, new double[] { 0.05, 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
+            yaw_lift_trainer.base_gen_weight = 4.0f;
             //yaw_lift_trainer.max_value_decay = 0.0002f;
             yaw_lift_trainer.gen_limits_decay = 0.0005f;
             yaw_lift_trainer.linear_time_decay = 0.004f;
@@ -779,6 +820,7 @@ namespace AtmosphereAutopilot
         void pitch_lift_input_method(Vector v)
         {
             v[0] = aoa_buf[PITCH].getFromTail(1);
+            v[1] = csurf_buf[PITCH].getLast();
         }
 
         double pitch_lift_output_method()
@@ -789,6 +831,7 @@ namespace AtmosphereAutopilot
         void yaw_lift_input_method(Vector v)
         {
             v[0] = aoa_buf[YAW].getFromTail(1);
+            v[1] = csurf_buf[YAW].getLast();
         }
 
         double yaw_lift_output_method()
@@ -937,6 +980,7 @@ namespace AtmosphereAutopilot
             public double k2;
             public double Cl0;
             public double Cl1;
+            public double Cl2;
             public double et0;
             public double et1;
         }
@@ -960,6 +1004,7 @@ namespace AtmosphereAutopilot
             // Fill coeff structs
             pitch_coeffs.Cl0 = pitch_lift_model.pars[0] / 1e3 * dyn_pressure / sum_mass;
             pitch_coeffs.Cl1 = pitch_lift_model.pars[1] / 1e3 * dyn_pressure / sum_mass;
+            pitch_coeffs.Cl2 = pitch_lift_model.pars[2] / 1e3 * dyn_pressure / sum_mass;
             pitch_coeffs.et0 = engines_torque_k0[PITCH] / MOI[PITCH];
             pitch_coeffs.et1 = engines_torque_k1[PITCH] / MOI[PITCH];
             pitch_coeffs.k0 = pitch_aero_torque_model.pars[0] / 1e4 * dyn_pressure;
@@ -973,6 +1018,10 @@ namespace AtmosphereAutopilot
             else
                 A[0, 0] = 0.0;
             A[0, 1] = 1.0;
+            if (dyn_pressure >= 10.0)
+                A[0, 2] = -pitch_coeffs.Cl2 / vessel.srfSpeed;
+            else
+                A[0, 2] = 0.0;
             A[1, 0] = pitch_coeffs.k1;
             A[1, 2] = pitch_coeffs.k2 * (1.0 - 4.0 * TimeWarp.fixedDeltaTime);
             A[2, 2] = -4.0;
@@ -998,6 +1047,10 @@ namespace AtmosphereAutopilot
             else
                 A[0, 0] = 0.0;
             A[0, 1] = 1.0;
+            if (dyn_pressure >= 10.0)
+                A[0, 2] = -pitch_coeffs.Cl2 / vessel.srfSpeed;
+            else
+                A[0, 2] = 0.0;
             A[1, 0] = pitch_coeffs.k1;
             B = pitch_rot_model_undelayed.B;
             B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.k2 + pitch_coeffs.et1;
@@ -1059,6 +1112,7 @@ namespace AtmosphereAutopilot
             // Fill coeff structs
             yaw_coeffs.Cl0 = yaw_lift_model.pars[0] / 1e3 * dyn_pressure / sum_mass;
             yaw_coeffs.Cl1 = yaw_lift_model.pars[1] / 1e3 * dyn_pressure / sum_mass;
+            yaw_coeffs.Cl2 = yaw_lift_model.pars[2] / 1e3 * dyn_pressure / sum_mass;
             yaw_coeffs.et0 = engines_torque_k0[YAW] / MOI[YAW];
             yaw_coeffs.et1 = engines_torque_k1[YAW] / MOI[YAW];
             yaw_coeffs.k0 = yaw_aero_torque_model.pars[0] / 1e4 * dyn_pressure;
@@ -1072,6 +1126,10 @@ namespace AtmosphereAutopilot
             else
                 A[0, 0] = 0.0;
             A[0, 1] = 1.0;
+            if (dyn_pressure >= 10.0)
+                A[0, 2] = -yaw_coeffs.Cl2 / vessel.srfSpeed;
+            else
+                A[0, 2] = 0.0;
             A[1, 0] = yaw_coeffs.k1;
             A[1, 2] = yaw_coeffs.k2 * (1.0 - 4.0 * TimeWarp.fixedDeltaTime);
             A[2, 2] = -4.0;
@@ -1097,6 +1155,10 @@ namespace AtmosphereAutopilot
             else
                 A[0, 0] = 0.0;
             A[0, 1] = 1.0;
+            if (dyn_pressure >= 10.0)
+                A[0, 2] = -yaw_coeffs.Cl2 / vessel.srfSpeed;
+            else
+                A[0, 2] = 0.0;
             A[1, 0] = yaw_coeffs.k1;
             B = yaw_rot_model_undelayed.B;
             B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.k2 + yaw_coeffs.et1;

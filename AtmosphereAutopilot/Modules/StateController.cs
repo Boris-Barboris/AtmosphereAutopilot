@@ -55,6 +55,7 @@ namespace AtmosphereAutopilot
 		/// <param name="target_value">Desired controlled value</param>
 		public abstract float ApplyControl(FlightCtrlState cntrl, float target_value);
 
+        public bool user_controlled = false;
 	}
 
     public static class ControlUtils

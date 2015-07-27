@@ -82,7 +82,7 @@ namespace AtmosphereAutopilot
             cur_aoa = imodel.AoA(axis);
 
             float user_input = Common.Clampf(ControlUtils.get_neutralized_user_input(cntrl, YAW), 1.0f);
-            if (user_input > 0.0)
+            if (user_controlled || user_input != 0.0f)
                 desired_aoa = user_input * v_controller.res_max_aoa;
             else
                 if (user_input < 0.0)
@@ -102,6 +102,7 @@ namespace AtmosphereAutopilot
             output_v = relax_k * transit_v + (1.0f - Math.Abs(relax_k)) * des_aoa_equilibr_v;
 
             ControlUtils.neutralize_user_input(cntrl, axis);
+            v_controller.user_controlled = false;
             v_controller.ApplyControl(cntrl, output_v);
 
             return output_v;

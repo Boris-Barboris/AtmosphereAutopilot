@@ -42,8 +42,11 @@ namespace AtmosphereAutopilot
         protected override void OnActivate() 
         {
             pc.Activate();
+            pc.user_controlled = true;
             rc.Activate();
+            rc.user_controlled = true;
             yc.Activate();
+            yc.user_controlled = true;
         }
 
         protected override void OnDeactivate()
@@ -64,7 +67,7 @@ namespace AtmosphereAutopilot
 
             pc.ApplyControl(cntrl, 0.0f);
             yc.ApplyControl(cntrl, 0.0f);
-            rc.ApplyControl(cntrl, 0.0f);            
+            rc.ApplyControl(cntrl, 0.0f);
         }
 
         protected override void _drawGUI(int id)
