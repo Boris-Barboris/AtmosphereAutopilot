@@ -123,6 +123,7 @@ namespace AtmosphereAutopilot
         void sceneSwitch(GameScenes scenes)
         {
             serialize_active_modules();
+            clean_modules();
             if (scenes != GameScenes.FLIGHT)
             {
                 ActiveVessel = null;
@@ -151,6 +152,17 @@ namespace AtmosphereAutopilot
             Debug.Log("[Autopilot] vessel switch");
             load_manager_for_vessel(v);
 			ActiveVessel = v;
+        }
+
+        void clean_modules()
+        {
+            var vesselsToRemove = autopilot_module_lists.Keys.Where(v => v.state == Vessel.State.DEAD).ToArray();
+            foreach (var v in vesselsToRemove)
+            {
+                var manager = autopilot_module_lists[v][typeof(TopModuleManager)];
+                manager.Deactivate();
+                autopilot_module_lists.Remove(v);
+            }
         }
 
         /// <summary>

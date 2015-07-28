@@ -71,7 +71,17 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("output_v", false, "G6")]
         protected float output_v;
 
+        [AutoGuiAttr("des_aoa_equilibr_v", false, "G6")]
+        protected float des_aoa_equilibr_v;
+
+        [AutoGuiAttr("filter_k", true, "G6")]
+        protected float filter_k = 4.0f;
+
         protected LinearSystemModel lin_model;
+
+        Matrix eq_A = new Matrix(2, 2);
+        Matrix eq_b = new Matrix(2, 1);
+        Matrix eq_x;
 
         /// <summary>
         /// Main control function
@@ -79,24 +89,61 @@ namespace AtmosphereAutopilot
         /// <param name="cntrl">Control state to change</param>
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
         {
+            if (imodel.dyn_pressure <= 10.0 || !v_controller.moderate_aoa)
+            {
+                v_controller.user_controlled = true;
+                v_controller.ApplyControl(cntrl, 0.0f);
+                return 0.0f;
+            }
+
             cur_aoa = imodel.AoA(axis);
 
             float user_input = Common.Clampf(ControlUtils.get_neutralized_user_input(cntrl, YAW), 1.0f);
             if (user_controlled || user_input != 0.0f)
-                desired_aoa = user_input * v_controller.res_max_aoa;
-            else
-                if (user_input < 0.0)
-                    desired_aoa = -user_input * v_controller.res_min_aoa;
+            {
+                if (user_input >= 0.0f)
+                    desired_aoa = user_input * v_controller.res_max_aoa;
                 else
-                    desired_aoa = (float)Common.Clamp(target_value, v_controller.res_min_aoa, v_controller.res_max_aoa);
+                    desired_aoa = -user_input * v_controller.res_min_aoa;
+                user_controlled = true;
+            }
+            else
+                desired_aoa = (float)Common.Clamp(target_value, v_controller.res_min_aoa, v_controller.res_max_aoa);
 
             // Let's find balance angular v on desired_aoa
-            float des_aoa_equilibr_v = -(float)(lin_model.C[0, 0] + lin_model.A[0, 0] * desired_aoa);
+            if (Math.Abs(cur_aoa) < 0.3f)
+            {
+                eq_A[0, 0] = lin_model.A[0, 1];
+                eq_A[0, 1] = lin_model.A[0, 2];
+                eq_A[1, 0] = lin_model.A[1, 1];
+                eq_A[1, 1] = lin_model.A[1, 2] + lin_model.B[1, 0];
+                eq_b[0, 0] = -(lin_model.A[0, 0] * desired_aoa + lin_model.C[0, 0]);
+                eq_b[1, 0] = -(lin_model.A[1, 0] * desired_aoa + lin_model.C[1, 0]);
+                eq_A.old_lu = true;
+                try
+                {
+                    eq_x = eq_A.SolveWith(eq_b);
+                    double new_eq_v = eq_x[0, 0];
+                    if (!double.IsInfinity(new_eq_v) && !double.IsInfinity(new_eq_v))
+                        des_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, des_aoa_equilibr_v, filter_k);
+                }
+                catch (MSingularException) { }
+                
+                //des_aoa_equilibr_v = -(float)(lin_model.C[0, 0] + lin_model.A[0, 0] * desired_aoa);
+            }
+            else
+                des_aoa_equilibr_v = 0.0f;
+
             float transit_v = v_controller.transit_max_v;
             float error = desired_aoa - cur_aoa;
-            float relax_k = error * 2.0f / (v_controller.res_max_aoa - v_controller.res_min_aoa);
-            if (float.IsInfinity(relax_k) || float.IsNaN(relax_k))
-                relax_k = 0.0f;
+            float relax_k = 0.0f;
+            if (v_controller.res_max_aoa - v_controller.res_min_aoa > 0.0f)
+                relax_k = error * 2.0f / (v_controller.res_max_aoa - v_controller.res_min_aoa);
+            else
+                if (v_controller.max_aoa > 0.0f)
+                    relax_k = error / v_controller.max_aoa;
+                else
+                    relax_k = error / 0.2f;
             relax_k = Common.Clampf(relax_k, 1.0f);
 
             output_v = relax_k * transit_v + (1.0f - Math.Abs(relax_k)) * des_aoa_equilibr_v;

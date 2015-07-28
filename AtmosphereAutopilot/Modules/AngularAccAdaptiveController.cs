@@ -99,8 +99,8 @@ namespace AtmosphereAutopilot
 
             float cur_input_raw = get_required_input(cntrl, desired_acc);
 			output = cur_input_raw;
-            //if (float.IsNaN(output) || float.IsInfinity(output))
-            //    output = 0.0f;
+            if (float.IsNaN(output) || float.IsInfinity(output))
+                output = 0.0f;
 
 			ControlUtils.set_raw_output(cntrl, axis, output);
 

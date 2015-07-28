@@ -98,7 +98,7 @@ namespace AtmosphereAutopilot
             {
                 // user is interfering with control
                 float clamp = FlightInputHandler.fetch.precisionMode ?
-                    0.2f * user_input_deriv_clamp * TimeWarp.fixedDeltaTime :
+                    0.33f * user_input_deriv_clamp * TimeWarp.fixedDeltaTime :
                     user_input_deriv_clamp * TimeWarp.fixedDeltaTime;
                 float delta_input = Common.Clampf(user_input - prev_input, clamp);
                 user_input = prev_input + delta_input;
@@ -173,9 +173,9 @@ namespace AtmosphereAutopilot
             : base(vessel, module_name, wnd_id, axis)
         { }
 
-        protected Matrix in_eq_A = new Matrix(2, 2);
-        protected Matrix in_eq_b = new Matrix(2, 1);
-        protected Matrix in_eq_x;
+        protected Matrix eq_A = new Matrix(2, 2);
+        protected Matrix eq_b = new Matrix(2, 1);
+        protected Matrix eq_x;
 
         [AutoGuiAttr("max_input_aoa", false, "G6")]
         protected float max_input_aoa;
@@ -189,26 +189,26 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("min_input_v", false, "G6")]
         protected float min_input_v;
 
-        [AutoGuiAttr("max_g_aoa_upper", false, "G6")]
-        protected float max_g_aoa_upper;
+        [AutoGuiAttr("max_g_aoa", false, "G6")]
+        protected float max_g_aoa;
 
-        [AutoGuiAttr("max_g_aoa_lower", false, "G6")]
-        protected float max_g_aoa_lower;
+        [AutoGuiAttr("min_g_aoa", false, "G6")]
+        protected float min_g_aoa;
 
-        [AutoGuiAttr("max_g_v_upper", false, "G6")]
-        protected float max_g_v_upper;
+        [AutoGuiAttr("max_g_v", false, "G6")]
+        protected float max_g_v;
 
-        [AutoGuiAttr("max_g_v_lower", false, "G6")]
-        protected float max_g_v_lower;
+        [AutoGuiAttr("min_g_v", false, "G6")]
+        protected float min_g_v;
 
-        [AutoGuiAttr("max_aoa_g", false, "G6")]
-        protected float max_aoa_g;
+        //[AutoGuiAttr("max_aoa_g", false, "G6")]
+        //protected float max_aoa_g;
 
         [AutoGuiAttr("max_aoa_v", false, "G6")]
         protected float max_aoa_v;
 
-        [AutoGuiAttr("min_aoa_g", false, "G6")]
-        protected float min_aoa_g;
+        //[AutoGuiAttr("min_aoa_g", false, "G6")]
+        //protected float min_aoa_g;
 
         [AutoGuiAttr("min_aoa_v", false, "G6")]
         protected float min_aoa_v;
@@ -230,145 +230,179 @@ namespace AtmosphereAutopilot
             res_equilibr_v_lower = -max_v_construction;
             float cur_aoa = imodel.AoA(axis);
             float abs_cur_aoa = Math.Abs(cur_aoa);
+            bool moderated = false;
 
             if (moderate_aoa && imodel.dyn_pressure > 100.0)
             {
-                bool stability_region = false;
-                res_max_aoa = rad_max_aoa;
-                res_min_aoa = -rad_max_aoa;
+                moderated = true;
 
-                if (abs_cur_aoa < 0.26f)
+                if (abs_cur_aoa < 0.3f)
                 {
                     // We're in linear regime so we can update our limitations
 
-                    // get equilibrium v for max_aoa
-                    float new_max_aoa_g =
-                        -(float)((lin_model.C[0, 0] + lin_model.A[0, 0] * rad_max_aoa) * vessel.srfSpeed);
-                    max_aoa_g = (float)Common.simple_filter(new_max_aoa_g, max_aoa_g, moder_filter);
-                    max_aoa_v = max_aoa_g / (float)vessel.srfSpeed;
-                    float new_min_aoa_g = new_max_aoa_g + (float)(2.0 * lin_model.A[0, 0] * rad_max_aoa * vessel.srfSpeed);
-                    min_aoa_g = (float)Common.simple_filter(new_min_aoa_g, min_aoa_g, moder_filter);
-                    min_aoa_v = min_aoa_g / (float)vessel.srfSpeed;
-
-                    // Check if model is adequate and we have at least some authority
-                    if (lin_model.B[1, 0] > 1e-4)
+                    // get equilibrium aoa and angular_v for 1.0 input
+                    try
                     {
-                        // get equilibrium aoa and angular_v for 1.0 input
-                        in_eq_A[0, 0] = lin_model.A[0, 0];
-                        in_eq_A[0, 1] = lin_model.A[0, 1];
-                        in_eq_A[1, 0] = lin_model.A[1, 0];
-                        in_eq_b[0, 0] = -lin_model.C[0, 0] - lin_model.A[0, 2];
-                        in_eq_b[1, 0] = -lin_model.A[1, 2] - lin_model.B[1, 0] - lin_model.C[1, 0];
-                        in_eq_A.old_lu = true;
-                        try
+                        eq_A[0, 0] = lin_model.A[0, 0];
+                        eq_A[0, 1] = lin_model.A[0, 1];
+                        eq_A[1, 0] = lin_model.A[1, 0];
+                        eq_A[1, 1] = 0.0;
+                        eq_b[0, 0] = -(lin_model.A[0, 2] + lin_model.C[0, 0]);
+                        eq_b[1, 0] = -(lin_model.A[1, 2] + lin_model.B[1, 0] + lin_model.C[1, 0]);
+                        eq_A.old_lu = true;
+                        eq_x = eq_A.SolveWith(eq_b);
+                        if (!double.IsInfinity(eq_x[0, 0]) && !double.IsNaN(eq_x[0, 0]))
                         {
-                            in_eq_x = in_eq_A.SolveWith(in_eq_b);
-                            if (!double.IsInfinity(in_eq_x[0, 0]))
+                            if (eq_x[0, 0] < 0.0)
                             {
-                                if (in_eq_x[0, 0] < 0.0)
+                                // plane is statically unstable, in_eq_x solution is equilibrium on it's minimal stable aoa
+                                min_input_aoa = (float)Common.simple_filter(0.8 * eq_x[0, 0], min_input_aoa, moder_filter);
+                                min_input_v = (float)Common.simple_filter(0.8 * eq_x[1, 0], min_input_v, moder_filter);
+                            }
+                            else
+                            {
+                                // plane is statically stable, in_eq_x solution is equilibrium on it's maximal stable aoa
+                                max_input_aoa = (float)Common.simple_filter(eq_x[0, 0], max_input_aoa, moder_filter);
+                                max_input_v = (float)Common.simple_filter(eq_x[1, 0], max_input_v, moder_filter);
+                            }
+
+                            // get equilibrium aoa and angular_v for -1.0 input
+                            eq_b[0, 0] = -(lin_model.C[0, 0] - lin_model.A[0, 2]);
+                            eq_b[1, 0] = lin_model.A[1, 2] + lin_model.B[1, 0] - lin_model.C[1, 0];
+                            eq_x = eq_A.SolveWith(eq_b);
+                            if (!double.IsInfinity(eq_x[0, 0]) && !double.IsNaN(eq_x[0, 0]))
+                            {
+                                if (eq_x[0, 0] >= 0.0)
                                 {
-                                    // plane is statically unstable, in_eq_x solution is equilibrium on it's minimal stable aoa
-                                    min_input_aoa = (float)Common.simple_filter(0.8 * in_eq_x[0, 0], min_input_aoa, moder_filter);
-                                    min_input_v = (float)Common.simple_filter(0.8 * in_eq_x[1, 0], min_input_v, moder_filter);
+                                    // plane is statically unstable, in_eq_x solution is equilibrium on it's maximal stable aoa
+                                    max_input_aoa = (float)Common.simple_filter(0.8 * eq_x[0, 0], max_input_aoa, moder_filter);
+                                    max_input_v = (float)Common.simple_filter(0.8 * eq_x[1, 0], max_input_v, moder_filter);
                                 }
                                 else
                                 {
-                                    // plane is statically stable, in_eq_x solution is equilibrium on it's maximal stable aoa
-                                    max_input_aoa = (float)Common.simple_filter(in_eq_x[0, 0], max_input_aoa, moder_filter);
-                                    max_input_v = (float)Common.simple_filter(in_eq_x[1, 0], max_input_v, moder_filter);
-                                }
-
-                                // get equilibrium aoa and angular_v for -1.0 input
-                                in_eq_b[0, 0] = -lin_model.C[0, 0] + lin_model.A[0, 2];
-                                in_eq_b[1, 0] = lin_model.A[1, 2] + lin_model.B[1, 0] - lin_model.C[1, 0];
-                                in_eq_x = in_eq_A.SolveWith(in_eq_b);
-                                if (!double.IsInfinity(in_eq_x[0, 0]) && !double.IsNaN(in_eq_x[0, 0]))
-                                {
-                                    if (in_eq_x[0, 0] >= 0.0)
-                                    {
-                                        // plane is statically unstable, in_eq_x solution is equilibrium on it's maximal stable aoa
-                                        max_input_aoa = (float)Common.simple_filter(0.8 * in_eq_x[0, 0], max_input_aoa, moder_filter);
-                                        max_input_v = (float)Common.simple_filter(0.8 * in_eq_x[1, 0], max_input_v, moder_filter);
-                                    }
-                                    else
-                                    {
-                                        // plane is statically stable, in_eq_x solution is equilibrium on it's minimal stable aoa
-                                        min_input_aoa = (float)Common.simple_filter(in_eq_x[0, 0], min_input_aoa, moder_filter);
-                                        min_input_v = (float)Common.simple_filter(in_eq_x[1, 0], min_input_v, moder_filter);
-                                    }
-                                    stability_region = true;    // we didn't fail on computing stability region, horay!
+                                    // plane is statically stable, in_eq_x solution is equilibrium on it's minimal stable aoa
+                                    min_input_aoa = (float)Common.simple_filter(eq_x[0, 0], min_input_aoa, moder_filter);
+                                    min_input_v = (float)Common.simple_filter(eq_x[1, 0], min_input_v, moder_filter);
                                 }
                             }
                         }
-                        catch (MSingularException)
+                    }
+                    catch (MSingularException) { }
+
+                    if (rad_max_aoa < res_max_aoa || -rad_max_aoa > res_min_aoa)
+                    {
+                        // get equilibrium v for max_aoa
+                        eq_A[0, 0] = lin_model.A[0, 1];
+                        eq_A[0, 1] = lin_model.A[0, 2];
+                        eq_A[1, 0] = lin_model.A[1, 1];
+                        eq_A[1, 1] = lin_model.A[1, 2] + lin_model.B[1, 0];
+                        eq_b[0, 0] = -(lin_model.A[0, 0] * rad_max_aoa + lin_model.C[0, 0]);
+                        eq_b[1, 0] = -(lin_model.A[1, 0] * rad_max_aoa + lin_model.C[1, 0]);
+                        eq_A.old_lu = true;
+                        try
                         {
-                            // we won't moderate by stability region
-                            //Debug.Log(e.Message + " " + e.StackTrace);
+                            eq_x = eq_A.SolveWith(eq_b);
+                            double new_max_aoa_v = eq_x[0, 0];
+                            eq_b[0, 0] = -(lin_model.A[0, 0] * -rad_max_aoa + lin_model.C[0, 0]);
+                            eq_b[1, 0] = -(lin_model.A[1, 0] * -rad_max_aoa + lin_model.C[1, 0]);
+                            eq_x = eq_A.SolveWith(eq_b);
+                            double new_min_aoa_v = eq_x[0, 0];
+                            if (!double.IsInfinity(new_max_aoa_v) && !double.IsInfinity(new_min_aoa_v))
+                            {
+                                max_aoa_v = (float)Common.simple_filter(new_max_aoa_v, max_aoa_v, moder_filter);
+                                min_aoa_v = (float)Common.simple_filter(new_min_aoa_v, min_aoa_v, moder_filter);
+                            }
                         }
+                        catch (MSingularException) { }
                     }
                 }
 
-                // let's apply moderation with max_aoa equilibrium
-                res_equilibr_v_upper = Math.Min(res_equilibr_v_upper, max_aoa_v);
-                res_equilibr_v_lower = Math.Max(res_equilibr_v_lower, min_aoa_v);
-
-                if (stability_region)
+                // let's apply moderation with stability region
+                if (max_input_aoa < res_max_aoa)
                 {
-                    // let's apply moderation with stability region
-                    if (max_input_aoa < res_max_aoa)
-                    {
-                        res_max_aoa = max_input_aoa;
-                        res_equilibr_v_upper = Math.Min(max_input_v, res_equilibr_v_upper);
-                    }
-                    if (min_input_aoa > res_min_aoa)
-                    {
-                        res_min_aoa = min_input_aoa;
-                        res_equilibr_v_lower = Math.Max(min_input_v, res_equilibr_v_lower);
-                    }
+                    res_max_aoa = max_input_aoa;
+                    res_equilibr_v_upper = Math.Min(max_input_v, res_equilibr_v_upper);
+                }
+                if (min_input_aoa > res_min_aoa)
+                {
+                    res_min_aoa = min_input_aoa;
+                    res_equilibr_v_lower = Math.Max(min_input_v, res_equilibr_v_lower);
+                }
+
+                // apply moderation
+                if (rad_max_aoa < res_max_aoa)
+                {
+                    res_max_aoa = rad_max_aoa;
+                    res_equilibr_v_upper = max_aoa_v;
+                }
+                if (-rad_max_aoa > res_min_aoa)
+                {
+                    res_min_aoa = -rad_max_aoa;
+                    res_equilibr_v_lower = min_aoa_v;
                 }
             }
 
             if (moderate_g && imodel.dyn_pressure > 100.0)
             {
-                if (lin_model.A[0, 0] != 0.0 && abs_cur_aoa < 0.26)
+                moderated = true;
+                
+                if (Math.Abs(lin_model.A[0, 0]) > 1e-4 && abs_cur_aoa < 0.3f)
                 {
+                    // model may be sane, let's update limitations
                     double gravity_acc = 0.0;
                     switch (axis)
                     {
                         case PITCH:
-                            gravity_acc = imodel.pitch_gravity_acc;
+                            gravity_acc = imodel.pitch_gravity_acc + imodel.pitch_noninert_acc;
                             break;
                         case YAW:
-                            gravity_acc = imodel.yaw_gravity_acc;
+                            gravity_acc = imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
                             break;
                         default:
                             gravity_acc = 0.0;
                             break;
                     }
                     // get equilibrium aoa and angular v for max_g g-force
-                    max_g_v_upper = (float)Common.simple_filter(
+                    max_g_v = (float)Common.simple_filter(
                         (max_g_force * 9.81 + gravity_acc) / vessel.srfSpeed,
-                        max_g_v_upper, moder_filter);
-                    max_g_aoa_upper = (float)Common.simple_filter(
-                        -(max_g_v_upper + lin_model.C[0, 0]) / lin_model.A[0, 0],
-                        max_g_aoa_upper, moder_filter);
-                    max_g_v_lower = (float)Common.simple_filter(
+                        max_g_v, moder_filter);
+                    min_g_v = (float)Common.simple_filter(
                         (-max_g_force * 9.81 + gravity_acc) / vessel.srfSpeed,
-                        max_g_v_lower, moder_filter);
-                    max_g_aoa_lower = (float)Common.simple_filter(
-                        -(max_g_v_lower + lin_model.C[0, 0]) / lin_model.A[0, 0],
-                        max_g_aoa_lower, moder_filter);
+                        min_g_v, moder_filter);
+                    // get equilibrium v for max_aoa
+                    eq_A[0, 0] = lin_model.A[0, 0];
+                    eq_A[0, 1] = lin_model.A[0, 2];
+                    eq_A[1, 0] = lin_model.A[1, 0];
+                    eq_A[1, 1] = lin_model.A[1, 2] + lin_model.B[1, 0];
+                    eq_b[0, 0] = -(lin_model.A[0, 1] * max_g_v + lin_model.C[0, 0]);
+                    eq_b[1, 0] = -lin_model.C[1, 0];
+                    eq_A.old_lu = true;
+                    try
+                    {
+                        eq_x = eq_A.SolveWith(eq_b);
+                        double new_max_g_aoa = eq_x[0, 0];
+                        eq_b[0, 0] = -(lin_model.A[0, 1] * min_g_v + lin_model.C[0, 0]);
+                        eq_x = eq_A.SolveWith(eq_b);
+                        double new_min_g_aoa = eq_x[0, 0];
+                        if (!double.IsInfinity(new_max_g_aoa) && !double.IsInfinity(new_min_g_aoa))
+                        {
+                            max_g_aoa = (float)Common.simple_filter(new_max_g_aoa, max_g_aoa, moder_filter);
+                            min_g_aoa = (float)Common.simple_filter(new_min_g_aoa, min_g_aoa, moder_filter);
+                        }
+                    }
+                    catch (MSingularException) { }
                 }
-                // apply g-force moderation
-                if (max_g_aoa_upper < res_max_aoa)
+                
+                // apply moderation
+                if (max_g_aoa < res_max_aoa)
                 {
-                    res_max_aoa = max_g_aoa_upper;
-                    res_equilibr_v_upper = Math.Min(max_g_v_upper, res_equilibr_v_upper);
+                    res_max_aoa = max_g_aoa;
+                    res_equilibr_v_upper = max_g_v;
                 }
-                if (max_g_aoa_lower > res_min_aoa)
+                if (min_g_aoa > res_min_aoa)
                 {
-                    res_min_aoa = max_g_aoa_lower;
-                    res_equilibr_v_lower = Math.Max(max_g_v_lower, res_equilibr_v_lower);
+                    res_min_aoa = min_g_aoa;
+                    res_equilibr_v_lower = min_g_v;
                 }
             }
 
@@ -393,6 +427,7 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
+                    new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
                     transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
                     old_dyn_max_v = transit_max_v;
                 }
@@ -425,20 +460,25 @@ namespace AtmosphereAutopilot
             if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
                 normalized_des_v = 0.0f;
             normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
-            if (des_v >= 0.0f)
+            if (moderated)
             {
-                scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) / 2.0f / res_max_aoa, 1.0f);
-                scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + v_offset + res_equilibr_v_upper * (1.0f - scaled_aoa),
-                    transit_max_v * normalized_des_v + v_offset);
+                if (des_v >= 0.0f)
+                {
+                    scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) / 2.0f / res_max_aoa, 1.0f);
+                    scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + v_offset + res_equilibr_v_upper * (1.0f - scaled_aoa),
+                        transit_max_v * normalized_des_v + v_offset);
+                }
+                else
+                {
+                    scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) / 2.0f / res_min_aoa, 1.0f);
+                    scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa + v_offset + res_equilibr_v_lower * (1.0f - scaled_aoa),
+                        transit_max_v * normalized_des_v + v_offset);
+                }
             }
             else
-            {
-                scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) / 2.0f / res_min_aoa, 1.0f);
-                scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa + v_offset + res_equilibr_v_lower * (1.0f - scaled_aoa),
-                    transit_max_v * normalized_des_v + v_offset);
-            }
+                scaled_restrained_v = transit_max_v * normalized_des_v;
+            
             des_v = scaled_restrained_v;
-
             return des_v;
         }
 
@@ -561,7 +601,7 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("max_aoa")]
         [AutoGuiAttr("max AoA", true, "G6")]
-        protected float max_aoa = 15.0f;
+        public float max_aoa = 15.0f;
 
         [AutoGuiAttr("max G-force", true, "G6")]
         protected float max_g_force = 10.0f;
