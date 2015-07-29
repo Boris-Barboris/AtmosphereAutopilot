@@ -155,7 +155,6 @@ namespace AtmosphereAutopilot
                 update_gen_space();
                 if (cur_time > time_reset)
                     reset_time();
-                check_linearity();
                 update_weights();                
                 if (input_view == null)
                     create_views();
@@ -164,16 +163,19 @@ namespace AtmosphereAutopilot
                     if (input_view.Count > 0)
                     {
                         linmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
+                        check_linearity();
                     }
             }
         }
 
+        [AutoGuiAttr("max_output_value", false)]
         double max_output_value = 0.01;         // maximum absolute value of model output reached in past
+
         readonly bool[] inputs_changed;         // flags that input has changed
         int added_to_imm = 0;                   // how many inputs where added to training imm_buf during last Train() call
 
-        //[AutoGuiAttr("max value decay", true)]
-        //public volatile float max_value_decay = 0.001f;
+        [AutoGuiAttr("max value decay", true)]
+        public volatile float max_value_decay = 0.001f;
 
         void update_imm_train_buf()
         {
@@ -189,7 +191,7 @@ namespace AtmosphereAutopilot
                     imm_buf_inputs.Get().DeepCopy(writing_cell);
                     imm_training_inputs.Put(writing_cell);
                     double new_output = imm_buf_outputs.Get();
-                    //max_output_value = max_output_value * (1.0 - max_value_decay * last_time_elapsed);
+                    max_output_value = max_output_value * (1.0 - max_value_decay * last_time_elapsed);
                     max_output_value = Math.Max(Math.Max(max_output_value, Math.Abs(new_output)), 0.01);
                     imm_training_outputs.Put(new_output);
                     count--;
@@ -202,10 +204,20 @@ namespace AtmosphereAutopilot
         readonly double[] init_upper_cell;
 
         [AutoGuiAttr("gen region decay", true, "G8")]
-        public volatile float gen_limits_decay = 0.001f;     // how fast generalization space is shrinking by itself
+        public volatile float gen_limits_decay = 0.0002f;     // how fast generalization space is shrinking by itself
 
         void update_gen_space()
         {
+            // Shrink gen space
+            if (gen_element_removed)
+            {
+                for (int j = 0; j < input_count; j++)
+                {
+                    gen_space.upper_cell[j] = Math.Max(init_upper_cell[j], linear_gen_buff.Max(v => v.coord[j]));
+                    gen_space.lower_cell[j] = Math.Min(init_lower_cell[j], linear_gen_buff.Min(v => v.coord[j]));
+                }
+                gen_element_removed = false;
+            }
             // Push all new inputs to generalization space
             for (int i = added_to_imm - 1; i >= 0; i--)
             {
@@ -220,16 +232,16 @@ namespace AtmosphereAutopilot
                         gen_space.lower_cell[j] = new_coord[j];
                 }
                 // decay
-                for (int j = 0; j < input_count; j++)
-                {
-                    double init_span = init_upper_cell[j] - init_lower_cell[j];
-                    double upper_span = gen_space.upper_cell[j] - new_coord[j];
-                    double decayed_upper_span = upper_span * (1.0 - last_time_elapsed * gen_limits_decay);
-                    gen_space.upper_cell[j] = new_coord[j] + Math.Max(decayed_upper_span, init_span / 2.0);
-                    double lower_span = gen_space.lower_cell[j] - new_coord[j];
-                    double decayed_lower_span = lower_span * (1.0 - last_time_elapsed * gen_limits_decay);
-                    gen_space.lower_cell[j] = new_coord[j] + Math.Min(decayed_lower_span, init_span / -2.0);
-                }
+                //for (int j = 0; j < input_count; j++)
+                //{
+                //    double init_span = init_upper_cell[j] - init_lower_cell[j];
+                //    double upper_span = gen_space.upper_cell[j] - new_coord[j];
+                //    double decayed_upper_span = upper_span * (1.0 - last_time_elapsed * gen_limits_decay);
+                //    gen_space.upper_cell[j] = new_coord[j] + Math.Max(decayed_upper_span, init_span / 2.0);
+                //    double lower_span = gen_space.lower_cell[j] - new_coord[j];
+                //    double decayed_lower_span = lower_span * (1.0 - last_time_elapsed * gen_limits_decay);
+                //    gen_space.lower_cell[j] = new_coord[j] + Math.Min(decayed_lower_span, init_span / -2.0);
+                //}
                 gen_space.recompute_region();
                 // push
                 gen_space.Put(new GenStruct(new_val, cur_time - last_time_elapsed * i), new_coord);
@@ -259,22 +271,27 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("nonlinear decay factor", true, "G8")]
         public volatile float nonlin_time_decay = 0.5f;
 
-        [AutoGuiAttr("min gen weight", true, "G8")]
+        [AutoGuiAttr("min gen weight", false, "G8")]
         public volatile float min_gen_weight = 0.005f;
 
-        // Linearity criteria
+        [AutoGuiAttr("nonlin_cutoff_time", true)]
+        public volatile int nonlin_cutoff_time  = 400;
+
         [AutoGuiAttr("linear criteria", true, "G8")]
         public volatile float linear_err_criteria = 0.05f;
 
         [AutoGuiAttr("linear", false)]
         public volatile bool linear = false;
 
+        [AutoGuiAttr("linear_param", false, "G6")]
+        public volatile float linear_param;
+
         void check_linearity()
         {
             if (imm_training_inputs.Size > 0)
             {
-                if (output_view != null)
-                    max_output_value = Math.Max(output_view.Max(v => Math.Abs(v)), 0.01);
+                //if (output_view != null)
+                //    max_output_value = Math.Max(output_view.Max(v => Math.Abs(v)), 0.01);
                 double sum_error = 0.0;
                 for (int i = 0; i < imm_training_inputs.Size; i++)
                 {
@@ -284,6 +301,7 @@ namespace AtmosphereAutopilot
                     double scaled_err = (lin_output - true_output) / max_output_value;
                     sum_error += Math.Abs(scaled_err);
                 }
+                linear_param = (float)(sum_error / (double)imm_training_inputs.Size);
                 linear = (sum_error / (double)imm_training_inputs.Size) < linear_err_criteria;
                 if (linear)
                     weight_time_decay = linear_time_decay;
@@ -291,6 +309,11 @@ namespace AtmosphereAutopilot
                     weight_time_decay = nonlin_time_decay;
             }
         }
+
+        [AutoGuiAttr("gen_space_fill_k", false, "G6")]
+        public volatile float gen_space_fill_k;
+
+        bool gen_element_removed = false;
 
         void update_weights()
         {
@@ -304,10 +327,11 @@ namespace AtmosphereAutopilot
             // Generalization buffer weights
             gen_error_weights.Clear();
             int j = 0;
+            min_gen_weight = (float)getAgeWeight(cur_time - nonlin_cutoff_time);
             while (j < linear_gen_buff.Count)
             {
                 double decayed_weight = getAgeWeight(linear_gen_buff[j].data.birth);
-                if (decayed_weight >= min_gen_weight)
+                if (decayed_weight >= min_gen_weight || linear)
                 {
                     double weight = decayed_weight * base_gen_weight;
                     gen_error_weights.Add(weight);
@@ -317,8 +341,10 @@ namespace AtmosphereAutopilot
                 {
                     // we need to delete this record from generalization space, it's too old
                     gen_space.Remove(linear_gen_buff[j]);
+                    gen_element_removed = true;
                 }
             }
+            gen_space_fill_k = (float)(linear_gen_buff.Count / (double)gen_space.storage_length);
             double popul_ratio = (double)imm_training_inputs.Size / (double)linear_gen_buff.Count;
             for (int i = 0; i < gen_error_weights.Count; i++)
                 gen_error_weights[i] *= popul_ratio;
@@ -353,10 +379,10 @@ namespace AtmosphereAutopilot
 
         void reset_time()
         {
-            foreach (var val in linear_gen_buff)
+            for (int i = 0; i < linear_gen_buff.Count; i++)
             {
-                int cur_age = Math.Min(cur_time - val.data.birth, max_age);
-                val.data.birth = max_age - cur_age;
+                int cur_age = Math.Min(cur_time - linear_gen_buff[i].data.birth, max_age);
+                linear_gen_buff[i].data.birth = max_age - cur_age;
             }
             cur_time = max_age;
         }

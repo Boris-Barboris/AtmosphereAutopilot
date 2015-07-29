@@ -73,7 +73,7 @@ namespace AtmosphereAutopilot
         //protected float model_acc;
 
         [AutoGuiAttr("output", false, "G6")]
-        protected float output;
+        public float output;
 
 		/// <summary>
 		/// Main control function
@@ -187,7 +187,7 @@ namespace AtmosphereAutopilot
         protected double cur_model_acc, prev_model_acc;
 
         [AutoGuiAttr("use_correction", true)]
-        protected bool use_correction = true;
+        protected bool use_correction = false;
 
         protected LinearSystemModel lin_model, lin_model_undelayed;
 
@@ -282,8 +282,16 @@ namespace AtmosphereAutopilot
             : base(vessel, "Roll ang acc controller", 77821330, ROLL)
 		{ }
 
-        Matrix cur_state = new Matrix(3, 1);
-        Matrix input_mat = new Matrix(1, 1);
+        AngularAccAdaptiveController yc;
+
+        public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+        {
+            base.InitializeDependencies(modules);
+            yc = modules[typeof(YawAngularAccController)] as AngularAccAdaptiveController;
+        }
+
+        Matrix cur_state = new Matrix(2, 1);
+        Matrix input_mat = new Matrix(3, 1);
 
         [AutoGuiAttr("model_predicted_acc", false, "G6")]
         double model_predicted_acc;
@@ -294,35 +302,37 @@ namespace AtmosphereAutopilot
         double cur_model_acc, prev_model_acc;
 
         [AutoGuiAttr("use_correction", true)]
-        bool use_correction = true;
+        bool use_correction = false;
 
         protected override float get_required_input(FlightCtrlState cntrl, float target_value)
         {
-            double authority = imodel.roll_rot_model.B[1, 0];
+            double authority = imodel.roll_rot_model.B[0, 0];
             // check if we have inadequate model authority
             if (Math.Abs(authority) < 1e-4)
                 return cntrl.pitch;
 
             // get model prediction for next frame
-            cur_state[0, 0] = imodel.AoA(YAW);
-            cur_state[1, 0] = imodel.AngularVel(ROLL);
-            cur_state[2, 0] = imodel.ControlSurfPos(ROLL);
-            input_mat[0, 0] = cur_state[2, 0];
-            double cur_acc_prediction = imodel.roll_rot_model.eval_row(1, cur_state, input_mat);
+            cur_state[0, 0] = imodel.AngularVel(ROLL);
+            cur_state[1, 0] = imodel.ControlSurfPos(ROLL);
+            input_mat[0, 0] = cur_state[1, 0];
+            input_mat[1, 0] = InstantControlModel.far_exponential_blend(imodel.ControlSurfPos(YAW), yc.output);
+            input_mat[2, 0] = imodel.AoA(YAW);
+            double cur_acc_prediction = imodel.roll_rot_model.eval_row(0, cur_state, input_mat);
 
             if (imodel.ControlSurfPosHistory(ROLL).Size > 1)
             {
                 // get model acceleration for current frame
                 float cur_input = imodel.ControlInput(ROLL);
                 float last_csurf = imodel.ControlSurfPosHistory(ROLL).getFromTail(1);
-                cur_state[0, 0] = imodel.AoAHistory(YAW).getFromTail(1);
-                cur_state[1, 0] = imodel.AngularVelHistory(ROLL).getFromTail(1);
-                cur_state[2, 0] = last_csurf;
+                cur_state[0, 0] = imodel.AngularVelHistory(ROLL).getFromTail(1);
+                cur_state[1, 0] = last_csurf;
                 input_mat[0, 0] = cur_input;
+                input_mat[1, 0] = imodel.ControlSurfPos(YAW);
+                input_mat[2, 0] = imodel.AoAHistory(YAW).getFromTail(1);
                 if (InstantControlModel.far_blend_collapse(last_csurf, cur_input))
-                    cur_model_acc = imodel.roll_rot_model_undelayed.eval_row(1, cur_state, input_mat);
+                    cur_model_acc = imodel.roll_rot_model_undelayed.eval_row(0, cur_state, input_mat);
                 else
-                    cur_model_acc = imodel.roll_rot_model.eval_row(1, cur_state, input_mat);
+                    cur_model_acc = imodel.roll_rot_model.eval_row(0, cur_state, input_mat);
                 //acc_correction = acc - cur_model_acc;
             }
             if (imodel.ControlSurfPosHistory(ROLL).Size > 2 && use_correction)
@@ -330,14 +340,15 @@ namespace AtmosphereAutopilot
                 // get model acceleration for previous frame
                 float last_input = imodel.ControlInputHistory(ROLL).getFromTail(1);
                 float prelast_csurf = imodel.ControlSurfPosHistory(ROLL).getFromTail(2);
-                cur_state[0, 0] = imodel.AoAHistory(YAW).getFromTail(2);
-                cur_state[1, 0] = imodel.AngularVelHistory(ROLL).getFromTail(2);
-                cur_state[2, 0] = prelast_csurf;
+                cur_state[0, 0] = imodel.AngularVelHistory(ROLL).getFromTail(2);
+                cur_state[1, 0] = prelast_csurf;
                 input_mat[0, 0] = last_input;
+                input_mat[1, 0] = imodel.ControlSurfPosHistory(YAW).getFromTail(1);
+                input_mat[2, 0] = imodel.AoAHistory(YAW).getFromTail(2);
                 if (InstantControlModel.far_blend_collapse(prelast_csurf, last_input))
-                    prev_model_acc = imodel.roll_rot_model_undelayed.eval_row(1, cur_state, input_mat);
+                    prev_model_acc = imodel.roll_rot_model_undelayed.eval_row(0, cur_state, input_mat);
                 else
-                    prev_model_acc = imodel.roll_rot_model.eval_row(1, cur_state, input_mat);
+                    prev_model_acc = imodel.roll_rot_model.eval_row(0, cur_state, input_mat);
                 acc_correction = (acc - cur_model_acc + imodel.AngularAccHistory(ROLL).getFromTail(1) - prev_model_acc) / 2.0;
             }
             else
@@ -351,7 +362,7 @@ namespace AtmosphereAutopilot
             if (InstantControlModel.far_blend_collapse(imodel.ControlSurfPos(ROLL), new_input))
             {
                 // we need to recalculate new_input according to undelayed model
-                authority = imodel.roll_rot_model_undelayed.B[1, 0];
+                authority = imodel.roll_rot_model_undelayed.B[0, 0];
                 new_input = (float)(imodel.ControlSurfPos(ROLL) + acc_error / authority);
                 new_input = Common.Clampf(new_input, 1.0f);
             }

@@ -164,15 +164,19 @@ namespace AtmosphereAutopilot
                 update_training_inputs();
                 update_cpu();
             }
-            update_pitch_rot_model();
-            update_roll_rot_model();
-            update_yaw_rot_model();
+            if (!vessel.LandedOrSplashed)
+            {
+                update_pitch_rot_model();
+                update_roll_rot_model();
+                update_yaw_rot_model();
+            }
 		}
 
 
 
 		#region RotationUpdate
 
+        //[AutoGuiAttr("angular_vel", false, "G8")]
         Vector3 angular_vel = Vector3.zero;
         
         [AutoGuiAttr("MOI", false, "G6")]
@@ -186,6 +190,7 @@ namespace AtmosphereAutopilot
         Vector3 partial_CoM;
         Vector3 cur_CoM;
 
+        [AutoGuiAttr("world_v", false, "G8")]
         Vector3d world_v;
 
         [AutoGuiAttr("Vessel mass", false, "G6")]
@@ -213,14 +218,19 @@ namespace AtmosphereAutopilot
         Vector3 partial_MOI = Vector3.zero;
         Vector3 partial_AM = Vector3.zero;
 
-        const int FullMomentFreq = 160;      // with standard 0.025 sec fixedDeltaTime it gives freq around 0.25 Hz
+        const int FullMomentFreq = 80;      // with standard 0.025 sec fixedDeltaTime it gives freq around 0.5 Hz
         int moments_cycle_counter = 0;
 
         [AutoGuiAttr("Reaction wheels", false, "G6")]
         public Vector3 reaction_torque = Vector3.zero;
 
+        int prev_part_count;
+
         void update_moments()
         {
+            if (vessel.Parts.Count != prev_part_count)
+                moments_cycle_counter = 0;
+            prev_part_count = vessel.Parts.Count;
             if (moments_cycle_counter == 0)
             {
                 get_moments(true);
@@ -228,7 +238,7 @@ namespace AtmosphereAutopilot
                 get_engines();
             }
             else
-                get_moments(false);
+                get_moments(true);
             moments_cycle_counter = (moments_cycle_counter + 1) % FullMomentFreq;
         }
 
@@ -236,7 +246,7 @@ namespace AtmosphereAutopilot
         {
             Vector3 res = Vector3.zero;
             foreach (var rw in vessel.FindPartModulesImplementing<ModuleReactionWheel>())
-                if (rw.isEnabled && rw.wheelState == ModuleReactionWheel.WheelState.Active)
+                if (rw.isEnabled && rw.wheelState == ModuleReactionWheel.WheelState.Active && rw.operational)
                 {
                     res.x += rw.PitchTorque;
                     res.y += rw.RollTorque;
@@ -392,11 +402,18 @@ namespace AtmosphereAutopilot
             else
             {
                 angular_vel = Common.divideVector(partial_AM, partial_MOI);
-                world_v -= Vector3.Cross(cur_CoM - CoM, cntrl_part_to_world * angular_vel);
+                //world_v -= Vector3.Cross(cur_CoM - CoM, cntrl_part_to_world * angular_vel);
             }
             angular_vel -= world_to_cntrl_part * vessel.mainBody.angularVelocity;     // remember that unity physics coordinate system is rotating
+            sum_mass = vessel.GetTotalMass();
             world_v += Krakensbane.GetFrameVelocity();
         }
+
+        [AutoGuiAttr("mainbd_ang_vel", false, "G6")]
+        Vector3 mainbd_ang_vel { get { return vessel.mainBody.angularVelocity; } }
+
+        [AutoGuiAttr("obt_vel", false, "G6")]
+        Vector3 obt_vel { get { return vessel.obt_velocity; } }
 
         static Vector3 get_rotated_moi(Vector3 inertia_tensor, Quaternion rotation)
         {
@@ -553,7 +570,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("engines torque", false, "G5")]
         public Vector3 engines_torque;
 
-        //[AutoGuiAttr("engines thrust", false, "G5")]
+        [AutoGuiAttr("engines thrust", false, "G5")]
         public Vector3 engines_thrust;
 
         float abs_thrust;
@@ -652,6 +669,7 @@ namespace AtmosphereAutopilot
         //[AutoGuiAttr("noninert_acc", false, "G6")]
         Vector3d noninert_acc;
 
+        [AutoGuiAttr("sum_acc", false, "G6")]
         Vector3d sum_acc;
 
         [AutoGuiAttr("pitch_gravity_acc", false, "G6")]
@@ -708,7 +726,7 @@ namespace AtmosphereAutopilot
             yaw_gravity_acc = Vector3d.Dot(gravity_acc, yaw_tangent);
             yaw_noninert_acc = Vector3d.Dot(noninert_acc, yaw_tangent);
             yaw_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust / sum_mass, yaw_tangent);
-            slide_acc = yaw_total_acc - pitch_noninert_acc - yaw_gravity_acc - yaw_engine_acc;
+            slide_acc = yaw_total_acc - yaw_noninert_acc - yaw_gravity_acc - yaw_engine_acc;
         }
 
         #endregion
@@ -720,7 +738,7 @@ namespace AtmosphereAutopilot
         //public Vector3d model_acc = Vector3d.zero;
 
         LinApprox pitch_aero_torque_model = new LinApprox(2);
-        LinApprox roll_aero_torque_model = new LinApprox(3);
+        LinApprox roll_aero_torque_model = new LinApprox(4);
         LinApprox yaw_aero_torque_model = new LinApprox(2);
         LinApprox pitch_lift_model = new LinApprox(2);
         LinApprox yaw_lift_model = new LinApprox(2);
@@ -735,56 +753,56 @@ namespace AtmosphereAutopilot
         {
             pitch_trainer = new OnlineLinTrainer(pitch_aero_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, pitch_input_method, pitch_output_method);
-            pitch_trainer.base_gen_weight = 5.0f;
-            //pitch_trainer.max_value_decay = 0.0005f;
-            pitch_trainer.gen_limits_decay = 0.0005f;
-            pitch_trainer.linear_time_decay = 0.008f;
-            pitch_trainer.nonlin_time_decay = 0.05f;
+            pitch_trainer.base_gen_weight = 0.1f;
+            pitch_trainer.max_value_decay = 0.001f;
+            pitch_trainer.gen_limits_decay = 0.001f;
+            pitch_trainer.linear_time_decay = 0.003f;
+            pitch_trainer.nonlin_time_decay = 0.03f;
             pitch_trainer.min_gen_weight = 0.02f;
-            pitch_trainer.linear_err_criteria = 0.2f;
+            pitch_trainer.linear_err_criteria = 0.05f;
             trainers[0] = pitch_trainer;
 
-            roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, IMM_BUF_SIZE, new int[] { 7, 7, 7 },
-                new double[] { -0.1, -0.05, -0.1 }, new double[] { 0.1, 0.05, 0.1 }, roll_input_method, roll_output_method);
-            roll_trainer.base_gen_weight = 5.0f;
-            //roll_trainer.max_value_decay = 0.0005f;
-            roll_trainer.gen_limits_decay = 0.0005f;
-            roll_trainer.linear_time_decay = 0.008f;
-            roll_trainer.nonlin_time_decay = 0.05f;
+            roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, IMM_BUF_SIZE, new int[] { 7, 7, 7, 7 },
+                new double[] { -0.05, -0.01, -0.05, -0.1 }, new double[] { 0.05, 0.01, 0.05, 0.1 }, roll_input_method, roll_output_method);
+            roll_trainer.base_gen_weight = 0.1f;
+            roll_trainer.max_value_decay = 0.001f;
+            roll_trainer.gen_limits_decay = 0.001f;
+            roll_trainer.linear_time_decay = 0.003f;
+            roll_trainer.nonlin_time_decay = 0.03f;
             roll_trainer.min_gen_weight = 0.02f;
-            roll_trainer.linear_err_criteria = 0.2f;
+            roll_trainer.linear_err_criteria = 0.05f;
             trainers[1] = roll_trainer;
 
             yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
-                new double[] { -0.1, -0.2 }, new double[] { 0.1, 0.2 }, yaw_input_method, yaw_output_method);
-            yaw_trainer.base_gen_weight = 5.0f;
-            //yaw_trainer.max_value_decay = 0.0005f;
-            yaw_trainer.gen_limits_decay = 0.0005f;
-            yaw_trainer.linear_time_decay = 0.008f;
-            yaw_trainer.nonlin_time_decay = 0.05f;
+                new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, yaw_input_method, yaw_output_method);
+            yaw_trainer.base_gen_weight = 0.1f;
+            yaw_trainer.max_value_decay = 0.001f;
+            yaw_trainer.gen_limits_decay = 0.001f;
+            pitch_trainer.linear_time_decay = 0.003f;
+            yaw_trainer.nonlin_time_decay = 0.03f;
             yaw_trainer.min_gen_weight = 0.02f;
-            yaw_trainer.linear_err_criteria = 0.2f;
+            yaw_trainer.linear_err_criteria = 0.05f;
             trainers[2] = yaw_trainer;
 
-            pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11, 7 },
+            pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.05, -0.1 }, new double[] { 0.05, 0.1 }, pitch_lift_input_method, pitch_lift_output_method);
-            pitch_lift_trainer.base_gen_weight = 4.0f;
-            //pitch_lift_trainer.max_value_decay = 0.0002f;
+            pitch_lift_trainer.base_gen_weight = 1.0f;
+            pitch_lift_trainer.max_value_decay = 0.0005f;
             pitch_lift_trainer.gen_limits_decay = 0.0005f;
-            pitch_lift_trainer.linear_time_decay = 0.004f;
-            pitch_lift_trainer.nonlin_time_decay = 0.05f;
+            pitch_lift_trainer.linear_time_decay = 0.002f;
+            pitch_lift_trainer.nonlin_time_decay = 0.02f;
             pitch_lift_trainer.min_gen_weight = 0.02f;
-            pitch_lift_trainer.linear_err_criteria = 0.2f;
+            pitch_lift_trainer.linear_err_criteria = 0.05f;
 
-            yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11, 7 },
+            yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.05, -0.1 }, new double[] { 0.05, 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
-            yaw_lift_trainer.base_gen_weight = 4.0f;
-            //yaw_lift_trainer.max_value_decay = 0.0002f;
+            yaw_lift_trainer.base_gen_weight = 1.0f;
+            yaw_lift_trainer.max_value_decay = 0.0005f;
             yaw_lift_trainer.gen_limits_decay = 0.0005f;
-            yaw_lift_trainer.linear_time_decay = 0.004f;
-            yaw_lift_trainer.nonlin_time_decay = 0.05f;
+            yaw_lift_trainer.linear_time_decay = 0.002f;
+            yaw_lift_trainer.nonlin_time_decay = 0.02f;
             yaw_lift_trainer.min_gen_weight = 0.02f;
-            yaw_lift_trainer.linear_err_criteria = 0.2f;
+            yaw_lift_trainer.linear_err_criteria = 0.05f;
         }
 
         /// <summary>
@@ -808,8 +826,9 @@ namespace AtmosphereAutopilot
         void roll_input_method(Vector v)
         {
             v[0] = aoa_buf[YAW].getFromTail(1);
-            v[1] = angular_v_buf[ROLL].getFromTail(1);
+            v[1] = angular_v_buf[ROLL].getFromTail(1) / vessel.srfSpeed * 1e3;
             v[2] = csurf_buf[ROLL].getLast();
+            v[3] = csurf_buf[YAW].getLast();
         }
 
         double roll_output_method()
@@ -979,11 +998,11 @@ namespace AtmosphereAutopilot
         #region RotationModels
 
         public readonly LinearSystemModel pitch_rot_model = new LinearSystemModel(3, 1);
-        public readonly LinearSystemModel roll_rot_model = new LinearSystemModel(3, 1);
+        public readonly LinearSystemModel roll_rot_model = new LinearSystemModel(2, 3);
         public readonly LinearSystemModel yaw_rot_model = new LinearSystemModel(3, 1);
 
         public readonly LinearSystemModel pitch_rot_model_undelayed = new LinearSystemModel(2, 1);
-        public readonly LinearSystemModel roll_rot_model_undelayed = new LinearSystemModel(2, 1);
+        public readonly LinearSystemModel roll_rot_model_undelayed = new LinearSystemModel(1, 3);
         public readonly LinearSystemModel yaw_rot_model_undelayed = new LinearSystemModel(2, 1);
 
         public class PitchYawCoeffs
@@ -1004,6 +1023,7 @@ namespace AtmosphereAutopilot
             public double k1;
             public double k2;
             public double k3;
+            public double k4;
             public double et0;
             public double et1;
         }
@@ -1086,8 +1106,9 @@ namespace AtmosphereAutopilot
             roll_coeffs.et1 = engines_torque_k1[ROLL] / MOI[ROLL];
             roll_coeffs.k0 = roll_aero_torque_model.pars[0] / 1e3 * dyn_pressure;
             roll_coeffs.k1 = roll_aero_torque_model.pars[1] / 1e3 * dyn_pressure;
-            roll_coeffs.k2 = roll_aero_torque_model.pars[2] / 1e3 * dyn_pressure;
+            roll_coeffs.k2 = roll_aero_torque_model.pars[2] / vessel.srfSpeed * dyn_pressure;
             roll_coeffs.k3 = roll_aero_torque_model.pars[3] / 1e3 * dyn_pressure;
+            roll_coeffs.k4 = roll_aero_torque_model.pars[4] / 1e3 * dyn_pressure;
 
             // Fill roll_rot_model
             Matrix A = roll_rot_model.A;
@@ -1095,22 +1116,25 @@ namespace AtmosphereAutopilot
             Matrix C = roll_rot_model.C;
             if (dyn_pressure > 10.0)
             {
-                A[1, 0] = roll_coeffs.k1;
-                A[1, 1] = roll_coeffs.k2;
-                A[1, 2] = roll_coeffs.k3 * (1.0 - 4.0 * TimeWarp.fixedDeltaTime);
-                B[1, 0] = reaction_torque[ROLL] / MOI[ROLL] + roll_coeffs.k3 * 4.0 * TimeWarp.fixedDeltaTime + roll_coeffs.et1;
-                C[1, 0] = roll_coeffs.k0 + roll_coeffs.et0;
+                A[0, 0] = roll_coeffs.k2;
+                A[0, 1] = roll_coeffs.k3 * (1.0 - 4.0 * TimeWarp.fixedDeltaTime);
+                B[0, 0] = reaction_torque[ROLL] / MOI[ROLL] + roll_coeffs.k3 * 4.0 * TimeWarp.fixedDeltaTime + roll_coeffs.et1;
+                B[0, 1] = roll_coeffs.k4;
+                B[0, 2] = roll_coeffs.k1;
+                C[0, 0] = roll_coeffs.k0 + roll_coeffs.et0;
             }
             else
             {
-                A[1, 0] = 0.0;
-                A[1, 1] = 0.0;
-                A[1, 2] = 0.0;
-                B[1, 0] = reaction_torque[ROLL] / MOI[ROLL] + roll_coeffs.et1;
-                C[1, 0] = roll_coeffs.et0;
+                A[0, 0] = 0.0;
+                A[0, 0] = 0.0;
+                A[0, 1] = 0.0;
+                B[0, 0] = reaction_torque[ROLL] / MOI[ROLL] + roll_coeffs.et1;
+                B[0, 1] = 0.0;
+                B[0, 2] = 0.0;
+                C[0, 0] = roll_coeffs.et0;
             }
-            A[2, 2] = -4.0;
-            B[2, 0] = 4.0;
+            A[1, 1] = -4.0;
+            B[1, 0] = 4.0;
 
             // Fill roll_rot_model_undelayed
             A = roll_rot_model_undelayed.A;
@@ -1118,17 +1142,19 @@ namespace AtmosphereAutopilot
             C = roll_rot_model_undelayed.C;
             if (dyn_pressure > 10.0)
             {
-                A[1, 0] = roll_coeffs.k1;
-                A[1, 1] = roll_coeffs.k2;
-                B[1, 0] = reaction_torque[ROLL] / MOI[ROLL] + roll_coeffs.k3 + roll_coeffs.et1;
-                C[1, 0] = roll_coeffs.k0 + roll_coeffs.et0;
+                A[0, 0] = roll_coeffs.k2;
+                B[0, 0] = reaction_torque[ROLL] / MOI[ROLL] + roll_coeffs.k3 + roll_coeffs.et1;
+                B[0, 1] = roll_coeffs.k4;
+                B[0, 2] = roll_coeffs.k1;
+                C[0, 0] = roll_coeffs.k0 + roll_coeffs.et0;
             }
             else
             {
-                A[1, 0] = 0.0;
-                A[1, 1] = 0.0;
-                B[1, 0] = reaction_torque[ROLL] / MOI[ROLL] + roll_coeffs.et1;
-                C[1, 0] = roll_coeffs.et0;
+                A[0, 0] = 0.0;
+                B[0, 0] = reaction_torque[ROLL] / MOI[ROLL] + roll_coeffs.et1;
+                B[0, 1] = 0.0;
+                B[0, 2] = 0.0;
+                C[0, 0] = 0.0 + roll_coeffs.et0;
             }
         }
 
@@ -1205,31 +1231,12 @@ namespace AtmosphereAutopilot
 
         #region Serialization
 
-        //protected override void OnDeserialize(ConfigNode node, Type attribute_type)
-        //{
-        //    if (attribute_type == typeof(VesselSerializable))
-        //    {
-        //        SimpleAnn pann = SimpleAnn.DeserializeFromNode(node, "pitch_ann");
-        //        if (pann != null)
-        //            pitch_ann = pann;
-        //        SimpleAnn rann = SimpleAnn.DeserializeFromNode(node, "roll_ann");
-        //        if (rann != null)
-        //            roll_ann = rann;
-        //        SimpleAnn yann = SimpleAnn.DeserializeFromNode(node, "yaw_ann");
-        //        if (yann != null)
-        //            yaw_ann = yann;
-        //    }
-        //}
-
-        //protected override void OnSerialize(ConfigNode node, Type attribute_type)
-        //{
-        //    if (attribute_type == typeof(VesselSerializable))
-        //    {
-        //        pitch_ann.SerializeToNode(node, "pitch_ann");
-        //        roll_ann.SerializeToNode(node, "roll_ann");
-        //        yaw_ann.SerializeToNode(node, "yaw_ann");
-        //    }
-        //}
+        public override bool Deserialize()
+        {
+            bool res = base.Deserialize();
+            initialize_trainer_windows();
+            return res;
+        }
 
         #endregion
 
@@ -1250,16 +1257,69 @@ namespace AtmosphereAutopilot
                 GUILayout.Label("AoA = " + (aoa_buf[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
                 //GUILayout.Label("MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 //GUILayout.Label("AngMoment = " + AM[i].ToString("G8"), GUIStyles.labelStyleLeft);
-                if (i == 2)
-                AutoGUI.AutoDrawObject(trainers[i]);
 			}
-            //GUILayout.Label("===Pitch lift trainer===", GUIStyles.labelStyleLeft);
-            //AutoGUI.AutoDrawObject(pitch_lift_trainer);
-            GUILayout.Label("===Yaw lift trainer===", GUIStyles.labelStyleLeft);
-            AutoGUI.AutoDrawObject(yaw_lift_trainer);
             AutoGUI.AutoDrawObject(this);
 			GUILayout.EndVertical();
 			GUI.DragWindow();
+        }
+
+        OnlineLinTrainerWindow pitch_lin_wnd, roll_lin_wnd, yaw_lin_wnd,
+            lift_lin_wnd, slide_lin_wnd;
+
+        void initialize_trainer_windows()
+        {
+            Rect lin_wnd_rect = window;
+            lin_wnd_rect.xMin = window.xMin - 225.0f;
+            lin_wnd_rect.xMax = window.xMax - 225.0f;
+            pitch_lin_wnd = new OnlineLinTrainerWindow(pitch_trainer, "pitch trainer", 908999, lin_wnd_rect);
+            roll_lin_wnd = new OnlineLinTrainerWindow(roll_trainer, "roll trainer", 908998, lin_wnd_rect);
+            yaw_lin_wnd = new OnlineLinTrainerWindow(yaw_trainer, "yaw trainer", 908997, lin_wnd_rect);
+            lift_lin_wnd = new OnlineLinTrainerWindow(pitch_lift_trainer, "lift trainer", 908996, lin_wnd_rect);
+            slide_lin_wnd = new OnlineLinTrainerWindow(yaw_lift_trainer, "slide trainer", 908995, lin_wnd_rect);
+        }
+
+        [AutoGuiAttr("pitch trainer", true)]
+        bool show_pitch_lin_wnd
+        {
+            get { return pitch_lin_wnd.IsShown(); }
+            set { if (value) pitch_lin_wnd.ShowGUI(); else pitch_lin_wnd.UnShowGUI(); }
+        }
+
+        [AutoGuiAttr("roll trainer", true)]
+        bool show_roll_lin_wnd
+        {
+            get { return roll_lin_wnd.IsShown(); }
+            set { if (value) roll_lin_wnd.ShowGUI(); else roll_lin_wnd.UnShowGUI(); }
+        }
+
+        [AutoGuiAttr("yaw trainer", true)]
+        bool show_yaw_lin_wnd
+        {
+            get { return yaw_lin_wnd.IsShown(); }
+            set { if (value) yaw_lin_wnd.ShowGUI(); else yaw_lin_wnd.UnShowGUI(); }
+        }
+
+        [AutoGuiAttr("lift trainer", true)]
+        bool show_lift_lin_wnd
+        {
+            get { return lift_lin_wnd.IsShown(); }
+            set { if (value) lift_lin_wnd.ShowGUI(); else lift_lin_wnd.UnShowGUI(); }
+        }
+
+        [AutoGuiAttr("slide trainer", true)]
+        bool show_slide_lin_wnd
+        {
+            get { return slide_lin_wnd.IsShown(); }
+            set { if (value) slide_lin_wnd.ShowGUI(); else slide_lin_wnd.UnShowGUI(); }
+        }
+
+        protected override void OnGUICustom()
+        {
+            pitch_lin_wnd.OnGUI();
+            roll_lin_wnd.OnGUI();
+            yaw_lin_wnd.OnGUI();
+            lift_lin_wnd.OnGUI();
+            slide_lin_wnd.OnGUI();
         }
 
         #endregion

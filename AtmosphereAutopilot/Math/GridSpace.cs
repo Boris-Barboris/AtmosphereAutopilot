@@ -38,18 +38,14 @@ namespace AtmosphereAutopilot
         double[] lower_border;              // lower region border
         double[] cell_size;                 // sizes of cells
 
-        int storage_length;                 // length of main linear storage of supercell
+        public readonly int storage_length;     // length of main linear storage of supercell
         int[] index_weight;                 // weight of each index in space when linearizing it to 1-dimensional array
 
-        List<CellValue> linear_form = new List<CellValue>();
+        List<CellValue> linear_form;
 
         public class CellValue
         {
-            public CellValue(T data)
-            {
-                this.data = data;
-            }
-
+            public bool empty;
             public Vector coord;
             public T data;
         }
@@ -72,11 +68,11 @@ namespace AtmosphereAutopilot
         public void Put(T data, Vector coord)
         {
             int index = getLinearIndex(coord, cell_center);
-            if (storage[index] == null)
+            if (storage[index].empty)
             {
-                storage[index] = new CellValue(data);
-                storage[index].coord = coord_storage[index];
+                storage[index].data = data;
                 coord.DeepCopy(storage[index].coord);
+                storage[index].empty = false;
                 linear_form.Add(storage[index]);
             }
             else
@@ -93,15 +89,8 @@ namespace AtmosphereAutopilot
 
         public bool Remove(CellValue val)
         {
-            int index = Array.IndexOf(storage, val);
-            if (index == -1)
-                return false;
-            else
-            {
-                storage[index] = null;
-                linear_form.Remove(val);
-                return true;
-            }
+            val.empty = true;
+            return linear_form.Remove(val);
         }
 
         /// <summary>
@@ -171,6 +160,13 @@ namespace AtmosphereAutopilot
             storage = new CellValue[storage_length];
             coord_storage = new VectorArray(dim_count, storage_length);
             cell_center = new Vector(dim_count);
+            for (int i = 0; i < storage_length; i++)
+            {
+                storage[i] = new CellValue();
+                storage[i].empty = true;
+                storage[i].coord = coord_storage[i];
+            }
+            linear_form = new List<CellValue>(storage_length);
         }
 
         /// <summary>

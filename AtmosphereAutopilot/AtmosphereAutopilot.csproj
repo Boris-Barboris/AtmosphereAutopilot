@@ -50,7 +50,7 @@
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="BackgroundThread.cs" />
     <Compile Include="Controller\PDController.cs" />
-    <None Include="FixedKrakensbane.cs" />
+    <Compile Include="FixedKrakensbane.cs" />
     <Compile Include="ListSelector.cs" />
     <Compile Include="ListView.cs" />
     <Compile Include="Math\GradientDescend.cs" />
@@ -62,6 +62,7 @@
     <Compile Include="Math\GridSpace.cs" />
     <Compile Include="Math\LinApprox.cs" />
     <Compile Include="Math\OnlineLinTrainer.cs" />
+    <Compile Include="Math\OnlineLinTrainerWindow.cs" />
     <Compile Include="Math\SimpleAnn.cs" />
     <Compile Include="Math\VectorArray.cs" />
     <Compile Include="Math\OnlineAnnTrainer.cs" />
