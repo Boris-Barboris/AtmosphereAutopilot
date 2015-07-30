@@ -470,12 +470,16 @@ namespace AtmosphereAutopilot
                 if (des_v >= 0.0f)
                 {
                     scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) / 2.0f / res_max_aoa, 1.0f);
+                    if (scaled_aoa < 0.0f)
+                        normalized_des_v = 1.0f;
                     scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_upper * (1.0f - scaled_aoa),
                         transit_max_v * normalized_des_v + v_offset);
                 }
                 else
                 {
                     scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) / 2.0f / res_min_aoa, 1.0f);
+                    if (scaled_aoa < 0.0f)
+                        normalized_des_v = -1.0f;
                     scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_lower * (1.0f - scaled_aoa),
                         transit_max_v * normalized_des_v + v_offset);
                 }
