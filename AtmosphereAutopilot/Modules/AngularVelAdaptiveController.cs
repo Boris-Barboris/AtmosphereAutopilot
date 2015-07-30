@@ -100,6 +100,8 @@ namespace AtmosphereAutopilot
                 float clamp = FlightInputHandler.fetch.precisionMode ?
                     0.33f * user_input_deriv_clamp * TimeWarp.fixedDeltaTime :
                     user_input_deriv_clamp * TimeWarp.fixedDeltaTime;
+                if (FlightInputHandler.fetch.precisionMode)
+                    user_input *= 0.33f;
                 float delta_input = Common.Clampf(user_input - prev_input, clamp);
                 user_input = prev_input + delta_input;
                 prev_input = user_input;
@@ -471,16 +473,22 @@ namespace AtmosphereAutopilot
                 {
                     scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) / 2.0f / res_max_aoa, 1.0f);
                     if (scaled_aoa < 0.0f)
+                    {
                         normalized_des_v = 1.0f;
-                    scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_upper * (1.0f - scaled_aoa),
+                        scaled_aoa *= 2.0f;
+                    }
+                    scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_upper * (1.0f - Math.Abs(scaled_aoa)),
                         transit_max_v * normalized_des_v + v_offset);
                 }
                 else
                 {
                     scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) / 2.0f / res_min_aoa, 1.0f);
                     if (scaled_aoa < 0.0f)
+                    {
                         normalized_des_v = -1.0f;
-                    scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_lower * (1.0f - scaled_aoa),
+                        scaled_aoa *= 2.0f;
+                    }
+                    scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_lower * (1.0f - Math.Abs(scaled_aoa)),
                         transit_max_v * normalized_des_v + v_offset);
                 }
             }
@@ -612,7 +620,7 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("max_g_force")]
         [AutoGuiAttr("max G-force", true, "G6")]
-        protected float max_g_force = 10.0f;
+        protected float max_g_force = 5.0f;
 
         #endregion
     }

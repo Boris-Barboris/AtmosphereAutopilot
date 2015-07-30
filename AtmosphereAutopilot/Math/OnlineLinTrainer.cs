@@ -168,6 +168,9 @@ namespace AtmosphereAutopilot
             }
         }
 
+        [AutoGuiAttr("min_output_value", false)]
+        public volatile float min_output_value = 0.01f;
+
         [AutoGuiAttr("max_output_value", false)]
         double max_output_value = 0.01;         // maximum absolute value of model output reached in past
 
@@ -192,7 +195,7 @@ namespace AtmosphereAutopilot
                     imm_training_inputs.Put(writing_cell);
                     double new_output = imm_buf_outputs.Get();
                     max_output_value = max_output_value * (1.0 - max_value_decay * last_time_elapsed);
-                    max_output_value = Math.Max(Math.Max(max_output_value, Math.Abs(new_output)), 0.01);
+                    max_output_value = Math.Max(Math.Max(max_output_value, Math.Abs(new_output)), min_output_value);
                     imm_training_outputs.Put(new_output);
                     count--;
                 }
@@ -275,7 +278,7 @@ namespace AtmosphereAutopilot
         public volatile float min_gen_weight = 0.005f;
 
         [AutoGuiAttr("nonlin_cutoff_time", true)]
-        public volatile int nonlin_cutoff_time  = 400;
+        public volatile int nonlin_cutoff_time  = 1000;
 
         [AutoGuiAttr("linear criteria", true, "G8")]
         public volatile float linear_err_criteria = 0.05f;

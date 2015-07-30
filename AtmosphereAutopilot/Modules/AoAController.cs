@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
@@ -74,6 +75,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("des_aoa_equilibr_v", false, "G6")]
         protected float des_aoa_equilibr_v;
 
+        [AutoGuiAttr("cur_aoa_equilibr_v", false, "G6")]
+        protected float cur_aoa_equilibr_v;
+
         [AutoGuiAttr("filter_k", true, "G6")]
         protected float filter_k = 4.0f;
 
@@ -124,15 +128,15 @@ namespace AtmosphereAutopilot
                 {
                     eq_x = eq_A.SolveWith(eq_b);
                     double new_eq_v = eq_x[0, 0];
-                    if (!double.IsInfinity(new_eq_v) && !double.IsInfinity(new_eq_v))
+                    if (!double.IsInfinity(new_eq_v) && !double.IsNaN(new_eq_v))
                         des_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, des_aoa_equilibr_v, filter_k);
                 }
                 catch (MSingularException) { }
-                
-                //des_aoa_equilibr_v = -(float)(lin_model.C[0, 0] + lin_model.A[0, 0] * desired_aoa);
             }
             else
                 des_aoa_equilibr_v = 0.0f;
+
+            cur_aoa_equilibr_v = (float)get_roll_aoa_deriv();
 
             float transit_v = v_controller.transit_max_v;
             float error = desired_aoa - cur_aoa;
@@ -146,13 +150,26 @@ namespace AtmosphereAutopilot
                     relax_k = error / 0.2f;
             relax_k = Common.Clampf(relax_k, 1.0f);
 
-            output_v = relax_k * transit_v + (1.0f - Math.Abs(relax_k)) * des_aoa_equilibr_v;
+            output_v = relax_k * transit_v + cur_aoa_equilibr_v + (1.0f - Math.Abs(relax_k)) * des_aoa_equilibr_v;
 
             ControlUtils.neutralize_user_input(cntrl, axis);
             v_controller.user_controlled = false;
             v_controller.ApplyControl(cntrl, output_v);
 
             return output_v;
+        }
+
+        double get_roll_aoa_deriv()
+        {
+            Vector3 pitch_aoa = new Vector3(imodel.AoA(PITCH), 0.0f, 0.0f);
+            Vector3 yaw_aoa = new Vector3(0.0f, imodel.AoA(YAW), 0.0f);
+            Vector3 ang_v = new Vector3(0.0f, 0.0f, imodel.AngularVel(ROLL));
+            Vector3 plane_vel = Vector3.Cross(ang_v, pitch_aoa + yaw_aoa);
+            if (axis == PITCH)
+                return Vector3.Dot(Vector3.right, plane_vel);
+            if (axis == YAW)
+                return Vector3.Dot(Vector3.up, plane_vel);
+            return 0.0;
         }
     }
 

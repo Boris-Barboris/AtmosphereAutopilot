@@ -56,7 +56,23 @@ namespace FixedKrakensbane
                     krak_instance.FrameVel = _fv;
             }
         }
+
+        public Vector3d LastCorrection
+        {
+            get
+            {
+                return _lc;
+            }
+            private set
+            {
+                _lc = value;
+                if (krak_instance != null)
+                    krak_instance.lastCorrection = _lc;
+            }
+        }
+
         Vector3d _fv;
+        Vector3d _lc;
 
         void Awake()
         {
@@ -119,6 +135,7 @@ namespace FixedKrakensbane
             if (root_rb != null)
             {
                 Vector3 ves_vel = root_rb.velocity;
+                LastCorrection = Vector3d.zero;
                 if (!cur_ves.packed)
                 {
                     if (cur_ves.state != Vessel.State.DEAD)
@@ -132,6 +149,7 @@ namespace FixedKrakensbane
                             if (FrameVelocity.IsZero())
                                 GameEvents.onKrakensbaneEngage.Fire(-shift_vel);
                             FrameVelocity += shift_vel;
+                            LastCorrection = shift_vel;
                             // update velocities
                             offset_velocities(-shift_vel);
                         }
