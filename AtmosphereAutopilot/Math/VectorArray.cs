@@ -129,6 +129,28 @@ namespace AtmosphereAutopilot
                 }
             }
 
+            public string ToString(string format)
+            {
+                if (source == null)
+                    return "{}";
+                else
+                {
+                    if (source.data_size == 1)
+                        return this[0].ToString(format);
+                    else
+                    {
+                        string result = "{";
+                        for (int i = 0; i < source.vector_size; i++)
+                            if (i != source.vector_size - 1)
+                                result += this[i].ToString(format) + ", ";
+                            else
+                                result += this[i].ToString(format);
+                        result += "}";
+                        return result;
+                    }
+                }
+            }
+
             public override bool Equals(Object obj)
             {
                 return obj is Vector && this == (Vector)obj;

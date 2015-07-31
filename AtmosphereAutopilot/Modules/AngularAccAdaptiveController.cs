@@ -186,6 +186,9 @@ namespace AtmosphereAutopilot
 
         protected double cur_model_acc, prev_model_acc;
 
+        [AutoGuiAttr("authority", false, "G8")]
+        protected double authority;
+
         [AutoGuiAttr("use_correction", true)]
         protected bool use_correction = false;
 
@@ -193,7 +196,7 @@ namespace AtmosphereAutopilot
 
         protected override float get_required_input(FlightCtrlState cntrl, float target_value)
         {
-            double authority = lin_model.B[1, 0];
+            authority = lin_model.B[1, 0];
             // check if we have inadequate model authority
             if (Math.Abs(authority) < 1e-4)
                 return cntrl.pitch;
@@ -304,9 +307,12 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("use_correction", true)]
         bool use_correction = false;
 
+        [AutoGuiAttr("authority", false, "G8")]
+        double authority;
+
         protected override float get_required_input(FlightCtrlState cntrl, float target_value)
         {
-            double authority = imodel.roll_rot_model.B[0, 0];
+            authority = imodel.roll_rot_model.B[0, 0];
             // check if we have inadequate model authority
             if (Math.Abs(authority) < 1e-4)
                 return cntrl.pitch;

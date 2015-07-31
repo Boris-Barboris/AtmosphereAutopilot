@@ -190,7 +190,7 @@ namespace AtmosphereAutopilot
         Vector3 partial_CoM;
         Vector3 cur_CoM;
 
-        [AutoGuiAttr("world_v", false, "G8")]
+        //[AutoGuiAttr("world_v", false, "G6")]
         Vector3d world_v;
 
         [AutoGuiAttr("Vessel mass", false, "G6")]
@@ -238,7 +238,7 @@ namespace AtmosphereAutopilot
                 get_engines();
             }
             else
-                get_moments(false);
+                get_moments(true);
             moments_cycle_counter = (moments_cycle_counter + 1) % FullMomentFreq;
         }
 
@@ -357,11 +357,11 @@ namespace AtmosphereAutopilot
                     Vector3 pv = world_to_cntrl_part * world_pv;
                     Vector3 impulse = mass * (world_to_cntrl_part * (part.rb.velocity - world_v));
                     // from part.rb principal frame to root part rotation
-                    Quaternion principal_to_root = part.rb.inertiaTensorRotation * part_to_cntrl;
+                    Quaternion principal_to_cntrl = part.rb.inertiaTensorRotation * part_to_cntrl;
                     // MOI of part as offsetted material point
                     moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
                     // MOI of part as rigid body
-                    Vector3 rotated_moi = get_rotated_moi(part.rb.inertiaTensor, principal_to_root);
+                    Vector3 rotated_moi = get_rotated_moi(part.rb.inertiaTensor, principal_to_cntrl);
                     moi += rotated_moi;
                     // angular moment of part as offsetted material point
                     am += Vector3.Cross(pv, impulse);
@@ -408,12 +408,6 @@ namespace AtmosphereAutopilot
             sum_mass = vessel.GetTotalMass();
             world_v += Krakensbane.GetFrameVelocity();
         }
-
-        [AutoGuiAttr("mainbd_ang_vel", false, "G6")]
-        Vector3 mainbd_ang_vel { get { return vessel.mainBody.angularVelocity; } }
-
-        [AutoGuiAttr("obt_vel", false, "G6")]
-        Vector3 obt_vel { get { return vessel.obt_velocity; } }
 
         static Vector3 get_rotated_moi(Vector3 inertia_tensor, Quaternion rotation)
         {
@@ -768,7 +762,7 @@ namespace AtmosphereAutopilot
             roll_trainer.gen_limits_decay = 0.001f;
             roll_trainer.linear_time_decay = 0.003f;
             roll_trainer.nonlin_time_decay = 0.03f;
-            roll_trainer.linear_err_criteria = 0.08f;
+            roll_trainer.linear_err_criteria = 0.15f;
             trainers[1] = roll_trainer;
 
             yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
@@ -876,13 +870,13 @@ namespace AtmosphereAutopilot
                 pitch_trainer.min_output_value = (float)(0.1 * MOI[PITCH] / dyn_pressure * 1e2);
 
                 roll_trainer.UpdateState(dt);
-                roll_trainer.min_output_value = (float)(0.2 * MOI[ROLL] / dyn_pressure * 1e2);
+                roll_trainer.min_output_value = (float)(0.1 * MOI[ROLL] / dyn_pressure * 1e2);
 
                 yaw_trainer.UpdateState(dt);
                 yaw_trainer.min_output_value = (float)(0.1 * MOI[YAW] / dyn_pressure * 1e2);
 
                 pitch_lift_trainer.UpdateState(dt);
-                pitch_lift_trainer.min_output_value = (float)(0.5 / dyn_pressure * 1e3 * sum_mass);
+                pitch_lift_trainer.min_output_value = (float)(1.0 / dyn_pressure * 1e3 * sum_mass);
 
                 yaw_lift_trainer.UpdateState(dt);
                 yaw_lift_trainer.min_output_value = (float)(0.5 / dyn_pressure * 1e3 * sum_mass);
@@ -890,13 +884,13 @@ namespace AtmosphereAutopilot
         }
 
         // Training methods
-        //[AutoGuiAttr("pitch_cpu", false)]
+        [AutoGuiAttr("pitch_cpu", false)]
         int pitch_cpu = 0;
 
-        //[AutoGuiAttr("roll_cpu", false)]
+        [AutoGuiAttr("roll_cpu", false)]
         int roll_cpu = 5;
 
-        //[AutoGuiAttr("yaw_cpu", false)]
+        [AutoGuiAttr("yaw_cpu", false)]
         int yaw_cpu = 0;
 
         //[AutoGuiAttr("pitch_lift_cpu", false)]

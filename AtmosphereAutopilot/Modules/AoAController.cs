@@ -136,7 +136,7 @@ namespace AtmosphereAutopilot
             else
                 des_aoa_equilibr_v = 0.0f;
 
-            cur_aoa_equilibr_v = (float)get_roll_aoa_deriv();
+            //des_aoa_equilibr_v += (float)get_roll_aoa_deriv(desired_aoa);
 
             float transit_v = v_controller.transit_max_v;
             float error = desired_aoa - cur_aoa;
@@ -159,10 +159,10 @@ namespace AtmosphereAutopilot
             return output_v;
         }
 
-        double get_roll_aoa_deriv()
+        double get_roll_aoa_deriv(float desired_aoa)
         {
-            Vector3 pitch_aoa = new Vector3(imodel.AoA(PITCH), 0.0f, 0.0f);
-            Vector3 yaw_aoa = new Vector3(0.0f, imodel.AoA(YAW), 0.0f);
+            Vector3 pitch_aoa = new Vector3(axis == PITCH ? desired_aoa : imodel.AoA(PITCH), 0.0f, 0.0f);
+            Vector3 yaw_aoa = new Vector3(0.0f, axis == YAW ? desired_aoa : imodel.AoA(YAW), 0.0f);
             Vector3 ang_v = new Vector3(0.0f, 0.0f, imodel.AngularVel(ROLL));
             Vector3 plane_vel = Vector3.Cross(ang_v, pitch_aoa + yaw_aoa);
             if (axis == PITCH)

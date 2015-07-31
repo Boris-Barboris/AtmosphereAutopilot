@@ -155,6 +155,7 @@ namespace AtmosphereAutopilot
                 update_gen_space();
                 if (cur_time > time_reset)
                     reset_time();
+                check_linearity();
                 update_weights();                
                 if (input_view == null)
                     create_views();
@@ -163,7 +164,6 @@ namespace AtmosphereAutopilot
                     if (input_view.Count > 0)
                     {
                         linmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
-                        check_linearity();
                     }
             }
         }
@@ -296,14 +296,18 @@ namespace AtmosphereAutopilot
                 //if (output_view != null)
                 //    max_output_value = Math.Max(output_view.Max(v => Math.Abs(v)), 0.01);
                 double sum_error = 0.0;
-                for (int i = 0; i < imm_training_inputs.Size; i++)
-                {
-                    Vector input = imm_training_inputs[i];
-                    double true_output = imm_training_outputs[i];
-                    double lin_output = linmodel.eval_training(input);
-                    double scaled_err = (lin_output - true_output) / max_output_value;
-                    sum_error += Math.Abs(scaled_err);
-                }
+                //for (int i = 0; i < imm_training_inputs.Size; i++)
+                //{
+                //    Vector input = imm_training_inputs[i];
+                //    double true_output = imm_training_outputs[i];
+                //    double lin_output = linmodel.eval_training(input);
+                //    double scaled_err = (lin_output - true_output) / max_output_value;
+                //    sum_error += Math.Abs(scaled_err);
+                //}
+                Vector input = imm_training_inputs.getLast();
+                double true_output = imm_training_outputs.getLast();
+                double lin_output = linmodel.eval_training(input);
+                sum_error = (lin_output - true_output) / max_output_value;
                 linear_param = (float)(sum_error / (double)imm_training_inputs.Size);
                 linear = (sum_error / (double)imm_training_inputs.Size) < linear_err_criteria;
                 if (linear)

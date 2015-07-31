@@ -387,7 +387,8 @@ namespace AtmosphereAutopilot
                         eq_b[0, 0] = -(lin_model.A[0, 1] * min_g_v + lin_model.C[0, 0]);
                         eq_x = eq_A.SolveWith(eq_b);
                         double new_min_g_aoa = eq_x[0, 0];
-                        if (!double.IsInfinity(new_max_g_aoa) && !double.IsInfinity(new_min_g_aoa))
+                        if (!double.IsInfinity(new_max_g_aoa) && !double.IsNaN(new_max_g_aoa) &&
+                            !double.IsInfinity(new_min_g_aoa) && !double.IsNaN(new_min_g_aoa))
                         {
                             max_g_aoa = (float)Common.simple_filter(new_max_g_aoa, max_g_aoa, moder_filter);
                             min_g_aoa = (float)Common.simple_filter(new_min_g_aoa, min_g_aoa, moder_filter);
@@ -674,7 +675,8 @@ namespace AtmosphereAutopilot
                     (float)((imodel.roll_rot_model_undelayed.C[0, 0] + imodel.roll_rot_model_undelayed.B[0, 0]) / -imodel.roll_rot_model_undelayed.A[0, 0]);
                 float new_min_input_v =
                     (float)((imodel.roll_rot_model_undelayed.C[0, 0] - imodel.roll_rot_model_undelayed.B[0, 0]) / -imodel.roll_rot_model_undelayed.A[0, 0]);
-                if (!float.IsInfinity(new_max_input_v) && !float.IsInfinity(new_min_input_v))
+                if (!float.IsInfinity(new_max_input_v) && !float.IsNaN(new_max_input_v) &&
+                    !float.IsInfinity(new_min_input_v) && !float.IsNaN(new_min_input_v))
                 {
                     max_input_v = (float)Common.simple_filter(new_max_input_v, max_input_v, moder_filter);
                     min_input_v = (float)Common.simple_filter(new_min_input_v, min_input_v, moder_filter);
