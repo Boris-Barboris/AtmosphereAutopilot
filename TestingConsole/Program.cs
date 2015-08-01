@@ -33,7 +33,11 @@ namespace TestingConsole
         static void Main(string[] args)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
-            linear_real_data_training();
+            //linear_real_data_training();
+            List<double> a = new List<double>(10);
+            a.Add(3.0);
+            a[0] *= 3.0;
+            Console.WriteLine(a.ToString());
             Console.ReadKey(true);
         }
 
@@ -163,7 +167,7 @@ namespace TestingConsole
             }
             LinApprox ann = new LinApprox(1);
             int i = 0;
-            OnlineLinTrainer trainer = new OnlineLinTrainer(ann, 10, new int[2] { 9, 9 },
+            OnlineLinTrainer trainer = new OnlineLinTrainer(ann, null, 10, new int[2] { 9, 9 },
                 new double[] { -0.1 }, new double[] { 0.1 },
                 (arr) => { arr[0] = inputs[i]; },
                 () => { return outputs[i]; });
@@ -209,7 +213,7 @@ namespace TestingConsole
             double cpu_add = 0.5;
 
             LinApprox model = new LinApprox(2);
-            OnlineLinTrainer trainer = new OnlineLinTrainer(model, 10, new int[2] { 11, 11 },
+            OnlineLinTrainer trainer = new OnlineLinTrainer(model, null, 10, new int[2] { 11, 11 },
                 new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 },
                 (arr) => { arr[0] = aoa[frame]; arr[1] = control[frame]; },
                 () => { return acc[frame] / density[frame] / airspd[frame] / airspd[frame] * 2e4; });

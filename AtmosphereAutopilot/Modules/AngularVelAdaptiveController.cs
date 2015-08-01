@@ -238,7 +238,7 @@ namespace AtmosphereAutopilot
             {
                 moderated = true;
 
-                if (abs_cur_aoa < 0.3f)
+                if (abs_cur_aoa < 0.35f)
                 {
                     // We're in linear regime so we can update our limitations
 
@@ -258,8 +258,8 @@ namespace AtmosphereAutopilot
                             if (eq_x[0, 0] < 0.0)
                             {
                                 // plane is statically unstable, in_eq_x solution is equilibrium on it's minimal stable aoa
-                                min_input_aoa = (float)Common.simple_filter(0.8 * eq_x[0, 0], min_input_aoa, moder_filter);
-                                min_input_v = (float)Common.simple_filter(0.8 * eq_x[1, 0], min_input_v, moder_filter);
+                                min_input_aoa = (float)Common.simple_filter(0.6 * eq_x[0, 0], min_input_aoa, moder_filter);
+                                min_input_v = (float)Common.simple_filter(0.6 * eq_x[1, 0], min_input_v, moder_filter);
                             }
                             else
                             {
@@ -277,8 +277,8 @@ namespace AtmosphereAutopilot
                                 if (eq_x[0, 0] >= 0.0)
                                 {
                                     // plane is statically unstable, in_eq_x solution is equilibrium on it's maximal stable aoa
-                                    max_input_aoa = (float)Common.simple_filter(0.8 * eq_x[0, 0], max_input_aoa, moder_filter);
-                                    max_input_v = (float)Common.simple_filter(0.8 * eq_x[1, 0], max_input_v, moder_filter);
+                                    max_input_aoa = (float)Common.simple_filter(0.6 * eq_x[0, 0], max_input_aoa, moder_filter);
+                                    max_input_v = (float)Common.simple_filter(0.6 * eq_x[1, 0], max_input_v, moder_filter);
                                 }
                                 else
                                 {
@@ -291,33 +291,30 @@ namespace AtmosphereAutopilot
                     }
                     catch (MSingularException) { }
 
-                    if (rad_max_aoa < res_max_aoa || -rad_max_aoa > res_min_aoa)
+                    // get equilibrium v for max_aoa
+                    eq_A[0, 0] = lin_model.A[0, 1];
+                    eq_A[0, 1] = lin_model.A[0, 2];
+                    eq_A[1, 0] = lin_model.A[1, 1];
+                    eq_A[1, 1] = lin_model.A[1, 2] + lin_model.B[1, 0];
+                    eq_b[0, 0] = -(lin_model.A[0, 0] * rad_max_aoa + lin_model.C[0, 0]);
+                    eq_b[1, 0] = -(lin_model.A[1, 0] * rad_max_aoa + lin_model.C[1, 0]);
+                    eq_A.old_lu = true;
+                    try
                     {
-                        // get equilibrium v for max_aoa
-                        eq_A[0, 0] = lin_model.A[0, 1];
-                        eq_A[0, 1] = lin_model.A[0, 2];
-                        eq_A[1, 0] = lin_model.A[1, 1];
-                        eq_A[1, 1] = lin_model.A[1, 2] + lin_model.B[1, 0];
-                        eq_b[0, 0] = -(lin_model.A[0, 0] * rad_max_aoa + lin_model.C[0, 0]);
-                        eq_b[1, 0] = -(lin_model.A[1, 0] * rad_max_aoa + lin_model.C[1, 0]);
-                        eq_A.old_lu = true;
-                        try
+                        eq_x = eq_A.SolveWith(eq_b);
+                        double new_max_aoa_v = eq_x[0, 0];
+                        eq_b[0, 0] = -(lin_model.A[0, 0] * -rad_max_aoa + lin_model.C[0, 0]);
+                        eq_b[1, 0] = -(lin_model.A[1, 0] * -rad_max_aoa + lin_model.C[1, 0]);
+                        eq_x = eq_A.SolveWith(eq_b);
+                        double new_min_aoa_v = eq_x[0, 0];
+                        if (!double.IsInfinity(new_max_aoa_v) && !double.IsNaN(new_max_aoa_v)
+                            && !double.IsInfinity(new_min_aoa_v) && !double.IsNaN(new_min_aoa_v))
                         {
-                            eq_x = eq_A.SolveWith(eq_b);
-                            double new_max_aoa_v = eq_x[0, 0];
-                            eq_b[0, 0] = -(lin_model.A[0, 0] * -rad_max_aoa + lin_model.C[0, 0]);
-                            eq_b[1, 0] = -(lin_model.A[1, 0] * -rad_max_aoa + lin_model.C[1, 0]);
-                            eq_x = eq_A.SolveWith(eq_b);
-                            double new_min_aoa_v = eq_x[0, 0];
-                            if (!double.IsInfinity(new_max_aoa_v) && !double.IsNaN(new_max_aoa_v)
-                                && !double.IsInfinity(new_min_aoa_v) && !double.IsNaN(new_min_aoa_v))
-                            {
-                                max_aoa_v = (float)Common.simple_filter(new_max_aoa_v, max_aoa_v, moder_filter);
-                                min_aoa_v = (float)Common.simple_filter(new_min_aoa_v, min_aoa_v, moder_filter);
-                            }
+                            max_aoa_v = (float)Common.simple_filter(new_max_aoa_v, max_aoa_v, moder_filter);
+                            min_aoa_v = (float)Common.simple_filter(new_min_aoa_v, min_aoa_v, moder_filter);
                         }
-                        catch (MSingularException) { }
                     }
+                    catch (MSingularException) { }
                 }
 
                 // let's apply moderation with stability region
@@ -349,7 +346,7 @@ namespace AtmosphereAutopilot
             {
                 moderated = true;
                 
-                if (Math.Abs(lin_model.A[0, 0]) > 1e-4 && abs_cur_aoa < 0.3f)
+                if (Math.Abs(lin_model.A[0, 0]) > 1e-4 && abs_cur_aoa < 0.35f)
                 {
                     // model may be sane, let's update limitations
                     double gravity_acc = 0.0;
@@ -472,22 +469,20 @@ namespace AtmosphereAutopilot
             {
                 if (des_v >= 0.0f)
                 {
-                    scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) / 2.0f / res_max_aoa, 1.0f);
+                    scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) / (res_max_aoa - res_min_aoa), 1.0f);
                     if (scaled_aoa < 0.0f)
                     {
-                        normalized_des_v = 1.0f;
-                        scaled_aoa *= 2.0f;
+                        scaled_aoa *= 5.0f;
                     }
                     scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_upper * (1.0f - Math.Abs(scaled_aoa)),
                         transit_max_v * normalized_des_v + v_offset);
                 }
                 else
                 {
-                    scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) / 2.0f / res_min_aoa, 1.0f);
+                    scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) / (res_min_aoa - res_max_aoa), 1.0f);
                     if (scaled_aoa < 0.0f)
                     {
-                        normalized_des_v = -1.0f;
-                        scaled_aoa *= 2.0f;
+                        scaled_aoa *= 5.0f;
                     }
                     scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_lower * (1.0f - Math.Abs(scaled_aoa)),
                         transit_max_v * normalized_des_v + v_offset);
@@ -517,7 +512,7 @@ namespace AtmosphereAutopilot
         protected float relaxation_Kp = 0.5f;
 
         [AutoGuiAttr("relaxation_frame", true)]
-        protected int relaxation_frame = 2;
+        protected int relaxation_frame = 1;
 
         [AutoGuiAttr("relaxation_frame", false)]
         protected int relax_count = 0;
@@ -636,7 +631,7 @@ namespace AtmosphereAutopilot
 		{
 			base.InitializeDependencies(modules);
 			this.acc_controller = modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
-            this.lin_model = imodel.pitch_rot_model;
+            this.lin_model = imodel.pitch_rot_model_gen;
 		}
     }
 
@@ -669,12 +664,14 @@ namespace AtmosphereAutopilot
             float cur_aoa = imodel.AoA(YAW);
             
             // let's find maximum angular v on 0.0 AoA and 0.0 Yaw input from model
-            if (cur_aoa < 0.26 && imodel.dyn_pressure > 10.0)
+            if (cur_aoa < 0.3 && imodel.dyn_pressure > 10.0)
             {
                 float new_max_input_v =
-                    (float)((imodel.roll_rot_model_undelayed.C[0, 0] + imodel.roll_rot_model_undelayed.B[0, 0]) / -imodel.roll_rot_model_undelayed.A[0, 0]);
+                    (float)((imodel.roll_rot_model_gen.C[0, 0] + imodel.roll_rot_model_gen.B[0, 0] + imodel.roll_rot_model_gen.A[0, 1]) /
+                        -imodel.roll_rot_model_gen.A[0, 0]);
                 float new_min_input_v =
-                    (float)((imodel.roll_rot_model_undelayed.C[0, 0] - imodel.roll_rot_model_undelayed.B[0, 0]) / -imodel.roll_rot_model_undelayed.A[0, 0]);
+                    (float)((imodel.roll_rot_model_gen.C[0, 0] - imodel.roll_rot_model_gen.B[0, 0] - imodel.roll_rot_model_gen.A[0, 1]) /
+                        -imodel.roll_rot_model_gen.A[0, 0]);
                 if (!float.IsInfinity(new_max_input_v) && !float.IsNaN(new_max_input_v) &&
                     !float.IsInfinity(new_min_input_v) && !float.IsNaN(new_min_input_v))
                 {
@@ -720,17 +717,17 @@ namespace AtmosphereAutopilot
         float relaxation_k = 2.0f;
 
         [AutoGuiAttr("relaxation_Kp", true, "G5")]
-        float relaxation_Kp = 0.2f;
+        float relaxation_Kp = 0.5f;
 
         [AutoGuiAttr("relaxation_frame", true)]
-        int relaxation_frame = 4;
+        int relaxation_frame = 1;
 
         [AutoGuiAttr("relaxation_frame", false)]
         int relax_count = 0;
 
         protected override float get_desired_acc(float des_v)
         {
-            float new_kacc_quadr = (float)(quadr_Kp * imodel.roll_rot_model.A[0, 1] * imodel.roll_rot_model.B[1, 0]);
+            float new_kacc_quadr = (float)(quadr_Kp * imodel.roll_rot_model_gen.A[0, 1] * imodel.roll_rot_model_gen.B[1, 0]);
             if (first_quadr)
                 kacc_quadr = new_kacc_quadr;
             else
@@ -804,7 +801,7 @@ namespace AtmosphereAutopilot
 		{
 			base.InitializeDependencies(modules);
 			this.acc_controller = modules[typeof(YawAngularAccController)] as YawAngularAccController;
-            this.lin_model = imodel.yaw_rot_model;
+            this.lin_model = imodel.yaw_rot_model_gen;
 		}
 	}
 

@@ -41,13 +41,13 @@ namespace AtmosphereAutopilot
             if (axis == PITCH)
             {
                 v_controller = modules[typeof(PitchAngularVelocityController)] as PitchYawAngularVelocityController;
-                lin_model = imodel.pitch_rot_model;
+                lin_model = imodel.pitch_rot_model_gen;
             }
             else
                 if (axis == YAW)
                 {
                     v_controller = modules[typeof(YawAngularVelocityController)] as PitchYawAngularVelocityController;
-                    lin_model = imodel.yaw_rot_model;
+                    lin_model = imodel.yaw_rot_model_gen;
                 }
         }
 

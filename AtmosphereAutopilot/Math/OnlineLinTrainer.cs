@@ -40,11 +40,16 @@ namespace AtmosphereAutopilot
         CircularBuffer<Vector> imm_training_inputs;
         VectorArray imm_training_vectors;
         CircularBuffer<double> imm_training_outputs;
-        // Generalization buffer is being used as ANN generality augmentor
+        // Gradient buffer
+        CircularBuffer<Vector> grad_training_inputs;
+        VectorArray grad_training_vectors;
+        CircularBuffer<GenStruct> grad_training_outputs;
+        // Generalization buffer is being used as generality augmentor
         GridSpace<GenStruct> gen_space;
         List<GridSpace<GenStruct>.CellValue> linear_gen_buff;
         // Error weight buffers
         List<double> imm_error_weights = new List<double>();
+        List<double> grad_error_weights = new List<double>();
         List<double> gen_error_weights = new List<double>();
         
         // Views to adapt inputs for ANN
@@ -59,7 +64,7 @@ namespace AtmosphereAutopilot
         int cur_time = 0;
 
         // model to train
-        LinApprox linmodel;
+        LinApprox linmodel, genmodel;
         readonly int input_count;
 
         struct GenStruct
@@ -73,23 +78,29 @@ namespace AtmosphereAutopilot
             }
         }
 
-        public OnlineLinTrainer(LinApprox linprox, int imm_buf_size, int[] gen_cells, double[] l_gen_cell, double[] u_gen_cell,
+        public OnlineLinTrainer(LinApprox linprox_main, LinApprox linprox_gen, int imm_buf_size, int[] gen_cells, double[] l_gen_cell, double[] u_gen_cell,
             Action<Vector> input_method, Func<double> output_method)
         {
-            this.linmodel = linprox;
+            this.linmodel = linprox_main;
+            this.genmodel = linprox_gen;
             input_count = linmodel.input_count;
-            // Immediate buffer initialization
+            // Immediate and gradient buffer initialization
             imm_buf_inputs = new CircularBuffer<Vector>(imm_buf_size, true);
             imm_buf_vectors = new VectorArray(input_count, imm_buf_size);
             imm_training_inputs = new CircularBuffer<Vector>(imm_buf_size, true);
             imm_training_vectors = new VectorArray(input_count, imm_buf_size);
+            grad_training_inputs = new CircularBuffer<Vector>(imm_buf_size / 2, true);
+            grad_training_vectors = new VectorArray(input_count, imm_buf_size / 2);
             imm_buf_outputs = new CircularBuffer<double>(imm_buf_size, true);
             imm_training_outputs = new CircularBuffer<double>(imm_buf_size, true);
+            grad_training_outputs = new CircularBuffer<GenStruct>(imm_buf_size / 2, true);
             // bind vectors in circular buffers to vector arrays
             for (int i = 0; i < imm_buf_size; i++)
             {
                 imm_buf_inputs[i] = imm_buf_vectors[i];
                 imm_training_inputs[i] = imm_training_vectors[i];
+                if (i < imm_buf_size / 2)
+                    grad_training_inputs[i] = grad_training_vectors[i];
             }
             // Generalization space initialization
             init_lower_cell = l_gen_cell;
@@ -156,29 +167,50 @@ namespace AtmosphereAutopilot
                 if (cur_time > time_reset)
                     reset_time();
                 check_linearity();
-                update_weights();                
+                update_weights();
                 if (input_view == null)
                     create_views();
-                update_singularity();
                 if (input_view != null)
+                {
                     if (input_view.Count > 0)
                     {
+                        update_singularity(input_view);
                         linmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
                     }
+                    if (genmodel != null && linear_gen_buff.Count > 0)
+                    {
+                        return_equal_weights();
+                        genmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
+                    }
+                }
             }
         }
 
-        [AutoGuiAttr("min_output_value", false)]
+        [AutoGuiAttr("min_output_value", false, "G6")]
         public volatile float min_output_value = 0.01f;
 
-        [AutoGuiAttr("max_output_value", false)]
+        [AutoGuiAttr("max_output_value", false, "G6")]
         double max_output_value = 0.01;         // maximum absolute value of model output reached in past
 
+        //[AutoGuiAttr("inputs_changed", false)]
         readonly bool[] inputs_changed;         // flags that input has changed
+
         int added_to_imm = 0;                   // how many inputs where added to training imm_buf during last Train() call
 
-        [AutoGuiAttr("max value decay", true)]
+        [AutoGuiAttr("max value decay", true, "G8")]
         public volatile float max_value_decay = 0.001f;
+
+        [AutoGuiAttr("gradient_sensitivity", true)]
+        public volatile float gradient_sensitivity = 0.05f;
+
+        //[AutoGuiAttr("grad_buf_size", false)]
+        public int grad_buf_size { get { return grad_training_outputs.Size; } }
+
+        //[AutoGuiAttr("upper_cell", false, "G6")]
+        public double[] gen_space_up_bounds { get { return gen_space.upper_cell; } }
+
+        //[AutoGuiAttr("lower_cell", false, "G6")]
+        public double[] gen_space_down_bounds { get { return gen_space.lower_cell; } }
 
         void update_imm_train_buf()
         {
@@ -190,6 +222,21 @@ namespace AtmosphereAutopilot
                 while (count > 0)
                 {
                     cur_time += last_time_elapsed;
+                    if (imm_training_inputs.Size == imm_training_inputs.Capacity)
+                    {
+                        // let's update gradient buffers if needed
+                        double cur_output = imm_training_outputs[1];
+                        double prev_output = imm_training_outputs[0];
+                        if (Math.Abs((prev_output - cur_output) / max_output_value) >= gradient_sensitivity)
+                        {
+                            // we need to put the output we'll be overwriting soon into gradient buffer
+                            Vector wrt = grad_training_inputs.getWritingCell();
+                            Vector v2write = imm_training_inputs[0];
+                            v2write.DeepCopy(wrt);
+                            grad_training_inputs.Put(wrt);
+                            grad_training_outputs.Put(new GenStruct(imm_training_outputs[0], cur_time - imm_training_inputs.Size * last_time_elapsed));
+                        }
+                    }
                     Vector writing_cell = imm_training_inputs.getWritingCell();
                     imm_buf_inputs.Get().DeepCopy(writing_cell);
                     imm_training_inputs.Put(writing_cell);
@@ -206,7 +253,7 @@ namespace AtmosphereAutopilot
         readonly double[] init_lower_cell;
         readonly double[] init_upper_cell;
 
-        [AutoGuiAttr("gen region decay", true, "G8")]
+        [AutoGuiAttr("gen region decay", true, "G6")]
         public volatile float gen_limits_decay = 0.0002f;     // how fast generalization space is shrinking by itself
 
         void update_gen_space()
@@ -226,38 +273,44 @@ namespace AtmosphereAutopilot
             {
                 Vector new_coord = imm_training_inputs.getFromTail(i);
                 double new_val = imm_training_outputs.getFromTail(i);
+                // generalization space decay
+                for (int j = 0; j < input_count; j++)
+                {
+                    double init_span = init_upper_cell[j] - init_lower_cell[j];
+                    double upper_span = gen_space.upper_cell[j] - new_coord[j];
+                    double decayed_upper_span = upper_span * (1.0 - last_time_elapsed * gen_limits_decay);
+                    gen_space.upper_cell[j] = Math.Max(new_coord[j] + decayed_upper_span, init_upper_cell[j]);
+                    double lower_span = gen_space.lower_cell[j] - new_coord[j];
+                    double decayed_lower_span = lower_span * (1.0 - last_time_elapsed * gen_limits_decay);
+                    gen_space.lower_cell[j] = Math.Min(new_coord[j] + decayed_lower_span, init_lower_cell[j]);
+                }
                 // stretch generalization space size if needed
                 for (int j = 0; j < input_count; j++)
                 {
+                    double init_span = (init_upper_cell[j] - init_lower_cell[j]) / 2.0;
                     if (new_coord[j] > gen_space.upper_cell[j])
-                        gen_space.upper_cell[j] = new_coord[j];
+                        gen_space.upper_cell[j] = init_upper_cell[j] + Math.Ceiling((new_coord[j] - init_upper_cell[j]) / init_span) * init_span;
                     if (new_coord[j] < gen_space.lower_cell[j])
-                        gen_space.lower_cell[j] = new_coord[j];
+                        gen_space.lower_cell[j] = init_lower_cell[j] - Math.Ceiling((init_lower_cell[j] - new_coord[j]) / init_span) * init_span;
                 }
-                // decay
-                //for (int j = 0; j < input_count; j++)
-                //{
-                //    double init_span = init_upper_cell[j] - init_lower_cell[j];
-                //    double upper_span = gen_space.upper_cell[j] - new_coord[j];
-                //    double decayed_upper_span = upper_span * (1.0 - last_time_elapsed * gen_limits_decay);
-                //    gen_space.upper_cell[j] = new_coord[j] + Math.Max(decayed_upper_span, init_span / 2.0);
-                //    double lower_span = gen_space.lower_cell[j] - new_coord[j];
-                //    double decayed_lower_span = lower_span * (1.0 - last_time_elapsed * gen_limits_decay);
-                //    gen_space.lower_cell[j] = new_coord[j] + Math.Min(decayed_lower_span, init_span / -2.0);
-                //}
                 gen_space.recompute_region();
                 // push
                 gen_space.Put(new GenStruct(new_val, cur_time - last_time_elapsed * i), new_coord);
             }            
         }
 
+        ListSelector<GridSpace<GenStruct>.CellValue, Vector> gen_inputs_selector;
+        ListSelector<GridSpace<GenStruct>.CellValue, double> gen_output_selector;
+        ListSelector<GenStruct, double> grad_output_selector;
+
         void create_views()
         {
-            input_view = new ListView<Vector>(imm_training_inputs, 
-                new ListSelector<GridSpace<GenStruct>.CellValue, Vector>(linear_gen_buff, (cv) => { return cv.coord; }));
-            output_view = new ListView<double>(imm_training_outputs,
-                new ListSelector<GridSpace<GenStruct>.CellValue, double>(linear_gen_buff, (cv) => { return cv.data.val; }));
-            weight_view = new ListView<double>(imm_error_weights, gen_error_weights);
+            gen_inputs_selector = new ListSelector<GridSpace<GenStruct>.CellValue, Vector>(linear_gen_buff, cv =>  cv.coord);
+            gen_output_selector = new ListSelector<GridSpace<GenStruct>.CellValue, double>(linear_gen_buff, cv => cv.data.val);
+            grad_output_selector = new ListSelector<GenStruct, double>(grad_training_outputs, gs => gs.val);
+            input_view = new ListView<Vector>(imm_training_inputs, grad_training_inputs,  gen_inputs_selector);
+            output_view = new ListView<double>(imm_training_outputs, grad_output_selector, gen_output_selector);
+            weight_view = new ListView<double>(imm_error_weights, grad_error_weights, gen_error_weights);
         }
 
         [AutoGuiAttr("base gen weight", true, "G8")]
@@ -296,20 +349,22 @@ namespace AtmosphereAutopilot
                 //if (output_view != null)
                 //    max_output_value = Math.Max(output_view.Max(v => Math.Abs(v)), 0.01);
                 double sum_error = 0.0;
-                //for (int i = 0; i < imm_training_inputs.Size; i++)
-                //{
-                //    Vector input = imm_training_inputs[i];
-                //    double true_output = imm_training_outputs[i];
-                //    double lin_output = linmodel.eval_training(input);
-                //    double scaled_err = (lin_output - true_output) / max_output_value;
-                //    sum_error += Math.Abs(scaled_err);
-                //}
-                Vector input = imm_training_inputs.getLast();
-                double true_output = imm_training_outputs.getLast();
-                double lin_output = linmodel.eval_training(input);
-                sum_error = (lin_output - true_output) / max_output_value;
+                for (int i = 0; i < imm_training_inputs.Size; i++)
+                {
+                    Vector input = imm_training_inputs[i];
+                    double true_output = imm_training_outputs[i];
+                    double lin_output = genmodel == null ? linmodel.eval_training(input) : genmodel.eval_training(input);
+                    double scaled_err = (lin_output - true_output) / max_output_value;
+                    sum_error += Math.Abs(scaled_err);
+                }
+                //Vector input = imm_training_inputs.getLast();
+                //double true_output = imm_training_outputs.getLast();
+                //double lin_output = linmodel.eval_training(input);
+                //sum_error = Math.Abs((lin_output - true_output) / max_output_value);
                 linear_param = (float)(sum_error / (double)imm_training_inputs.Size);
                 linear = (sum_error / (double)imm_training_inputs.Size) < linear_err_criteria;
+                //linear_param = (float)sum_error;
+                //linear = sum_error < linear_err_criteria;
                 if (linear)
                     weight_time_decay = linear_time_decay;
                 else
@@ -331,6 +386,10 @@ namespace AtmosphereAutopilot
                 int birth = cur_time - (imm_training_inputs.Size - i - 1) * last_time_elapsed;
                 imm_error_weights.Add(getAgeWeight(birth));
             }
+            // Gradient buffer error weights
+            grad_error_weights.Clear();
+            for (int i = 0; i < grad_training_outputs.Size; i++)
+                grad_error_weights.Add(getAgeWeight(grad_training_outputs[i].birth));
             // Generalization buffer weights
             gen_error_weights.Clear();
             int j = 0;
@@ -357,12 +416,19 @@ namespace AtmosphereAutopilot
                 gen_error_weights[i] *= popul_ratio;
         }
 
-        void update_singularity()
+        void return_equal_weights()
+        {
+            double popul_ratio = (double)imm_training_inputs.Size / (double)linear_gen_buff.Count;
+            for (int i = 0; i < gen_error_weights.Count; i++)
+                gen_error_weights[i] /= popul_ratio * base_gen_weight;
+        }
+
+        void update_singularity(IList<Vector> input_list)
         {
             for (int i = 0; i < input_count; i++)
                 inputs_changed[i] = false;
             int changed = 0;
-            for (int i = 0; i < input_view.Count - 1; i++)
+            for (int i = 0; i < input_list.Count - 1; i++)
             {
                 if (changed >= input_count)
                     break;
@@ -370,7 +436,7 @@ namespace AtmosphereAutopilot
                 {
                     if (inputs_changed[j])
                         continue;
-                    if (input_view[i][j] != input_view[i + 1][j])
+                    if (input_list[i][j] != input_list[i + 1][j])
                     {
                         inputs_changed[j] = true;
                         changed++;
@@ -390,6 +456,11 @@ namespace AtmosphereAutopilot
             {
                 int cur_age = Math.Min(cur_time - linear_gen_buff[i].data.birth, max_age);
                 linear_gen_buff[i].data.birth = max_age - cur_age;
+            }
+            for (int i = 0; i < grad_training_outputs.Size; i++)
+            {
+                int cur_age = Math.Min(cur_time - grad_training_outputs[i].birth, max_age);
+                grad_training_outputs[i] = new GenStruct(grad_training_outputs[i].val, max_age - cur_age);
             }
             cur_time = max_age;
         }

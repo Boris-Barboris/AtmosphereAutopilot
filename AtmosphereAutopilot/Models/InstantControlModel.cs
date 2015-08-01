@@ -732,8 +732,11 @@ namespace AtmosphereAutopilot
         //public Vector3d model_acc = Vector3d.zero;
 
         LinApprox pitch_aero_torque_model = new LinApprox(2);
+        LinApprox pitch_aero_torque_model_gen = new LinApprox(2);
         LinApprox roll_aero_torque_model = new LinApprox(4);
+        LinApprox roll_aero_torque_model_gen = new LinApprox(4);
         LinApprox yaw_aero_torque_model = new LinApprox(2);
+        LinApprox yaw_aero_torque_model_gen = new LinApprox(2);
         LinApprox pitch_lift_model = new LinApprox(2);
         LinApprox yaw_lift_model = new LinApprox(2);
 
@@ -745,53 +748,53 @@ namespace AtmosphereAutopilot
 
         void initialize_ann_tainers()
         {
-            pitch_trainer = new OnlineLinTrainer(pitch_aero_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
+            pitch_trainer = new OnlineLinTrainer(pitch_aero_torque_model, pitch_aero_torque_model_gen, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, pitch_input_method, pitch_output_method);
-            pitch_trainer.base_gen_weight = 0.1f;
+            pitch_trainer.base_gen_weight = 0.0001f;
             pitch_trainer.max_value_decay = 0.001f;
-            pitch_trainer.gen_limits_decay = 0.001f;
-            pitch_trainer.linear_time_decay = 0.003f;
+            pitch_trainer.gen_limits_decay = 0.002f;
+            pitch_trainer.linear_time_decay = 0.005f;
             pitch_trainer.nonlin_time_decay = 0.03f;
-            pitch_trainer.linear_err_criteria = 0.08f;
+            pitch_trainer.linear_err_criteria = 0.2f;
             trainers[0] = pitch_trainer;
 
-            roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, IMM_BUF_SIZE, new int[] { 7, 7, 7, 7 },
+            roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, roll_aero_torque_model_gen, IMM_BUF_SIZE, new int[] { 7, 7, 7, 7 },
                 new double[] { -0.05, -0.01, -0.05, -0.1 }, new double[] { 0.05, 0.01, 0.05, 0.1 }, roll_input_method, roll_output_method);
-            roll_trainer.base_gen_weight = 0.1f;
+            roll_trainer.base_gen_weight = 0.0001f;
             roll_trainer.max_value_decay = 0.001f;
-            roll_trainer.gen_limits_decay = 0.001f;
-            roll_trainer.linear_time_decay = 0.003f;
+            roll_trainer.gen_limits_decay = 0.002f;
+            roll_trainer.linear_time_decay = 0.005f;
             roll_trainer.nonlin_time_decay = 0.03f;
-            roll_trainer.linear_err_criteria = 0.15f;
+            roll_trainer.linear_err_criteria = 0.2f;
             trainers[1] = roll_trainer;
 
-            yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, IMM_BUF_SIZE, new int[] { 11, 11 },
+            yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, yaw_aero_torque_model_gen, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 }, yaw_input_method, yaw_output_method);
-            yaw_trainer.base_gen_weight = 0.1f;
+            yaw_trainer.base_gen_weight = 0.0001f;
             yaw_trainer.max_value_decay = 0.001f;
-            yaw_trainer.gen_limits_decay = 0.001f;
-            pitch_trainer.linear_time_decay = 0.003f;
+            yaw_trainer.gen_limits_decay = 0.002f;
+            yaw_trainer.linear_time_decay = 0.005f;
             yaw_trainer.nonlin_time_decay = 0.03f;
-            yaw_trainer.linear_err_criteria = 0.08f;
+            yaw_trainer.linear_err_criteria = 0.2f;
             trainers[2] = yaw_trainer;
 
-            pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, IMM_BUF_SIZE, new int[] { 11, 11 },
+            pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, null, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.05, -0.1 }, new double[] { 0.05, 0.1 }, pitch_lift_input_method, pitch_lift_output_method);
             pitch_lift_trainer.base_gen_weight = 0.5f;
             pitch_lift_trainer.max_value_decay = 0.0005f;
             pitch_lift_trainer.gen_limits_decay = 0.0005f;
             pitch_lift_trainer.linear_time_decay = 0.002f;
             pitch_lift_trainer.nonlin_time_decay = 0.02f;
-            pitch_lift_trainer.linear_err_criteria = 0.06f;
+            pitch_lift_trainer.linear_err_criteria = 0.25f;
 
-            yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, IMM_BUF_SIZE, new int[] { 11, 11 },
+            yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, null, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.05, -0.1 }, new double[] { 0.05, 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
             yaw_lift_trainer.base_gen_weight = 0.5f;
             yaw_lift_trainer.max_value_decay = 0.0005f;
             yaw_lift_trainer.gen_limits_decay = 0.0005f;
             yaw_lift_trainer.linear_time_decay = 0.002f;
             yaw_lift_trainer.nonlin_time_decay = 0.02f;
-            yaw_lift_trainer.linear_err_criteria = 0.06f;
+            yaw_lift_trainer.linear_err_criteria = 0.25f;
         }
 
         /// <summary>
@@ -867,19 +870,19 @@ namespace AtmosphereAutopilot
             if (!vessel.LandedOrSplashed && dyn_pressure >= 10.0)
             {
                 pitch_trainer.UpdateState(dt);
-                pitch_trainer.min_output_value = (float)(0.1 * MOI[PITCH] / dyn_pressure * 1e2);
+                pitch_trainer.min_output_value = (float)(1.0 * MOI[PITCH] / dyn_pressure * 1e2);
 
                 roll_trainer.UpdateState(dt);
-                roll_trainer.min_output_value = (float)(0.1 * MOI[ROLL] / dyn_pressure * 1e2);
+                roll_trainer.min_output_value = (float)(2.0 * MOI[ROLL] / dyn_pressure * 1e2);
 
                 yaw_trainer.UpdateState(dt);
-                yaw_trainer.min_output_value = (float)(0.1 * MOI[YAW] / dyn_pressure * 1e2);
+                yaw_trainer.min_output_value = (float)(0.5 * MOI[YAW] / dyn_pressure * 1e2);
 
                 pitch_lift_trainer.UpdateState(dt);
-                pitch_lift_trainer.min_output_value = (float)(1.0 / dyn_pressure * 1e3 * sum_mass);
+                pitch_lift_trainer.min_output_value = (float)(10.0 / dyn_pressure * 1e3 * sum_mass);
 
                 yaw_lift_trainer.UpdateState(dt);
-                yaw_lift_trainer.min_output_value = (float)(0.5 / dyn_pressure * 1e3 * sum_mass);
+                yaw_lift_trainer.min_output_value = (float)(10.0 / dyn_pressure * 1e3 * sum_mass);
             }
         }
 
@@ -978,12 +981,15 @@ namespace AtmosphereAutopilot
         {
             //pitch_input_method(temp_v2);
             pitch_aero_torque_model.update_from_training();
+            pitch_aero_torque_model_gen.update_from_training();
             //model_acc[PITCH] = pitch_torque_model.eval(temp_v2) / 1e4 * dyn_pressure;
             //roll_input_method(temp_v4);
             roll_aero_torque_model.update_from_training();
+            roll_aero_torque_model_gen.update_from_training();
             //model_acc[ROLL] = roll_torque_model.eval(temp_v4) / 1e4 * dyn_pressure;
             //yaw_input_method(temp_v2);
             yaw_aero_torque_model.update_from_training();
+            yaw_aero_torque_model_gen.update_from_training();
             //model_acc[YAW] = yaw_torque_model.eval(temp_v2) / 1e4 * dyn_pressure;
             pitch_lift_model.update_from_training();
             yaw_lift_model.update_from_training();
@@ -994,6 +1000,10 @@ namespace AtmosphereAutopilot
 
 
         #region RotationModels
+
+        public readonly LinearSystemModel pitch_rot_model_gen = new LinearSystemModel(3, 1);
+        public readonly LinearSystemModel roll_rot_model_gen = new LinearSystemModel(2, 3);
+        public readonly LinearSystemModel yaw_rot_model_gen = new LinearSystemModel(3, 1);
 
         public readonly LinearSystemModel pitch_rot_model = new LinearSystemModel(3, 1);
         public readonly LinearSystemModel roll_rot_model = new LinearSystemModel(2, 3);
@@ -1032,20 +1042,20 @@ namespace AtmosphereAutopilot
 
         void update_pitch_rot_model()
         {
-            // Fill coeff structs
+            // fill coeff structs
             pitch_coeffs.Cl0 = pitch_lift_model.pars[0] / 1e3 * dyn_pressure / sum_mass;
             pitch_coeffs.Cl1 = pitch_lift_model.pars[1] / 1e3 * dyn_pressure / sum_mass;
             pitch_coeffs.Cl2 = pitch_lift_model.pars[2] / 1e3 * dyn_pressure / sum_mass;
             pitch_coeffs.et0 = engines_torque_k0[PITCH] / MOI[PITCH];
             pitch_coeffs.et1 = engines_torque_k1[PITCH] / MOI[PITCH];
-            pitch_coeffs.k0 = pitch_aero_torque_model.pars[0] / 1e2 * dyn_pressure / MOI[PITCH];
-            pitch_coeffs.k1 = pitch_aero_torque_model.pars[1] / 1e2 * dyn_pressure / MOI[PITCH];
-            pitch_coeffs.k2 = pitch_aero_torque_model.pars[2] / 1e2 * dyn_pressure / MOI[PITCH];
+            pitch_coeffs.k0 = pitch_aero_torque_model_gen.pars[0] / 1e2 * dyn_pressure / MOI[PITCH];
+            pitch_coeffs.k1 = pitch_aero_torque_model_gen.pars[1] / 1e2 * dyn_pressure / MOI[PITCH];
+            pitch_coeffs.k2 = pitch_aero_torque_model_gen.pars[2] / 1e2 * dyn_pressure / MOI[PITCH];
 
-            // Fill pitch_rot_model
-            Matrix A = pitch_rot_model.A;
-            Matrix B = pitch_rot_model.B;
-            Matrix C = pitch_rot_model.C;
+            // fill pitch_rot_model_gen
+            Matrix A = pitch_rot_model_gen.A;
+            Matrix B = pitch_rot_model_gen.B;
+            Matrix C = pitch_rot_model_gen.C;
             if (dyn_pressure >= 10.0)
             {
                 A[0, 0] = -(pitch_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
@@ -1070,7 +1080,39 @@ namespace AtmosphereAutopilot
             A[2, 2] = -4.0;
             B[2, 0] = 4.0;
 
-            // Fill pitch_rot_model_undelayed
+            pitch_coeffs.k0 = pitch_aero_torque_model.pars[0] / 1e2 * dyn_pressure / MOI[PITCH];
+            pitch_coeffs.k1 = pitch_aero_torque_model.pars[1] / 1e2 * dyn_pressure / MOI[PITCH];
+            pitch_coeffs.k2 = pitch_aero_torque_model.pars[2] / 1e2 * dyn_pressure / MOI[PITCH];
+
+            // fill pitch_rot_model
+            A = pitch_rot_model.A;
+            B = pitch_rot_model.B;
+            C = pitch_rot_model.C;
+            if (dyn_pressure >= 10.0)
+            {
+                A[0, 0] = -(pitch_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
+                A[0, 2] = -pitch_coeffs.Cl2 / vessel.srfSpeed;
+                A[1, 0] = pitch_coeffs.k1;
+                A[1, 2] = pitch_coeffs.k2 * (1.0 - 4.0 * TimeWarp.fixedDeltaTime);
+                B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.k2 * 4.0 * TimeWarp.fixedDeltaTime + pitch_coeffs.et1;
+                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc + pitch_coeffs.Cl0 - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[1, 0] = pitch_coeffs.k0 + pitch_coeffs.et0;
+            }
+            else
+            {
+                A[0, 0] = -engines_thrust[ROLL] / sum_mass / vessel.srfSpeed;
+                A[0, 2] = 0.0;
+                A[1, 0] = 0.0;
+                A[1, 2] = 0.0;
+                B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.et1;
+                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[1, 0] = pitch_coeffs.et0;
+            }
+            A[0, 1] = 1.0;
+            A[2, 2] = -4.0;
+            B[2, 0] = 4.0;
+
+            // fill pitch_rot_model_undelayed
             A = pitch_rot_model_undelayed.A;
             B = pitch_rot_model_undelayed.B;
             C = pitch_rot_model_undelayed.C;
@@ -1099,19 +1141,19 @@ namespace AtmosphereAutopilot
 
         void update_roll_rot_model()
         {
-            // Fill coeff structs
+            // fill coeff structs
             roll_coeffs.et0 = engines_torque_k0[ROLL] / MOI[ROLL];
             roll_coeffs.et1 = engines_torque_k1[ROLL] / MOI[ROLL];
-            roll_coeffs.k0 = roll_aero_torque_model.pars[0] / 1e2 * dyn_pressure / MOI[ROLL];
-            roll_coeffs.k1 = roll_aero_torque_model.pars[1] / 1e2 * dyn_pressure / MOI[ROLL];
-            roll_coeffs.k2 = roll_aero_torque_model.pars[2] / vessel.srfSpeed * dyn_pressure / MOI[ROLL];
-            roll_coeffs.k3 = roll_aero_torque_model.pars[3] / 1e2 * dyn_pressure / MOI[ROLL];
-            roll_coeffs.k4 = roll_aero_torque_model.pars[4] / 1e2 * dyn_pressure / MOI[ROLL];
+            roll_coeffs.k0 = roll_aero_torque_model_gen.pars[0] / 1e2 * dyn_pressure / MOI[ROLL];
+            roll_coeffs.k1 = roll_aero_torque_model_gen.pars[1] / 1e2 * dyn_pressure / MOI[ROLL];
+            roll_coeffs.k2 = roll_aero_torque_model_gen.pars[2] / vessel.srfSpeed * dyn_pressure / MOI[ROLL];
+            roll_coeffs.k3 = roll_aero_torque_model_gen.pars[3] / 1e2 * dyn_pressure / MOI[ROLL];
+            roll_coeffs.k4 = roll_aero_torque_model_gen.pars[4] / 1e2 * dyn_pressure / MOI[ROLL];
 
-            // Fill roll_rot_model
-            Matrix A = roll_rot_model.A;
-            Matrix B = roll_rot_model.B;
-            Matrix C = roll_rot_model.C;
+            // fill roll_rot_model_gen
+            Matrix A = roll_rot_model_gen.A;
+            Matrix B = roll_rot_model_gen.B;
+            Matrix C = roll_rot_model_gen.C;
             if (dyn_pressure > 10.0)
             {
                 A[0, 0] = roll_coeffs.k2;
@@ -1134,7 +1176,39 @@ namespace AtmosphereAutopilot
             A[1, 1] = -4.0;
             B[1, 0] = 4.0;
 
-            // Fill roll_rot_model_undelayed
+            roll_coeffs.k0 = roll_aero_torque_model.pars[0] / 1e2 * dyn_pressure / MOI[ROLL];
+            roll_coeffs.k1 = roll_aero_torque_model.pars[1] / 1e2 * dyn_pressure / MOI[ROLL];
+            roll_coeffs.k2 = roll_aero_torque_model.pars[2] / vessel.srfSpeed * dyn_pressure / MOI[ROLL];
+            roll_coeffs.k3 = roll_aero_torque_model.pars[3] / 1e2 * dyn_pressure / MOI[ROLL];
+            roll_coeffs.k4 = roll_aero_torque_model.pars[4] / 1e2 * dyn_pressure / MOI[ROLL];
+
+            // fill roll_rot_model
+            A = roll_rot_model.A;
+            B = roll_rot_model.B;
+            C = roll_rot_model.C;
+            if (dyn_pressure > 10.0)
+            {
+                A[0, 0] = roll_coeffs.k2;
+                A[0, 1] = roll_coeffs.k3 * (1.0 - 4.0 * TimeWarp.fixedDeltaTime);
+                B[0, 0] = reaction_torque[ROLL] / MOI[ROLL] + roll_coeffs.k3 * 4.0 * TimeWarp.fixedDeltaTime + roll_coeffs.et1;
+                B[0, 1] = roll_coeffs.k4;
+                B[0, 2] = roll_coeffs.k1;
+                C[0, 0] = roll_coeffs.k0 + roll_coeffs.et0;
+            }
+            else
+            {
+                A[0, 0] = 0.0;
+                A[0, 0] = 0.0;
+                A[0, 1] = 0.0;
+                B[0, 0] = reaction_torque[ROLL] / MOI[ROLL] + roll_coeffs.et1;
+                B[0, 1] = 0.0;
+                B[0, 2] = 0.0;
+                C[0, 0] = roll_coeffs.et0;
+            }
+            A[1, 1] = -4.0;
+            B[1, 0] = 4.0;
+
+            // fill roll_rot_model_undelayed
             A = roll_rot_model_undelayed.A;
             B = roll_rot_model_undelayed.B;
             C = roll_rot_model_undelayed.C;
@@ -1164,14 +1238,46 @@ namespace AtmosphereAutopilot
             yaw_coeffs.Cl2 = yaw_lift_model.pars[2] / 1e3 * dyn_pressure / sum_mass;
             yaw_coeffs.et0 = engines_torque_k0[YAW] / MOI[YAW];
             yaw_coeffs.et1 = engines_torque_k1[YAW] / MOI[YAW];
+            yaw_coeffs.k0 = yaw_aero_torque_model_gen.pars[0] / 1e2 * dyn_pressure / MOI[YAW];
+            yaw_coeffs.k1 = yaw_aero_torque_model_gen.pars[1] / 1e2 * dyn_pressure / MOI[YAW];
+            yaw_coeffs.k2 = yaw_aero_torque_model_gen.pars[2] / 1e2 * dyn_pressure / MOI[YAW];
+
+            // Fill yaw_rot_model_gen
+            Matrix A = yaw_rot_model_gen.A;
+            Matrix B = yaw_rot_model_gen.B;
+            Matrix C = yaw_rot_model_gen.C;
+            if (dyn_pressure >= 10.0)
+            {
+                A[0, 0] = -(yaw_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
+                A[0, 2] = -yaw_coeffs.Cl2 / vessel.srfSpeed;
+                A[1, 0] = yaw_coeffs.k1;
+                A[1, 2] = yaw_coeffs.k2 * (1.0 - 4.0 * TimeWarp.fixedDeltaTime);
+                B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.k2 * 4.0 * TimeWarp.fixedDeltaTime + yaw_coeffs.et1;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[1, 0] = yaw_coeffs.k0 + yaw_coeffs.et0;
+            }
+            else
+            {
+                A[0, 0] = -engines_thrust[ROLL] / sum_mass / vessel.srfSpeed;
+                A[0, 2] = 0.0;
+                A[1, 0] = 0.0;
+                A[1, 2] = 0.0;
+                B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.et1;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[1, 0] = yaw_coeffs.et0;
+            }
+            A[0, 1] = 1.0;
+            A[2, 2] = -4.0;
+            B[2, 0] = 4.0;
+
             yaw_coeffs.k0 = yaw_aero_torque_model.pars[0] / 1e2 * dyn_pressure / MOI[YAW];
             yaw_coeffs.k1 = yaw_aero_torque_model.pars[1] / 1e2 * dyn_pressure / MOI[YAW];
             yaw_coeffs.k2 = yaw_aero_torque_model.pars[2] / 1e2 * dyn_pressure / MOI[YAW];
 
             // Fill yaw_rot_model
-            Matrix A = yaw_rot_model.A;
-            Matrix B = yaw_rot_model.B;
-            Matrix C = yaw_rot_model.C;
+            A = yaw_rot_model.A;
+            B = yaw_rot_model.B;
+            C = yaw_rot_model.C;
             if (dyn_pressure >= 10.0)
             {
                 A[0, 0] = -(yaw_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
