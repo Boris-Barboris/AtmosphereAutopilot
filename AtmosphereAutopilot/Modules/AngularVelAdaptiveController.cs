@@ -395,9 +395,8 @@ namespace AtmosphereAutopilot
                 }
                 
                 // apply moderation
-                if (Math.Abs(max_g_aoa) < 1.0 || Math.Abs(min_g_aoa) < 1.0)
+                if (max_g_aoa < 1.0 && max_g_aoa > -0.2 && max_g_aoa > min_g_aoa)       // sanity check
                 {
-                    // check for adequacy
                     if (max_g_aoa < res_max_aoa)
                     {
                         res_max_aoa = max_g_aoa;

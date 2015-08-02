@@ -882,7 +882,7 @@ namespace AtmosphereAutopilot
                 pitch_lift_trainer.min_output_value = (float)(10.0 / dyn_pressure * 1e3 * sum_mass);
 
                 yaw_lift_trainer.UpdateState(dt);
-                yaw_lift_trainer.min_output_value = (float)(10.0 / dyn_pressure * 1e3 * sum_mass);
+                yaw_lift_trainer.min_output_value = (float)(1.0 / dyn_pressure * 1e3 * sum_mass);
             }
         }
 
