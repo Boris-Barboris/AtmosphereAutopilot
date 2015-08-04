@@ -203,14 +203,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("min_g_v", false, "G6")]
         protected float min_g_v;
 
-        //[AutoGuiAttr("max_aoa_g", false, "G6")]
-        //protected float max_aoa_g;
-
         [AutoGuiAttr("max_aoa_v", false, "G6")]
         protected float max_aoa_v;
-
-        //[AutoGuiAttr("min_aoa_g", false, "G6")]
-        //protected float min_aoa_g;
 
         [AutoGuiAttr("min_aoa_v", false, "G6")]
         protected float min_aoa_v;
@@ -495,7 +489,7 @@ namespace AtmosphereAutopilot
         }
 
         [AutoGuiAttr("quadr Kp", true, "G6")]
-        protected float quadr_Kp = 0.2f;
+        protected float quadr_Kp = 0.3f;
 
         [AutoGuiAttr("kacc_quadr", false, "G6")]
         protected float kacc_quadr;
@@ -518,7 +512,13 @@ namespace AtmosphereAutopilot
 
         protected override float get_desired_acc(float des_v)
         {
-            float new_kacc_quadr = (float)(quadr_Kp * lin_model.A[1, 2] * lin_model.B[2, 0]);
+            float new_kacc_quadr = 0.0f;
+            if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
+                new_kacc_quadr = (float)(quadr_Kp * (lin_model.A[1, 2] * lin_model.B[2, 0] + lin_model.B[1, 0]));
+            if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.Stock)
+                new_kacc_quadr = (float)(quadr_Kp * (lin_model.A[1, 2] * lin_model.C[2, 0] + lin_model.B[1, 0]));
+            if (float.IsNaN(new_kacc_quadr))
+                return base.get_desired_acc(des_v);
             if (first_quadr)
                 kacc_quadr = new_kacc_quadr;
             else
@@ -601,8 +601,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("DEBUG scaled_aoa", false, "G6")]
         protected float scaled_aoa;
 
-        #region ModerationParameters
-
         [AutoGuiAttr("Moderate AoA", true, null)]
         public bool moderate_aoa = true;
 
@@ -616,8 +614,6 @@ namespace AtmosphereAutopilot
         [VesselSerializable("max_g_force")]
         [AutoGuiAttr("max G-force", true, "G6")]
         protected float max_g_force = 5.0f;
-
-        #endregion
     }
 
     public sealed class PitchAngularVelocityController : PitchYawAngularVelocityController
@@ -703,7 +699,7 @@ namespace AtmosphereAutopilot
         }
 
         [AutoGuiAttr("quadr Kp", true, "G6")]
-        float quadr_Kp = 0.2f;
+        float quadr_Kp = 0.4f;
 
         [AutoGuiAttr("kacc_quadr", false, "G6")]
         float kacc_quadr;
@@ -726,7 +722,13 @@ namespace AtmosphereAutopilot
 
         protected override float get_desired_acc(float des_v)
         {
-            float new_kacc_quadr = (float)(quadr_Kp * imodel.roll_rot_model_gen.A[0, 1] * imodel.roll_rot_model_gen.B[1, 0]);
+            float new_kacc_quadr = 0.0f;
+            if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
+                new_kacc_quadr = (float)(quadr_Kp * (imodel.roll_rot_model_gen.A[0, 1] * imodel.roll_rot_model_gen.B[1, 0] + imodel.roll_rot_model_gen.B[0, 0]));
+            if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.Stock)
+                new_kacc_quadr = (float)(quadr_Kp * (imodel.roll_rot_model_gen.A[0, 1] * imodel.roll_rot_model_gen.C[1, 0] + imodel.roll_rot_model_gen.B[0, 0]));
+            if (float.IsNaN(new_kacc_quadr))
+                return base.get_desired_acc(des_v);
             if (first_quadr)
                 kacc_quadr = new_kacc_quadr;
             else

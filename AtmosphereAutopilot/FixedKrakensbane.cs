@@ -161,6 +161,7 @@ namespace FixedKrakensbane
                                 Vector3 shift_vel = -FrameVelocity;
                                 GameEvents.onKrakensbaneDisengage.Fire(FrameVelocity);
                                 FrameVelocity = Vector3d.zero;
+                                LastCorrection = shift_vel;
                                 // update velocities
                                 offset_velocities(-shift_vel);
                             }

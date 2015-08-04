@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using System.Reflection;
 
 namespace AtmosphereAutopilot
 {
@@ -52,6 +53,7 @@ namespace AtmosphereAutopilot
         {
             Debug.Log("[Autopilot]: AtmosphereAutopilot starting up!"); 
             DontDestroyOnLoad(this);
+            classify_aero();
             initialize_types();
             initialize_hotkeys();
             initialize_thread();
@@ -65,6 +67,26 @@ namespace AtmosphereAutopilot
             GameEvents.onGameUnpause.Add(OnApplicationUnpause);
             Instance = this;
 			ActiveVessel = null;
+        }
+
+        public enum AerodinamycsModel
+        {
+            Stock,
+            FAR
+        }
+
+        public static AerodinamycsModel AeroModel = AerodinamycsModel.Stock;
+
+        void classify_aero()
+        {
+            foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (a.FullName.Equals("FerramAerospaceResearch"))
+                {
+                    AeroModel = AerodinamycsModel.FAR;
+                    return;
+                }
+            }
         }
 
         void initialize_types()
