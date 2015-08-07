@@ -114,8 +114,7 @@ namespace AtmosphereAutopilot
                 desired_v = Common.Clampf(target_value, max_v_construction);
             }
             
-            if (imodel.dyn_pressure >= 10.0)
-                desired_v = moderate_desired_v(desired_v, user_controlled);      // moderation stage
+            desired_v = moderate_desired_v(desired_v, user_controlled);      // moderation stage
 
             output_acc = get_desired_acc(desired_v);            // produce output
 

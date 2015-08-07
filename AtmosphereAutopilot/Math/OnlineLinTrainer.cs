@@ -166,7 +166,6 @@ namespace AtmosphereAutopilot
                 update_gen_space();
                 if (cur_time > time_reset)
                     reset_time();
-                check_linearity();
                 update_weights();
                 if (input_view == null)
                     create_views();
@@ -182,6 +181,7 @@ namespace AtmosphereAutopilot
                         return_equal_weights();
                         genmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
                     }
+                    check_linearity();
                 }
             }
         }
@@ -342,6 +342,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("linear_param", false, "G6")]
         public volatile float linear_param;
 
+        [AutoGuiAttr("nonlin_cycles", false)]
+        int nonlin_cycles = 0;
+
         void check_linearity()
         {
             if (imm_training_inputs.Size > 0)
@@ -366,14 +369,23 @@ namespace AtmosphereAutopilot
                 //linear_param = (float)sum_error;
                 //linear = sum_error < linear_err_criteria;
                 if (linear)
+                {
                     weight_time_decay = linear_time_decay;
+                    nonlin_cycles = 0;
+                }
                 else
+                {
                     weight_time_decay = nonlin_time_decay;
+                    nonlin_cycles += last_time_elapsed * added_to_imm;
+                }
             }
         }
 
         [AutoGuiAttr("gen_space_fill_k", false, "G6")]
         public volatile float gen_space_fill_k;
+
+        [AutoGuiAttr("nonlin_check_cutoff", true)]
+        public int nonlin_check_cutoff = 100;
 
         bool gen_element_removed = false;
 
@@ -388,8 +400,22 @@ namespace AtmosphereAutopilot
             }
             // Gradient buffer error weights
             grad_error_weights.Clear();
-            for (int i = 0; i < grad_training_outputs.Size; i++)
-                grad_error_weights.Add(getAgeWeight(grad_training_outputs[i].birth));
+            int k = 0;
+            while (k < grad_training_inputs.Size)
+            {
+                double k_weight = getAgeWeight(grad_training_outputs[k].birth);
+                if (linear || k_weight >= min_gen_weight || nonlin_cycles < nonlin_check_cutoff)
+                {
+                    grad_error_weights.Add(k_weight);
+                    k++;
+                }
+                else
+                {
+                    grad_training_inputs.Get();
+                    grad_training_outputs.Get();
+                }                        
+            }
+                
             // Generalization buffer weights
             gen_error_weights.Clear();
             int j = 0;
@@ -397,7 +423,7 @@ namespace AtmosphereAutopilot
             while (j < linear_gen_buff.Count)
             {
                 double decayed_weight = getAgeWeight(linear_gen_buff[j].data.birth);
-                if (decayed_weight >= min_gen_weight || linear)
+                if (linear || decayed_weight >= min_gen_weight || nonlin_cycles < nonlin_check_cutoff)
                 {
                     double weight = decayed_weight * base_gen_weight;
                     gen_error_weights.Add(weight);

@@ -772,7 +772,7 @@ namespace AtmosphereAutopilot
             pitch_trainer.gen_limits_decay = 0.002f;
             pitch_trainer.linear_time_decay = 0.005f;
             pitch_trainer.nonlin_time_decay = 0.03f;
-            pitch_trainer.linear_err_criteria = 0.1f;
+            pitch_trainer.linear_err_criteria = 0.02f;
             trainers[0] = pitch_trainer;
 
             roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, roll_aero_torque_model_gen, IMM_BUF_SIZE, new int[] { 7, 7, 7, 7 },
@@ -782,7 +782,7 @@ namespace AtmosphereAutopilot
             roll_trainer.gen_limits_decay = 0.002f;
             roll_trainer.linear_time_decay = 0.005f;
             roll_trainer.nonlin_time_decay = 0.03f;
-            roll_trainer.linear_err_criteria = 0.1f;
+            roll_trainer.linear_err_criteria = 0.02f;
             trainers[1] = roll_trainer;
 
             yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, yaw_aero_torque_model_gen, IMM_BUF_SIZE, new int[] { 11, 11 },
@@ -792,7 +792,7 @@ namespace AtmosphereAutopilot
             yaw_trainer.gen_limits_decay = 0.002f;
             yaw_trainer.linear_time_decay = 0.005f;
             yaw_trainer.nonlin_time_decay = 0.03f;
-            yaw_trainer.linear_err_criteria = 0.1f;
+            yaw_trainer.linear_err_criteria = 0.01f;
             trainers[2] = yaw_trainer;
 
             pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, null, IMM_BUF_SIZE, new int[] { 11, 11 },
@@ -802,7 +802,7 @@ namespace AtmosphereAutopilot
             pitch_lift_trainer.gen_limits_decay = 0.0005f;
             pitch_lift_trainer.linear_time_decay = 0.002f;
             pitch_lift_trainer.nonlin_time_decay = 0.02f;
-            pitch_lift_trainer.linear_err_criteria = 0.25f;
+            pitch_lift_trainer.linear_err_criteria = 0.05f;
 
             yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, null, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.05, -0.1 }, new double[] { 0.05, 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
@@ -811,7 +811,7 @@ namespace AtmosphereAutopilot
             yaw_lift_trainer.gen_limits_decay = 0.0005f;
             yaw_lift_trainer.linear_time_decay = 0.002f;
             yaw_lift_trainer.nonlin_time_decay = 0.02f;
-            yaw_lift_trainer.linear_err_criteria = 0.25f;
+            yaw_lift_trainer.linear_err_criteria = 0.05f;
         }
 
         /// <summary>
