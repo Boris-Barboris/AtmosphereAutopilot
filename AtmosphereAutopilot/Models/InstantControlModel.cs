@@ -52,6 +52,7 @@ namespace AtmosphereAutopilot
 
 		protected override void OnActivate()
 		{
+            sequential_dt = false;
 			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
 			vessel.OnPostAutopilotUpdate += new FlightInputCallback(OnPostAutopilot);
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_pitch_ann);
@@ -72,6 +73,7 @@ namespace AtmosphereAutopilot
             AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_pitch_lift);
             AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_yaw_lift);
             return_gimbals();
+            sequential_dt = false;
 		}
 
 		static readonly int BUFFER_SIZE = 8;
@@ -148,7 +150,10 @@ namespace AtmosphereAutopilot
         void OnPostAutopilot(FlightCtrlState state)		// update control input
 		{
 			update_control(state);
+            sequential_dt = true;
 		}
+
+        bool sequential_dt = false;
 
 		void OnPreAutopilot(FlightCtrlState state)		// workhorse function
 		{
@@ -158,17 +163,21 @@ namespace AtmosphereAutopilot
             update_engine_moments();
             get_gimbal_authority();
             update_dynamics();
-            if (angular_acc_buf[0].Size > 0)
+
+            if (sequential_dt)
             {
-                update_model_acc();
-                update_training_inputs();
-                update_cpu();
-            }
-            if (!vessel.LandedOrSplashed)
-            {
-                update_pitch_rot_model();
-                update_roll_rot_model();
-                update_yaw_rot_model();
+                if (angular_acc_buf[0].Size > 0)
+                {
+                    update_model_acc();
+                    update_training_inputs();
+                    update_cpu();
+                }
+                if (!vessel.LandedOrSplashed)
+                {
+                    update_pitch_rot_model();
+                    update_roll_rot_model();
+                    update_yaw_rot_model();
+                }
             }
 		}
 
@@ -424,7 +433,7 @@ namespace AtmosphereAutopilot
 			for (int i = 0; i < 3; i++)
 			{
                 angular_v_buf[i].Put(angular_vel[i]);	        // update angular velocity
-                if (angular_v_buf[i].Size >= 2)
+                if (angular_v_buf[i].Size >= 2 && sequential_dt)
 					angular_acc_buf[i].Put(
 						Common.derivative1_short(
 							angular_v_buf[i].getFromTail(1),
@@ -487,7 +496,7 @@ namespace AtmosphereAutopilot
                 input_buf[i].Put(raw_input);
                 if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.Stock)
                 {
-                    if (csurf_buf[i].Size >= 1)
+                    if (csurf_buf[i].Size >= 1 && sequential_dt)
                         csurf_buf[i].Put(stock_actuator_blend(csurf_buf[i].getLast(), raw_input));
                     else
                         csurf_buf[i].Put(raw_input);
@@ -495,7 +504,7 @@ namespace AtmosphereAutopilot
                 else
                     if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
                     {
-                        if (csurf_buf[i].Size >= 1)
+                        if (csurf_buf[i].Size >= 1 && sequential_dt)
                             csurf_buf[i].Put(far_exponential_blend(csurf_buf[i].getLast(), raw_input));
                         else
                             csurf_buf[i].Put(raw_input);
