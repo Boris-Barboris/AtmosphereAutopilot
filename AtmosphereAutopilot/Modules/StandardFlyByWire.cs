@@ -26,8 +26,9 @@ namespace AtmosphereAutopilot
     {
         PitchAngularVelocityController pc;
         RollAngularVelocityController rc;
+		YawAngularVelocityController yvc;
         SideslipController yc;
-        AutopilotModule[] gui_list = new AutopilotModule[3];
+        AutopilotModule[] gui_list = new AutopilotModule[4];
 
         internal StandardFlyByWire(Vessel v) :
             base(v, "Standard Fly-By-Wire", 44421322) { }
@@ -36,7 +37,8 @@ namespace AtmosphereAutopilot
         {
             gui_list[0] = pc = modules[typeof(PitchAngularVelocityController)] as PitchAngularVelocityController;
             gui_list[1] = rc = modules[typeof(RollAngularVelocityController)] as RollAngularVelocityController;
-            gui_list[2] = yc = modules[typeof(SideslipController)] as SideslipController;
+			gui_list[2] = yvc = modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
+            gui_list[3] = yc = modules[typeof(SideslipController)] as SideslipController;
         }
 
         protected override void OnActivate() 
@@ -45,6 +47,8 @@ namespace AtmosphereAutopilot
             pc.user_controlled = true;
             rc.Activate();
             rc.user_controlled = true;
+			yvc.Activate();
+			yvc.user_controlled = rocket_mode;
             yc.Activate();
             yc.user_controlled = true;
         }
@@ -56,6 +60,10 @@ namespace AtmosphereAutopilot
             yc.Deactivate();
         }
 
+		[VesselSerializable("rocket_mode")]
+		[AutoGuiAttr("Rocket mode", true)]
+		public bool rocket_mode = false;
+
         /// <summary>
         /// Main control function
         /// </summary>
@@ -66,8 +74,14 @@ namespace AtmosphereAutopilot
                 return;
 
             pc.ApplyControl(cntrl, 0.0f);
-            yc.ApplyControl(cntrl, 0.0f);
-            rc.ApplyControl(cntrl, 0.0f);
+			if (rocket_mode)
+			{
+				yvc.user_controlled = true;
+				yvc.ApplyControl(cntrl, 0.0f);
+			}
+			else
+				yc.ApplyControl(cntrl, 0.0f);
+			rc.ApplyControl(cntrl, 0.0f);
         }
 
         protected override void _drawGUI(int id)
@@ -81,6 +95,8 @@ namespace AtmosphereAutopilot
                 else
                     module.UnShowGUI();
             }
+			GUILayout.Space(5.0f);
+			AutoGUI.AutoDrawObject(this);
             GUILayout.EndVertical();
             GUI.DragWindow();
         }
