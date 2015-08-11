@@ -384,8 +384,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("gen_space_fill_k", false, "G6")]
         public volatile float gen_space_fill_k;
 
-        [AutoGuiAttr("nonlin_check_cutoff", true)]
-        public int nonlin_check_cutoff = 100;
+		[AutoGuiAttr("nonlin_trigger", true)]
+        public int nonlin_trigger = 100;
 
         bool gen_element_removed = false;
 
@@ -398,13 +398,15 @@ namespace AtmosphereAutopilot
                 int birth = cur_time - (imm_training_inputs.Size - i - 1) * last_time_elapsed;
                 imm_error_weights.Add(getAgeWeight(birth));
             }
+			// get cutoff decayed weight
+			min_gen_weight = (float)getAgeWeight(cur_time - nonlin_cutoff_time);
             // Gradient buffer error weights
             grad_error_weights.Clear();
             int k = 0;
             while (k < grad_training_inputs.Size)
             {
                 double k_weight = getAgeWeight(grad_training_outputs[k].birth);
-                if (linear || k_weight >= min_gen_weight || nonlin_cycles < nonlin_check_cutoff)
+                if (linear || k_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger)
                 {
                     grad_error_weights.Add(k_weight);
                     k++;
@@ -413,17 +415,16 @@ namespace AtmosphereAutopilot
                 {
                     grad_training_inputs.Get();
                     grad_training_outputs.Get();
-                }                        
-            }
-                
+                }
+            }                
             // Generalization buffer weights
             gen_error_weights.Clear();
             int j = 0;
-            min_gen_weight = (float)getAgeWeight(cur_time - nonlin_cutoff_time);
+            
             while (j < linear_gen_buff.Count)
             {
                 double decayed_weight = getAgeWeight(linear_gen_buff[j].data.birth);
-                if (linear || decayed_weight >= min_gen_weight || nonlin_cycles < nonlin_check_cutoff)
+                if (linear || decayed_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger)
                 {
                     double weight = decayed_weight * base_gen_weight;
                     gen_error_weights.Add(weight);

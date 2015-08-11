@@ -114,12 +114,12 @@ namespace AtmosphereAutopilot
                 desired_v = Common.Clampf(target_value, max_v_construction);
             }
             
-            desired_v = moderate_desired_v(desired_v, user_controlled);      // moderation stage
+            desired_v = process_desired_v(desired_v, user_controlled);      // moderation stage
 
             output_acc = get_desired_acc(desired_v);            // produce output
 
 			// check if we're stable on given input value
-            if (AutoTrim)
+            if (AutoTrim && vessel == AtmosphereAutopilot.Instance.ActiveVessel)
             {
                 if (Math.Abs(vel) < 0.005f)
                 {
@@ -144,22 +144,16 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Max v construction", true, "G8")]
         public float max_v_construction = 0.5f;
 
-        protected virtual float moderate_desired_v(float des_v, bool user_input) { return des_v; }
+        protected virtual float process_desired_v(float des_v, bool user_input) { return des_v; }
 
         protected virtual float get_desired_acc(float des_v) { return Kp * (desired_v - vel); }
-
-
-		#region Parameters
 
         [AutoGuiAttr("DEBUG desired_v", false, "G8")]
         protected float desired_v;
 
         [GlobalSerializable("AutoTrim")]
-        [AutoGuiAttr("AutoTrim", true, null)]
+        [AutoGuiAttr("AutoTrim", true)]
         public bool AutoTrim { get; set; }
-
-		#endregion
-
 	}
 
 
@@ -216,7 +210,7 @@ namespace AtmosphereAutopilot
 
         protected LinearSystemModel lin_model;
 
-        protected override float moderate_desired_v(float des_v, bool user_input)
+        protected override float process_desired_v(float des_v, bool user_input)
         {
             float rad_max_aoa = max_aoa * dgr2rad;
             res_max_aoa = 100.0f;
@@ -229,8 +223,6 @@ namespace AtmosphereAutopilot
 
             if (moderate_aoa && imodel.dyn_pressure > 100.0)
             {
-                moderated = true;
-
                 if (abs_cur_aoa < 0.35f)
                 {
                     // We're in linear regime so we can update our limitations
@@ -262,7 +254,7 @@ namespace AtmosphereAutopilot
                             }
 
                             // get equilibrium aoa and angular_v for -1.0 input
-                            eq_b[0, 0] = -(lin_model.C[0, 0] - lin_model.A[0, 2]);
+                            eq_b[0, 0] = -lin_model.C[0, 0] + lin_model.A[0, 2];
                             eq_b[1, 0] = lin_model.A[1, 2] + lin_model.B[1, 0] - lin_model.C[1, 0];
                             eq_x = eq_A.SolveWith(eq_b);
                             if (!double.IsInfinity(eq_x[0, 0]) && !double.IsNaN(eq_x[0, 0]))
@@ -310,7 +302,7 @@ namespace AtmosphereAutopilot
                     catch (MSingularException) { }
                 }
 
-                // let's apply moderation with stability region
+                // let's apply moderation with controllability region
                 if (max_input_aoa < res_max_aoa)
                 {
                     res_max_aoa = max_input_aoa;
@@ -322,7 +314,7 @@ namespace AtmosphereAutopilot
                     res_equilibr_v_lower = min_input_v;
                 }
 
-                // apply moderation
+                // apply simple AoA moderation
                 if (rad_max_aoa < res_max_aoa)
                 {
                     res_max_aoa = rad_max_aoa;
@@ -333,13 +325,15 @@ namespace AtmosphereAutopilot
                     res_min_aoa = -rad_max_aoa;
                     res_equilibr_v_lower = min_aoa_v;
                 }
+
+				moderated = true;
             }
 
             if (moderate_g && imodel.dyn_pressure > 100.0)
             {
                 moderated = true;
                 
-                if (Math.Abs(lin_model.A[0, 0]) > 1e-4 && abs_cur_aoa < 0.35f)
+                if (Math.Abs(lin_model.A[0, 0]) > 1e-5 && abs_cur_aoa < 0.35f)
                 {
                     // model may be sane, let's update limitations
                     double gravity_acc = 0.0;
@@ -367,14 +361,14 @@ namespace AtmosphereAutopilot
                     eq_A[0, 1] = lin_model.A[0, 2];
                     eq_A[1, 0] = lin_model.A[1, 0];
                     eq_A[1, 1] = lin_model.A[1, 2] + lin_model.B[1, 0];
-                    eq_b[0, 0] = -(lin_model.A[0, 1] * max_g_v + lin_model.C[0, 0]);
+                    eq_b[0, 0] = -(max_g_v + lin_model.C[0, 0]);
                     eq_b[1, 0] = -lin_model.C[1, 0];
                     eq_A.old_lu = true;
                     try
                     {
                         eq_x = eq_A.SolveWith(eq_b);
                         double new_max_g_aoa = eq_x[0, 0];
-                        eq_b[0, 0] = -(lin_model.A[0, 1] * min_g_v + lin_model.C[0, 0]);
+                        eq_b[0, 0] = -(min_g_v + lin_model.C[0, 0]);
                         eq_x = eq_A.SolveWith(eq_b);
                         double new_min_g_aoa = eq_x[0, 0];
                         if (!double.IsInfinity(new_max_g_aoa) && !double.IsNaN(new_max_g_aoa) &&
@@ -388,7 +382,7 @@ namespace AtmosphereAutopilot
                 }
                 
                 // apply moderation
-                if (max_g_aoa < 1.0 && max_g_aoa > -0.2 && max_g_aoa > min_g_aoa)       // sanity check
+                if (max_g_aoa < 2.0 && max_g_aoa > 0.0 && min_g_aoa > -2.0 && max_g_aoa > min_g_aoa)       // sanity check
                 {
                     if (max_g_aoa < res_max_aoa)
                     {
@@ -406,39 +400,44 @@ namespace AtmosphereAutopilot
             // let's get non-overshooting max v value, let's call it transit_max_v
             // we start on 0.0 aoa with transit_max_v and we must not overshoot res_max_aoa
             // while applying -1.0 input all the time
-            if (abs_cur_aoa < 0.26f && imodel.dyn_pressure > 10.0)
-            {
-                double transit_max_aoa = Math.Min(rad_max_aoa, res_max_aoa);
-                state_mat[0, 0] = transit_max_aoa / 2.0;
-                state_mat[2, 0] = -1.0;
-                input_mat[0, 0] = -1.0;
-                double acc = lin_model.eval_row(1, state_mat, input_mat);
-                float new_dyn_max_v =
-                    (float)Math.Sqrt(transit_max_aoa * (-acc));
-                if (float.IsNaN(new_dyn_max_v))
-                {
-                    if (old_dyn_max_v != 0.0f)
-                        transit_max_v = old_dyn_max_v;
-                    else
-                        old_dyn_max_v = max_v_construction;
-                }
-                else
-                {
-                    new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
-                    transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
-                    old_dyn_max_v = transit_max_v;
-                }
-            }
-            else
-                if (old_dyn_max_v != 0.0f)
-                    transit_max_v = old_dyn_max_v;
-                else
-                {
-                    old_dyn_max_v = max_v_construction;
-                    transit_max_v = max_v_construction;
-                }
+			if (abs_cur_aoa < 0.26f && imodel.dyn_pressure > 10.0)
+			{
+				double transit_max_aoa = Math.Min(rad_max_aoa, res_max_aoa);
+				state_mat[0, 0] = transit_max_aoa / 2.0;
+				state_mat[2, 0] = -1.0;
+				input_mat[0, 0] = -1.0;
+				double acc = lin_model.eval_row(1, state_mat, input_mat);
+				float new_dyn_max_v =
+					(float)Math.Sqrt(transit_max_aoa * (-acc));
+				if (float.IsNaN(new_dyn_max_v))
+				{
+					if (old_dyn_max_v != 0.0f)
+						transit_max_v = old_dyn_max_v;
+					else
+						old_dyn_max_v = max_v_construction;
+				}
+				else
+				{
+					new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
+					transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
+					old_dyn_max_v = transit_max_v;
+				}
+			}
+			else
+				if (imodel.dyn_pressure <= 10.0)
+					transit_max_v = max_v_construction;
+				else
+				{
+					if (old_dyn_max_v != 0.0f)
+						transit_max_v = old_dyn_max_v;
+					else
+					{
+						old_dyn_max_v = max_v_construction;
+						transit_max_v = max_v_construction;
+					}
+				}
             
-            // if the user is inputting, let's hold surface pitch angle
+            // if the user is in charge, let's hold surface-relative pitch angle
             float v_offset = 0.0f;
             if (user_input && vessel.obt_velocity.sqrMagnitude > 1.0)
             {
@@ -464,9 +463,10 @@ namespace AtmosphereAutopilot
                     scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) / (res_max_aoa - res_min_aoa), 1.0f);
                     if (scaled_aoa < 0.0f)
                     {
-                        scaled_aoa *= 5.0f;
+                        scaled_aoa *= 2.0f;
                     }
-                    scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_upper * (1.0f - Math.Abs(scaled_aoa)),
+                    scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa +
+						res_equilibr_v_upper * (1.0f - Math.Abs(scaled_aoa)) + v_offset,
                         transit_max_v * normalized_des_v + v_offset);
                 }
                 else
@@ -474,9 +474,10 @@ namespace AtmosphereAutopilot
                     scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) / (res_min_aoa - res_max_aoa), 1.0f);
                     if (scaled_aoa < 0.0f)
                     {
-                        scaled_aoa *= 5.0f;
+                        scaled_aoa *= 2.0f;
                     }
-                    scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa + res_equilibr_v_lower * (1.0f - Math.Abs(scaled_aoa)),
+                    scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa +
+						res_equilibr_v_lower * (1.0f - Math.Abs(scaled_aoa)) + v_offset,
                         transit_max_v * normalized_des_v + v_offset);
                 }
             }
@@ -653,7 +654,7 @@ namespace AtmosphereAutopilot
         Matrix state_mat = new Matrix(2, 1);
         Matrix input_mat = new Matrix(3, 1);
 
-        protected override float moderate_desired_v(float des_v, bool user_input)
+        protected override float process_desired_v(float des_v, bool user_input)
         {
             float cur_aoa = imodel.AoA(YAW);
             

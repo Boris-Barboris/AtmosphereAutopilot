@@ -150,7 +150,8 @@ namespace AtmosphereAutopilot
         void OnPostAutopilot(FlightCtrlState state)		// update control input
 		{
 			update_control(state);
-            sequential_dt = true;
+			if (!vessel.LandedOrSplashed)
+				sequential_dt = true;
 		}
 
         bool sequential_dt = false;
@@ -628,10 +629,10 @@ namespace AtmosphereAutopilot
 
         Vector3 prev_engines_torque;
 
-        [AutoGuiAttr("engines_torque_k0", false, "G6")]
+        [AutoGuiAttr("e_torque_k0", false, "G5")]
         Vector3 engines_torque_k0;
 
-        [AutoGuiAttr("engines_torque_k1", false, "G6")]
+        [AutoGuiAttr("e_torque_k1", false, "G5")]
         Vector3 engines_torque_k1;
 
         // Stupid linear authority of gimbals
@@ -780,8 +781,10 @@ namespace AtmosphereAutopilot
             pitch_trainer.max_value_decay = 0.001f;
             pitch_trainer.gen_limits_decay = 0.002f;
             pitch_trainer.linear_time_decay = 0.005f;
-            pitch_trainer.nonlin_time_decay = 0.03f;
-            pitch_trainer.linear_err_criteria = 0.02f;
+			pitch_trainer.nonlin_time_decay = 0.005f;
+            pitch_trainer.linear_err_criteria = 0.05f;
+			pitch_trainer.nonlin_trigger = 500;
+			pitch_trainer.nonlin_cutoff_time = 500;
             trainers[0] = pitch_trainer;
 
             roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, roll_aero_torque_model_gen, IMM_BUF_SIZE, new int[] { 7, 7, 7, 7 },
@@ -790,8 +793,10 @@ namespace AtmosphereAutopilot
             roll_trainer.max_value_decay = 0.001f;
             roll_trainer.gen_limits_decay = 0.002f;
             roll_trainer.linear_time_decay = 0.005f;
-            roll_trainer.nonlin_time_decay = 0.03f;
-            roll_trainer.linear_err_criteria = 0.02f;
+			roll_trainer.nonlin_time_decay = 0.005f;
+            roll_trainer.linear_err_criteria = 0.05f;
+			roll_trainer.nonlin_trigger = 500;
+			roll_trainer.nonlin_cutoff_time = 500;
             trainers[1] = roll_trainer;
 
             yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, yaw_aero_torque_model_gen, IMM_BUF_SIZE, new int[] { 11, 11 },
@@ -800,27 +805,31 @@ namespace AtmosphereAutopilot
             yaw_trainer.max_value_decay = 0.001f;
             yaw_trainer.gen_limits_decay = 0.002f;
             yaw_trainer.linear_time_decay = 0.005f;
-            yaw_trainer.nonlin_time_decay = 0.03f;
-            yaw_trainer.linear_err_criteria = 0.01f;
+			yaw_trainer.nonlin_time_decay = 0.005f;
+            yaw_trainer.linear_err_criteria = 0.05f;
+			yaw_trainer.nonlin_trigger = 500;
+			yaw_trainer.nonlin_cutoff_time = 500;
             trainers[2] = yaw_trainer;
 
             pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, null, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.05, -0.1 }, new double[] { 0.05, 0.1 }, pitch_lift_input_method, pitch_lift_output_method);
-            pitch_lift_trainer.base_gen_weight = 0.5f;
+            pitch_lift_trainer.base_gen_weight = 10.0f;
             pitch_lift_trainer.max_value_decay = 0.0005f;
             pitch_lift_trainer.gen_limits_decay = 0.0005f;
             pitch_lift_trainer.linear_time_decay = 0.002f;
-            pitch_lift_trainer.nonlin_time_decay = 0.02f;
+			pitch_lift_trainer.nonlin_time_decay = 0.002f;
             pitch_lift_trainer.linear_err_criteria = 0.05f;
+			pitch_lift_trainer.nonlin_trigger = 500;
 
             yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, null, IMM_BUF_SIZE, new int[] { 11, 11 },
                 new double[] { -0.05, -0.1 }, new double[] { 0.05, 0.1 }, yaw_lift_input_method, yaw_lift_output_method);
-            yaw_lift_trainer.base_gen_weight = 0.5f;
+            yaw_lift_trainer.base_gen_weight = 10.0f;
             yaw_lift_trainer.max_value_decay = 0.0005f;
             yaw_lift_trainer.gen_limits_decay = 0.0005f;
             yaw_lift_trainer.linear_time_decay = 0.002f;
-            yaw_lift_trainer.nonlin_time_decay = 0.02f;
+			yaw_lift_trainer.nonlin_time_decay = 0.002f;
             yaw_lift_trainer.linear_err_criteria = 0.05f;
+			yaw_lift_trainer.nonlin_trigger = 500;
         }
 
         /// <summary>
@@ -908,7 +917,7 @@ namespace AtmosphereAutopilot
                 pitch_lift_trainer.min_output_value = (float)(10.0 / dyn_pressure * 1e3 * sum_mass);
 
                 yaw_lift_trainer.UpdateState(dt);
-                yaw_lift_trainer.min_output_value = (float)(1.0 / dyn_pressure * 1e3 * sum_mass);
+                yaw_lift_trainer.min_output_value = (float)(2.0 / dyn_pressure * 1e3 * sum_mass);
             }
         }
 
@@ -998,25 +1007,14 @@ namespace AtmosphereAutopilot
             return false;
         }
 
-        // Model evaluation
-        //Vector temp_v1 = new Vector(1);
-        Vector temp_v2 = new Vector(2);
-        //Vector temp_v3 = new Vector(3);
-        Vector temp_v4 = new Vector(4);
         void update_model_acc()
         {
-            //pitch_input_method(temp_v2);
             pitch_aero_torque_model.update_from_training();
             pitch_aero_torque_model_gen.update_from_training();
-            //model_acc[PITCH] = pitch_torque_model.eval(temp_v2) / 1e4 * dyn_pressure;
-            //roll_input_method(temp_v4);
             roll_aero_torque_model.update_from_training();
             roll_aero_torque_model_gen.update_from_training();
-            //model_acc[ROLL] = roll_torque_model.eval(temp_v4) / 1e4 * dyn_pressure;
-            //yaw_input_method(temp_v2);
             yaw_aero_torque_model.update_from_training();
             yaw_aero_torque_model_gen.update_from_training();
-            //model_acc[YAW] = yaw_torque_model.eval(temp_v2) / 1e4 * dyn_pressure;
             pitch_lift_model.update_from_training();
             yaw_lift_model.update_from_training();
         }

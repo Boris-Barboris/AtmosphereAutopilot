@@ -113,11 +113,6 @@ namespace AtmosphereAutopilot
                 lock (tpars)
                 {
                     // update training parameters
-                    //bool inf_nan_check = false;
-                    //for (int i = 0; i < new_params.rows; i++)
-                    //    inf_nan_check |= double.IsInfinity(new_params[i, 0]) || double.IsNaN(new_params[i, 0]);
-                    //if (inf_nan_check)
-                    //    return false;
                     tpars[0] = new_params[0, 0];
                     int j = 0;
                     for (int input = 0; input < input_count; input++)
