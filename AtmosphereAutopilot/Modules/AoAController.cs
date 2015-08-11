@@ -75,9 +75,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("des_aoa_equilibr_v", false, "G6")]
         protected float des_aoa_equilibr_v;
 
-        [AutoGuiAttr("cur_aoa_equilibr_v", false, "G6")]
-        protected float cur_aoa_equilibr_v;
-
         [AutoGuiAttr("filter_k", true, "G6")]
         protected float filter_k = 4.0f;
 
@@ -150,7 +147,7 @@ namespace AtmosphereAutopilot
                     relax_k = error / 0.2f;
             relax_k = Common.Clampf(relax_k, 1.0f);
 
-            output_v = relax_k * transit_v + cur_aoa_equilibr_v + (1.0f - Math.Abs(relax_k)) * des_aoa_equilibr_v;
+            output_v = relax_k * transit_v + (1.0f - Math.Abs(relax_k)) * des_aoa_equilibr_v;
 
             ControlUtils.neutralize_user_input(cntrl, axis);
             v_controller.user_controlled = false;

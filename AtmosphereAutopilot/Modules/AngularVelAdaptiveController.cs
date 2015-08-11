@@ -654,12 +654,31 @@ namespace AtmosphereAutopilot
         Matrix state_mat = new Matrix(2, 1);
         Matrix input_mat = new Matrix(3, 1);
 
+		[VesselSerializable("wing_leveler")]
+		[GlobalSerializable("wing_leveler")]
+		[AutoGuiAttr("Wing leveler", true)]
+		public bool wing_leveler = true;
+		
+		[AutoGuiAttr("Snap angle", true, "G4")]
+		public float leveler_snap_angle = 5.0f;
+
+		[AutoGuiAttr("angle_btw_hor", false, "G5")]
+		float angle_btw_hor;
+
+		[AutoGuiAttr("angle_btw_hor_sin", false, "G5")]
+		float angle_btw_hor_sin;
+
+		float transit_max_v;
+
+		[AutoGuiAttr("snapping_Kp", true, "G5")]
+		float snapping_Kp = 0.25f;
+
         protected override float process_desired_v(float des_v, bool user_input)
         {
             float cur_aoa = imodel.AoA(YAW);
             
             // let's find maximum angular v on 0.0 AoA and 0.0 Yaw input from model
-            if (cur_aoa < 0.3 && imodel.dyn_pressure > 10.0)
+            if (cur_aoa < 0.3 && imodel.dyn_pressure > 100.0)
             {
                 float new_max_input_v =
                     (float)((imodel.roll_rot_model_gen.C[0, 0] + imodel.roll_rot_model_gen.B[0, 0] + imodel.roll_rot_model_gen.A[0, 1]) /
@@ -674,6 +693,45 @@ namespace AtmosphereAutopilot
                     min_input_v = (float)Common.simple_filter(new_min_input_v, min_input_v, moder_filter);
                 }
             }
+
+			// wing level snapping
+			float snapping_vel = 0.0f;
+			if (wing_leveler && user_input && des_v == 0.0f && kacc_quadr > 1e-6)
+			{
+				Vector3 planet2ves = (vessel.transform.position - vessel.mainBody.position).normalized;
+				float zenith_angle = Vector3.Angle(planet2ves, vessel.transform.up);
+				if (zenith_angle > 20.0f && zenith_angle < 160.0f)
+				{
+					Vector3 right_horizont_vector = Vector3.Cross(planet2ves, vessel.transform.up);
+					angle_btw_hor_sin = Vector3.Cross(vessel.transform.right, right_horizont_vector.normalized).magnitude;
+					if (Vector3.Dot(vessel.transform.right, planet2ves) < 0.0f)
+						angle_btw_hor_sin = -angle_btw_hor_sin;
+					if (Vector3.Dot(vessel.transform.right, right_horizont_vector) < 0.0f)
+						angle_btw_hor_sin = -angle_btw_hor_sin;
+					if (Math.Abs(angle_btw_hor_sin) <= Math.Sin(leveler_snap_angle * dgr2rad))
+					{
+						angle_btw_hor = Mathf.Asin(angle_btw_hor_sin);
+						float dt = TimeWarp.fixedDeltaTime;
+
+						// Non-overshooting velocity for leveler_snap_angle
+						float transit_max_angle = leveler_snap_angle * dgr2rad;
+						state_mat[0, 0] = 0.0;
+						state_mat[1, 0] = 1.0;
+						input_mat[0, 0] = 1.0;
+						double acc = imodel.roll_rot_model_gen.eval_row(0, state_mat, input_mat);
+						float new_dyn_max_v =
+							(float)Math.Sqrt(transit_max_angle * acc);
+						if (!float.IsNaN(new_dyn_max_v))
+						{
+							new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
+							transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
+							snapping_vel = snapping_Kp * angle_btw_hor / transit_max_angle * transit_max_v;
+							if (Math.Abs(snapping_vel) > Math.Abs(angle_btw_hor) / dt)
+								snapping_vel = angle_btw_hor / dt;
+						}
+					}
+				}
+			}
 
             // desired_v moderation section
             if (des_v >= 0.0f)
@@ -695,7 +753,7 @@ namespace AtmosphereAutopilot
                 des_v = normalized_des_v * scaled_restrained_v;
             }
 
-            return des_v;
+			return des_v + snapping_vel;
         }
 
         [AutoGuiAttr("quadr Kp", true, "G6")]
