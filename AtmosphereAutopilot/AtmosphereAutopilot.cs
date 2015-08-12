@@ -62,7 +62,6 @@ namespace AtmosphereAutopilot
             GameEvents.onHideUI.Add(OnHideUI);
             GameEvents.onShowUI.Add(OnShowUI);
             GameEvents.onGUIApplicationLauncherReady.Add(onAppLauncherLoad);
-            GameEvents.onGUIApplicationLauncherDestroyed.Add(onAppLauncherDestroy);
             GameEvents.onGamePause.Add(OnApplicationPause);
             GameEvents.onGameUnpause.Add(OnApplicationUnpause);
             Instance = this;
@@ -202,23 +201,19 @@ namespace AtmosphereAutopilot
 		#region AppLauncherSection
 
 		ApplicationLauncherButton launcher_btn;
-        bool app_launcher_loaded = false;
 
         // Called when applauncher is ready for population
         void onAppLauncherLoad()
         {
-            if (ApplicationLauncher.Ready && !app_launcher_loaded)
+            if (ApplicationLauncher.Ready)
             {
-                launcher_btn = ApplicationLauncher.Instance.AddModApplication(
-                    OnALTrue, OnALFalse, OnHover, OnALUnHover, null, null, ApplicationLauncher.AppScenes.FLIGHT,
-                    GameDatabase.Instance.GetTexture("AtmosphereAutopilot/icon", false));
-                app_launcher_loaded = true;
+				bool hidden;
+				bool contains = ApplicationLauncher.Instance.Contains(launcher_btn, out hidden);
+				if (!contains)
+					launcher_btn = ApplicationLauncher.Instance.AddModApplication(
+						OnALTrue, OnALFalse, OnHover, OnALUnHover, null, null, ApplicationLauncher.AppScenes.FLIGHT,
+						GameDatabase.Instance.GetTexture("AtmosphereAutopilot/icon", false));
             }
-        }
-
-        void onAppLauncherDestroy()
-        {
-            GameEvents.onGUIApplicationLauncherReady.Add(onAppLauncherLoad);
         }
 
         void OnALTrue()
