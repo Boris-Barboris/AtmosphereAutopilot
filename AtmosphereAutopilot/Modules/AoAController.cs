@@ -90,7 +90,7 @@ namespace AtmosphereAutopilot
         /// <param name="cntrl">Control state to change</param>
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
         {
-            if (imodel.dyn_pressure <= 10.0 || !v_controller.moderate_aoa)
+            if (imodel.dyn_pressure <= 100.0 || !v_controller.moderate_aoa)
             {
                 v_controller.user_controlled = true;
                 v_controller.ApplyControl(cntrl, 0.0f);

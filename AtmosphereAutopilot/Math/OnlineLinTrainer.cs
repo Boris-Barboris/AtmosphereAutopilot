@@ -41,18 +41,16 @@ namespace AtmosphereAutopilot
         VectorArray imm_training_vectors;
         CircularBuffer<double> imm_training_outputs;
         // Gradient buffer
-        CircularBuffer<Vector> grad_training_inputs;
         VectorArray grad_training_vectors;
-        CircularBuffer<GenStruct> grad_training_outputs;
+        CircularBuffer<GenStruct> grad_training;
         // Generalization buffer is being used as generality augmentor
-        GridSpace<GenStruct> gen_space;
-        List<GridSpace<GenStruct>.CellValue> linear_gen_buff;
+		CircularBuffer<GenStruct>[] gen_buffers;
         // Error weight buffers
         List<double> imm_error_weights = new List<double>();
         List<double> grad_error_weights = new List<double>();
-        List<double> gen_error_weights = new List<double>();
+		List<double> gen_error_weights = new List<double>();
         
-        // Views to adapt inputs for ANN
+        // Views to adapt inputs for Approximator
         ListView<Vector> input_view;
         ListView<double> output_view;
         ListView<double> weight_view;
@@ -60,7 +58,7 @@ namespace AtmosphereAutopilot
         // flag of buffers update
         volatile bool updated = false;
 
-        // time is used for generalization info ageing
+        // time is used for generalization measures aging
         int cur_time = 0;
 
         // model to train
@@ -69,16 +67,18 @@ namespace AtmosphereAutopilot
 
         struct GenStruct
         {
+			public Vector coord;
             public double val;
             public int birth;
-            public GenStruct(double value, int time)
+            public GenStruct(double value, int time, Vector v)
             {
                 val = value;
                 birth = time;
+				coord = v;
             }
         }
 
-        public OnlineLinTrainer(LinApprox linprox_main, LinApprox linprox_gen, int imm_buf_size, int[] gen_cells, double[] l_gen_cell, double[] u_gen_cell,
+        public OnlineLinTrainer(LinApprox linprox_main, LinApprox linprox_gen, int imm_buf_size, double[] gen_triggers, int[] gen_buf_sizes,
             Action<Vector> input_method, Func<double> output_method)
         {
             this.linmodel = linprox_main;
@@ -89,40 +89,36 @@ namespace AtmosphereAutopilot
             imm_buf_vectors = new VectorArray(input_count, imm_buf_size);
             imm_training_inputs = new CircularBuffer<Vector>(imm_buf_size, true);
             imm_training_vectors = new VectorArray(input_count, imm_buf_size);
-            grad_training_inputs = new CircularBuffer<Vector>(imm_buf_size / 2, true);
+			grad_training = new CircularBuffer<GenStruct>(imm_buf_size / 2, true);
             grad_training_vectors = new VectorArray(input_count, imm_buf_size / 2);
             imm_buf_outputs = new CircularBuffer<double>(imm_buf_size, true);
             imm_training_outputs = new CircularBuffer<double>(imm_buf_size, true);
-            grad_training_outputs = new CircularBuffer<GenStruct>(imm_buf_size / 2, true);
             // bind vectors in circular buffers to vector arrays
             for (int i = 0; i < imm_buf_size; i++)
             {
                 imm_buf_inputs[i] = imm_buf_vectors[i];
                 imm_training_inputs[i] = imm_training_vectors[i];
                 if (i < imm_buf_size / 2)
-                    grad_training_inputs[i] = grad_training_vectors[i];
+                    grad_training[i] = new GenStruct(0.0, 0, grad_training_vectors[i]);
             }
             // Generalization space initialization
-            init_lower_cell = l_gen_cell;
-            init_upper_cell = u_gen_cell;
-            double[] active_l_cell = new double[init_lower_cell.Length];
-            double[] active_u_cell = new double[init_upper_cell.Length];
-            init_lower_cell.CopyTo(active_l_cell, 0);
-            init_upper_cell.CopyTo(active_u_cell, 0);
-            gen_space = new GridSpace<GenStruct>(input_count, gen_cells, active_l_cell, active_u_cell);
-			linear_gen_buff = gen_space.Linearized;
-            gen_space.put_method = GenBufPutCriteria;
+			this.gen_triggers = gen_triggers;
+			gen_space_size = 0;
+			gen_buffers = new CircularBuffer<GenStruct>[input_count];
+			for (int i = 0; i < input_count; i++)
+			{
+				gen_buffers[i] = new CircularBuffer<GenStruct>(gen_buf_sizes[i], true);
+				gen_space_size += gen_buf_sizes[i];
+				VectorArray gen_array = new VectorArray(input_count, gen_buf_sizes[i]);
+				for (int j = 0; j < gen_buf_sizes[i]; j++)
+					gen_buffers[i][j] = new GenStruct(0.0, 0, gen_array[j]);
+			}			
             // Delegates assignment
             input_update_dlg = input_method;
             output_update_dlg = output_method;
             // Preallocate buffers for matrix operations in linear approximator
-            int supercell_size = gen_cells[0];
-            for (int i = 1; i < input_count; i++)
-                supercell_size *= gen_cells[i];
-            linmodel.preallocate(imm_buf_size + supercell_size * 2 / 3);
+            linmodel.preallocate((int)(imm_buf_size * 1.5) + gen_buf_sizes.Sum());
             // Misc
-            dist1 = new Vector(input_count);
-            dist2 = new Vector(input_count);
             inputs_changed = new bool[input_count];
         }
 
@@ -176,7 +172,7 @@ namespace AtmosphereAutopilot
                         update_singularity(input_view);
                         linmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
                     }
-                    if (genmodel != null && linear_gen_buff.Count > 0)
+					if (genmodel != null && gen_list_view.Count > 0)
                     {
                         return_equal_weights();
                         genmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
@@ -203,15 +199,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("gradient_sensitivity", true)]
         public volatile float gradient_sensitivity = 0.05f;
 
-        //[AutoGuiAttr("grad_buf_size", false)]
-        public int grad_buf_size { get { return grad_training_outputs.Size; } }
-
-        //[AutoGuiAttr("upper_cell", false, "G6")]
-        public double[] gen_space_up_bounds { get { return gen_space.upper_cell; } }
-
-        //[AutoGuiAttr("lower_cell", false, "G6")]
-        public double[] gen_space_down_bounds { get { return gen_space.lower_cell; } }
-
         void update_imm_train_buf()
         {
             // There are new inputs from Unity thread
@@ -230,11 +217,10 @@ namespace AtmosphereAutopilot
                         if (Math.Abs((prev_output - cur_output) / max_output_value) >= gradient_sensitivity)
                         {
                             // we need to put the output we'll be overwriting soon into gradient buffer
-                            Vector wrt = grad_training_inputs.getWritingCell();
+                            Vector wrt = grad_training.getWritingCell().coord;
                             Vector v2write = imm_training_inputs[0];
                             v2write.DeepCopy(wrt);
-                            grad_training_inputs.Put(wrt);
-                            grad_training_outputs.Put(new GenStruct(imm_training_outputs[0], cur_time - imm_training_inputs.Size * last_time_elapsed));
+							grad_training.Put(new GenStruct(imm_training_outputs[0], cur_time - imm_training_inputs.Size * last_time_elapsed, wrt));
                         }
                     }
                     Vector writing_cell = imm_training_inputs.getWritingCell();
@@ -249,66 +235,49 @@ namespace AtmosphereAutopilot
             }
         }
 
-        // initial values for generalization space bounds
-        readonly double[] init_lower_cell;
-        readonly double[] init_upper_cell;
-
         [AutoGuiAttr("gen region decay", true, "G6")]
         public volatile float gen_limits_decay = 0.0002f;     // how fast generalization space is shrinking by itself
 
+		public double[] gen_triggers;
+
         void update_gen_space()
         {
-            // Shrink gen space
-            if (gen_element_removed)
-            {
-                for (int j = 0; j < input_count; j++)
-                {
-                    gen_space.upper_cell[j] = Math.Max(init_upper_cell[j], linear_gen_buff.Max(v => v.coord[j]));
-                    gen_space.lower_cell[j] = Math.Min(init_lower_cell[j], linear_gen_buff.Min(v => v.coord[j]));
-                }
-                gen_element_removed = false;
-            }
             // Push all new inputs to generalization space
             for (int i = added_to_imm - 1; i >= 0; i--)
             {
                 Vector new_coord = imm_training_inputs.getFromTail(i);
                 double new_val = imm_training_outputs.getFromTail(i);
-                // generalization space decay
-                for (int j = 0; j < input_count; j++)
-                {
-                    double init_span = init_upper_cell[j] - init_lower_cell[j];
-                    double upper_span = gen_space.upper_cell[j] - new_coord[j];
-                    double decayed_upper_span = upper_span * (1.0 - last_time_elapsed * gen_limits_decay);
-                    gen_space.upper_cell[j] = Math.Max(new_coord[j] + decayed_upper_span, init_upper_cell[j]);
-                    double lower_span = gen_space.lower_cell[j] - new_coord[j];
-                    double decayed_lower_span = lower_span * (1.0 - last_time_elapsed * gen_limits_decay);
-                    gen_space.lower_cell[j] = Math.Min(new_coord[j] + decayed_lower_span, init_lower_cell[j]);
-                }
-                // stretch generalization space size if needed
-                for (int j = 0; j < input_count; j++)
-                {
-                    double init_span = (init_upper_cell[j] - init_lower_cell[j]) / 2.0;
-                    if (new_coord[j] > gen_space.upper_cell[j])
-                        gen_space.upper_cell[j] = init_upper_cell[j] + Math.Ceiling((new_coord[j] - init_upper_cell[j]) / init_span) * init_span;
-                    if (new_coord[j] < gen_space.lower_cell[j])
-                        gen_space.lower_cell[j] = init_lower_cell[j] - Math.Ceiling((init_lower_cell[j] - new_coord[j]) / init_span) * init_span;
-                }
-                gen_space.recompute_region();
-                // push
-                gen_space.Put(new GenStruct(new_val, cur_time - last_time_elapsed * i), new_coord);
+				for (int j = 0; j < input_count; j++)
+				{
+					int cur_add_time = cur_time - i * last_time_elapsed;
+					var prev_cell = gen_buffers[j].getLast();
+					if (gen_buffers[j].Size == 0 || 
+						Math.Abs(prev_cell.coord[j] - new_coord[j]) >= gen_triggers[j])
+					{
+						var cell = gen_buffers[j].getWritingCell();
+						new_coord.DeepCopy(cell.coord);
+						gen_buffers[j].Put(new GenStruct(new_val, cur_add_time, cell.coord));
+					}
+				}
             }            
         }
 
-        ListSelector<GridSpace<GenStruct>.CellValue, Vector> gen_inputs_selector;
-        ListSelector<GridSpace<GenStruct>.CellValue, double> gen_output_selector;
-        ListSelector<GenStruct, double> grad_output_selector;
+		ListView<GenStruct> gen_list_view;
+
+        ListSelector<GenStruct, Vector> gen_inputs_selector;
+        ListSelector<GenStruct, double> gen_output_selector;
+
+		ListSelector<GenStruct, Vector> grad_input_selector;
+		ListSelector<GenStruct, double> grad_output_selector;
 
         void create_views()
         {
-            gen_inputs_selector = new ListSelector<GridSpace<GenStruct>.CellValue, Vector>(linear_gen_buff, cv =>  cv.coord);
-            gen_output_selector = new ListSelector<GridSpace<GenStruct>.CellValue, double>(linear_gen_buff, cv => cv.data.val);
-            grad_output_selector = new ListSelector<GenStruct, double>(grad_training_outputs, gs => gs.val);
-            input_view = new ListView<Vector>(imm_training_inputs, grad_training_inputs,  gen_inputs_selector);
+			gen_list_view = new ListView<GenStruct>(gen_buffers);
+			gen_inputs_selector = new ListSelector<GenStruct, Vector>(gen_list_view, cv => cv.coord);
+			gen_output_selector = new ListSelector<GenStruct, double>(gen_list_view, cv => cv.val);
+			grad_input_selector = new ListSelector<GenStruct, Vector>(grad_training, gs => gs.coord);
+            grad_output_selector = new ListSelector<GenStruct, double>(grad_training, gs => gs.val);
+			input_view = new ListView<Vector>(imm_training_inputs, grad_input_selector, gen_inputs_selector);
             output_view = new ListView<double>(imm_training_outputs, grad_output_selector, gen_output_selector);
             weight_view = new ListView<double>(imm_error_weights, grad_error_weights, gen_error_weights);
         }
@@ -387,6 +356,8 @@ namespace AtmosphereAutopilot
 		[AutoGuiAttr("nonlin_trigger", true)]
         public int nonlin_trigger = 100;
 
+		int gen_space_size;
+
         bool gen_element_removed = false;
 
         void update_weights()
@@ -403,49 +374,45 @@ namespace AtmosphereAutopilot
             // Gradient buffer error weights
             grad_error_weights.Clear();
             int k = 0;
-            while (k < grad_training_inputs.Size)
+            while (k < grad_training.Size)
             {
-                double k_weight = getAgeWeight(grad_training_outputs[k].birth);
+                double k_weight = getAgeWeight(grad_training[k].birth);
                 if (linear || k_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger)
                 {
                     grad_error_weights.Add(k_weight);
                     k++;
                 }
                 else
-                {
-                    grad_training_inputs.Get();
-                    grad_training_outputs.Get();
-                }
+                    grad_training.Get();
             }                
             // Generalization buffer weights
             gen_error_weights.Clear();
-            int j = 0;
-            
-            while (j < linear_gen_buff.Count)
-            {
-                double decayed_weight = getAgeWeight(linear_gen_buff[j].data.birth);
-                if (linear || decayed_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger)
-                {
-                    double weight = decayed_weight * base_gen_weight;
-                    gen_error_weights.Add(weight);
-                    j++;
-                }
-                else
-                {
-                    // we need to delete this record from generalization space, it's too old
-                    gen_space.Remove(linear_gen_buff[j]);
-                    gen_element_removed = true;
-                }
-            }
-            gen_space_fill_k = (float)(linear_gen_buff.Count / (double)gen_space.storage_length);
-            double popul_ratio = (double)imm_training_inputs.Size / (double)linear_gen_buff.Count;
+            for (int i = 0; i < gen_buffers.Length; i++)
+				for (int j = 0; j < gen_buffers[i].Size; j++)
+				{
+					double decayed_weight = getAgeWeight(gen_buffers[i][j].birth);
+					if (linear || decayed_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger)
+					{
+						double weight = decayed_weight * base_gen_weight;
+						gen_error_weights.Add(weight);
+					}
+					else
+					{
+						// we need to delete this record from generalization space, it's too old
+						gen_buffers[i].Get();
+						gen_element_removed = true;
+						j--;
+					}
+				}
+			gen_space_fill_k = gen_error_weights.Count / (float)gen_space_size;
+			double popul_ratio = (double)imm_training_inputs.Size / (double)gen_error_weights.Count;
             for (int i = 0; i < gen_error_weights.Count; i++)
                 gen_error_weights[i] *= popul_ratio;
         }
 
         void return_equal_weights()
         {
-            double popul_ratio = (double)imm_training_inputs.Size / (double)linear_gen_buff.Count;
+			double popul_ratio = (double)imm_training_inputs.Size / (double)gen_error_weights.Count;
             for (int i = 0; i < gen_error_weights.Count; i++)
                 gen_error_weights[i] /= popul_ratio * base_gen_weight;
         }
@@ -479,15 +446,17 @@ namespace AtmosphereAutopilot
 
         void reset_time()
         {
-            for (int i = 0; i < linear_gen_buff.Count; i++)
+            for (int i = 0; i < gen_buffers.Length; i++)
+				for (int j = 0; j < gen_buffers[i].Size; j++)
+				{
+					var cur_struct = gen_buffers[i][j];
+					int cur_age = Math.Min(cur_time - cur_struct.birth, max_age);
+					gen_buffers[i][j] = new GenStruct(cur_struct.val, max_age - cur_age, cur_struct.coord);
+				}            
+            for (int i = 0; i < grad_training.Size; i++)
             {
-                int cur_age = Math.Min(cur_time - linear_gen_buff[i].data.birth, max_age);
-                linear_gen_buff[i].data.birth = max_age - cur_age;
-            }
-            for (int i = 0; i < grad_training_outputs.Size; i++)
-            {
-                int cur_age = Math.Min(cur_time - grad_training_outputs[i].birth, max_age);
-                grad_training_outputs[i] = new GenStruct(grad_training_outputs[i].val, max_age - cur_age);
+                int cur_age = Math.Min(cur_time - grad_training[i].birth, max_age);
+				grad_training[i] = new GenStruct(grad_training[i].val, max_age - cur_age, grad_training[i].coord);
             }
             cur_time = max_age;
         }
@@ -497,29 +466,6 @@ namespace AtmosphereAutopilot
             int age = Math.Min(cur_time - birth, max_age);
             double result = 1.0 / (weight_time_decay * age + 1.0);
             return result;
-        }
-
-        Vector dist1, dist2;
-
-        void GenBufPutCriteria(GridSpace<GenStruct>.CellValue oldvalue, GenStruct newdata, Vector new_coord,
-            Vector cell_center, double[] cell_sizes)
-        {
-            if (newdata.birth - oldvalue.data.birth > 100)
-            {
-                new_coord.DeepCopy(oldvalue.coord);
-                oldvalue.data = newdata;
-                return;
-            }
-            Vector.Sub(oldvalue.coord, cell_center, dist1);
-            dist1.InverseScale(cell_sizes);
-            Vector.Sub(new_coord, cell_center, dist2);
-            dist2.InverseScale(cell_sizes);
-            if (dist1.SqrLength() > dist2.SqrLength())
-            {
-                new_coord.DeepCopy(oldvalue.coord);
-                oldvalue.data = newdata;
-                return;
-            }
         }
 
         #endregion

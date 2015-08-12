@@ -16,6 +16,9 @@ namespace AtmosphereAutopilot
 
         protected override void CtrlSurfaceUpdate(Vector3 vel)
         {
+			if (vessel.transform == null)
+				return;
+			
             Vector3 world_com = vessel.CoM + vessel.rb_velocity * TimeWarp.fixedDeltaTime;
             Vector3 local_com = baseTransform.InverseTransformPoint(world_com);
             float pitch_input = ignorePitch ? 0.0f : vessel.ctrlState.pitch;

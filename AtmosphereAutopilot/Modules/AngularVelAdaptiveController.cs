@@ -400,7 +400,7 @@ namespace AtmosphereAutopilot
             // let's get non-overshooting max v value, let's call it transit_max_v
             // we start on 0.0 aoa with transit_max_v and we must not overshoot res_max_aoa
             // while applying -1.0 input all the time
-			if (abs_cur_aoa < 0.26f && imodel.dyn_pressure > 10.0)
+			if (abs_cur_aoa < 0.26f && imodel.dyn_pressure > 100.0)
 			{
 				double transit_max_aoa = Math.Min(rad_max_aoa, res_max_aoa);
 				state_mat[0, 0] = transit_max_aoa / 2.0;
@@ -424,7 +424,7 @@ namespace AtmosphereAutopilot
 				}
 			}
 			else
-				if (imodel.dyn_pressure <= 10.0)
+				if (imodel.dyn_pressure <= 100.0)
 					transit_max_v = max_v_construction;
 				else
 				{
@@ -464,6 +464,7 @@ namespace AtmosphereAutopilot
                     if (scaled_aoa < 0.0f)
                     {
                         scaled_aoa *= 2.0f;
+						normalized_des_v = -1.0f;
                     }
                     scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa +
 						res_equilibr_v_upper * (1.0f - Math.Abs(scaled_aoa)) + v_offset,
@@ -475,6 +476,7 @@ namespace AtmosphereAutopilot
                     if (scaled_aoa < 0.0f)
                     {
                         scaled_aoa *= 2.0f;
+						normalized_des_v = 1.0f;
                     }
                     scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa +
 						res_equilibr_v_lower * (1.0f - Math.Abs(scaled_aoa)) + v_offset,
@@ -700,14 +702,18 @@ namespace AtmosphereAutopilot
 			{
 				Vector3 planet2ves = (vessel.transform.position - vessel.mainBody.position).normalized;
 				float zenith_angle = Vector3.Angle(planet2ves, vessel.transform.up);
-				if (zenith_angle > 20.0f && zenith_angle < 160.0f)
+				if (zenith_angle > 20.0f && zenith_angle < 160.0f && vessel.srfSpeed > 10.0)
 				{
-					Vector3 right_horizont_vector = Vector3.Cross(planet2ves, vessel.transform.up);
-					angle_btw_hor_sin = Vector3.Cross(vessel.transform.right, right_horizont_vector.normalized).magnitude;
-					if (Vector3.Dot(vessel.transform.right, planet2ves) < 0.0f)
-						angle_btw_hor_sin = -angle_btw_hor_sin;
-					if (Vector3.Dot(vessel.transform.right, right_horizont_vector) < 0.0f)
-						angle_btw_hor_sin = -angle_btw_hor_sin;
+					Vector3 right_horizont_vector = Vector3.Cross(planet2ves, vessel.srf_velocity);
+					Vector3 right_project = Vector3.ProjectOnPlane(vessel.transform.right, Vector3.Cross(vessel.srf_velocity, right_horizont_vector));
+					Vector3 roll_vector = Vector3.Cross(vessel.transform.right, right_project.normalized);
+					angle_btw_hor_sin = -Vector3.Dot(roll_vector, vessel.transform.up);
+					//angle_btw_hor_sin = Vector3.Project(vessel.transform.right, Vector3.Cross(vessel.srf_velocity, right_horizont_vector)).magnitude;
+					//angle_btw_hor_sin = Vector3.Cross(vessel.transform.right, right_horizont_vector.normalized).magnitude;
+					//if (Vector3.Dot(vessel.transform.right, planet2ves) < 0.0f)
+					//	angle_btw_hor_sin = -angle_btw_hor_sin;
+					//if (Vector3.Dot(vessel.transform.right, right_horizont_vector) < 0.0f)
+					//	angle_btw_hor_sin = -angle_btw_hor_sin;
 					if (Math.Abs(angle_btw_hor_sin) <= Math.Sin(leveler_snap_angle * dgr2rad))
 					{
 						angle_btw_hor = Mathf.Asin(angle_btw_hor_sin);
