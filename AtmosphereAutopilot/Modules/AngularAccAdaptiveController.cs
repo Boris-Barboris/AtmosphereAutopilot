@@ -197,7 +197,7 @@ namespace AtmosphereAutopilot
                 authority = lin_model.B[1, 0];
 
                 // check if we have inadequate model authority
-                if (Math.Abs(authority) < 1e-4)
+                if (Math.Abs(authority) < 1e-6)
                     return cntrl.pitch;
 
                 // get model prediction for next frame

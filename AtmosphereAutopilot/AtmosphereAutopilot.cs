@@ -51,7 +51,7 @@ namespace AtmosphereAutopilot
 
         void Start()
         {
-            Debug.Log("[Autopilot]: AtmosphereAutopilot starting up!"); 
+			Debug.Log("[AtmosphereAutopilot]: starting up!"); 
             DontDestroyOnLoad(this);
             classify_aero();
             initialize_types();
@@ -80,9 +80,10 @@ namespace AtmosphereAutopilot
         {
             foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
             {
-                if (a.FullName.Equals("FerramAerospaceResearch"))
+                if (a.GetName().Name.Equals("FerramAerospaceResearch"))
                 {
                     AeroModel = AerodinamycsModel.FAR;
+					Debug.Log("[AtmosphereAutopilot]: FAR aerodynamics detected");
                     return;
                 }
             }
@@ -160,7 +161,7 @@ namespace AtmosphereAutopilot
 				return;
             if (!autopilot_module_lists.ContainsKey(v))
             {
-                Debug.Log("[Autopilot] new vessel, creating new module map");
+                Debug.Log("[AtmosphereAutopilot]: new vessel, creating new module map");
                 autopilot_module_lists[v] = new Dictionary<Type, AutopilotModule>();
             }
             if (!autopilot_module_lists[v].ContainsKey(typeof(TopModuleManager)))
@@ -170,7 +171,7 @@ namespace AtmosphereAutopilot
         void vesselSwitch(Vessel v)
         {
             serialize_active_modules();
-            Debug.Log("[Autopilot] vessel switch");
+			Debug.Log("[AtmosphereAutopilot]: vessel switch");
             load_manager_for_vessel(v);
 			ActiveVessel = v;
         }

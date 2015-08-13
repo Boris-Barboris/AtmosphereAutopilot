@@ -193,10 +193,10 @@ namespace AtmosphereAutopilot
 
         int added_to_imm = 0;                   // how many inputs where added to training imm_buf during last Train() call
 
-        [AutoGuiAttr("max value decay", true, "G8")]
+        [AutoGuiAttr("max value decay", true, "G6")]
         public volatile float max_value_decay = 0.001f;
 
-        [AutoGuiAttr("gradient_sensitivity", true)]
+        [AutoGuiAttr("gradient_sensitivity", true, "G6")]
         public volatile float gradient_sensitivity = 0.05f;
 
         void update_imm_train_buf()
@@ -234,9 +234,6 @@ namespace AtmosphereAutopilot
                 }
             }
         }
-
-        [AutoGuiAttr("gen region decay", true, "G6")]
-        public volatile float gen_limits_decay = 0.0002f;     // how fast generalization space is shrinking by itself
 
 		public double[] gen_triggers;
 
@@ -290,19 +287,19 @@ namespace AtmosphereAutopilot
         //[AutoGuiAttr("weight decay factor", false)]
         public volatile float weight_time_decay = 0.02f;
 
-        [AutoGuiAttr("linear decay factor", true, "G8")]
+        [AutoGuiAttr("linear decay factor", true, "G6")]
         public volatile float linear_time_decay = 0.02f;
 
-        [AutoGuiAttr("nonlinear decay factor", true, "G8")]
+        [AutoGuiAttr("nonlinear decay factor", true, "G6")]
         public volatile float nonlin_time_decay = 0.5f;
 
-        [AutoGuiAttr("min gen weight", false, "G8")]
+        [AutoGuiAttr("min gen weight", false, "G6")]
         public volatile float min_gen_weight = 0.005f;
 
         [AutoGuiAttr("nonlin_cutoff_time", true)]
         public volatile int nonlin_cutoff_time  = 1000;
 
-        [AutoGuiAttr("linear criteria", true, "G8")]
+        [AutoGuiAttr("linear criteria", true, "G6")]
         public volatile float linear_err_criteria = 0.05f;
 
         [AutoGuiAttr("linear", false)]

@@ -166,7 +166,12 @@ namespace AtmosphereAutopilot
         protected PitchYawAngularVelocityController(Vessel vessel, string module_name,
             int wnd_id, int axis)
             : base(vessel, module_name, wnd_id, axis)
-        { }
+        {
+			max_input_aoa = max_aoa * dgr2rad;
+			min_input_aoa = -max_input_aoa;
+			max_g_aoa = max_input_aoa;
+			min_g_aoa = -max_g_aoa;
+		}
 
         protected Matrix eq_A = new Matrix(2, 2);
         protected Matrix eq_b = new Matrix(2, 1);
@@ -203,7 +208,7 @@ namespace AtmosphereAutopilot
         protected float min_aoa_v;
 
         [AutoGuiAttr("moder_filter", true, "G6")]
-        protected float moder_filter = 4.0f;
+        protected float moder_filter = 3.0f;
 
         protected Matrix state_mat = new Matrix(3, 1);
         protected Matrix input_mat = new Matrix(1, 1);
@@ -708,12 +713,6 @@ namespace AtmosphereAutopilot
 					Vector3 right_project = Vector3.ProjectOnPlane(vessel.transform.right, Vector3.Cross(vessel.srf_velocity, right_horizont_vector));
 					Vector3 roll_vector = Vector3.Cross(vessel.transform.right, right_project.normalized);
 					angle_btw_hor_sin = -Vector3.Dot(roll_vector, vessel.transform.up);
-					//angle_btw_hor_sin = Vector3.Project(vessel.transform.right, Vector3.Cross(vessel.srf_velocity, right_horizont_vector)).magnitude;
-					//angle_btw_hor_sin = Vector3.Cross(vessel.transform.right, right_horizont_vector.normalized).magnitude;
-					//if (Vector3.Dot(vessel.transform.right, planet2ves) < 0.0f)
-					//	angle_btw_hor_sin = -angle_btw_hor_sin;
-					//if (Vector3.Dot(vessel.transform.right, right_horizont_vector) < 0.0f)
-					//	angle_btw_hor_sin = -angle_btw_hor_sin;
 					if (Math.Abs(angle_btw_hor_sin) <= Math.Sin(leveler_snap_angle * dgr2rad))
 					{
 						angle_btw_hor = Mathf.Asin(angle_btw_hor_sin);

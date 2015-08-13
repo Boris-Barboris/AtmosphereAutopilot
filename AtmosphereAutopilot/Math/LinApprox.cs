@@ -83,22 +83,23 @@ namespace AtmosphereAutopilot
                 if (inputs_varied[i])
                     params_varied++;
             
-            // fill X matrix
+            // fill X and Y matrix
             Matrix.Realloc(icount, params_varied, ref X);
+			Matrix.Realloc(icount, 1, ref Y);
             for (int i = 0; i < icount; i++)
             {
                 X[i, 0] = 1.0;
+				Y[i, 0] = outputs[i];
                 int j = 0;
                 for (int input = 0; input < input_count; input++)
-                    if (inputs_varied[input])
-                    {
-                        j++;
-                        X[i, j] = inputs[i][input];
-                    }
+					if (inputs_varied[input])
+					{
+						j++;
+						X[i, j] = inputs[i][input];
+					}
+					else
+						Y[i, 0] -= inputs[i][input] * tpars[input + 1];
             }
-            
-            // fill Y matrix
-            Matrix.ChangeData(outputs, icount, ref Y, true);
 
             Matrix.Transpose(X, ref XtW);
             // Multiply Xt on W (diagonal matrix of weights)
@@ -121,8 +122,8 @@ namespace AtmosphereAutopilot
                             j++;
                             tpars[input + 1] = new_params[j, 0];
                         }
-                        else
-                            tpars[input] = 0.0;
+						//else
+						//	tpars[input] = 0.0;
                 }
             }
             catch (MSingularException)
