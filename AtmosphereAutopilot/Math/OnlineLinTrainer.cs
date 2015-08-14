@@ -157,9 +157,8 @@ namespace AtmosphereAutopilot
         {
             if (updated)
             {
-                update_imm_train_buf();
+                update_train_buf();
                 updated = false;
-                update_gen_space();
                 if (cur_time > time_reset)
                     reset_time();
                 update_weights();
@@ -176,6 +175,10 @@ namespace AtmosphereAutopilot
                     {
                         return_equal_weights();
                         genmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
+						// let's shift general solution so that is almost precise on immediate inputs
+						for (int i = 0; i < inputs_changed.Length; i++)
+							inputs_changed[i] = false;
+						genmodel.weighted_lsqr(imm_training_inputs, imm_training_outputs, imm_error_weights, inputs_changed);
                     }
                     check_linearity();
                 }
@@ -199,7 +202,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("gradient_sensitivity", true, "G6")]
         public volatile float gradient_sensitivity = 0.05f;
 
-        void update_imm_train_buf()
+        void update_train_buf()
         {
             // There are new inputs from Unity thread
             lock (imm_buf_inputs)
@@ -222,6 +225,21 @@ namespace AtmosphereAutopilot
                             v2write.DeepCopy(wrt);
 							grad_training.Put(new GenStruct(imm_training_outputs[0], cur_time - imm_training_inputs.Size * last_time_elapsed, wrt));
                         }
+						// let's update generalization buffers
+						Vector new_coord = imm_training_inputs[0];
+						for (int j = 0; j < input_count; j++)
+						{
+							int cur_add_time = cur_time - imm_training_inputs.Size * last_time_elapsed;
+							var prev_cell = gen_buffers[j].getLast();
+							if (gen_buffers[j].Size == 0 ||
+								Math.Abs(prev_cell.coord[j] - new_coord[j]) >
+								(gen_buffers[j].Size / (double)gen_buffers[j].Capacity) * gen_triggers[j])
+							{
+								var cell = gen_buffers[j].getWritingCell();
+								new_coord.DeepCopy(cell.coord);
+								gen_buffers[j].Put(new GenStruct(prev_output, cur_add_time, cell.coord));
+							}
+						}
                     }
                     Vector writing_cell = imm_training_inputs.getWritingCell();
                     imm_buf_inputs.Get().DeepCopy(writing_cell);
@@ -236,28 +254,6 @@ namespace AtmosphereAutopilot
         }
 
 		public double[] gen_triggers;
-
-        void update_gen_space()
-        {
-            // Push all new inputs to generalization space
-            for (int i = added_to_imm - 1; i >= 0; i--)
-            {
-                Vector new_coord = imm_training_inputs.getFromTail(i);
-                double new_val = imm_training_outputs.getFromTail(i);
-				for (int j = 0; j < input_count; j++)
-				{
-					int cur_add_time = cur_time - i * last_time_elapsed;
-					var prev_cell = gen_buffers[j].getLast();
-					if (gen_buffers[j].Size == 0 || 
-						Math.Abs(prev_cell.coord[j] - new_coord[j]) >= gen_triggers[j])
-					{
-						var cell = gen_buffers[j].getWritingCell();
-						new_coord.DeepCopy(cell.coord);
-						gen_buffers[j].Put(new GenStruct(new_val, cur_add_time, cell.coord));
-					}
-				}
-            }            
-        }
 
 		ListView<GenStruct> gen_list_view;
 
@@ -315,8 +311,6 @@ namespace AtmosphereAutopilot
         {
             if (imm_training_inputs.Size > 0)
             {
-                //if (output_view != null)
-                //    max_output_value = Math.Max(output_view.Max(v => Math.Abs(v)), 0.01);
                 double sum_error = 0.0;
                 for (int i = 0; i < imm_training_inputs.Size; i++)
                 {

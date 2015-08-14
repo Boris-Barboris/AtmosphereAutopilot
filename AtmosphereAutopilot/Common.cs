@@ -184,5 +184,10 @@ namespace AtmosphereAutopilot
         {
             return y0 + dy1 * dt + 0.5 * dy2 * dt * dt;
         }
+
+		public static string ToString(this Vector3d v, string format)
+		{
+			return '(' + v.x.ToString(format) + ", " + v.y.ToString(format) + ", " + v.z.ToString(format) + ')';
+		}
     }
 }

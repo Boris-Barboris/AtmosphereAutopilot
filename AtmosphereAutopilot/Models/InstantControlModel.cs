@@ -588,10 +588,10 @@ namespace AtmosphereAutopilot
             }
         }
 
-        [AutoGuiAttr("engines torque", false, "G5")]
+        [AutoGuiAttr("e_torque", false, "G4")]
         public Vector3 engines_torque;
 
-        [AutoGuiAttr("engines thrust", false, "G5")]
+        [AutoGuiAttr("e_thrust", false, "G4")]
         public Vector3 engines_thrust;
 
         float abs_thrust;
@@ -629,10 +629,10 @@ namespace AtmosphereAutopilot
 
         Vector3 prev_engines_torque;
 
-        [AutoGuiAttr("e_torque_k0", false, "G5")]
+        [AutoGuiAttr("e_torq_k0", false, "G4")]
         Vector3 engines_torque_k0;
 
-        [AutoGuiAttr("e_torque_k1", false, "G5")]
+        [AutoGuiAttr("e_torq_k1", false, "G4")]
         Vector3 engines_torque_k1;
 
         // Stupid linear authority of gimbals
@@ -690,7 +690,7 @@ namespace AtmosphereAutopilot
         //[AutoGuiAttr("noninert_acc", false, "G6")]
         Vector3d noninert_acc;
 
-        [AutoGuiAttr("sum_acc", false, "G6")]
+        [AutoGuiAttr("sum_acc", false, "G5")]
         Vector3d sum_acc;
 
         [AutoGuiAttr("pitch_gravity_acc", false, "G6")]
@@ -783,7 +783,7 @@ namespace AtmosphereAutopilot
 			pitch_trainer.nonlin_time_decay = 0.005f;
             pitch_trainer.linear_err_criteria = 0.02f;
 			pitch_trainer.nonlin_trigger = 200;
-			pitch_trainer.nonlin_cutoff_time = 500;
+			pitch_trainer.nonlin_cutoff_time = 1000;
             trainers[0] = pitch_trainer;
 
 			roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, roll_aero_torque_model_gen, IMM_BUF_SIZE, 
@@ -794,7 +794,7 @@ namespace AtmosphereAutopilot
 			roll_trainer.nonlin_time_decay = 0.005f;
             roll_trainer.linear_err_criteria = 0.02f;
 			roll_trainer.nonlin_trigger = 200;
-			roll_trainer.nonlin_cutoff_time = 500;
+			roll_trainer.nonlin_cutoff_time = 1000;
             trainers[1] = roll_trainer;
 
 			yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, yaw_aero_torque_model_gen, IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
@@ -805,28 +805,28 @@ namespace AtmosphereAutopilot
 			yaw_trainer.nonlin_time_decay = 0.005f;
             yaw_trainer.linear_err_criteria = 0.02f;
 			yaw_trainer.nonlin_trigger = 200;
-			yaw_trainer.nonlin_cutoff_time = 500;
+			yaw_trainer.nonlin_cutoff_time = 1000;
             trainers[2] = yaw_trainer;
 
 			pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, null, IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
 				new int[] { 20, 20 }, pitch_lift_input_method, pitch_lift_output_method);
-            pitch_lift_trainer.base_gen_weight = 10.0f;
+            pitch_lift_trainer.base_gen_weight = 0.1f;
             pitch_lift_trainer.max_value_decay = 0.0005f;
             pitch_lift_trainer.linear_time_decay = 0.002f;
 			pitch_lift_trainer.nonlin_time_decay = 0.002f;
-            pitch_lift_trainer.linear_err_criteria = 0.05f;
+            pitch_lift_trainer.linear_err_criteria = 0.02f;
 			pitch_lift_trainer.nonlin_trigger = 200;
-			pitch_lift_trainer.nonlin_cutoff_time = 500;
+			pitch_lift_trainer.nonlin_cutoff_time = 1000;
 
 			yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, null, IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
 				new int[] { 20, 20 }, yaw_lift_input_method, yaw_lift_output_method);
-            yaw_lift_trainer.base_gen_weight = 10.0f;
+            yaw_lift_trainer.base_gen_weight = 0.1f;
             yaw_lift_trainer.max_value_decay = 0.0005f;
             yaw_lift_trainer.linear_time_decay = 0.002f;
 			yaw_lift_trainer.nonlin_time_decay = 0.002f;
-            yaw_lift_trainer.linear_err_criteria = 0.05f;
+            yaw_lift_trainer.linear_err_criteria = 0.02f;
 			yaw_lift_trainer.nonlin_trigger = 200;
-			yaw_lift_trainer.nonlin_cutoff_time = 500;
+			yaw_lift_trainer.nonlin_cutoff_time = 1000;
         }
 
         /// <summary>
