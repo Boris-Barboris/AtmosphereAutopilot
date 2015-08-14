@@ -34,9 +34,9 @@
 */
 
 /*
-Copyright 2015, Boris-Barboris
-
-This file is part of Atmosphere Autopilot.
+Atmosphere Autopilot, plugin for Kerbal Space Program.
+Copyright (C) 2015, Baranin Alexander aka Boris-Barboris.
+ 
 Atmosphere Autopilot is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
