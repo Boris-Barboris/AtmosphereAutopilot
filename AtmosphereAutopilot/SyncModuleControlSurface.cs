@@ -41,6 +41,22 @@ namespace AtmosphereAutopilot
             float roll_input = ignoreRoll ? 0.0f : vessel.ctrlState.roll;
             float yaw_input = ignoreYaw ? 0.0f : vessel.ctrlState.yaw;
 
+            if (this.deploy)
+            {
+                if (this.deployInvert)
+                {
+                    pitch_input = ignorePitch ? 0.0f : -1.0f;
+                    roll_input = ignoreRoll ? 0.0f : -1.0f;
+                    yaw_input = ignoreYaw ? 0.0f : -1.0f;
+                }
+                else
+                {
+                    pitch_input = ignorePitch ? 0.0f : 1.0f;
+                    roll_input = ignoreRoll ? 0.0f : 1.0f;
+                    yaw_input = ignoreYaw ? 0.0f : 1.0f;
+                }
+            }
+
             float spd_factor = TimeWarp.fixedDeltaTime * CSURF_SPD;
 
             if (!ignorePitch)

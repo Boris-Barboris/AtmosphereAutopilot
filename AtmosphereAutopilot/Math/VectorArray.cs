@@ -43,7 +43,7 @@ namespace AtmosphereAutopilot
             data = new double[data_size];
         }
 
-        double[] data;
+        public double[] data;
 
         public Vector this[int index]
         {

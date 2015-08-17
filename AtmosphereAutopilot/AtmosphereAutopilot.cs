@@ -250,6 +250,8 @@ namespace AtmosphereAutopilot
         {
 			if (ActiveVessel == null)
 				return;
+            if (!HighLogic.LoadedSceneIsFlight)
+                return;
             if (!styles_init)
             {
                 GUIStyles.Init();

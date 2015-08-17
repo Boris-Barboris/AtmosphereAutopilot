@@ -120,6 +120,7 @@ namespace AtmosphereAutopilot
             linmodel.preallocate((int)(imm_buf_size * 1.5) + gen_buf_sizes.Sum());
             // Misc
             inputs_changed = new bool[input_count];
+            nothing_changed = new bool[input_count];
         }
 
         #region DataSourceThread
@@ -153,6 +154,8 @@ namespace AtmosphereAutopilot
 
         #region TrainingThread
 
+        bool[] nothing_changed;
+
         public void Train()
         {
             if (updated)
@@ -170,15 +173,13 @@ namespace AtmosphereAutopilot
                     {
                         update_singularity(input_view);
                         linmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
+                        linmodel.weighted_lsqr(imm_training_inputs, imm_training_outputs, imm_error_weights, nothing_changed);
                     }
 					if (genmodel != null && gen_list_view.Count > 0)
                     {
                         return_equal_weights();
                         genmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
-						// let's shift general solution so that is almost precise on immediate inputs
-						for (int i = 0; i < inputs_changed.Length; i++)
-							inputs_changed[i] = false;
-						genmodel.weighted_lsqr(imm_training_inputs, imm_training_outputs, imm_error_weights, inputs_changed);
+                        genmodel.weighted_lsqr(imm_training_inputs, imm_training_outputs, imm_error_weights, nothing_changed);
                     }
                     check_linearity();
                 }
@@ -347,6 +348,9 @@ namespace AtmosphereAutopilot
 		[AutoGuiAttr("nonlin_trigger", true)]
         public int nonlin_trigger = 100;
 
+        [AutoGuiAttr("grad_buf_length", false)]
+        int grad_buf_length { get { return grad_training.Size; } }
+
 		int gen_space_size;
 
         bool gen_element_removed = false;
@@ -368,8 +372,7 @@ namespace AtmosphereAutopilot
             while (k < grad_training.Size)
             {
                 double k_weight = getAgeWeight(grad_training[k].birth);
-                if (linear || k_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger ||
-					grad_training.Size < 2)
+                if (linear || k_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger || grad_training.Size < 2)
                 {
                     grad_error_weights.Add(k_weight);
                     k++;
@@ -383,8 +386,7 @@ namespace AtmosphereAutopilot
 				for (int j = 0; j < gen_buffers[i].Size; j++)
 				{
 					double decayed_weight = getAgeWeight(gen_buffers[i][j].birth);
-					if (linear || decayed_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger ||
-						gen_buffers[i].Size < 3)
+                    if (linear || decayed_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger || gen_buffers[i].Size < 2)
 					{
 						double weight = decayed_weight * base_gen_weight;
 						gen_error_weights.Add(weight);

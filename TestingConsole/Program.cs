@@ -33,11 +33,7 @@ namespace TestingConsole
         static void Main(string[] args)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
-            //linear_real_data_training();
-            List<double> a = new List<double>(10);
-            a.Add(3.0);
-            a[0] *= 3.0;
-            Console.WriteLine(a.ToString());
+            line_translation_test();            
             Console.ReadKey(true);
         }
 
@@ -150,38 +146,38 @@ namespace TestingConsole
             Console.WriteLine("finished");
         }
 
-        static void trainingPerformanceTest_lin()
-        {
-            List<double> inputs = new List<double>();
-            List<double> outputs = new List<double>();
-            int set_size = 100;
-            for (int j = 0; j < set_size; j++)
-            {
-                inputs.Add(j);
-                outputs.Add(j * 0.5);
-            }
-            for (int j = 0; j < set_size; j++)
-            {
-                inputs.Add(j);
-                outputs.Add(j * 0.5);
-            }
-            LinApprox ann = new LinApprox(1);
-            int i = 0;
-            OnlineLinTrainer trainer = new OnlineLinTrainer(ann, null, 10, new int[2] { 9, 9 },
-                new double[] { -0.1 }, new double[] { 0.1 },
-                (arr) => { arr[0] = inputs[i]; },
-                () => { return outputs[i]; });
-            while (i < set_size)
-            {
-                for (int j = 0; j < 5 && i < set_size; j++)
-                {
-                    trainer.UpdateState(0);
-                    i++;
-                }
-                trainer.Train();
-            }
-            Console.WriteLine("finished");
-        }
+        //static void trainingPerformanceTest_lin()
+        //{
+        //    List<double> inputs = new List<double>();
+        //    List<double> outputs = new List<double>();
+        //    int set_size = 100;
+        //    for (int j = 0; j < set_size; j++)
+        //    {
+        //        inputs.Add(j);
+        //        outputs.Add(j * 0.5);
+        //    }
+        //    for (int j = 0; j < set_size; j++)
+        //    {
+        //        inputs.Add(j);
+        //        outputs.Add(j * 0.5);
+        //    }
+        //    LinApprox ann = new LinApprox(1);
+        //    int i = 0;
+        //    OnlineLinTrainer trainer = new OnlineLinTrainer(ann, null, 10, new int[2] { 9, 9 },
+        //        new double[] { -0.1 }, new double[] { 0.1 },
+        //        (arr) => { arr[0] = inputs[i]; },
+        //        () => { return outputs[i]; });
+        //    while (i < set_size)
+        //    {
+        //        for (int j = 0; j < 5 && i < set_size; j++)
+        //        {
+        //            trainer.UpdateState(0);
+        //            i++;
+        //        }
+        //        trainer.Train();
+        //    }
+        //    Console.WriteLine("finished");
+        //}
 
         static void linear_real_data_training()
         {
@@ -213,8 +209,7 @@ namespace TestingConsole
             double cpu_add = 0.5;
 
             LinApprox model = new LinApprox(2);
-            OnlineLinTrainer trainer = new OnlineLinTrainer(model, null, 10, new int[2] { 11, 11 },
-                new double[] { -0.1, -0.1 }, new double[] { 0.1, 0.1 },
+            OnlineLinTrainer trainer = new OnlineLinTrainer(model, null, 10, new double[] { 0.05, 0.05 }, new int[2] { 20, 20 },
                 (arr) => { arr[0] = aoa[frame]; arr[1] = control[frame]; },
                 () => { return acc[frame] / density[frame] / airspd[frame] / airspd[frame] * 2e4; });
 
@@ -250,6 +245,26 @@ namespace TestingConsole
         {
             l.RemoveRange(0, from_start);
             l.RemoveRange(l.Count - 1 - from_end, from_end);
+        }
+
+        static void line_translation_test()
+        {
+            VectorArray inputs_va = new VectorArray(1, 4);
+            inputs_va.data[0] = 0.0;
+            inputs_va.data[1] = 1.0;
+            inputs_va.data[2] = 0.25;
+            inputs_va.data[3] = 0.5;
+            List<Vector> inputs = new List<Vector>();
+            for (int i = 0; i < 4; i++)
+                inputs.Add(inputs_va[i]);
+            List<Vector> inputs_short = new List<Vector>();
+            inputs_short.Add(inputs_va[0]);
+            inputs_short.Add(inputs_va[1]);
+            double[] outputs = new double[] { 0.0, 1.0, 0.5, 0.75 };
+            double[] outputs_short = new double[] { 0.0, 1.0 };
+            LinApprox approx = new LinApprox(1);
+            approx.weighted_lsqr(inputs, outputs, new double[4] { 1.0, 1.0, 1.0, 1.0 }, new bool[1] { true });
+            approx.weighted_lsqr(inputs_short, outputs_short, new double[2] { 1.0, 1.0 }, new bool[1] { false });            
         }
     }
 }

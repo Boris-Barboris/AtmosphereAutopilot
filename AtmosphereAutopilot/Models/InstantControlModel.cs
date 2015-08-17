@@ -325,7 +325,7 @@ namespace AtmosphereAutopilot
                 Part part = all_parts ? vessel.parts[pi] : massive_parts[pi].part;
                 if (part.physicalSignificance == Part.PhysicalSignificance.NONE)
                     continue;
-                if (!part.isAttached || part.State == PartStates.DEAD)
+                if (part.vessel != vessel || part.State == PartStates.DEAD)
                 {
                     moments_cycle_counter = 0;      // iterating over old part list
                     continue;
@@ -351,7 +351,7 @@ namespace AtmosphereAutopilot
                 Part part = all_parts ? vessel.parts[pi] : massive_parts[pi].part;
                 if (part.physicalSignificance == Part.PhysicalSignificance.NONE)
                     continue;
-                if (!part.isAttached || part.State == PartStates.DEAD)
+                if (part.vessel != vessel || part.State == PartStates.DEAD)
                 {
                     moments_cycle_counter = 0;      // iterating over old part list
                     continue;
@@ -393,13 +393,13 @@ namespace AtmosphereAutopilot
                 {
                     massive_parts.Add(new PartMass(part, mass));
                     MOI += moi;
-                    AM -= am;
+                    AM -= am;                   // minus because left handed Unity
                     sum_mass += mass;
                 }
                 else
                 {
                     partial_MOI += moi;
-                    partial_AM -= am;           // minus because fucking left handed unity
+                    partial_AM -= am;           // minus because left handed Unity
                 }
             }
             if (all_parts)
@@ -415,7 +415,7 @@ namespace AtmosphereAutopilot
                 world_v -= Vector3.Cross(cur_CoM - CoM, cntrl_part_to_world * angular_vel);
             }
             angular_vel -= world_to_cntrl_part * vessel.mainBody.angularVelocity;     // remember that unity physics reference frame is rotating
-            sum_mass = vessel.GetTotalMass();
+            //sum_mass = vessel.GetTotalMass();
             world_v += Krakensbane.GetFrameVelocity();
         }
 
@@ -489,27 +489,33 @@ namespace AtmosphereAutopilot
 				aoa_buf[ROLL].Put(0.0f);
         }
 
+        public const float CSURF_PRECISION_SNAP = 0.0087f;
+
 		void update_control(FlightCtrlState state)
 		{
             for (int i = 0; i < 3; i++)
             {
                 float raw_input = Common.Clampf(ControlUtils.getControlFromState(state, i), 1.0f);
                 input_buf[i].Put(raw_input);
+                float csurf_input = 0.0f;
                 if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.Stock)
                 {
                     if (csurf_buf[i].Size >= 1 && sequential_dt)
-                        csurf_buf[i].Put(stock_actuator_blend(csurf_buf[i].getLast(), raw_input));
+                        csurf_input = stock_actuator_blend(csurf_buf[i].getLast(), raw_input);
                     else
-                        csurf_buf[i].Put(raw_input);
+                        csurf_input = raw_input;
                 }
                 else
                     if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
                     {
                         if (csurf_buf[i].Size >= 1 && sequential_dt)
-                            csurf_buf[i].Put(far_exponential_blend(csurf_buf[i].getLast(), raw_input));
+                            csurf_input = far_exponential_blend(csurf_buf[i].getLast(), raw_input);
                         else
-                            csurf_buf[i].Put(raw_input);
+                            csurf_input = raw_input;
                     }
+                //if (Math.Abs(csurf_input) < CSURF_PRECISION_SNAP)
+                //    csurf_input = 0.0f;
+                csurf_buf[i].Put(csurf_input);
             }
 		}
 
