@@ -62,19 +62,19 @@ namespace AtmosphereAutopilot
             if (!ignorePitch)
             {
                 float axis_factor = Vector3.Dot(vessel.transform.right, baseTransform.right);
-                float new_pitch_action = pitch_input * axis_factor * Math.Sign(local_com.y);
+                float new_pitch_action = pitch_input * axis_factor * Math.Sign(Vector3.Dot(world_com - baseTransform.position, vessel.transform.up));
                 prev_pitch_action = prev_pitch_action + Common.Clampf(new_pitch_action - prev_pitch_action, spd_factor * Math.Abs(axis_factor));
             }
             if (!ignoreRoll)
             {
-                float axis_factor = Vector3.Dot(vessel.transform.up, baseTransform.up);
-                float new_roll_action = roll_input * axis_factor * -Math.Sign(local_com.x);
-                prev_roll_action = prev_roll_action + Common.Clampf(new_roll_action - prev_roll_action, spd_factor * Math.Abs(axis_factor));
+                float axis_factor = Math.Abs(Vector3.Dot(vessel.transform.up, baseTransform.up));
+                float new_roll_action = roll_input * axis_factor * -Math.Sign(Vector3.Dot(world_com - baseTransform.position, baseTransform.right));
+                prev_roll_action = prev_roll_action + Common.Clampf(new_roll_action - prev_roll_action, spd_factor * axis_factor);
             }
             if (!ignoreYaw)
             {
                 float axis_factor = Vector3.Dot(vessel.transform.forward, baseTransform.right);
-                float new_yaw_action = yaw_input * axis_factor * Math.Sign(local_com.y);
+                float new_yaw_action = yaw_input * axis_factor * Math.Sign(Vector3.Dot(world_com - baseTransform.position, vessel.transform.up));
                 prev_yaw_action = prev_yaw_action + Common.Clampf(new_yaw_action - prev_yaw_action, spd_factor * Math.Abs(axis_factor));
             }
 

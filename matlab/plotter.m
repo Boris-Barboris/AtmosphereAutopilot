@@ -9,7 +9,7 @@ figure('Name','Telemetry Plotter',...
 hold on
 plot(time, acc,'r','Marker','.','MarkerSize',5)
 plot(time, predict,'r-.')
-plot(time, 1.0 .* control,'k','Marker','.','MarkerSize',5)
+plot(time, 30.0 .* control,'k','Marker','.','MarkerSize',5)
 plot(time, aoa,'b','Marker','.','MarkerSize',5)
 plot(time, 1.0 .* v,'g')
 hold off
