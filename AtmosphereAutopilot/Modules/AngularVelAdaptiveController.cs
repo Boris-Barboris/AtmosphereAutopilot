@@ -700,6 +700,11 @@ namespace AtmosphereAutopilot
                     min_input_v = (float)Common.simple_filter(new_min_input_v, min_input_v, moder_filter);
                 }
             }
+            else
+            {
+                max_input_v = max_v_construction;
+                min_input_v = -max_v_construction;
+            }
 
 			// wing level snapping
 			float snapping_vel = 0.0f;
