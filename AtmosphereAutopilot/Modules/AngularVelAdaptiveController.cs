@@ -469,7 +469,7 @@ namespace AtmosphereAutopilot
                     if (scaled_aoa < 0.0f)
                     {
                         scaled_aoa *= 2.0f;
-						normalized_des_v = -1.0f;
+                        normalized_des_v = Math.Min(normalized_des_v, scaled_aoa);
                     }
                     scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa +
 						res_equilibr_v_upper * (1.0f - Math.Abs(scaled_aoa)) + v_offset,
@@ -481,7 +481,7 @@ namespace AtmosphereAutopilot
                     if (scaled_aoa < 0.0f)
                     {
                         scaled_aoa *= 2.0f;
-						normalized_des_v = 1.0f;
+						normalized_des_v = Math.Max(normalized_des_v, -scaled_aoa);
                     }
                     scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa +
 						res_equilibr_v_lower * (1.0f - Math.Abs(scaled_aoa)) + v_offset,
