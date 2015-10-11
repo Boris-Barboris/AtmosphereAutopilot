@@ -40,10 +40,13 @@ namespace AtmosphereAutopilot
 
         public double eval(Vector input)
         {
-            double res = pars[0];
-            for (int i = 0; i < input_count; i++)
-                res += pars[i+1] * input[i];
-            return res;
+            lock (tpars)
+            {
+                double res = pars[0];
+                for (int i = 0; i < input_count; i++)
+                    res += pars[i + 1] * input[i];
+                return res;
+            }
         }
 
         public double eval_training(Vector input)
@@ -122,8 +125,6 @@ namespace AtmosphereAutopilot
                             j++;
                             tpars[input + 1] = new_params[j, 0];
                         }
-						//else
-						//	tpars[input] = 0.0;
                 }
             }
             catch (MSingularException)

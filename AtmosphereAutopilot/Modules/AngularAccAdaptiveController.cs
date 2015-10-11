@@ -30,7 +30,7 @@ namespace AtmosphereAutopilot
 	{
 		protected int axis;
 
-		protected InstantControlModel imodel;
+		protected FlightModel imodel;
 
 		// Telemetry writers
 		protected StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, 
@@ -52,7 +52,7 @@ namespace AtmosphereAutopilot
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
 		{
-			this.imodel = modules[typeof(InstantControlModel)] as InstantControlModel;
+			this.imodel = modules[typeof(FlightModel)] as FlightModel;
 		}
 
 		protected override void OnActivate()
@@ -212,7 +212,7 @@ namespace AtmosphereAutopilot
                 new_input = Common.Clampf(new_input, 1.0f);
 
                 // Exponential blend can mess with rotation model, let's check it
-                if (InstantControlModel.far_blend_collapse(imodel.ControlSurfPos(axis), new_input))
+                if (FlightModel.far_blend_collapse(imodel.ControlSurfPos(axis), new_input))
                 {
                     // we need to recalculate new_input according to undelayed model
                     authority = lin_model_undelayed.B[1, 0];
@@ -321,7 +321,7 @@ namespace AtmosphereAutopilot
                 cur_state[0, 0] = imodel.AngularVel(ROLL);
                 cur_state[1, 0] = imodel.ControlSurfPos(ROLL);
                 input_mat[0, 0] = cur_state[1, 0];
-                input_mat[1, 0] = InstantControlModel.far_exponential_blend(imodel.ControlSurfPos(YAW), yc.output);
+                input_mat[1, 0] = FlightModel.far_exponential_blend(imodel.ControlSurfPos(YAW), yc.output);
                 input_mat[2, 0] = imodel.AoA(YAW);
                 double cur_acc_prediction = imodel.roll_rot_model.eval_row(0, cur_state, input_mat);
 
@@ -330,7 +330,7 @@ namespace AtmosphereAutopilot
                 new_input = Common.Clampf(new_input, 1.0f);
 
                 // Exponential blend can mess with rotation model, let's check it
-                if (InstantControlModel.far_blend_collapse(imodel.ControlSurfPos(ROLL), new_input))
+                if (FlightModel.far_blend_collapse(imodel.ControlSurfPos(ROLL), new_input))
                 {
                     // we need to recalculate new_input according to undelayed model
                     authority = imodel.roll_rot_model_undelayed.B[0, 0];
@@ -351,7 +351,7 @@ namespace AtmosphereAutopilot
                 cur_state[0, 0] = imodel.AngularVel(ROLL);
                 cur_state[1, 0] = imodel.ControlSurfPos(ROLL);
                 input_mat[0, 0] = cur_state[1, 0];
-                input_mat[1, 0] = InstantControlModel.stock_actuator_blend(imodel.ControlSurfPos(YAW), yc.output);
+                input_mat[1, 0] = FlightModel.stock_actuator_blend(imodel.ControlSurfPos(YAW), yc.output);
                 input_mat[2, 0] = imodel.AoA(YAW);
                 double cur_acc_prediction = imodel.roll_rot_model_undelayed.eval_row(0, cur_state, input_mat);
 

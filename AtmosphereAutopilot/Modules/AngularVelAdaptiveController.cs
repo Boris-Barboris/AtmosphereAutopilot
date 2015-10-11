@@ -30,7 +30,7 @@ namespace AtmosphereAutopilot
 	{
 		protected int axis;
 
-        protected InstantControlModel imodel;
+        protected FlightModel imodel;
 		protected AngularAccAdaptiveController acc_controller;
 
 		/// <summary>
@@ -51,7 +51,7 @@ namespace AtmosphereAutopilot
 
 		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
 		{
-			this.imodel = modules[typeof(InstantControlModel)] as InstantControlModel;
+			this.imodel = modules[typeof(FlightModel)] as FlightModel;
 		}
 
 		protected override void OnActivate() 

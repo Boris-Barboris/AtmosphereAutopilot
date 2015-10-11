@@ -39,7 +39,7 @@ namespace AtmosphereAutopilot
 		/// Set this property or field as auto-renderable.
 		/// </summary>
 		/// <param name="value_name">Displayed element name</param>
-		/// <param name="editable">Can be edited by user. Use for constants only!</param>
+		/// <param name="editable">Can be edited by user. Use for basic types only!</param>
 		/// <param name="format">If type provides ToString(string format) method, this format string
 		/// will be used. You can set it to null if not required</param>
 		public AutoGuiAttr(string value_name, bool editable, string format = null)
@@ -157,25 +157,25 @@ namespace AtmosphereAutopilot
         protected abstract void _drawGUI(int id);
 
 		/// <inheritdoc />
-        public void HideGUI()
+        public virtual void HideGUI()
         {
             gui_hidden = true;
         }
 
 		/// <inheritdoc />
-        public void UnHideGUI()
+        public virtual void UnHideGUI()
         {
             gui_hidden = false;
         }
 
 		/// <inheritdoc />
-        public void ShowGUI()
+        public virtual void ShowGUI()
         {
             gui_shown = true;
         }
 
 		/// <inheritdoc />
-        public void UnShowGUI()
+        public virtual void UnShowGUI()
         {
             gui_shown = false;
         }
@@ -183,7 +183,7 @@ namespace AtmosphereAutopilot
 
 
 	/// <summary>
-	/// Automatic property and field rendering functionality
+	/// Automatic property and field rendering functionality.
 	/// </summary>
     public static class AutoGUI
     {

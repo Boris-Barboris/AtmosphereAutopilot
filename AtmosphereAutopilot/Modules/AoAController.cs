@@ -25,7 +25,7 @@ namespace AtmosphereAutopilot
 
     public abstract class AoAController : SISOController
     {
-        InstantControlModel imodel;
+        FlightModel imodel;
         PitchYawAngularVelocityController v_controller;
 
         int axis;
@@ -37,7 +37,7 @@ namespace AtmosphereAutopilot
 
         public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
         {
-            imodel = modules[typeof(InstantControlModel)] as InstantControlModel;
+            imodel = modules[typeof(FlightModel)] as FlightModel;
             if (axis == PITCH)
             {
                 v_controller = modules[typeof(PitchAngularVelocityController)] as PitchYawAngularVelocityController;
