@@ -34,7 +34,7 @@ namespace AtmosphereAutopilot
     public sealed partial class FlightModel : AutopilotModule
 	{
 		internal FlightModel(Vessel v):
-            base(v, 34278832, "Instant control model")
+            base(v, 34278832, "Flight model")
 		{
 			for (int i = 0; i < 3; i++)
 			{
