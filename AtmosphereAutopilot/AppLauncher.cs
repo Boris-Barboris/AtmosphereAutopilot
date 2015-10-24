@@ -64,5 +64,10 @@ namespace AtmosphereAutopilot
                 }
             }
         }
+
+        internal void set_x_position(float x)
+        {
+            window.x = Math.Min(x - 125, Screen.width - 250);
+        }
     }
 }

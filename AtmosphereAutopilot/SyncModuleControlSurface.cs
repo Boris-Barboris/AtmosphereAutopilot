@@ -22,6 +22,11 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
+
+    /// <summary>
+    /// Synchronised ModuleControlSurface realization, greatly simplifies control and flight model regression 
+    /// by making all control surfaces move in one phase.
+    /// </summary>
     public class SyncModuleControlSurface: ModuleControlSurface
     {
         public const float CSURF_SPD = 2.0f;
@@ -36,10 +41,12 @@ namespace AtmosphereAutopilot
 				return;
 			
             Vector3 world_com = vessel.CoM + vessel.rb_velocity * TimeWarp.fixedDeltaTime;
-            Vector3 local_com = baseTransform.InverseTransformPoint(world_com);
             float pitch_input = ignorePitch ? 0.0f : vessel.ctrlState.pitch;
             float roll_input = ignoreRoll ? 0.0f : vessel.ctrlState.roll;
             float yaw_input = ignoreYaw ? 0.0f : vessel.ctrlState.yaw;
+
+            if (base.vessel.atmDensity == 0.0)
+                pitch_input = roll_input = yaw_input = 0.0f;
 
             if (this.deploy)
             {

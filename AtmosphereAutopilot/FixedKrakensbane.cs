@@ -23,6 +23,9 @@ using System.Reflection;
 
 namespace FixedKrakensbane
 {
+
+    // Experimental class, should not be compiled.
+    // Slightly optimizes squad code.
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class FixedKrakensbane : MonoBehaviour
     {

@@ -53,7 +53,7 @@ namespace AtmosphereAutopilot
         {
 			Debug.Log("[AtmosphereAutopilot]: starting up!"); 
             DontDestroyOnLoad(this);
-            classify_aero();
+            determine_aerodynamics();
             initialize_types();
             initialize_hotkeys();
             initialize_thread();
@@ -74,10 +74,14 @@ namespace AtmosphereAutopilot
             FAR
         }
 
-        public static AerodinamycsModel AeroModel = AerodinamycsModel.Stock;
+        /// <summary>
+        /// Current aerodynamics model.
+        /// </summary>
+        public static AerodinamycsModel AeroModel { get; private set; }
 
-        void classify_aero()
+        void determine_aerodynamics()
         {
+            AeroModel = AerodinamycsModel.Stock;
             foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
             {
                 if (a.GetName().Name.Equals("FerramAerospaceResearch"))
@@ -105,7 +109,7 @@ namespace AtmosphereAutopilot
             module_hotkeys[typeof(TopModuleManager)] = KeyCode.P;       // press P to activate master switch
         }
 
-        // Thread for computational-heavy tasks
+        // Thread for computation-heavy tasks
         BackgroundThread thread;
 
         /// <summary>
@@ -171,7 +175,7 @@ namespace AtmosphereAutopilot
         void vesselSwitch(Vessel v)
         {
             serialize_active_modules();
-			Debug.Log("[AtmosphereAutopilot]: vessel switch");
+			Debug.Log("[AtmosphereAutopilot]: vessel switch to " + v.vesselName);
             load_manager_for_vessel(v);
 			ActiveVessel = v;
         }
@@ -212,7 +216,8 @@ namespace AtmosphereAutopilot
 				bool contains = ApplicationLauncher.Instance.Contains(launcher_btn, out hidden);
 				if (!contains)
 					launcher_btn = ApplicationLauncher.Instance.AddModApplication(
-						OnALTrue, OnALFalse, OnHover, OnALUnHover, null, null, ApplicationLauncher.AppScenes.FLIGHT,
+						OnALTrue, OnALFalse, OnHover, OnALUnHover, null, null, 
+                        ApplicationLauncher.AppScenes.FLIGHT | ApplicationLauncher.AppScenes.MAPVIEW,
 						GameDatabase.Instance.GetTexture("AtmosphereAutopilot/icon", false));
             }
         }
@@ -227,6 +232,7 @@ namespace AtmosphereAutopilot
 		{
 			applauncher.ShowGUI();
 			applauncher.show_while_hover = false;
+            applauncher.set_x_position(Mouse.screenPos.x);
 		}
 
         void OnALFalse()
@@ -257,10 +263,11 @@ namespace AtmosphereAutopilot
                 GUIStyles.Init();
                 styles_init = true;
             }
-            GUI.skin = GUIStyles.skin;
+            GUIStyles.set_colors();
             applauncher.OnGUI();
             foreach (var pair in autopilot_module_lists[ActiveVessel])
                 pair.Value.OnGUI();
+            GUIStyles.reset_colors();
         }
 
         void OnHideUI()

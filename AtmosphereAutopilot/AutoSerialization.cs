@@ -78,7 +78,7 @@ namespace AtmosphereAutopilot
 		/// <param name="OnDeserialize">Callback for custom behaviour, 
 		/// called after automatic part is over and didn't crash. Gets node, 
 		/// from wich object was deserialized and attribute type.</param>
-		/// <returns>true if node_name node was found and used to deserialize</returns>
+		/// <returns>true if node_name node was found and used to deserialize the object</returns>
         public static bool Deserialize(object obj, string node_name, string filename, Type attribute_type, Action<ConfigNode, Type> OnDeserialize = null)
         {
             if (System.IO.File.Exists(filename))

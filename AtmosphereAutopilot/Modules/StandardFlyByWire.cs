@@ -51,6 +51,7 @@ namespace AtmosphereAutopilot
 			yvc.user_controlled = rocket_mode;
             yc.Activate();
             yc.user_controlled = true;
+            MessageManager.post_status_message("Standard Fly-By-Wire enabled");
         }
 
         protected override void OnDeactivate()
@@ -58,6 +59,7 @@ namespace AtmosphereAutopilot
             pc.Deactivate();
             rc.Deactivate();
             yc.Deactivate();
+            MessageManager.post_status_message("Standard Fly-By-Wire disabled");
         }
 
 		[VesselSerializable("rocket_mode")]

@@ -21,6 +21,8 @@ using System.Text;
 
 namespace System.Collections.Generic
 {
+
+    // IList concatenator
     public class ListView<T> : IList<T>, ICollection<T>, IEnumerable<T>, IEnumerable
     {
         List<IList<T>> lists = new List<IList<T>>();

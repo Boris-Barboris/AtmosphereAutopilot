@@ -22,6 +22,8 @@ using System.Text;
 
 namespace AtmosphereAutopilot
 {
+
+    // IList adapter
     public class ListSelector<ST, RT> : IList<RT>, ICollection<RT>, IEnumerable<RT>, IEnumerable
     {
         IList<ST> source;

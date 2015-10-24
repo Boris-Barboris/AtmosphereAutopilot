@@ -133,10 +133,8 @@ namespace AtmosphereAutopilot
         {
             if (!gui_shown || gui_hidden)
                 return;
-            GUIStyles.set_colors();
             window = GUILayout.Window(wnd_id, window, _drawGUI, wndname);
             OnGUICustom();
-            GUIStyles.reset_colors();
         }
 
 		/// <summary>
