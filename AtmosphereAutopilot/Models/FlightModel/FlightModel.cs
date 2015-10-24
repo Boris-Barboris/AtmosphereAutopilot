@@ -84,7 +84,7 @@ namespace AtmosphereAutopilot
 
         CircularBuffer<float>[] input_buf = new CircularBuffer<float>[3];
 
-        CircularBuffer<float>[] csurf_buf = new CircularBuffer<float>[3];   // True control surface rotation values
+        CircularBuffer<float>[] csurf_buf = new CircularBuffer<float>[3];   // True control surface action values
 
         CircularBuffer<float>[] angular_v_buf = new CircularBuffer<float>[3];
 
@@ -167,14 +167,11 @@ namespace AtmosphereAutopilot
 
             if (sequential_dt)
             {
-                if (angular_acc_buf[0].Size > 0)
+                if (angular_acc_buf[0].Size > 0 && !vessel.LandedOrSplashed)
                 {
                     update_model_acc();
                     update_training_inputs();
                     update_cpu();
-                }
-                if (!vessel.LandedOrSplashed)
-                {
                     update_pitch_rot_model();
                     update_roll_rot_model();
                     update_yaw_rot_model();
@@ -205,11 +202,8 @@ namespace AtmosphereAutopilot
 			{
                 GUILayout.Label("=======" + axis_names[i] + "=======");
 				GUILayout.Label("ang vel = " + angular_v_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
-                //GUILayout.Label("ang vel part = " + vessel.angularVelocity[i].ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label("ang acc = " + angular_acc_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label("AoA = " + (aoa_buf[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
-                //GUILayout.Label("MOI = " + MOI[i].ToString("G8"), GUIStyles.labelStyleLeft);
-                //GUILayout.Label("AngMoment = " + AM[i].ToString("G8"), GUIStyles.labelStyleLeft);
 			}
             AutoGUI.AutoDrawObject(this);
 			GUILayout.EndVertical();
@@ -218,7 +212,8 @@ namespace AtmosphereAutopilot
 
         OnlineLinTrainerWindow pitch_lin_wnd, roll_lin_wnd, yaw_lin_wnd,
             lift_lin_wnd, slide_lin_wnd;
-        OnlineLinTrainerWindow[] trainer_windows = new OnlineLinTrainerWindow[5];
+        OnlineLinTrainerWindow[] trainer_windows = new OnlineLinTrainerWindow[5];        
+        int shown_trainer = -1;
 
         void initialize_trainer_windows()
         {
@@ -289,8 +284,8 @@ namespace AtmosphereAutopilot
 
         protected override void OnGUICustom()
         {
-            foreach (var tw in trainer_windows)
-                tw.OnGUI();
+            foreach (var trainer in trainer_windows)
+                trainer.OnGUI();
         }
 
         #endregion

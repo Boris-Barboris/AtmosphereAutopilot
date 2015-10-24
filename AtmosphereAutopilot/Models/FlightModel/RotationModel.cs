@@ -37,7 +37,7 @@ namespace AtmosphereAutopilot
 
         public Vector3 AM;
 
-        //[AutoGuiAttr("CoM", false, "G6")]
+        [AutoGuiAttr("CoM", false, "G6")]
         public Vector3 CoM;
 
         Vector3 partial_CoM;
@@ -51,6 +51,7 @@ namespace AtmosphereAutopilot
 
         // It's too expensive to iterate over all parts every physics frame, so we'll stick with 20 most massive
         const int PartsMax = 20;
+
         struct PartMass
         {
             public PartMass(Part p, float m) { part = p; mass = m; }
@@ -67,17 +68,18 @@ namespace AtmosphereAutopilot
                         return 1;
             }
         }
+
         List<PartMass> massive_parts = new List<PartMass>(PartsMax);
         Vector3 partial_MOI = Vector3.zero;
         Vector3 partial_AM = Vector3.zero;
 
-        const int FullMomentFreq = 80;      // with standard 0.025 sec fixedDeltaTime it gives freq around 0.5 Hz
+        const int FullMomentFreq = 40;      // with standard 0.025 sec fixedDeltaTime it gives freq around 1 Hz
         int moments_cycle_counter = 0;
 
         [AutoGuiAttr("Reaction wheels", false, "G6")]
         public Vector3 reaction_torque = Vector3.zero;
 
-        int prev_part_count;
+        int prev_part_count = 0;
 
         void update_moments()
         {
@@ -123,9 +125,9 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
-                    mass += pm.part.mass + pm.part.GetResourceMass();
-                    result += (pm.part.partTransform.position + pm.part.partTransform.rotation * pm.part.CoMOffset) *
-                        (pm.part.mass + pm.part.GetResourceMass());
+                    float pmass = pm.part.mass + pm.part.GetResourceMass();
+                    mass += pmass;
+                    result += (pm.part.partTransform.position + pm.part.partTransform.rotation * pm.part.CoMOffset) * pmass;
                 }
             }
             if (mass > 0.0f)
@@ -140,8 +142,8 @@ namespace AtmosphereAutopilot
         void get_moments(bool all_parts)
         {
             cntrl_part_to_world = vessel.transform.rotation;
-            world_to_cntrl_part = cntrl_part_to_world.Inverse();            // from world to root part rotation
-            CoM = vessel.findWorldCenterOfMass();                           // vessel.CoM unfortunately lags by one physics frame
+            world_to_cntrl_part = cntrl_part_to_world.Inverse();            // from world to control part rotation
+            CoM = vessel.findWorldCenterOfMass();
             if (all_parts)
             {
                 MOI = Vector3d.zero;
@@ -247,9 +249,11 @@ namespace AtmosphereAutopilot
             }
             if (all_parts)
             {
+                /*
                 massive_parts.Sort(PartMass.Comparison);
                 if (massive_parts.Count > PartsMax)
                     massive_parts.RemoveRange(PartsMax, massive_parts.Count - PartsMax);
+                */
                 angular_vel = Common.divideVector(AM, MOI);
             }
             else
@@ -258,7 +262,6 @@ namespace AtmosphereAutopilot
                 world_v -= Vector3.Cross(cur_CoM - CoM, cntrl_part_to_world * angular_vel);
             }
             angular_vel -= world_to_cntrl_part * vessel.mainBody.angularVelocity;     // remember that unity physics reference frame is rotating
-            //sum_mass = vessel.GetTotalMass();
             world_v += Krakensbane.GetFrameVelocity();
         }
 
@@ -293,7 +296,6 @@ namespace AtmosphereAutopilot
 
         void update_aoa()
         {
-            // thx ferram
             up_srf_v = Vector3.Project(vessel.srf_velocity, vessel.ReferenceTransform.up);
             fwd_srf_v = Vector3.Project(vessel.srf_velocity, vessel.ReferenceTransform.forward);
             right_srf_v = Vector3.Project(vessel.srf_velocity, vessel.ReferenceTransform.right);
