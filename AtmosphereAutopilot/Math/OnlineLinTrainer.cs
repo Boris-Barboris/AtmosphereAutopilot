@@ -62,7 +62,7 @@ namespace AtmosphereAutopilot
         int cur_time = 0;
 
         // model to train
-        LinApprox linmodel, genmodel;
+        public readonly LinApprox linmodel, genmodel;
         readonly int input_count;
 
         struct GenStruct
@@ -112,12 +112,14 @@ namespace AtmosphereAutopilot
 				VectorArray gen_array = new VectorArray(input_count, gen_buf_sizes[i]);
 				for (int j = 0; j < gen_buf_sizes[i]; j++)
 					gen_buffers[i][j] = new GenStruct(0.0, 0, gen_array[j]);
-			}			
+			}
             // Delegates assignment
             input_update_dlg = input_method;
             output_update_dlg = output_method;
             // Preallocate buffers for matrix operations in linear approximator
             linmodel.preallocate((int)(imm_buf_size * 1.5) + gen_buf_sizes.Sum());
+            if (genmodel != null)
+                genmodel.preallocate((int)(imm_buf_size * 1.5) + gen_buf_sizes.Sum());
             // Misc
             inputs_changed = new bool[input_count];
             nothing_changed = new bool[input_count];
@@ -213,7 +215,7 @@ namespace AtmosphereAutopilot
                 while (count > 0)
                 {
                     cur_time += last_time_elapsed;
-                    if (imm_training_inputs.Size == imm_training_inputs.Capacity)
+                    if (imm_training_inputs.Size == imm_training_inputs.Capacity)       // if we'll be overwriting immediate buffer
                     {
                         // let's update gradient buffers if needed
                         double cur_output = imm_training_outputs[1];
@@ -317,7 +319,7 @@ namespace AtmosphereAutopilot
                 {
                     Vector input = imm_training_inputs[i];
                     double true_output = imm_training_outputs[i];
-                    double lin_output = genmodel == null ? linmodel.eval_training(input) : genmodel.eval_training(input);
+                    double lin_output = (genmodel == null ? linmodel.eval_training(input) : genmodel.eval_training(input));
                     double scaled_err = (lin_output - true_output) / max_output_value;
                     sum_error += Math.Abs(scaled_err);
                 }

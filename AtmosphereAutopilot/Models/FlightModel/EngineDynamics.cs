@@ -123,7 +123,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("e_torq_k1", false, "G4")]
         Vector3 engines_torque_k1;
 
-        // Stupid linear authority of gimbals
+        // Stupid linear authority of gimbals, verry approximate but simple and effective.
         // engines_torque = engines_torque_k0 + user_input * engines_torque_k1
         void get_gimbal_authority()
         {
@@ -135,7 +135,7 @@ namespace AtmosphereAutopilot
                 {
                     float cur_cntrl = input_buf[axis].getLast();
                     float last_cntrl = input_buf[axis].getFromTail(1);
-                    if (Math.Abs(cur_cntrl - last_cntrl) > 0.05)
+                    if (Math.Abs(cur_cntrl - last_cntrl) > 0.05)            // only significant input signal changes are analyzed
                     {
                         float k1 = (scaled_cur_torque[axis] - scaled_prev_torque[axis]) / (cur_cntrl - last_cntrl);
                         float k0 = scaled_cur_torque[axis] - cur_cntrl * k1;

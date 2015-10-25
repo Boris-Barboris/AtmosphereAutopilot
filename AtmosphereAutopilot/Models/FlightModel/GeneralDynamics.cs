@@ -32,7 +32,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Lift acc", false, "G6")]
         public double lift_acc = 0.0;
 
-        [AutoGuiAttr("Slide acc", false, "G8")]
+        [AutoGuiAttr("Slide acc", false, "G6")]
         public double slide_acc = 0.0;
 
         //Vector3d vess2planet;
@@ -54,10 +54,10 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("pitch_noninert_acc", false, "G6")]
         public double pitch_noninert_acc;
 
-        [AutoGuiAttr("yaw_gravity_acc", false, "G8")]
+        [AutoGuiAttr("yaw_gravity_acc", false, "G6")]
         public double yaw_gravity_acc;
 
-        [AutoGuiAttr("yaw_engine_acc", false, "G8")]
+        [AutoGuiAttr("yaw_engine_acc", false, "G6")]
         public double yaw_engine_acc;
 
         [AutoGuiAttr("yaw_noninert_acc", false, "G6")]

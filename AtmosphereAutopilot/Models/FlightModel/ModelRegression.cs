@@ -44,7 +44,6 @@ namespace AtmosphereAutopilot
 
         OnlineLinTrainer pitch_trainer, roll_trainer, yaw_trainer;
         OnlineLinTrainer pitch_lift_trainer, yaw_lift_trainer;
-        OnlineLinTrainer[] trainers = new OnlineLinTrainer[3];
 
         void initialize_ann_tainers()
         {
@@ -57,7 +56,6 @@ namespace AtmosphereAutopilot
             pitch_trainer.linear_err_criteria = 0.02f;
             pitch_trainer.nonlin_trigger = 200;
             pitch_trainer.nonlin_cutoff_time = 1000;
-            trainers[0] = pitch_trainer;
 
             roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, roll_aero_torque_model_gen, IMM_BUF_SIZE,
                 new double[] { 0.01, 0.05, 0.05, 0.05 }, new int[] { 20, 20, 20, 20 }, roll_input_method, roll_output_method);
@@ -68,7 +66,6 @@ namespace AtmosphereAutopilot
             roll_trainer.linear_err_criteria = 0.02f;
             roll_trainer.nonlin_trigger = 200;
             roll_trainer.nonlin_cutoff_time = 1000;
-            trainers[1] = roll_trainer;
 
             yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, yaw_aero_torque_model_gen, IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
                 new int[] { 20, 20 }, yaw_input_method, yaw_output_method);
@@ -79,7 +76,6 @@ namespace AtmosphereAutopilot
             yaw_trainer.linear_err_criteria = 0.02f;
             yaw_trainer.nonlin_trigger = 200;
             yaw_trainer.nonlin_cutoff_time = 1000;
-            trainers[2] = yaw_trainer;
 
             pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, null, IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
                 new int[] { 20, 20 }, pitch_lift_input_method, pitch_lift_output_method);
