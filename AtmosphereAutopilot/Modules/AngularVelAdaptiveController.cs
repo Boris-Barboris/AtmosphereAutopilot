@@ -247,13 +247,13 @@ namespace AtmosphereAutopilot
                         {
                             if (eq_x[0, 0] < 0.0)
                             {
-                                // plane is statically unstable, in_eq_x solution is equilibrium on it's minimal stable aoa
+                                // plane is statically unstable, eq_x solution is equilibrium on it's minimal stable aoa
                                 min_input_aoa = (float)Common.simple_filter(0.6 * eq_x[0, 0], min_input_aoa, moder_filter);
                                 min_input_v = (float)Common.simple_filter(0.6 * eq_x[1, 0], min_input_v, moder_filter);
                             }
                             else
                             {
-                                // plane is statically stable, in_eq_x solution is equilibrium on it's maximal stable aoa
+                                // plane is statically stable, eq_x solution is equilibrium on it's maximal stable aoa
                                 max_input_aoa = (float)Common.simple_filter(eq_x[0, 0], max_input_aoa, moder_filter);
                                 max_input_v = (float)Common.simple_filter(eq_x[1, 0], max_input_v, moder_filter);
                             }
@@ -266,13 +266,13 @@ namespace AtmosphereAutopilot
                             {
                                 if (eq_x[0, 0] >= 0.0)
                                 {
-                                    // plane is statically unstable, in_eq_x solution is equilibrium on it's maximal stable aoa
+                                    // plane is statically unstable, eq_x solution is equilibrium on it's maximal stable aoa
                                     max_input_aoa = (float)Common.simple_filter(0.6 * eq_x[0, 0], max_input_aoa, moder_filter);
                                     max_input_v = (float)Common.simple_filter(0.6 * eq_x[1, 0], max_input_v, moder_filter);
                                 }
                                 else
                                 {
-                                    // plane is statically stable, in_eq_x solution is equilibrium on it's minimal stable aoa
+                                    // plane is statically stable, eq_x solution is equilibrium on it's minimal stable aoa
                                     min_input_aoa = (float)Common.simple_filter(eq_x[0, 0], min_input_aoa, moder_filter);
                                     min_input_v = (float)Common.simple_filter(eq_x[1, 0], min_input_v, moder_filter);
                                 }
@@ -620,7 +620,7 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("max_g_force")]
         [AutoGuiAttr("max G-force", true, "G6")]
-        protected float max_g_force = 5.0f;
+        protected float max_g_force = 10.0f;
     }
 
     public sealed class PitchAngularVelocityController : PitchYawAngularVelocityController

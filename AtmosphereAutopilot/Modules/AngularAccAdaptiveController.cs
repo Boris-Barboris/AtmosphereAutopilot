@@ -197,8 +197,14 @@ namespace AtmosphereAutopilot
                 authority = lin_model.B[1, 0];
 
                 // check if we have inadequate model authority
-                if (Math.Abs(authority) < 1e-6)
-                    return cntrl.pitch;
+                if (authority < 1e-4)
+                {
+                    float user_input = axis == PITCH ? cntrl.pitch : cntrl.yaw;
+                    if (user_input != 0.0f)
+                        return user_input;
+                    else
+                        return Common.Clampf(target_value, 1.0f);
+                }
 
                 // get model prediction for next frame
                 cur_state[0, 0] = imodel.AoA(axis);
@@ -227,8 +233,14 @@ namespace AtmosphereAutopilot
                 authority = lin_model_undelayed.B[1, 0];
 
                 // check if we have inadequate model authority
-                if (Math.Abs(authority) < 1e-4)
-                    return cntrl.pitch;
+                if (authority < 1e-4)
+                {
+                    float user_input = axis == PITCH ? cntrl.pitch : cntrl.yaw;
+                    if (user_input != 0.0f)
+                        return user_input;
+                    else
+                        return Common.Clampf(target_value, 1.0f);
+                }
 
                 // get model prediction for next frame
                 cur_state[0, 0] = imodel.AoA(axis);
@@ -314,8 +326,14 @@ namespace AtmosphereAutopilot
             {
                 authority = imodel.roll_rot_model.B[0, 0];
                 // check if we have inadequate model authority
-                if (Math.Abs(authority) < 1e-4)
-                    return cntrl.pitch;
+                if (authority < 1e-4)
+                {
+                    float user_input = cntrl.roll;
+                    if (user_input != 0.0f)
+                        return user_input;
+                    else
+                        return Common.Clampf(target_value, 1.0f);
+                }
 
                 // get model prediction for next frame
                 cur_state[0, 0] = imodel.AngularVel(ROLL);
@@ -344,8 +362,14 @@ namespace AtmosphereAutopilot
             {
                 authority = imodel.roll_rot_model_undelayed.B[0, 0];
                 // check if we have inadequate model authority
-                if (Math.Abs(authority) < 1e-4)
-                    return cntrl.pitch;
+                if (authority < 1e-4)
+                {
+                    float user_input = cntrl.roll;
+                    if (user_input != 0.0f)
+                        return user_input;
+                    else
+                        return Common.Clampf(target_value, 1.0f);
+                }
 
                 // get model prediction for next frame
                 cur_state[0, 0] = imodel.AngularVel(ROLL);
