@@ -59,13 +59,24 @@ namespace AtmosphereAutopilot
 
         readonly double[] tpars;                            // training linear koefficients
 
+		volatile bool updated_flag = false;					// is set to true when training parameters are ready
+
         public void update_from_training()
         {
-            lock (tpars)
-            {
-                tpars.CopyTo(pars, 0);
-            }
+			if (updated_flag)
+			{
+				updated_flag = false;
+				lock (tpars)
+				{
+					tpars.CopyTo(pars, 0);
+				}
+			}
         }
+
+		public void signalUpdated()
+		{
+			updated_flag = true;
+		}
         
         Matrix X, Y, XtW, XtWX, XtWY;                       // matrix storages
 

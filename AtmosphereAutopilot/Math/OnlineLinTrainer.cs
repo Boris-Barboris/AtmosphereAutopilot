@@ -176,12 +176,14 @@ namespace AtmosphereAutopilot
                         update_singularity(input_view);
                         linmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
                         linmodel.weighted_lsqr(imm_training_inputs, imm_training_outputs, imm_error_weights, nothing_changed);
+						linmodel.signalUpdated();
                     }
 					if (genmodel != null && gen_list_view.Count > 0)
                     {
                         return_equal_weights();
                         genmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
                         genmodel.weighted_lsqr(imm_training_inputs, imm_training_outputs, imm_error_weights, nothing_changed);
+						genmodel.signalUpdated();
                     }
                     check_linearity();
                 }
@@ -328,7 +330,7 @@ namespace AtmosphereAutopilot
                 //double lin_output = linmodel.eval_training(input);
                 //sum_error = Math.Abs((lin_output - true_output) / max_output_value);
                 linear_param = (float)(sum_error / (double)imm_training_inputs.Size);
-                linear = (sum_error / (double)imm_training_inputs.Size) < linear_err_criteria;
+				linear = linear_param < linear_err_criteria;
                 //linear_param = (float)sum_error;
                 //linear = sum_error < linear_err_criteria;
                 if (linear)

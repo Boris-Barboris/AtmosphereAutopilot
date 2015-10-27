@@ -54,7 +54,7 @@ namespace AtmosphereAutopilot
             pitch_trainer.linear_time_decay = 0.005f;
             pitch_trainer.nonlin_time_decay = 0.005f;
             pitch_trainer.linear_err_criteria = 0.02f;
-            pitch_trainer.nonlin_trigger = 200;
+            pitch_trainer.nonlin_trigger = 100;
             pitch_trainer.nonlin_cutoff_time = 1000;
 
             roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, roll_aero_torque_model_gen, IMM_BUF_SIZE,
@@ -64,7 +64,7 @@ namespace AtmosphereAutopilot
             roll_trainer.linear_time_decay = 0.005f;
             roll_trainer.nonlin_time_decay = 0.005f;
             roll_trainer.linear_err_criteria = 0.02f;
-            roll_trainer.nonlin_trigger = 200;
+            roll_trainer.nonlin_trigger = 100;
             roll_trainer.nonlin_cutoff_time = 1000;
 
             yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, yaw_aero_torque_model_gen, IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
@@ -74,7 +74,7 @@ namespace AtmosphereAutopilot
             yaw_trainer.linear_time_decay = 0.005f;
             yaw_trainer.nonlin_time_decay = 0.005f;
             yaw_trainer.linear_err_criteria = 0.02f;
-            yaw_trainer.nonlin_trigger = 200;
+            yaw_trainer.nonlin_trigger = 100;
             yaw_trainer.nonlin_cutoff_time = 1000;
 
             pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, null, IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
@@ -84,7 +84,7 @@ namespace AtmosphereAutopilot
             pitch_lift_trainer.linear_time_decay = 0.002f;
             pitch_lift_trainer.nonlin_time_decay = 0.002f;
             pitch_lift_trainer.linear_err_criteria = 0.02f;
-            pitch_lift_trainer.nonlin_trigger = 200;
+            pitch_lift_trainer.nonlin_trigger = 100;
             pitch_lift_trainer.nonlin_cutoff_time = 1000;
 
             yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, null, IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
@@ -94,7 +94,7 @@ namespace AtmosphereAutopilot
             yaw_lift_trainer.linear_time_decay = 0.002f;
             yaw_lift_trainer.nonlin_time_decay = 0.002f;
             yaw_lift_trainer.linear_err_criteria = 0.02f;
-            yaw_lift_trainer.nonlin_trigger = 200;
+            yaw_lift_trainer.nonlin_trigger = 100;
             yaw_lift_trainer.nonlin_cutoff_time = 1000;
         }
 
