@@ -9,9 +9,9 @@ figure('Name','Telemetry Plotter',...
 hold on
 plot(time, acc,'r','Marker','.','MarkerSize',5)
 plot(time, predict,'r-.')
-plot(time, 0.1 .* control,'k','Marker','.','MarkerSize',5)
+plot(time, control,'k','Marker','.','MarkerSize',5)
 plot(time, aoa,'b','Marker','.','MarkerSize',5)
-plot(time, 1.0 .* v,'g')
+plot(time, v,'g')
 hold off
 xlabel('time')
 legend('acc','predict','control','aoa','v');
