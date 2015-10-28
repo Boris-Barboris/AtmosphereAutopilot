@@ -696,6 +696,12 @@ namespace AtmosphereAutopilot
                 if (!float.IsInfinity(new_max_input_v) && !float.IsNaN(new_max_input_v) &&
                     !float.IsInfinity(new_min_input_v) && !float.IsNaN(new_min_input_v))
                 {
+                    // adequacy check
+                    if (new_max_input_v < new_min_input_v || new_max_input_v < 0.0 || new_min_input_v > 0.0)
+                    {
+                        new_max_input_v = max_v_construction;
+                        new_min_input_v = -max_v_construction;
+                    }
                     max_input_v = (float)Common.simple_filter(new_max_input_v, max_input_v, moder_filter);
                     min_input_v = (float)Common.simple_filter(new_min_input_v, min_input_v, moder_filter);
                 }
