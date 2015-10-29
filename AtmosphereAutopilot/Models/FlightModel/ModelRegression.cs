@@ -171,10 +171,10 @@ namespace AtmosphereAutopilot
             if (!vessel.LandedOrSplashed && dyn_pressure >= 60.0)
             {
                 pitch_trainer.UpdateState(dt);
-                pitch_trainer.min_output_value = (float)(1.0 * MOI[PITCH] / dyn_pressure * 1e2);
+                pitch_trainer.min_output_value = (float)(0.5 * MOI[PITCH] / dyn_pressure * 1e2);
 
                 roll_trainer.UpdateState(dt);
-                roll_trainer.min_output_value = (float)(2.0 * MOI[ROLL] / dyn_pressure * 1e2);
+                roll_trainer.min_output_value = (float)(1.0 * MOI[ROLL] / dyn_pressure * 1e2);
 
                 yaw_trainer.UpdateState(dt);
                 yaw_trainer.min_output_value = (float)(0.5 * MOI[YAW] / dyn_pressure * 1e2);

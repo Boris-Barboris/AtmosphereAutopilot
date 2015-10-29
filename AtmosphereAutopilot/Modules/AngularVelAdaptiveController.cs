@@ -667,7 +667,7 @@ namespace AtmosphereAutopilot
 		public bool wing_leveler = true;
 		
 		[AutoGuiAttr("Snap angle", true, "G4")]
-		public float leveler_snap_angle = 5.0f;
+		public float leveler_snap_angle = 3.0f;
 
 		[AutoGuiAttr("angle_btw_hor", false, "G5")]
 		float angle_btw_hor;
