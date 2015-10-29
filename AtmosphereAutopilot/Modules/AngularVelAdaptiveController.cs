@@ -714,7 +714,7 @@ namespace AtmosphereAutopilot
 
 			// wing level snapping
 			float snapping_vel = 0.0f;
-			if (wing_leveler && user_input && des_v == 0.0f && kacc_quadr > 1e-6)
+            if (wing_leveler && user_input && des_v == 0.0f && kacc_quadr > 1e-6 && imodel.dyn_pressure > 0.0)
 			{
 				Vector3 planet2ves = (vessel.transform.position - vessel.mainBody.position).normalized;
 				float zenith_angle = Vector3.Angle(planet2ves, vessel.transform.up);
