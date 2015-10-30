@@ -456,7 +456,6 @@ namespace AtmosphereAutopilot
             }
 
             // desired_v moderation section
-            float scaled_restrained_v;
             float normalized_des_v = user_input ? des_v / max_v_construction : des_v / transit_max_v;
             if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
                 normalized_des_v = 0.0f;
@@ -499,7 +498,8 @@ namespace AtmosphereAutopilot
         protected float quadr_Kp = 0.3f;
 
         [AutoGuiAttr("kacc_quadr", false, "G6")]
-        protected float kacc_quadr;
+        internal float kacc_quadr;
+        
         protected bool first_quadr = true;
 
         [AutoGuiAttr("kacc_smoothing", true, "G5")]
@@ -511,10 +511,10 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("relaxation_Kp", true, "G5")]
         protected float relaxation_Kp = 0.5f;
 
-        [AutoGuiAttr("relaxation_frame", true)]
+        [AutoGuiAttr("relaxation_avg_frame", true)]
         protected int relaxation_frame = 1;
 
-        [AutoGuiAttr("relaxation_frame", false)]
+        [AutoGuiAttr("relax_count", false)]
         protected int relax_count = 0;
 
         protected override float get_desired_acc(float des_v)
@@ -607,6 +607,9 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("DEBUG scaled_aoa", false, "G6")]
         protected float scaled_aoa;
+
+        [AutoGuiAttr("DEBUG scaled_restrained_v", false, "G6")]
+        protected float scaled_restrained_v;
 
         [AutoGuiAttr("Moderate AoA", true, null)]
         public bool moderate_aoa = true;

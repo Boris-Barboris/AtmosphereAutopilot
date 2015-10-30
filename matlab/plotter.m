@@ -10,8 +10,8 @@ hold on
 plot(time, acc,'r','Marker','.','MarkerSize',5)
 plot(time, predict,'r-.')
 plot(time, control,'k','Marker','.','MarkerSize',5)
-plot(time, aoa,'b','Marker','.','MarkerSize',5)
-plot(time, v,'g')
+plot(time, 10 .* aoa,'b','Marker','.','MarkerSize',5)
+plot(time, 10 .* v,'g')
 hold off
 xlabel('time')
 legend('acc','predict','control','aoa','v');

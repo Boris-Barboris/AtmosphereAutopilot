@@ -84,6 +84,21 @@ namespace AtmosphereAutopilot
         Matrix eq_b = new Matrix(2, 1);
         Matrix eq_x;
 
+        [AutoGuiAttr("relaxation_frame", true, "G6")]
+        protected float relaxation_frame = 2.0f;
+
+        [AutoGuiAttr("relaxation_factor", true, "G6")]
+        protected float relaxation_factor = 0.1f;
+
+        [AutoGuiAttr("cubic_barrier", true, "G6")]
+        protected float cubic_barrier = 1.0f;
+
+        [AutoGuiAttr("cubic_KP", true, "G6")]
+        protected float cubic_kp = 0.3f;
+
+        [AutoGuiAttr("cubic mode", false)]
+        protected bool cubic = false;
+
         /// <summary>
         /// Main control function
         /// </summary>
@@ -111,7 +126,7 @@ namespace AtmosphereAutopilot
             else
                 desired_aoa = (float)Common.Clamp(target_value, v_controller.res_min_aoa, v_controller.res_max_aoa);
 
-            // Let's find balance angular v on desired_aoa
+            // Let's find equilibrium angular v on desired_aoa
             if (Math.Abs(cur_aoa) < 0.3f)
             {
                 eq_A[0, 0] = lin_model.A[0, 1];
@@ -135,19 +150,41 @@ namespace AtmosphereAutopilot
 
             //des_aoa_equilibr_v += (float)get_roll_aoa_deriv(desired_aoa);
 
-            float transit_v = v_controller.transit_max_v;
-            float error = desired_aoa - cur_aoa;
-            float relax_k = 0.0f;
-            if (v_controller.res_max_aoa - v_controller.res_min_aoa > 0.0f)
-                relax_k = error * 2.0f / (v_controller.res_max_aoa - v_controller.res_min_aoa);
+            // parabolic descend to desired angle of attack
+            double error = Common.Clampf(desired_aoa - cur_aoa, Mathf.Abs(v_controller.res_max_aoa - v_controller.res_min_aoa));
+            if (Math.Abs(error) < 1e-4)
+                output_v = (float)des_aoa_equilibr_v;
             else
-                if (v_controller.max_aoa > 0.0f)
-                    relax_k = error / v_controller.max_aoa;
+            {
+                double k = v_controller.transit_max_v * v_controller.transit_max_v / 2.0 / (v_controller.res_max_aoa - v_controller.res_min_aoa);
+                double t = -Math.Sqrt(Math.Abs(error / k));
+                double descend_v;
+                if (t < -cubic_barrier)
+                {
+                    // we're still far away from desired aoa, we'll descend using parabolic function
+                    cubic = false;
+                    double t_step = Math.Min(0.0, t + TimeWarp.fixedDeltaTime);
+                    double relaxation = 1.0;
+                    if (t > -relaxation_frame * TimeWarp.fixedDeltaTime)
+                        relaxation = relaxation_factor;
+                    descend_v = relaxation * k * (t * t - t_step * t_step) * Math.Sign(error) / TimeWarp.fixedDeltaTime;
+                }
                 else
-                    relax_k = error / 0.2f;
-            relax_k = Common.Clampf(relax_k, 1.0f);
+                {
+                    // we're close to desired aoa, we'll descend using cubic function
+                    cubic = true;
+                    double kacc_quadr = v_controller.kacc_quadr;
+                    double k_cubic = kacc_quadr / 6.0 * cubic_kp;
+                    double t_cubic = -Math.Pow(Math.Abs(error / k_cubic), 0.33);
+                    double t_step = Math.Min(0.0, t_cubic + TimeWarp.fixedDeltaTime);
+                    double relaxation = 1.0;
+                    if (t > -relaxation_frame * TimeWarp.fixedDeltaTime)
+                        relaxation = relaxation_factor;
+                    descend_v = relaxation * k_cubic * (t_step * t_step * t_step - t_cubic * t_cubic * t_cubic) * Math.Sign(error) / TimeWarp.fixedDeltaTime;
+                }
 
-            output_v = relax_k * transit_v + des_aoa_equilibr_v;
+                output_v = (float)(descend_v + des_aoa_equilibr_v);
+            }
 
             ControlUtils.neutralize_user_input(cntrl, axis);
             v_controller.user_controlled = false;

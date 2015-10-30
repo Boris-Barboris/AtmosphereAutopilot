@@ -102,6 +102,8 @@ namespace AtmosphereAutopilot
             if (float.IsNaN(output) || float.IsInfinity(output))
                 output = 0.0f;
 
+            if (Mathf.Abs(output) < 0.006f)             // fighting numerical precision issues in KSP
+                output = 0.0f;
 			ControlUtils.set_raw_output(cntrl, axis, output);
 
             if (write_telemetry)
