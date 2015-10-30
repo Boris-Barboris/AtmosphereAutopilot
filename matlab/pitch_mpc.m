@@ -1,5 +1,5 @@
 %% initialize plane characteristics
-moi = 10000.0;
+moi = 100.0;
 mass = 200.0;
 g = 10.0;
 gravity = mass * g;
@@ -8,7 +8,7 @@ airspd = 200.0;
 dyn_pressure = density * airspd^2;
 
 % Calculate lift coefficient
-horizontal_flight_aoa = 0.15;
+horizontal_flight_aoa = 0.05;
 % Lift == gravity
 % aoa * Cl == gravity
 % Cl = gravity / aoa
@@ -18,8 +18,8 @@ Cl = gravity / horizontal_flight_aoa;
 csurf_exp_factor = 0.25;
 
 % linear control torques
-sas_torque = 10.0;
-engine_torque = 10.0;
+sas_torque = 5.0;
+engine_torque = 5.0;
 
 % control and aoa aothority
 k0 = 0.0;
@@ -28,8 +28,8 @@ k2 = 800.0;
 
 % limits
 max_aoa = 0.25;
-max_v = 5.0;
-max_g = 10.0;
+max_v = 0.5;
+max_g = 100.0;
 
 dt = 0.025;
 % model evolution law:
