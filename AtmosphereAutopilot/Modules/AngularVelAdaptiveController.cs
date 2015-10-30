@@ -467,9 +467,9 @@ namespace AtmosphereAutopilot
                 {
                     scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) * 2.0f / (res_max_aoa - res_min_aoa), 1.0f);
                     if (scaled_aoa < 0.0f)
-						scaled_restrained_v = (float)(((1.0 - scaled_aoa) *
-							Math.Min(res_equilibr_v_upper - v_offset, max_v_construction) +
-							scaled_aoa * Math.Max(-transit_max_v - v_offset, -max_v_construction)) + v_offset);
+						scaled_restrained_v = (float)((scaled_aoa + 1.0) *
+                            Math.Min(res_equilibr_v_upper, normalized_des_v * max_v_construction + v_offset) +
+							scaled_aoa * Math.Min(transit_max_v, max_v_construction));
 					else
 						scaled_restrained_v = (float)(normalized_des_v * ((1.0 - scaled_aoa) * 
 							Math.Min(res_equilibr_v_upper - v_offset, max_v_construction) +
@@ -477,15 +477,15 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
-                    scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) / (res_min_aoa - res_max_aoa), 1.0f);
+                    scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) * 2.0f / (res_min_aoa - res_max_aoa), 1.0f);
                     if (scaled_aoa < 0.0f)
-                    {
-                        scaled_aoa *= 2.0f;
-						normalized_des_v = Math.Max(normalized_des_v, -scaled_aoa);
-                    }
-                    scaled_restrained_v = Math.Max(transit_max_v * normalized_des_v * scaled_aoa +
-						res_equilibr_v_lower * (1.0f - Math.Abs(scaled_aoa)) + v_offset,
-                        transit_max_v * normalized_des_v + v_offset);
+                        scaled_restrained_v = (float)((scaled_aoa + 1.0) *
+                            Math.Max(res_equilibr_v_lower, normalized_des_v * max_v_construction + v_offset) -
+                            scaled_aoa * Math.Min(transit_max_v, max_v_construction));
+                    else
+                        scaled_restrained_v = (float)(normalized_des_v * ((1.0 - scaled_aoa) *
+                            Math.Min(-res_equilibr_v_lower - v_offset, max_v_construction) +
+                            scaled_aoa * Math.Min(transit_max_v - v_offset, max_v_construction)) + v_offset);
                 }
             }
             else
