@@ -121,7 +121,7 @@ namespace AtmosphereAutopilot
 			// check if we're stable on given input value
             if (AutoTrim && vessel == AtmosphereAutopilot.Instance.ActiveVessel)
             {
-                if (Math.Abs(vel) < 0.005f)
+                if (Math.Abs(vel) < 0.002f)
                 {
                     time_in_regime += TimeWarp.fixedDeltaTime;
                 }
@@ -405,7 +405,7 @@ namespace AtmosphereAutopilot
             // let's get non-overshooting max v value, let's call it transit_max_v
             // we start on 0.0 aoa with transit_max_v and we must not overshoot res_max_aoa
             // while applying -1.0 input all the time
-			if (abs_cur_aoa < 0.26f && imodel.dyn_pressure > 100.0)
+			if (abs_cur_aoa < 0.26f && (moderate_aoa || moderate_g) && imodel.dyn_pressure > 100.0)
 			{
 				double transit_max_aoa = Math.Min(rad_max_aoa, res_max_aoa);
 				state_mat[0, 0] = transit_max_aoa / 2.0;
@@ -442,7 +442,7 @@ namespace AtmosphereAutopilot
 					}
 				}
             
-            // if the user is in charge, let's hold surface-relative pitch angle
+            // if the user is in charge, let's hold surface-relative angular elocity
             float v_offset = 0.0f;
             if (user_input && vessel.obt_velocity.sqrMagnitude > 1.0)
             {
@@ -465,15 +465,15 @@ namespace AtmosphereAutopilot
             {
                 if (des_v >= 0.0f)
                 {
-                    scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) / (res_max_aoa - res_min_aoa), 1.0f);
+                    scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) * 2.0f / (res_max_aoa - res_min_aoa), 1.0f);
                     if (scaled_aoa < 0.0f)
-                    {
-                        scaled_aoa *= 2.0f;
-                        normalized_des_v = Math.Min(normalized_des_v, scaled_aoa);
-                    }
-                    scaled_restrained_v = Math.Min(transit_max_v * normalized_des_v * scaled_aoa +
-						res_equilibr_v_upper * (1.0f - Math.Abs(scaled_aoa)) + v_offset,
-                        transit_max_v * normalized_des_v + v_offset);
+						scaled_restrained_v = (float)(((1.0 - scaled_aoa) *
+							Math.Min(res_equilibr_v_upper - v_offset, max_v_construction) +
+							scaled_aoa * Math.Max(-transit_max_v - v_offset, -max_v_construction)) + v_offset);
+					else
+						scaled_restrained_v = (float)(normalized_des_v * ((1.0 - scaled_aoa) * 
+							Math.Min(res_equilibr_v_upper - v_offset, max_v_construction) +
+							scaled_aoa * Math.Min(transit_max_v - v_offset, max_v_construction)) + v_offset);
                 }
                 else
                 {
