@@ -33,8 +33,8 @@ namespace AtmosphereAutopilot
 		protected FlightModel imodel;
 
 		// Telemetry writers
-		protected StreamWriter controlWriter, v_writer, acc_writer, prediction_writer, 
-			desire_acc_writer, aoa_writer, airspd_writer, density_writer;
+		protected StreamWriter controlWriter, v_writer, acc_writer, prediction_writer,
+            desire_acc_writer, aoa_writer, airspd_writer, density_writer, outputWriter;
 
 		/// <summary>
 		/// Create controller instance.
@@ -102,12 +102,17 @@ namespace AtmosphereAutopilot
             if (float.IsNaN(output) || float.IsInfinity(output))
                 output = 0.0f;
 
-            if (Mathf.Abs(output) < 0.006f)             // fighting numerical precision issues in KSP
+            // fighting numerical precision issues in KSP
+            if (Mathf.Abs(output) < 0.006f)
                 output = 0.0f;
+
 			ControlUtils.set_raw_output(cntrl, axis, output);
 
             if (write_telemetry)
-				controlWriter.Write(csurf_output.ToString("G8") + ',');
+            {
+                controlWriter.Write(csurf_output.ToString("G8") + ',');
+                outputWriter.Write(output.ToString("G8") + ',');
+            }
 
             return output;
 		}
@@ -138,6 +143,7 @@ namespace AtmosphereAutopilot
 						aoa_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/aoa.csv");
 						airspd_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/airspd.csv");
 						density_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/density.csv");
+                        outputWriter = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/output.csv");
 						_write_telemetry = value;
                     }
 				}
@@ -153,6 +159,7 @@ namespace AtmosphereAutopilot
 						aoa_writer.Close();
 						airspd_writer.Close();
 						density_writer.Close();
+                        outputWriter.Close();
                         _write_telemetry = value;
                     }					
 				}

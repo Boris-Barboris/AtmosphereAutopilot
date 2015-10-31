@@ -173,7 +173,7 @@ namespace AtmosphereAutopilot
                 {
                     // we're close to desired aoa, we'll descend using cubic function
                     cubic = true;
-                    double kacc_quadr = v_controller.kacc_quadr;
+                    double kacc_quadr = Math.Abs(v_controller.kacc_quadr);
                     double k_cubic = kacc_quadr / 6.0 * cubic_kp;
                     double t_cubic = -Math.Pow(Math.Abs(error / k_cubic), 0.33);
                     double t_step = Math.Min(0.0, t_cubic + TimeWarp.fixedDeltaTime);

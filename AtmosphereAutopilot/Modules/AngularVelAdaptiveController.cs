@@ -140,7 +140,6 @@ namespace AtmosphereAutopilot
 		}
 
         [VesselSerializable("max_v_construction")]
-        [GlobalSerializable("max_v_construction")]
         [AutoGuiAttr("Max v construction", true, "G8")]
         public float max_v_construction = 0.5f;
 
@@ -524,6 +523,7 @@ namespace AtmosphereAutopilot
                 new_kacc_quadr = (float)(quadr_Kp * (lin_model.A[1, 2] * lin_model.B[2, 0] + lin_model.B[1, 0]));
             if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.Stock)
                 new_kacc_quadr = (float)(quadr_Kp * (lin_model.A[1, 2] * lin_model.C[2, 0] + lin_model.B[1, 0]));
+            new_kacc_quadr = Math.Abs(new_kacc_quadr);
             if (float.IsNaN(new_kacc_quadr))
                 return base.get_desired_acc(des_v);
             if (first_quadr)
@@ -804,6 +804,7 @@ namespace AtmosphereAutopilot
                 new_kacc_quadr = (float)(quadr_Kp * (imodel.roll_rot_model_gen.A[0, 1] * imodel.roll_rot_model_gen.B[1, 0] + imodel.roll_rot_model_gen.B[0, 0]));
             if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.Stock)
                 new_kacc_quadr = (float)(quadr_Kp * (imodel.roll_rot_model_gen.A[0, 1] * imodel.roll_rot_model_gen.C[1, 0] + imodel.roll_rot_model_gen.B[0, 0]));
+            new_kacc_quadr = Math.Abs(new_kacc_quadr);
             if (float.IsNaN(new_kacc_quadr))
                 return base.get_desired_acc(des_v);
             if (first_quadr)
