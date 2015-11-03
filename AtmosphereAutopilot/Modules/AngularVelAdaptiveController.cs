@@ -79,7 +79,7 @@ namespace AtmosphereAutopilot
 
         [GlobalSerializable("user_input_deriv_clamp")]
         [AutoGuiAttr("Input deriv limit", true, "G6")]
-        public float user_input_deriv_clamp = 3.0f;
+        public float user_input_deriv_clamp = 5.0f;
 
         [AutoGuiAttr("prev_input", false, "G6")]
         protected float prev_input;

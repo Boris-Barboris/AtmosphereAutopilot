@@ -135,6 +135,11 @@ namespace AtmosphereAutopilot
         {
             if (!gui_shown || gui_hidden)
                 return;
+            
+            // forbid windows not on screen
+            window.xMin = Common.Clampf(window.xMin, 5.0f - window.width, Screen.width - 5.0f);
+            window.yMin = Common.Clampf(window.yMin, 5.0f - window.height, Screen.height - 5.0f);
+
             window = GUILayout.Window(wnd_id, window, _drawGUI, wndname);
             OnGUICustom();
         }
