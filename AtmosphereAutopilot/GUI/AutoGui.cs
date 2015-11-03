@@ -34,6 +34,7 @@ namespace AtmosphereAutopilot
         internal string value_name;
 		internal bool editable;
 		internal string format;
+        internal object[] format_arr;
 
 		/// <summary>
 		/// Set this property or field as auto-renderable.
@@ -47,6 +48,7 @@ namespace AtmosphereAutopilot
             this.value_name = value_name;
             this.editable = editable;
             this.format = format;
+            format_arr = new object[] { this.format };
         }
     }
 
@@ -342,13 +344,20 @@ namespace AtmosphereAutopilot
             GUILayout.BeginHorizontal();
             GUILayout.Label(att.value_name, GUIStyles.labelStyleLeft);
 
+            if (element_type == typeof(Vector3d) && !att.editable && att.format != null)
+            {
+                // it's a toggle button
+                GUILayout.Label(((Vector3d)GetValue(element, obj)).ToString(att.format), GUIStyles.labelStyleRight);
+                return;
+            }
+
 			if (!toStringMethods.ContainsKey(element_type))
 				toStringMethods[element_type] = element_type.GetMethod("ToString", formatStrTypes);
 			MethodInfo ToStringFormat = toStringMethods[element_type];
             if (!att.editable)
             {
                 if (ToStringFormat != null && att.format != null)
-                    GUILayout.Label((string)ToStringFormat.Invoke(GetValue(element, obj), new[] { att.format }), GUIStyles.labelStyleRight);
+                    GUILayout.Label((string)ToStringFormat.Invoke(GetValue(element, obj), att.format_arr), GUIStyles.labelStyleRight);
                 else
                     GUILayout.Label(GetValue(element, obj).ToString(), GUIStyles.labelStyleRight);
             }
@@ -356,7 +365,7 @@ namespace AtmosphereAutopilot
             {
                 string val_holder;
                 if (ToStringFormat != null && att.format != null)
-                    val_holder = (string)ToStringFormat.Invoke(GetValue(element, obj), new[] { att.format });
+                    val_holder = (string)ToStringFormat.Invoke(GetValue(element, obj), att.format_arr);
                 else
                     val_holder = GetValue(element, obj).ToString();
                 val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);

@@ -54,6 +54,7 @@ namespace AtmosphereAutopilot
 			Debug.Log("[AtmosphereAutopilot]: starting up!"); 
             DontDestroyOnLoad(this);
             determine_aerodynamics();
+            get_csurf_module();
             initialize_types();
             initialize_hotkeys();
             initialize_thread();
@@ -78,6 +79,7 @@ namespace AtmosphereAutopilot
         /// Current aerodynamics model.
         /// </summary>
         public static AerodinamycsModel AeroModel { get; private set; }
+        Assembly far_assembly;
 
         void determine_aerodynamics()
         {
@@ -86,10 +88,28 @@ namespace AtmosphereAutopilot
             {
                 if (a.GetName().Name.Equals("FerramAerospaceResearch"))
                 {
+                    far_assembly = a;
                     AeroModel = AerodinamycsModel.FAR;
 					Debug.Log("[AtmosphereAutopilot]: FAR aerodynamics detected");
                     return;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Type of module of control surface.
+        /// </summary>
+        public static Type control_surface_module_type { get; private set; }
+
+        void get_csurf_module()
+        {
+            if (AeroModel == AerodinamycsModel.Stock)
+                control_surface_module_type = typeof(SyncModuleControlSurface);
+            else
+            {
+                control_surface_module_type = far_assembly.GetTypes().First(t => t.Name.Equals("FARControllableSurface"));
+                if (control_surface_module_type == null)
+                    throw new Exception("AtmosphereAutopilot could not bind to FAR FARControllableSurface class");
             }
         }
 

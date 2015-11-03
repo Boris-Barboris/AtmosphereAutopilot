@@ -88,6 +88,7 @@ namespace AtmosphereAutopilot
             prev_part_count = vessel.Parts.Count;
             if (moments_cycle_counter == 0)
             {
+                check_csurfaces();
                 get_moments(true);
                 reaction_torque = get_sas_authority();
                 get_engines();
@@ -95,6 +96,14 @@ namespace AtmosphereAutopilot
             else
                 get_moments(true);
             moments_cycle_counter = (moments_cycle_counter + 1) % FullMomentFreq;
+        }
+        
+        [AutoGuiAttr("has csurf", false)]
+        public bool HasControlSurfaces { get; private set; }
+
+        void check_csurfaces()
+        {
+            HasControlSurfaces = vessel.Parts.Find(p => p.Modules.Contains(AtmosphereAutopilot.control_surface_module_type.Name)) != null;
         }
 
         Vector3 get_sas_authority()
@@ -334,33 +343,34 @@ namespace AtmosphereAutopilot
                 aoa_buf[ROLL].Put(0.0f);
         }
 
-        public const float CSURF_PRECISION_SNAP = 0.0087f;
-
         void update_control(FlightCtrlState state)
         {
             for (int i = 0; i < 3; i++)
             {
                 float raw_input = Common.Clampf(ControlUtils.getControlFromState(state, i), 1.0f);
                 input_buf[i].Put(raw_input);
-                float csurf_input = 0.0f;
-                if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.Stock)
+                if (HasControlSurfaces)
                 {
-                    if (csurf_buf[i].Size >= 1 && sequential_dt)
-                        csurf_input = stock_actuator_blend(csurf_buf[i].getLast(), raw_input);
-                    else
-                        csurf_input = raw_input;
-                }
-                else
-                    if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
+                    float csurf_input = 0.0f;
+                    if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.Stock)
                     {
                         if (csurf_buf[i].Size >= 1 && sequential_dt)
-                            csurf_input = far_exponential_blend(csurf_buf[i].getLast(), raw_input);
+                            csurf_input = stock_actuator_blend(csurf_buf[i].getLast(), raw_input);
                         else
                             csurf_input = raw_input;
                     }
-                //if (Math.Abs(csurf_input) < CSURF_PRECISION_SNAP)
-                //    csurf_input = 0.0f;
-                csurf_buf[i].Put(csurf_input);
+                    else
+                        if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
+                        {
+                            if (csurf_buf[i].Size >= 1 && sequential_dt)
+                                csurf_input = far_exponential_blend(csurf_buf[i].getLast(), raw_input);
+                            else
+                                csurf_input = raw_input;
+                        }
+                    csurf_buf[i].Put(csurf_input);
+                }
+                else
+                    csurf_buf[i].Put(0.0f);
             }
         }
 
