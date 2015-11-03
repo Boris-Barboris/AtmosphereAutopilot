@@ -218,8 +218,8 @@ namespace AtmosphereAutopilot
         void initialize_trainer_windows()
         {
             Rect lin_wnd_rect = window;
-            lin_wnd_rect.xMin = window.xMin - 225.0f;
-            lin_wnd_rect.xMax = window.xMax - 225.0f;
+            lin_wnd_rect.xMin = window.xMin - 240.0f;
+            lin_wnd_rect.xMax = window.xMax - 240.0f;
             trainer_windows[0] = pitch_lin_wnd = new OnlineLinTrainerWindow(pitch_trainer, "pitch trainer", 908999, lin_wnd_rect);
             trainer_windows[1] = roll_lin_wnd = new OnlineLinTrainerWindow(roll_trainer, "roll trainer", 908998, lin_wnd_rect);
             trainer_windows[2] = yaw_lin_wnd = new OnlineLinTrainerWindow(yaw_trainer, "yaw trainer", 908997, lin_wnd_rect);

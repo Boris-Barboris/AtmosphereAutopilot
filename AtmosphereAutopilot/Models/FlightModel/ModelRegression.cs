@@ -191,13 +191,13 @@ namespace AtmosphereAutopilot
         }
 
         // Training methods
-        [AutoGuiAttr("pitch_cpu", false)]
+        //[AutoGuiAttr("pitch_cpu", false)]
         int pitch_cpu = 0;
 
-        [AutoGuiAttr("roll_cpu", false)]
+        //[AutoGuiAttr("roll_cpu", false)]
         int roll_cpu = 5;
 
-        [AutoGuiAttr("yaw_cpu", false)]
+        //[AutoGuiAttr("yaw_cpu", false)]
         int yaw_cpu = 0;
 
         //[AutoGuiAttr("pitch_lift_cpu", false)]

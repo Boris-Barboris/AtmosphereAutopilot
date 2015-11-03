@@ -3,8 +3,9 @@ AtmosphereAutopilot
 
 Plugin for Kerbal Space Program.
 
-Original author: Boris-Barboris.
-Contributors:
+Original author: Boris-Barboris. 
+Contributors: 
+License: GNU GPL version 3
 
 # General description
 Atmosphere autopilot is a modular atmospheric flight control system library. It's meant to be a foundation for multiple high-level programs - "Autopilots", wich will aid KSP player in one way or another, implying atmospheric flight. Autopilots are mutually exclusive - only one or none at all may be active at the active vessel at one given moment. They are provided by the library with means of automatic reflection-based serialization\deserialization and ugly, but lazy and customizable GUI interaction.
@@ -17,7 +18,7 @@ Stock and FAR aerodynamics are supported. Plugin is dependent on ModuleManager b
 AA icon is placed in Application Launcher toolbar during flight. It's contents will visualize a list of all Autopilots and Modules, created for active vessel. For every vessel "Autopilot Module Manager" will be created regardless. Turning on a "MASTER SWITCH" on it's window will create required context of Autopilots and Modules for this vessel. Under the master switch all Autopilots will be listed, for the user to choose one of them as an active one. Each Autopilot and Module has it's own GUI window. All of them (even inactive ones) are accessible from AA button in Application Launcher, some of them are accessible from Autopilot window hierarchy (that's up to Autopilot developer to decide, what particular Modules should be accessible from it's GUI). Window positions are serialized (preserved between flights and game sessions) in "Global_settings.cfg" file.
 
 # Craft implications and limitations
-"Control from here" part is facing prograde, with zero angle of attack. Planar symmetry is implied (left and right side of the plane are mirrored), as well as good degree of pitch-yaw and pitch-roll control isolation. Axial engine symmetry is strongly recommended. No wind mods are supported, as well as any mods besides Stock Bug Fix Modules, wich are changing control surface, rcs and engine gimbaling behaviour.
+"Control from here" part is facing prograde, with close-to-zero angle of attack bias. Planar symmetry is implied (left and right side of the plane are mirrored), as well as good degree of pitch-yaw and pitch-roll control isolation. Axial engine symmetry is strongly recommended. No wind mods are supported, as well as any mods besides Stock Bug Fix Modules, wich are changing control surface, rcs and engine gimbaling behaviour.
 
 **WARNING: DO NOT USE AEROBRAKES AS CONTROL SURFACES, USE THEM ONLY AS BRAKES!**
 
@@ -45,9 +46,8 @@ Short GUI description (consult source code for more deatils and insight):
   * AoA - angle of attack, degrees. Positive for pitch up, yaw right. For roll it's the angle between wing chord and airspeed vector, projected on frontal plane.
 * _has csurf_ - is true if Flight Model has found control surfaces on the craft. It is important for aerodynamics regressor to know it.
 * Five "trainers", linear regressors. They are analyzing craft performance history and try (and fail horribly) to produce linear models of aerodynamic torques and forces. Their GUIs are filled with magic numbers you should never need to change.
-* Three "cpu" integer fields. If they're blinking in 0-10 diapasone - background thread is active and is busy with regressor code.
 * _Lift acc_ - acceleration, provided by aerodynamic lift in the direction of plane spine.
-* _Slide acc_ - acceleration, provided by aerodynamic lift in the direction of plane right wind.
+* _Slide acc_ - acceleration, provided by aerodynamic lift in the direction of plane right wing.
 * _sum acc_ - vector of total craft acceleration in PhysX reference frame.
 * _pitch gravity acc_ - gravitational acceleration, projected on craft spine vector.
 * _pitch engine acc_ - engines-induced acceleration, projected on craft spine vector.
@@ -61,7 +61,9 @@ Short GUI description (consult source code for more deatils and insight):
 * _Reaction wheels_ - overall torque capability of reaction wheel systems.
 * _RCS pos_ - estimated torque capability of RCS system when user input is positive.
 * _RCS neg_ - estimated torque capability of RCS system when user input is negative.
-* four vectors on engine torque linear estimations. They are used to adress gimbaling capabilities of a craft.
+* _e torque_ - engines-induced torque in craft principal reference frame.
+* _e thrust_ - engines thrust in craft principal reference frame.
+* two vectors on engine torque linear estimations. They are used to adress gimbaling capabilities of a craft.
 
 ## Pitch, roll and yaw angular acceleration controllers
 Low level model-reference angular acceleration controllers. Input: desired angular acceleration. Output: pitch\roll\yaw control state.
@@ -76,4 +78,64 @@ Short GUI description:
 * _output_ - control state output, is passed to vessel in FlightCtrlState object.
 
 ## Pitch and yaw angular velocity controllers
-Model-reference controllers, that perform pitch and yaw angular velocity control with respect to moderation and controllability restrictions. They are designed for both higher-level input and direct user input.
+Model-reference controllers, that perform pitch and yaw angular velocity control with respect to moderation and controllability restrictions. Input: [-1, 1] user input or desired angular velocity. Output: desired angular acceleration, passed to angular acceleration controller.
+
+When navball is in surface mode, controller is dealing with surface-oriented reference frame. Zero input will keep zero velocity relative to ground - useful on planes. In orbit mode inertial reference frame will be used - usefull for spacecrafts. Precision mode (CAPS LOCK) divides input by the factor of 3 to provide more precise control, or to aid with control on high physical warp regimes.
+
+Short GUI description:
+* _Auto trim_ button - turn on of you want control trim to preserve after controller shutdown. Off by default.
+* _max\min input aoa_ - estimated maximum angle of attack (radians), achievable by locking control to 1.0 or -1.0. When craft is dynamically unstable, this value is 0.6 of the controllability region boundary - it helps to stay reliable on unstable planes.
+* _max\min input v_ - equilibrium angular velocities on max\min input aoa flight regimes.
+* _max\min g aoa_ - estimated maximum angle of attack considering g-force moderation.
+* _max\min g v_ - respective equilibrium angular velocities.
+* _max\min aoa v_ - equlibrium angular velocities for set by user AoA limit.
+* _moder filter_ - default value - 3.0. Used to filter out rapid changes or oscillations in flight model to provide more smooth boundary condition evolution. Magic number.
+* _quadr Kp_ - default value - 0.3. Contoller uses parabolic descend model of angular velocity to it's desired value. Those descend parameters are governed by this koefficient. Larger values may cause overshoot from wrong control surface lag handling. Lower values will slow down control. Magic number.
+* _kacc quadr_ - parabollic steepness of control, governed by control utilities authority and craft characteristics. Should be positive.
+* _kacc smoothing_ - default value - 10.0. Filter gain for slow and smooth "kacc quadr" evolution. Magic number.
+* _relaxation k_ - default value - 1.0. Controller uses relaxed linear descend on very small velocity error regimes. This koefficient governs relaxation frame size.
+* _relaxation Kp_ - default value - 0.5. Relaxation gain itself.
+* _relaxation frame_ - default value - 1. How many velocity frames will be averaged as current angular velocity. This is an old deprecated way of fighting oscillations, keep it 1.
+* _relax count_ - for how many frames velocity is in relaxation state.
+* _transit max v_ - very rough, but safe estimation of maximum non-overshooting velocity in transit maneuver (from 0.0 AoA to maximum AoA).
+* _res max\min aoa_ - AoA limits, that will actually govern controller in the current frame. Are chosed as the most strict ones from previously listed.
+* _res max\min v_ - respective equilibrium angular velocities.
+* _scaled aoa_ - how far away current AoA is from it's limit.
+* _scaled restr v_ - result of moderation algorithm.
+* _Moderate AoA_ button - toggle angle of attack moderation. Is necessary for safe flight, but can be turned off, for example, during re-entry to provide maximum-drag profile. Required to be ON, if this controller is governed by upper-level AoA controller.
+* _Moderate G-force_ button - toggle G-force moderation. Moderates centifugal acceleration of trajectory, not the full one, so G-meeter on navball will sometimes exceed maximum value (it is a correct behaviour).
+* _max AoA_ - default value - 15.0 degrees. User-entered AoA limit. Recommended values [5.0, 25.0]. Serialized on per-design basis.
+* _max G-force_ - default value - 10.0 g's. Self-explanatory. Serialized on per-design basis.
+* _angular vel_ - current angular velocity of a craft in corresponding axis.
+* _output acceleration_ - output, produced by controller.
+* _input deriv limit_ - default value - 5.0. Artificial inertia gain. User input derivative is clamped by this value. Decrease for more inertia, increase for sharpness. Serialized globally.
+* _prev input_ - previous controller input.
+* _Max v construction_ - default value - 0.5 (rad/sec). Global angular velocity restriction. Is introduced to provide comfortable control by limiting vessel rotation capabilities. 0.5 is good for most crafts.
+* _desired v_ - desired angular velocity, not yet processed by moderation.
+
+## Roll angular velocity controllers
+Model-reference controller, that perform roll angular velocity control and wing leveling. Input: [-1, 1] user input or desired angular velocity. Output: desired angular acceleration, passed to angular acceleration controller.
+
+Precision mode (CAPS LOCK) divides input by the factor of 3 to provide more precise control, or to aid with control on high physical warp regimes.
+
+Short GUI description (except identical from previous module):
+* _Wing leveler_ - toggle to level wings automaticly, if craft is close to zero bank angle. Zero angle is not horizontal one, but the normal one to the trajectory plane - good for leveling on non-zero pitch while yawing.
+* _Snap angle_ - default value - 3.0 degrees. Decides, when to activate wing leveler.
+* _angle btw hor_ - when wings are close to snapped state, this is the angle in radians. Is needed if snap angle is large and sin(x)<>x.
+* _angle btw hor sin_ - sinus of the horizont angle.
+* _snapping Kp_ - snapping speed gain. Default avlue - 0.25. Larger values seem to be too agressive, too large oscillate.
+
+## AoA and Sideslip controllers
+Model-reference controllers with self-explanatory names. Input: [-1, 1] user input or desired AoA. Output: desired angular velocity. Both require respective angular velocity controllers to have AoA moderation on.
+
+Short GUI description:
+* _AoA_ - respective angle of attack in radians.
+* _desired aoa_ - processed by controller input in radians.
+* _output v_ - controller output.
+* _desired aoa equilibr v_ - equilibrium angular velocity on desired angle of attack. For example, nosedive angular velocity on nose-heavy plane, wich will keep AoA at zero.
+* _filter k_ - filter gain to smooth changes in equilibrium v estimation. Default value - 4.0.
+* _relaxation frame_ - relaxation frame count, used for close-to desired behaviour. Default value - 2.
+* _relaxation factor_ - default value 0.1. Proportional gain of relaxation smoothing.
+* _cubic barrier_ - default value 1.0 seconds. AoA controller uses quadratic descend profile for long evolutions and cubic for short (less than "cubic barrier" seconds). Used to prevent overshooting.
+* _cubic KP_ - default value 0.3. Gain for cubic profile steepness evaluation.
+* _cubic mode_ - true if controller is now in cubic mode.
