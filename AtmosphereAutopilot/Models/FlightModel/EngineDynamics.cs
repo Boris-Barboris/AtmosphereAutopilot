@@ -76,10 +76,10 @@ namespace AtmosphereAutopilot
             }
         }
 
-        [AutoGuiAttr("e_torque", false, "G4")]
+        [AutoGuiAttr("e_torque", false, "G3")]
         public Vector3 engines_torque;
 
-        [AutoGuiAttr("e_thrust", false, "G4")]
+        [AutoGuiAttr("e_thrust", false, "G3")]
         public Vector3 engines_thrust;
 
         float abs_thrust;
@@ -117,10 +117,10 @@ namespace AtmosphereAutopilot
 
         Vector3 prev_engines_torque;
 
-        [AutoGuiAttr("e_torq_k0", false, "G4")]
+        [AutoGuiAttr("e_torq_k0", false, "G3")]
         Vector3 engines_torque_k0;
 
-        [AutoGuiAttr("e_torq_k1", false, "G4")]
+        [AutoGuiAttr("e_torq_k1", false, "G3")]
         Vector3 engines_torque_k1;
 
         // Stupid linear authority of gimbals, verry approximate but simple and effective.
@@ -138,6 +138,8 @@ namespace AtmosphereAutopilot
                     if (Math.Abs(cur_cntrl - last_cntrl) > 0.05)            // only significant input signal changes are analyzed
                     {
                         float k1 = (scaled_cur_torque[axis] - scaled_prev_torque[axis]) / (cur_cntrl - last_cntrl);
+                        if (k1 < 0.0f)
+                            k1 = 0.0f;
                         float k0 = scaled_cur_torque[axis] - cur_cntrl * k1;
                         engines_torque_k0[axis] = k0 * abs_thrust;
                         engines_torque_k1[axis] = k1 * abs_thrust;

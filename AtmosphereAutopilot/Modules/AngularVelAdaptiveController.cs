@@ -605,10 +605,10 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("res_equolibr_v_lower", false, "G6")]
         public float res_equilibr_v_lower;
 
-        [AutoGuiAttr("DEBUG scaled_aoa", false, "G6")]
+        [AutoGuiAttr("scaled_aoa", false, "G6")]
         protected float scaled_aoa;
 
-        [AutoGuiAttr("DEBUG scaled_restrained_v", false, "G6")]
+        [AutoGuiAttr("scaled_restr_v", false, "G6")]
         protected float scaled_restrained_v;
 
         [AutoGuiAttr("Moderate AoA", true, null)]

@@ -32,12 +32,12 @@ namespace AtmosphereAutopilot
         //[AutoGuiAttr("angular_vel", false, "G8")]
         Vector3 angular_vel = Vector3.zero;
 
-        [AutoGuiAttr("MOI", false, "G6")]
+        [AutoGuiAttr("MOI", false, "G5")]
         public Vector3 MOI;
 
         public Vector3 AM;
 
-        [AutoGuiAttr("CoM", false, "G6")]
+        [AutoGuiAttr("CoM", false, "G5")]
         public Vector3 CoM;
 
         Vector3 partial_CoM;
@@ -76,7 +76,7 @@ namespace AtmosphereAutopilot
         const int FullMomentFreq = 40;      // with standard 0.025 sec fixedDeltaTime it gives freq around 1 Hz
         int moments_cycle_counter = 0;
 
-        [AutoGuiAttr("Reaction wheels", false, "G6")]
+        [AutoGuiAttr("Reaction wheels", false, "G4")]
         public Vector3 reaction_torque = Vector3.zero;
 
         int prev_part_count = 0;

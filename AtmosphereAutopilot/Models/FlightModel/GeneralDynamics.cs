@@ -42,7 +42,7 @@ namespace AtmosphereAutopilot
         //[AutoGuiAttr("noninert_acc", false, "G6")]
         Vector3d noninert_acc;
 
-        [AutoGuiAttr("sum_acc", false, "G5")]
+        [AutoGuiAttr("sum_acc", false, "G3")]
         Vector3d sum_acc;
 
         [AutoGuiAttr("pitch_gravity_acc", false, "G6")]
