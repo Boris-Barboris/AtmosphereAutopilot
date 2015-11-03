@@ -346,8 +346,8 @@ namespace AtmosphereAutopilot
 
             if (element_type == typeof(Vector3d) && !att.editable && att.format != null)
             {
-                // it's a toggle button
                 GUILayout.Label(((Vector3d)GetValue(element, obj)).ToString(att.format), GUIStyles.labelStyleRight);
+                GUILayout.EndHorizontal();
                 return;
             }
 
