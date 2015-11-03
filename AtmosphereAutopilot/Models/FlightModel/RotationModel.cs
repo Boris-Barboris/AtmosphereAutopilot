@@ -91,6 +91,7 @@ namespace AtmosphereAutopilot
                 check_csurfaces();
                 get_moments(true);
                 reaction_torque = get_sas_authority();
+                get_rcs_characteristics();
                 get_engines();
             }
             else
@@ -394,6 +395,67 @@ namespace AtmosphereAutopilot
         {
             float max_delta = TimeWarp.fixedDeltaTime * SyncModuleControlSurface.CSURF_SPD;
             return prev + Common.Clampf(desire - prev, max_delta);
+        }
+
+        List<ModuleRCS> rcs_thrusters;
+
+        [AutoGuiAttr("RCS pos", false, "G4")]
+        public Vector3 rcs_authority_pos;
+
+        [AutoGuiAttr("RCS neg", false, "G4")]
+        public Vector3 rcs_authority_neg;
+
+        void get_rcs_characteristics()
+        {
+            rcs_thrusters = vessel.FindPartModulesImplementing<ModuleRCS>().Where(rcs => rcs.rcsEnabled && !rcs.part.ShieldedFromAirstream &&
+                rcs.part.isControllable).ToList();
+            if (vessel.ActionGroups[KSPActionGroup.RCS])
+            {
+                rcs_authority_pos = Vector3.zero;
+                rcs_authority_neg = Vector3.zero;
+                foreach (var rcsm in rcs_thrusters)
+                {
+                    for (int i = 0; i < rcsm.thrusterTransforms.Count; i++)
+                    {
+                        Transform t = rcsm.thrusterTransforms[i];
+                        //float lever_k = rcsm.GetLeverDistance(-t.up, CoM);
+                        Vector3 rv = world_to_cntrl_part * (t.position - CoM);
+                        Vector3 rvn = rv.normalized;
+                        Vector3 tup = world_to_cntrl_part * t.up;
+
+                        // positive authority
+                        float pitch_force = Mathf.Max(0.0f, Vector3.Dot(Vector3.Cross(new Vector3(1.0f, 0.0f, 0.0f), rvn), tup));
+                        float roll_force = Mathf.Max(0.0f, Vector3.Dot(Vector3.Cross(new Vector3(0.0f, 1.0f, 0.0f), rvn), tup));
+                        float yaw_force = Mathf.Max(0.0f, Vector3.Dot(Vector3.Cross(new Vector3(0.0f, 0.0f, 1.0f), rvn), tup));
+                        float pitch_torque = Vector3.Cross(rv, tup * pitch_force).x;
+                        float roll_torque = Vector3.Cross(rv, tup * roll_force).y;
+                        float yaw_torque = Vector3.Cross(rv, tup * yaw_force).z;
+                        rcs_authority_pos += new Vector3(pitch_torque, roll_torque, yaw_torque) * rcsm.thrusterPower;
+
+                        // negative authority
+                        pitch_force = Mathf.Max(0.0f, Vector3.Dot(Vector3.Cross(new Vector3(-1.0f, 0.0f, 0.0f), rvn), tup));
+                        roll_force = Mathf.Max(0.0f, Vector3.Dot(Vector3.Cross(new Vector3(0.0f, -1.0f, 0.0f), rvn), tup));
+                        yaw_force = Mathf.Max(0.0f, Vector3.Dot(Vector3.Cross(new Vector3(0.0f, 0.0f, -1.0f), rvn), tup));
+                        pitch_torque = Vector3.Cross(rv, tup * pitch_force).x;
+                        roll_torque = Vector3.Cross(rv, tup * roll_force).y;
+                        yaw_torque = Vector3.Cross(rv, tup * yaw_force).z;
+                        rcs_authority_neg -= new Vector3(pitch_torque, roll_torque, yaw_torque) * rcsm.thrusterPower;                        
+                    }
+                }
+            }
+            else
+            {
+                rcs_authority_pos = Vector3.zero;
+                rcs_authority_neg = Vector3.zero;
+            }
+        }
+
+        public double get_rcs_torque(int axis, float input)
+        {
+            if (input >= 0.0f)
+                return input * rcs_authority_pos[axis];
+            else
+                return input * rcs_authority_neg[axis];
         }
     }
 }

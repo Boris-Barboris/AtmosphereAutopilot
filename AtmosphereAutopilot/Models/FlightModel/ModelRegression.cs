@@ -113,7 +113,8 @@ namespace AtmosphereAutopilot
         double pitch_output_method()
         {
             return (angular_acc_buf[PITCH].getLast() -
-                (reaction_torque[PITCH] * input_buf[PITCH].getLast() + engines_torque[PITCH]) / MOI[PITCH]) * MOI[PITCH] / dyn_pressure * 1e2;
+                (reaction_torque[PITCH] * input_buf[PITCH].getLast() + engines_torque[PITCH] +
+                get_rcs_torque(PITCH, input_buf[PITCH].getLast())) / MOI[PITCH]) * MOI[PITCH] / dyn_pressure * 1e2;
         }
 
         void roll_input_method(Vector v)
@@ -127,7 +128,8 @@ namespace AtmosphereAutopilot
         double roll_output_method()
         {
             return (angular_acc_buf[ROLL].getLast() -
-                (reaction_torque[ROLL] * input_buf[ROLL].getLast() + engines_torque[ROLL]) / MOI[ROLL]) * MOI[ROLL] / dyn_pressure * 1e2;
+                (reaction_torque[ROLL] * input_buf[ROLL].getLast() + engines_torque[ROLL] +
+                get_rcs_torque(ROLL, input_buf[ROLL].getLast())) / MOI[ROLL]) * MOI[ROLL] / dyn_pressure * 1e2;
         }
 
         void yaw_input_method(Vector v)
@@ -139,7 +141,8 @@ namespace AtmosphereAutopilot
         double yaw_output_method()
         {
             return (angular_acc_buf[YAW].getLast() -
-                (reaction_torque[YAW] * input_buf[YAW].getLast() + engines_torque[YAW]) / MOI[YAW]) * MOI[YAW] / dyn_pressure * 1e2;
+                (reaction_torque[YAW] * input_buf[YAW].getLast() + engines_torque[YAW] +
+                get_rcs_torque(YAW, input_buf[YAW].getLast())) / MOI[YAW]) * MOI[YAW] / dyn_pressure * 1e2;
         }
 
         void pitch_lift_input_method(Vector v)

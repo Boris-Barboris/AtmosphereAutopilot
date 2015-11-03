@@ -76,6 +76,14 @@ namespace AtmosphereAutopilot
         public PitchYawCoeffs yaw_coeffs = new PitchYawCoeffs();
         public RollCoeffs roll_coeffs = new RollCoeffs();
 
+        double get_rcs_authority(int axis)
+        {
+            if (input_buf[axis].getLast() >= 0.0f)
+                return rcs_authority_pos[axis];
+            else
+                return rcs_authority_neg[axis];
+        }
+
         void update_pitch_rot_model()
         {
             // fill coeff structs
@@ -83,7 +91,7 @@ namespace AtmosphereAutopilot
             pitch_coeffs.Cl1 = pitch_lift_model.pars[1] / 1e3 * dyn_pressure / sum_mass;
             pitch_coeffs.Cl2 = pitch_lift_model.pars[2] / 1e3 * dyn_pressure / sum_mass;
             pitch_coeffs.et0 = engines_torque_k0[PITCH] / MOI[PITCH];
-            pitch_coeffs.et1 = engines_torque_k1[PITCH] / MOI[PITCH];
+            pitch_coeffs.et1 = (engines_torque_k1[PITCH] + get_rcs_authority(PITCH)) / MOI[PITCH];
             pitch_coeffs.k0_gen = pitch_aero_torque_model_gen.pars[0] / 1e2 * dyn_pressure / MOI[PITCH];
             pitch_coeffs.k1_gen = pitch_aero_torque_model_gen.pars[1] / 1e2 * dyn_pressure / MOI[PITCH];
             pitch_coeffs.k2_gen = pitch_aero_torque_model_gen.pars[2] / 1e2 * dyn_pressure / MOI[PITCH];
@@ -205,7 +213,7 @@ namespace AtmosphereAutopilot
         {
             // fill coeff structs
             roll_coeffs.et0 = engines_torque_k0[ROLL] / MOI[ROLL];
-            roll_coeffs.et1 = engines_torque_k1[ROLL] / MOI[ROLL];
+            roll_coeffs.et1 = (engines_torque_k1[ROLL] + get_rcs_authority(ROLL)) / MOI[ROLL];
             roll_coeffs.k0_gen = roll_aero_torque_model_gen.pars[0] / 1e2 * dyn_pressure / MOI[ROLL];
             roll_coeffs.k1_gen = roll_aero_torque_model_gen.pars[1] / 1e2 * dyn_pressure / MOI[ROLL];
             roll_coeffs.k2_gen = roll_aero_torque_model_gen.pars[2] / vessel.srfSpeed * dyn_pressure / MOI[ROLL];
@@ -325,7 +333,7 @@ namespace AtmosphereAutopilot
             yaw_coeffs.Cl1 = yaw_lift_model.pars[1] / 1e3 * dyn_pressure / sum_mass;
             yaw_coeffs.Cl2 = yaw_lift_model.pars[2] / 1e3 * dyn_pressure / sum_mass;
             yaw_coeffs.et0 = engines_torque_k0[YAW] / MOI[YAW];
-            yaw_coeffs.et1 = engines_torque_k1[YAW] / MOI[YAW];
+            yaw_coeffs.et1 = (engines_torque_k1[YAW] + get_rcs_authority(YAW)) / MOI[YAW];
             yaw_coeffs.k0_gen = yaw_aero_torque_model_gen.pars[0] / 1e2 * dyn_pressure / MOI[YAW];
             yaw_coeffs.k1_gen = yaw_aero_torque_model_gen.pars[1] / 1e2 * dyn_pressure / MOI[YAW];
             yaw_coeffs.k2_gen = yaw_aero_torque_model_gen.pars[2] / 1e2 * dyn_pressure / MOI[YAW];
