@@ -3,8 +3,10 @@ AtmosphereAutopilot
 
 Plugin for Kerbal Space Program.
 
-Original author: Boris-Barboris. 
-Contributors: 
+Original author: Boris-Barboris.
+
+Contributors:
+
 License: GNU GPL version 3
 
 # General description
@@ -110,7 +112,7 @@ Short GUI description:
 * _output acceleration_ - output, produced by controller.
 * _input deriv limit_ - default value - 5.0. Artificial inertia gain. User input derivative is clamped by this value. Decrease for more inertia, increase for sharpness. Serialized globally.
 * _prev input_ - previous controller input.
-* _Max v construction_ - default value - 0.5 (rad/sec). Global angular velocity restriction. Is introduced to provide comfortable control by limiting vessel rotation capabilities. 0.5 is good for most crafts.
+* _Max v construction_ - default value - 0.5 (rad/sec). Global angular velocity restriction. Is introduced to provide comfortable control by limiting vessel rotation capabilities. 0.5 is good for most crafts. Serialized on per-design basis.
 * _desired v_ - desired angular velocity, not yet processed by moderation.
 
 ## Roll angular velocity controllers
@@ -126,7 +128,7 @@ Short GUI description (except identical from previous module):
 * _snapping Kp_ - snapping speed gain. Default avlue - 0.25. Larger values seem to be too agressive, too large oscillate.
 
 ## AoA and Sideslip controllers
-Model-reference controllers with self-explanatory names. Input: [-1, 1] user input or desired AoA. Output: desired angular velocity. Both require respective angular velocity controllers to have AoA moderation on.
+Model-reference controllers with self-explanatory names. Input: [-1, 1] user input or desired AoA. Output: desired angular velocity. Both require respective angular velocity controllers to have AoA moderation on, because it uses respective angular velocity controller limitation values as governers.
 
 Short GUI description:
 * _AoA_ - respective angle of attack in radians.
