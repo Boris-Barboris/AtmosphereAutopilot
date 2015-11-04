@@ -11,7 +11,7 @@ plot(time, acc,'r','Marker','.','MarkerSize',5)
 plot(time, predict,'r-.')
 plot(time, control,'k','Marker','.','MarkerSize',5)
 plot(time, output,'k:','Marker','.','MarkerSize',5)
-plot(time, 100 .* aoa,'b','Marker','.','MarkerSize',5)
+plot(time, 10 .* aoa,'b','Marker','.','MarkerSize',5)
 plot(time, 1 .* v,'g')
 hold off
 xlabel('time')

@@ -116,12 +116,21 @@ namespace AtmosphereAutopilot
         void initialize_types()
         {
             // Find all sealed children of AutopilotModule and treat them as complete autopilot modules
-            var lListOfBs = (from lAssembly in AppDomain.CurrentDomain.GetAssemblies()
-                             from lType in lAssembly.GetTypes()
-                             where lType.IsSubclassOf(typeof(AutopilotModule))
-                             where lType.IsSealed
-                             select lType);
-            autopilot_module_types.AddRange(lListOfBs);
+            foreach (var asmbly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    var lListOfBs = (from lType in asmbly.GetTypes()
+                                     where lType.IsSubclassOf(typeof(AutopilotModule))
+                                     where lType.IsSealed
+                                     select lType);
+                    autopilot_module_types.AddRange(lListOfBs);
+                }
+                catch (Exception)
+                {
+                    Debug.Log("[AtmosphereAutopilot]: reflection crash on " + asmbly.FullName + " assembly.");
+                }
+            }
         }
 
         void initialize_hotkeys()
