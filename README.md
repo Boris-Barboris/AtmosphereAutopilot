@@ -34,7 +34,7 @@ Main goals:
 * Sideslip handling.
 * Fighting oscillations.
 
-FBW uses three controllers - pitch, roll and yaw. Pitch is handled by "Pitch ang vel controller", roll by "Roll ang vel controller" and yaw is handled by "Sideslip controller" in plane mode, or directly by "Yaw ang vel controller" in "Rocket mode". In Rocket mode pitch and yaw axes are treated the same - it's usefull in case player wants to use FBW for rocket launches. FBW is effective only on small (<25 degrees) AoA values, though control is possible on all regimes. It's just that it's quality will degrade from inadequacy of linearization assumptions.
+FBW uses three controllers - pitch, roll and yaw. Pitch is handled by "Pitch ang vel controller", roll by "Roll ang vel controller" and yaw is handled by "Sideslip controller" in plane mode, or directly by "Yaw ang vel controller" in "Rocket mode". In Rocket mode pitch and yaw axes are treated the same - it's usefull in case player wants to use FBW for rocket launches. FBW is effective only on small (<25 degrees) AoA values, though control is possible on all regimes. It's just that it's quality will degrade from inadequacy of linearization assumptions. "Moderation" button is toggling all pitch and yaw moderations - usefull for low speed VTOL action or for fighting overmoderation bugs.
 
 # Default Modules descriptions
 
@@ -86,7 +86,7 @@ When navball is in surface mode, controller is dealing with surface-oriented ref
 
 Short GUI description:
 * _Auto trim_ button - turn on of you want control trim to preserve after controller shutdown. Off by default.
-* _max\min input aoa_ - estimated maximum angle of attack (radians), achievable by locking control to 1.0 or -1.0. When craft is dynamically unstable, this value is 0.6 of the controllability region boundary - it helps to stay reliable on unstable planes.
+* _max\min input aoa_ - estimated maximum angle of attack (radians), achievable by locking control to 1.0 or -1.0. When craft is statically unstable, this value is 0.6 of the controllability region boundary - it helps to stay reliable on unstable planes.
 * _max\min input v_ - equilibrium angular velocities on max\min input aoa flight regimes.
 * _max\min g aoa_ - estimated maximum angle of attack considering g-force moderation.
 * _max\min g v_ - respective equilibrium angular velocities.
