@@ -66,6 +66,20 @@ namespace AtmosphereAutopilot
 		[AutoGuiAttr("Rocket mode", true)]
 		public bool rocket_mode = false;
 
+        [AutoGuiAttr("Moderation", true)]
+        public bool moderation_switch
+        {
+            get
+            {
+                return (pc.moderate_aoa || pc.moderate_g || yvc.moderate_aoa || yvc.moderate_g);
+            }
+            set
+            {
+                if (value != moderation_switch)
+                    pc.moderate_aoa = pc.moderate_g = yvc.moderate_aoa = yvc.moderate_g = value;
+            }
+        }
+
         /// <summary>
         /// Main control function
         /// </summary>
