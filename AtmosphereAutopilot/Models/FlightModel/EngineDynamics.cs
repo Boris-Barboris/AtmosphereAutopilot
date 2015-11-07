@@ -29,7 +29,7 @@ namespace AtmosphereAutopilot
 
     public sealed partial class FlightModel : AutopilotModule
 	{
-        struct EngineMoment
+        public struct EngineMoment
         {
             public EngineMoment(ModuleEngines m, ModuleGimbal g, bool turned_off_gimbal_spd)
             {
@@ -42,7 +42,7 @@ namespace AtmosphereAutopilot
             public bool tunred_off_gimbal_spd;
         }
 
-        List<EngineMoment> engines = new List<EngineMoment>();
+        public List<EngineMoment> engines = new List<EngineMoment>();
 
         void get_engines()
         {

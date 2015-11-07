@@ -135,15 +135,7 @@ namespace AtmosphereAutopilot
 				{
                     if (!_write_telemetry)
                     {
-                        controlWriter = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/control.csv");
-                        v_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/v.csv");
-                        acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/acc.csv");
-                        desire_acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/desire.csv");
-                        prediction_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/predict.csv");
-						aoa_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/aoa.csv");
-						airspd_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/airspd.csv");
-						density_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/density.csv");
-                        outputWriter = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/output.csv");
+                        create_writers();
 						_write_telemetry = value;
                     }
 				}
@@ -151,15 +143,7 @@ namespace AtmosphereAutopilot
 				{
                     if (_write_telemetry)
                     {
-                        controlWriter.Close();
-                        v_writer.Close();
-                        acc_writer.Close();
-                        desire_acc_writer.Close();
-                        prediction_writer.Close();
-						aoa_writer.Close();
-						airspd_writer.Close();
-						density_writer.Close();
-                        outputWriter.Close();
+                        close_writers();
                         _write_telemetry = value;
                     }					
 				}
@@ -169,6 +153,32 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("DEBUG desired acc", false, "G8")]
         internal float desired_acc { get; private set; }
+
+        void create_writers()
+        {
+            controlWriter = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/control.csv");
+            v_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/v.csv");
+            acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/acc.csv");
+            desire_acc_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/desire.csv");
+            prediction_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/predict.csv");
+            aoa_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/aoa.csv");
+            airspd_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/airspd.csv");
+            density_writer = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/density.csv");
+            outputWriter = File.CreateText(KSPUtil.ApplicationRootPath + "/Resources/output.csv");
+        }
+
+        void close_writers()
+        {
+            controlWriter.Close();
+            v_writer.Close();
+            acc_writer.Close();
+            desire_acc_writer.Close();
+            prediction_writer.Close();
+            aoa_writer.Close();
+            airspd_writer.Close();
+            density_writer.Close();
+            outputWriter.Close();
+        }
 
 	}
 

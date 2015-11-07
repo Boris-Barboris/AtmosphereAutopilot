@@ -152,9 +152,8 @@ namespace AtmosphereAutopilot
 
             // parabolic descend to desired angle of attack
             double error = Common.Clampf(desired_aoa - cur_aoa, Mathf.Abs(v_controller.res_max_aoa - v_controller.res_min_aoa));
-            if (Math.Abs(error) < 1e-4)
-                output_v = (float)des_aoa_equilibr_v;
-            else
+
+            if (Math.Abs(error) >= 1e-4)
             {
                 double k = v_controller.transit_max_v * v_controller.transit_max_v / 2.0 / (v_controller.res_max_aoa - v_controller.res_min_aoa);
                 double t = -Math.Sqrt(Math.Abs(error / k));
@@ -165,7 +164,7 @@ namespace AtmosphereAutopilot
                     cubic = false;
                     double t_step = Math.Min(0.0, t + TimeWarp.fixedDeltaTime);
                     double relaxation = 1.0;
-                    if (t > -relaxation_frame * TimeWarp.fixedDeltaTime)
+                    if (t >= -relaxation_frame * TimeWarp.fixedDeltaTime)
                         relaxation = relaxation_factor;
                     descend_v = relaxation * k * (t * t - t_step * t_step) * Math.Sign(error) / TimeWarp.fixedDeltaTime;
                 }
@@ -177,14 +176,16 @@ namespace AtmosphereAutopilot
                     double k_cubic = kacc_quadr / 6.0 * cubic_kp;
                     double t_cubic = -Math.Pow(Math.Abs(error / k_cubic), 0.33);
                     double t_step = Math.Min(0.0, t_cubic + TimeWarp.fixedDeltaTime);
-                    double relaxation = 1.0;
-                    if (t > -relaxation_frame * TimeWarp.fixedDeltaTime)
-                        relaxation = relaxation_factor;
-                    descend_v = relaxation * k_cubic * (t_step * t_step * t_step - t_cubic * t_cubic * t_cubic) * Math.Sign(error) / TimeWarp.fixedDeltaTime;
+                    if (t >= -relaxation_frame * TimeWarp.fixedDeltaTime)
+                        descend_v = relaxation_factor * error / TimeWarp.fixedDeltaTime;
+                    else
+                        descend_v = k_cubic * (t_step * t_step * t_step - t_cubic * t_cubic * t_cubic) * Math.Sign(error) / TimeWarp.fixedDeltaTime;
                 }
 
                 output_v = (float)(descend_v + des_aoa_equilibr_v);
             }
+            else
+                output_v = des_aoa_equilibr_v;
 
             ControlUtils.neutralize_user_input(cntrl, axis);
             v_controller.user_controlled = false;

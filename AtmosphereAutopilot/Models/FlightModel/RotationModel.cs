@@ -43,7 +43,7 @@ namespace AtmosphereAutopilot
         Vector3 partial_CoM;
         Vector3 cur_CoM;
 
-        //[AutoGuiAttr("world_v", false, "G6")]
+        //[AutoGuiAttr("world_v", false, "G4")]
         Vector3d world_v;
 
         [AutoGuiAttr("Vessel mass", false, "G6")]
@@ -306,9 +306,9 @@ namespace AtmosphereAutopilot
 
         void update_aoa()
         {
-            up_srf_v = Vector3.Project(vessel.srf_velocity, vessel.ReferenceTransform.up);
-            fwd_srf_v = Vector3.Project(vessel.srf_velocity, vessel.ReferenceTransform.forward);
-            right_srf_v = Vector3.Project(vessel.srf_velocity, vessel.ReferenceTransform.right);
+            up_srf_v = Vector3.Project(world_v, vessel.ReferenceTransform.up);
+            fwd_srf_v = Vector3.Project(world_v, vessel.ReferenceTransform.forward);
+            right_srf_v = Vector3.Project(world_v, vessel.ReferenceTransform.right);
 
             Vector3 projected_vel = up_srf_v + fwd_srf_v;
             if (projected_vel.sqrMagnitude > 1.0f)
