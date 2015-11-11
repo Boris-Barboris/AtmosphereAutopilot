@@ -151,10 +151,15 @@ namespace AtmosphereAutopilot
                 string str = node.GetValue(att.data_name);
                 if (str == null)
                     continue;
-                var parse_method = field.FieldType.GetMethod("Parse", new [] { typeof(string) });
-                if (parse_method == null)
-                    continue;
-                field.SetValue(obj, parse_method.Invoke(null, new[] { str }));
+                if (field.FieldType.IsEnum)
+                    field.SetValue(obj, Enum.Parse(field.FieldType, str));
+                else
+                {
+                    var parse_method = field.FieldType.GetMethod("Parse", new[] { typeof(string) });
+                    if (parse_method == null)
+                        continue;
+                    field.SetValue(obj, parse_method.Invoke(null, new[] { str }));
+                }
             }
             foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
@@ -167,10 +172,15 @@ namespace AtmosphereAutopilot
                 string str = node.GetValue(att.data_name);
                 if (str == null)
                     continue;
-                var parse_method = property.PropertyType.GetMethod("Parse", new[] { typeof(string) });
-                if (parse_method == null)
-                    continue;
-                property.SetValue(obj, parse_method.Invoke(null, new[] { str }), null);
+                if (property.PropertyType.IsEnum)
+                    property.SetValue(obj, Enum.Parse(property.PropertyType, str), null);
+                else
+                {
+                    var parse_method = property.PropertyType.GetMethod("Parse", new[] { typeof(string) });
+                    if (parse_method == null)
+                        continue;
+                    property.SetValue(obj, parse_method.Invoke(null, new[] { str }), null);
+                }
             }
         }
 

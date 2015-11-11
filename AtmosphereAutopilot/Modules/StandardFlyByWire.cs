@@ -76,8 +76,20 @@ namespace AtmosphereAutopilot
             set
             {
                 if (value != moderation_switch)
+                {
+                    MessageManager.post_status_message(value ? "Moderation enabled" : "Moderation disabled");
                     pc.moderate_aoa = pc.moderate_g = yvc.moderate_aoa = yvc.moderate_g = value;
+                }
             }
+        }
+
+        [GlobalSerializable("moderation_keycode")]
+        protected KeyCode moderation_keycode = KeyCode.O;
+
+        public override void OnUpdate()
+        {
+            if (Input.GetKeyDown(moderation_keycode))
+                moderation_switch = !moderation_switch;
         }
 
         /// <summary>

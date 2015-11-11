@@ -91,6 +91,11 @@ namespace AtmosphereAutopilot
             }
         }
 
+        /// <summary>
+        /// Is called on Update Unity event for current vessel every frame
+        /// </summary>
+        public virtual void OnUpdate() { }
+
         #region Serialization
 
 		/// <summary>

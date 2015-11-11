@@ -338,6 +338,11 @@ namespace AtmosphereAutopilot
 					MessageManager.post_status_message(module.ModuleName + (module.Active ? " enabled" : " disabled"));
 				}
 			}
+            if (autopilot_module_lists.ContainsKey(ActiveVessel))
+            {
+                foreach (var module in autopilot_module_lists[ActiveVessel].Values)
+                    module.OnUpdate();
+            }
         }
     }
 }
