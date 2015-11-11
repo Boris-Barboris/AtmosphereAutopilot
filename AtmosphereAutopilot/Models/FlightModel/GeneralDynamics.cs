@@ -75,7 +75,7 @@ namespace AtmosphereAutopilot
         {
             dyn_pressure = vessel.atmDensity * vessel.srfSpeed * vessel.srfSpeed;
 
-            //vess2planet = vessel.mainBody.position - vessel.transform.position;
+            //vess2planet = vessel.mainBody.position - vessel.ReferenceTransform.position;
             //gravity_acc = vess2planet.normalized * (vessel.mainBody.gMagnitudeAtCenter / vess2planet.sqrMagnitude);
             gravity_acc = integrator.gForce;
             noninert_acc = integrator.CoriolisAcc + integrator.CentrifugalAcc;

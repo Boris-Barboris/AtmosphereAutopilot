@@ -151,7 +151,7 @@ namespace AtmosphereAutopilot
 
         void get_moments(bool all_parts)
         {
-            cntrl_part_to_world = vessel.transform.rotation;
+            cntrl_part_to_world = vessel.ReferenceTransform.rotation;
             world_to_cntrl_part = cntrl_part_to_world.Inverse();            // from world to control part rotation
             CoM = vessel.findWorldCenterOfMass();
             if (all_parts)
