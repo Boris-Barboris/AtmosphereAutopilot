@@ -430,7 +430,7 @@ namespace AtmosphereAutopilot
                         float pitch_torque = Vector3.Cross(rv, tup * pitch_force).x;
                         float roll_torque = Vector3.Cross(rv, tup * roll_force).y;
                         float yaw_torque = Vector3.Cross(rv, tup * yaw_force).z;
-                        rcs_authority_pos += new Vector3(pitch_torque, roll_torque, yaw_torque) * rcsm.thrusterPower;
+                        rcs_authority_pos += new Vector3(pitch_torque, roll_torque, yaw_torque) * rcsm.thrusterPower * rcsm.thrustPercentage * 0.01f;
 
                         // negative authority
                         pitch_force = Mathf.Max(0.0f, Vector3.Dot(Vector3.Cross(new Vector3(-1.0f, 0.0f, 0.0f), rvn), tup));
@@ -439,7 +439,7 @@ namespace AtmosphereAutopilot
                         pitch_torque = Vector3.Cross(rv, tup * pitch_force).x;
                         roll_torque = Vector3.Cross(rv, tup * roll_force).y;
                         yaw_torque = Vector3.Cross(rv, tup * yaw_force).z;
-                        rcs_authority_neg -= new Vector3(pitch_torque, roll_torque, yaw_torque) * rcsm.thrusterPower;                        
+                        rcs_authority_neg -= new Vector3(pitch_torque, roll_torque, yaw_torque) * rcsm.thrusterPower * rcsm.thrustPercentage * 0.01f;
                     }
                 }
             }
