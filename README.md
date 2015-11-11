@@ -34,7 +34,10 @@ Main goals:
 * Sideslip handling.
 * Fighting oscillations.
 
-FBW uses three controllers - pitch, roll and yaw. Pitch is handled by "Pitch ang vel controller", roll by "Roll ang vel controller" and yaw is handled by "Sideslip controller" in plane mode, or directly by "Yaw ang vel controller" in "Rocket mode". In Rocket mode pitch and yaw axes are treated the same - it's usefull in case player wants to use FBW for rocket launches. FBW is effective only on small (<25 degrees) AoA values, though control is possible on all regimes. It's just that it's quality will degrade from inadequacy of linearization assumptions. "Moderation" button is toggling all pitch and yaw moderations - usefull for low speed VTOL action or for fighting overmoderation bugs.
+FBW uses three controllers - pitch, roll and yaw. Pitch is handled by "Pitch ang vel controller", roll by "Roll ang vel controller" and yaw is handled by "Sideslip controller" in plane mode, or directly by "Yaw ang vel controller" in "Rocket mode". In Rocket mode pitch and yaw axes are treated the same - it's usefull in case player wants to use FBW for rocket launches. FBW is effective only on small (<25 degrees) AoA values, though control is possible on all regimes. It's just that it's quality will degrade from inadequacy of linearization assumptions. "Moderation" button is toggling all pitch and yaw moderations - usefull for low speed VTOL action or for fighting overmoderation bugs. 
+
+Hotkey for FBW is letter P, autoPilot. Hardcoded.
+Default hotkey for Moderation is letter O, mOderation. Can be changed in Global_settings.cfg file.
 
 # Default Modules descriptions
 
