@@ -428,18 +428,7 @@ namespace AtmosphereAutopilot
 				}
 			}
 			else
-				if (imodel.dyn_pressure <= 100.0)
-					transit_max_v = max_v_construction;
-				else
-				{
-					if (old_dyn_max_v != 0.0f)
-						transit_max_v = old_dyn_max_v;
-					else
-					{
-						old_dyn_max_v = max_v_construction;
-						transit_max_v = max_v_construction;
-					}
-				}
+				transit_max_v = max_v_construction;
             
             // if the user is in charge, let's hold surface-relative angular elocity
             float v_offset = 0.0f;
