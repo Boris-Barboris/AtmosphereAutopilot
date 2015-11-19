@@ -1,5 +1,5 @@
 %% import time series with removed delays
-ksp_plots_path ='D:\Games\Kerbal Space Program 1.04\Resources\';
+ksp_plots_path ='D:\Games\Kerbal Space Program 1.05\Resources\';
 
 acc = csvread([ksp_plots_path, 'acc.csv']);
 control = csvread([ksp_plots_path, 'control.csv']);

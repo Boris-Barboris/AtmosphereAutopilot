@@ -65,7 +65,7 @@ namespace AtmosphereAutopilot
             }
 
             float spd_factor = TimeWarp.fixedDeltaTime * CSURF_SPD;
-            float fwd_airstream_factor = Mathf.Sign(Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity));
+            float fwd_airstream_factor = Mathf.Sign(Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity) + 0.1f);
 
             if (!ignorePitch)
             {
