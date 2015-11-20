@@ -90,7 +90,7 @@ namespace AtmosphereAutopilot
             double pitch_total_acc = Vector3d.Dot(sum_acc, pitch_tangent);
             pitch_gravity_acc = Vector3d.Dot(gravity_acc, pitch_tangent);
             pitch_noninert_acc = Vector3d.Dot(noninert_acc, pitch_tangent);
-            pitch_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust / sum_mass, pitch_tangent);
+            pitch_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust_principal / sum_mass, pitch_tangent);
             lift_acc = pitch_total_acc - pitch_noninert_acc - pitch_gravity_acc - pitch_engine_acc;
 
             // yaw
@@ -98,7 +98,7 @@ namespace AtmosphereAutopilot
             double yaw_total_acc = Vector3d.Dot(sum_acc, yaw_tangent);
             yaw_gravity_acc = Vector3d.Dot(gravity_acc, yaw_tangent);
             yaw_noninert_acc = Vector3d.Dot(noninert_acc, yaw_tangent);
-            yaw_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust / sum_mass, yaw_tangent);
+            yaw_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust_principal / sum_mass, yaw_tangent);
             slide_acc = yaw_total_acc - yaw_noninert_acc - yaw_gravity_acc - yaw_engine_acc;
         }
     }

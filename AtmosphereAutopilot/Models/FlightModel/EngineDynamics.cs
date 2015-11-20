@@ -77,17 +77,17 @@ namespace AtmosphereAutopilot
         }
 
         [AutoGuiAttr("e_torque", false, "G3")]
-        public Vector3 engines_torque;
+        public Vector3 engines_torque_principal;
 
         [AutoGuiAttr("e_thrust", false, "G3")]
-        public Vector3 engines_thrust;
+        public Vector3 engines_thrust_principal;
 
         float abs_thrust;
 
         void update_engine_moments()
         {
-            engines_torque = Vector3.zero;
-            engines_thrust = Vector3.zero;
+            engines_torque_principal = Vector3.zero;
+            engines_thrust_principal = Vector3.zero;
             abs_thrust = 0.0f;
             for (int i = 0; i < engines.Count; i++)
             {
@@ -106,8 +106,8 @@ namespace AtmosphereAutopilot
                     tpos = world_to_cntrl_part * tpos;
                     tdir = world_to_cntrl_part * tdir;
                     Vector3 torque_moment = -Vector3.Cross(tpos, tdir);       // minus because Unity's left-handed
-                    engines_torque += torque_moment * engines[i].engine.finalThrust / (float)tcount;
-                    engines_thrust += engines[i].engine.finalThrust * tdir / (float)tcount;
+                    engines_torque_principal += torque_moment * engines[i].engine.finalThrust / (float)tcount;
+                    engines_thrust_principal += engines[i].engine.finalThrust * tdir / (float)tcount;
                 }
                 abs_thrust += engines[i].engine.finalThrust;
             }
@@ -130,7 +130,7 @@ namespace AtmosphereAutopilot
             if ((prev_abs_thrust != 0.0f) && (abs_thrust != 0.0f) && (input_buf[0].Size >= 2))
             {
                 Vector3 scaled_prev_torque = prev_engines_torque / prev_abs_thrust;
-                Vector3 scaled_cur_torque = engines_torque / abs_thrust;
+                Vector3 scaled_cur_torque = engines_torque_principal / abs_thrust;
                 for (int axis = 0; axis < 3; axis++)
                 {
                     float cur_cntrl = input_buf[axis].getLast();
@@ -154,11 +154,11 @@ namespace AtmosphereAutopilot
             }
             else
             {
-                engines_torque_k0 = engines_torque;
+                engines_torque_k0 = engines_torque_principal;
                 engines_torque_k1 = Vector3d.zero;
             }
             prev_abs_thrust = abs_thrust;
-            prev_engines_torque = engines_torque;
+            prev_engines_torque = engines_torque_principal;
         }
     }
 }

@@ -102,7 +102,7 @@ namespace AtmosphereAutopilot
             Matrix C = pitch_rot_model_gen.C;
             if (dyn_pressure >= 60.0)
             {
-                A[0, 0] = -(pitch_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
+                A[0, 0] = -(pitch_coeffs.Cl1 + engines_thrust_principal[ROLL] / sum_mass) / vessel.srfSpeed;
                 A[0, 2] = -pitch_coeffs.Cl2 / vessel.srfSpeed;
                 A[1, 0] = pitch_coeffs.k1_gen;
                 if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
@@ -115,17 +115,17 @@ namespace AtmosphereAutopilot
                     A[1, 2] = pitch_coeffs.k2_gen;
                     B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.et1;
                 }
-                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc + pitch_coeffs.Cl0 - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc + pitch_coeffs.Cl0 - engines_thrust_principal[YAW] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = pitch_coeffs.k0_gen + pitch_coeffs.et0;
             }
             else
             {
-                A[0, 0] = -engines_thrust[ROLL] / sum_mass / vessel.srfSpeed;
+                A[0, 0] = -engines_thrust_principal[ROLL] / sum_mass / vessel.srfSpeed;
                 A[0, 2] = 0.0;
                 A[1, 0] = 0.0;
                 A[1, 2] = 0.0;
                 B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.et1;
-                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc - engines_thrust_principal[YAW] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = pitch_coeffs.et0;
             }
             A[0, 1] = 1.0;
@@ -147,7 +147,7 @@ namespace AtmosphereAutopilot
             C = pitch_rot_model.C;
             if (dyn_pressure >= 60.0)
             {
-                A[0, 0] = -(pitch_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
+                A[0, 0] = -(pitch_coeffs.Cl1 + engines_thrust_principal[ROLL] / sum_mass) / vessel.srfSpeed;
                 A[0, 2] = -pitch_coeffs.Cl2 / vessel.srfSpeed;
                 A[1, 0] = pitch_coeffs.k1;
                 if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
@@ -160,17 +160,17 @@ namespace AtmosphereAutopilot
                     A[1, 2] = pitch_coeffs.k2;
                     B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.et1;
                 }
-                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc + pitch_coeffs.Cl0 - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc + pitch_coeffs.Cl0 - engines_thrust_principal[YAW] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = pitch_coeffs.k0 + pitch_coeffs.et0;
             }
             else
             {
-                A[0, 0] = -engines_thrust[ROLL] / sum_mass / vessel.srfSpeed;
+                A[0, 0] = -engines_thrust_principal[ROLL] / sum_mass / vessel.srfSpeed;
                 A[0, 2] = 0.0;
                 A[1, 0] = 0.0;
                 A[1, 2] = 0.0;
                 B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.et1;
-                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc - engines_thrust_principal[YAW] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = pitch_coeffs.et0;
             }
             A[0, 1] = 1.0;
@@ -188,20 +188,20 @@ namespace AtmosphereAutopilot
             C = pitch_rot_model_undelayed.C;
             if (dyn_pressure >= 60.0)
             {
-                A[0, 0] = -(pitch_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
+                A[0, 0] = -(pitch_coeffs.Cl1 + engines_thrust_principal[ROLL] / sum_mass) / vessel.srfSpeed;
                 A[1, 0] = pitch_coeffs.k1;
                 B[0, 0] = -pitch_coeffs.Cl2 / vessel.srfSpeed;
                 B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.k2 + pitch_coeffs.et1;
-                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc + pitch_coeffs.Cl0 - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc + pitch_coeffs.Cl0 - engines_thrust_principal[YAW] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = pitch_coeffs.k0 + pitch_coeffs.et0;
             }
             else
             {
-                A[0, 0] = -engines_thrust[ROLL] / sum_mass / vessel.srfSpeed;
+                A[0, 0] = -engines_thrust_principal[ROLL] / sum_mass / vessel.srfSpeed;
                 A[1, 0] = 0.0;
                 B[0, 0] = 0.0;
                 B[1, 0] = reaction_torque[PITCH] / MOI[PITCH] + pitch_coeffs.et1;
-                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc - engines_thrust[YAW] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(pitch_gravity_acc + pitch_noninert_acc - engines_thrust_principal[YAW] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = pitch_coeffs.et0;
             }
             A[0, 1] = 1.0;
@@ -344,7 +344,7 @@ namespace AtmosphereAutopilot
             Matrix C = yaw_rot_model_gen.C;
             if (dyn_pressure >= 60.0)
             {
-                A[0, 0] = -(yaw_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
+                A[0, 0] = -(yaw_coeffs.Cl1 + engines_thrust_principal[ROLL] / sum_mass) / vessel.srfSpeed;
                 A[0, 2] = -yaw_coeffs.Cl2 / vessel.srfSpeed;
                 A[1, 0] = yaw_coeffs.k1_gen;
                 if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
@@ -357,17 +357,17 @@ namespace AtmosphereAutopilot
                     A[1, 2] = yaw_coeffs.k2_gen;
                     B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.et1;
                 }
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.k0_gen + yaw_coeffs.et0;
             }
             else
             {
-                A[0, 0] = -engines_thrust[ROLL] / sum_mass / vessel.srfSpeed;
+                A[0, 0] = -engines_thrust_principal[ROLL] / sum_mass / vessel.srfSpeed;
                 A[0, 2] = 0.0;
                 A[1, 0] = 0.0;
                 A[1, 2] = 0.0;
                 B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.et1;
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc - engines_thrust[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.et0;
             }
             A[0, 1] = 1.0;
@@ -389,7 +389,7 @@ namespace AtmosphereAutopilot
             C = yaw_rot_model.C;
             if (dyn_pressure >= 60.0)
             {
-                A[0, 0] = -(yaw_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
+                A[0, 0] = -(yaw_coeffs.Cl1 + engines_thrust_principal[ROLL] / sum_mass) / vessel.srfSpeed;
                 A[0, 2] = -yaw_coeffs.Cl2 / vessel.srfSpeed;
                 A[1, 0] = yaw_coeffs.k1;
                 if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
@@ -402,17 +402,17 @@ namespace AtmosphereAutopilot
                     A[1, 2] = yaw_coeffs.k2;
                     B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.et1;
                 }
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.k0 + yaw_coeffs.et0;
             }
             else
             {
-                A[0, 0] = -engines_thrust[ROLL] / sum_mass / vessel.srfSpeed;
+                A[0, 0] = -engines_thrust_principal[ROLL] / sum_mass / vessel.srfSpeed;
                 A[0, 2] = 0.0;
                 A[1, 0] = 0.0;
                 A[1, 2] = 0.0;
                 B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.et1;
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc - engines_thrust[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.et0;
             }
             A[0, 1] = 1.0;
@@ -430,20 +430,20 @@ namespace AtmosphereAutopilot
             C = yaw_rot_model_undelayed.C;
             if (dyn_pressure >= 60.0)
             {
-                A[0, 0] = -(yaw_coeffs.Cl1 + engines_thrust[ROLL] / sum_mass) / vessel.srfSpeed;
+                A[0, 0] = -(yaw_coeffs.Cl1 + engines_thrust_principal[ROLL] / sum_mass) / vessel.srfSpeed;
                 A[1, 0] = yaw_coeffs.k1;
                 B[0, 0] = -yaw_coeffs.Cl2 / vessel.srfSpeed;
                 B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.k2 + yaw_coeffs.et1;
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.k0 + yaw_coeffs.et0;
             }
             else
             {
-                A[0, 0] = -engines_thrust[ROLL] / sum_mass / vessel.srfSpeed;
+                A[0, 0] = -engines_thrust_principal[ROLL] / sum_mass / vessel.srfSpeed;
                 A[1, 0] = 0.0;
                 B[0, 0] = 0.0;
                 B[1, 0] = reaction_torque[YAW] / MOI[YAW] + yaw_coeffs.et1;
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc - engines_thrust[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.et0;
             }
             A[0, 1] = 1.0;
