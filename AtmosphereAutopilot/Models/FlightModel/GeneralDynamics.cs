@@ -80,7 +80,7 @@ namespace AtmosphereAutopilot
             gravity_acc = integrator.gForce;
             noninert_acc = integrator.CoriolisAcc + integrator.CentrifugalAcc;
 
-            Vector3d orb_vel = world_v;
+            Vector3d orb_vel = surface_v;
 
             sum_acc = (orb_vel - prev_orb_vel) / TimeWarp.fixedDeltaTime;
             prev_orb_vel = orb_vel;

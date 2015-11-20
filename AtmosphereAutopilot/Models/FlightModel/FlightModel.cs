@@ -152,10 +152,9 @@ namespace AtmosphereAutopilot
 			update_control(state);
 			if (!vessel.LandedOrSplashed)
 				sequential_dt = true;
-            AtmosphereAutopilot.Instance.just_switched_vessel = false;
 		}
 
-        bool sequential_dt = false;
+        internal bool sequential_dt = false;
 
 		void OnPreAutopilot(FlightCtrlState state)		// workhorse function
 		{
@@ -168,7 +167,7 @@ namespace AtmosphereAutopilot
 
             if (sequential_dt)
             {
-                if (angular_acc_buf[0].Size > 0 && !vessel.LandedOrSplashed && !AtmosphereAutopilot.Instance.just_switched_vessel)
+                if (angular_acc_buf[0].Size > 0 && !vessel.LandedOrSplashed)
                 {
                     update_model_acc();
                     update_training_inputs();

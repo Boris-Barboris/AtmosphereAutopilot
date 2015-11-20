@@ -207,10 +207,10 @@ namespace AtmosphereAutopilot
 			Debug.Log("[AtmosphereAutopilot]: vessel switch to " + v.vesselName);
             load_manager_for_vessel(v);
 			ActiveVessel = v;
-            just_switched_vessel = true;
+            foreach (Vessel c in autopilot_module_lists.Keys)
+                if (autopilot_module_lists[c].ContainsKey(typeof(FlightModel)))
+                    (autopilot_module_lists[c][typeof(FlightModel)] as FlightModel).sequential_dt = false;
         }
-
-        public bool just_switched_vessel = false;
 
         void clean_modules()
         {

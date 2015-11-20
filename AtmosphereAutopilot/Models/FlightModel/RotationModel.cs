@@ -44,7 +44,7 @@ namespace AtmosphereAutopilot
         Vector3 cur_CoM;
 
         //[AutoGuiAttr("world_v", false, "G4")]
-        Vector3d world_v;
+        public Vector3d surface_v;
 
         [AutoGuiAttr("Vessel mass", false, "G6")]
         public float sum_mass = 0.0f;
@@ -172,7 +172,7 @@ namespace AtmosphereAutopilot
             int indexing = all_parts ? vessel.parts.Count : massive_parts.Count;
 
             // Get velocity
-            world_v = Vector3d.zero;
+            surface_v = Vector3d.zero;
             Vector3d v_impulse = Vector3d.zero;
             double v_mass = 0.0;
             for (int pi = 0; pi < indexing; pi++)
@@ -198,7 +198,7 @@ namespace AtmosphereAutopilot
                 }
                 v_mass += mass;
             }
-            world_v = v_impulse / v_mass;
+            surface_v = v_impulse / v_mass;
 
             // Get angular velocity
             for (int pi = 0; pi < indexing; pi++)
@@ -220,7 +220,7 @@ namespace AtmosphereAutopilot
                     mass = part.rb.mass;
                     Vector3 world_pv = part.rb.worldCenterOfMass - cur_CoM;
                     Vector3 pv = world_to_cntrl_part * world_pv;
-                    Vector3 impulse = mass * (world_to_cntrl_part * (part.rb.velocity - world_v));
+                    Vector3 impulse = mass * (world_to_cntrl_part * (part.rb.velocity - surface_v));
                     // from part.rb principal frame to root part rotation
                     Quaternion principal_to_cntrl = part.rb.inertiaTensorRotation * part_to_cntrl;
                     // MOI of part as offsetted material point
@@ -238,7 +238,7 @@ namespace AtmosphereAutopilot
                     mass = part.mass + part.GetResourceMass();
                     Vector3 world_pv = part.partTransform.position + part.partTransform.rotation * part.CoMOffset - cur_CoM;
                     Vector3 pv = world_to_cntrl_part * world_pv;
-                    Vector3 impulse = mass * (world_to_cntrl_part * (part.vel - world_v));
+                    Vector3 impulse = mass * (world_to_cntrl_part * (part.vel - surface_v));
                     // MOI of part as offsetted material point
                     moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
                     // angular moment of part as offsetted material point
@@ -269,10 +269,10 @@ namespace AtmosphereAutopilot
             else
             {
                 angular_vel = Common.divideVector(partial_AM, partial_MOI);
-                world_v -= Vector3.Cross(cur_CoM - CoM, cntrl_part_to_world * angular_vel);
+                surface_v -= Vector3.Cross(cur_CoM - CoM, cntrl_part_to_world * angular_vel);
             }
             angular_vel -= world_to_cntrl_part * vessel.mainBody.angularVelocity;     // remember that unity physics reference frame is rotating
-            world_v += Krakensbane.GetFrameVelocity();
+            surface_v += Krakensbane.GetFrameVelocity();
         }
 
         static Vector3 get_rotated_moi(Vector3 inertia_tensor, Quaternion rotation)
@@ -306,9 +306,9 @@ namespace AtmosphereAutopilot
 
         void update_aoa()
         {
-            up_srf_v = Vector3.Project(world_v, vessel.ReferenceTransform.up);
-            fwd_srf_v = Vector3.Project(world_v, vessel.ReferenceTransform.forward);
-            right_srf_v = Vector3.Project(world_v, vessel.ReferenceTransform.right);
+            up_srf_v = Vector3.Project(surface_v, vessel.ReferenceTransform.up);
+            fwd_srf_v = Vector3.Project(surface_v, vessel.ReferenceTransform.forward);
+            right_srf_v = Vector3.Project(surface_v, vessel.ReferenceTransform.right);
 
             Vector3 projected_vel = up_srf_v + fwd_srf_v;
             if (projected_vel.sqrMagnitude > 1.0f)
