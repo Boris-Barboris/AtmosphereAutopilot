@@ -78,6 +78,12 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Kp_v", true, "G5")]
         public double Kp_v = 100.0;
 
+        [AutoGuiAttr("acc_filter_k", true, "G5")]
+        public double acc_filter_k = 10.0;
+
+        [AutoGuiAttr("relaxation_acc_error", true, "G5")]
+        protected double relaxation_acc_error = 1.0;
+
         /// <summary>
         /// Main control function
         /// </summary>
@@ -124,12 +130,20 @@ namespace AtmosphereAutopilot
                 Vector3 thrust = imodel.cntrl_part_to_world * imodel.engines_thrust_principal;
                 prograde_thrust = Vector3.Dot(thrust, imodel.surface_v);
 
-                double current_acc = Vector3.Dot(imodel.sum_acc - imodel.gravity_acc - imodel.noninert_acc, imodel.surface_v);
+                double current_acc = Vector3.Dot(imodel.sum_acc, imodel.surface_v);
                 drag_estimate = current_acc - prograde_thrust / imodel.sum_mass;
 
                 v_error = desired_v - current_v;
                 desired_acc = Kp_v * v_error;
-                acc_error = desired_acc - current_acc;
+                if (Math.Abs(acc_error) < relaxation_acc_error)
+                {
+                    // we're on low error regime, let's smooth out acceleration error using exponential moving average
+                    acc_error = Common.simple_filter(desired_acc - current_acc, acc_error, acc_filter_k);
+                }
+                else
+                {
+                    acc_error = desired_acc - current_acc;                    
+                }
                 thrust_error = acc_error * imodel.sum_mass;
 
                 if (prograde_thrust < -0.1)
@@ -226,7 +240,7 @@ namespace AtmosphereAutopilot
                     }
                 }
                 iter_count++;
-            } while (spool_dir_changed && iter_count <= imodel.engines.Count);
+            } while (spool_dir_changed && iter_count <= imodel.engines.Count + 2);
 
             return (float)Common.Clamp(desired_throttle, 0.0, 1.0);
         }
