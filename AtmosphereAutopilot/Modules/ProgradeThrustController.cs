@@ -55,14 +55,14 @@ namespace AtmosphereAutopilot
             imodel.Deactivate();
         }
 
-        [AutoGuiAttr("desired_v", false, "G4")]
+        [AutoGuiAttr("desired_v", false, "G5")]
         protected float desired_v = 0.0f;
 
         [AutoGuiAttr("current_v", false, "G5")]
         public double current_v = 0.0f;
 
         [VesselSerializable("break_margin")]
-        [AutoGuiAttr("break spd margin %", true, "G4")]
+        [AutoGuiAttr("break spd margin %", true, "G5")]
         public double break_margin = 10.0f;
 
         [AutoGuiAttr("Use breaks", true)]
@@ -75,17 +75,8 @@ namespace AtmosphereAutopilot
         public double drag_estimate;
 
         [VesselSerializable("Kp_v")]
-        [AutoGuiAttr("Kp_v", true, "G4")]
-        public double Kp_v = 50.0;
-
-        [AutoGuiAttr("Ki_throttle", true, "G4")]
-        public double Ki_throttle = 0.1;
-
-        [AutoGuiAttr("Kd_throttle", true, "G4")]
-        public double Kd_throttle = 0.1;
-
-        [AutoGuiAttr("relaxation_throttle", true, "G4")]
-        public double relaxation_throttle = 0.1;
+        [AutoGuiAttr("Kp_v", true, "G5")]
+        public double Kp_v = 100.0;
 
         /// <summary>
         /// Main control function
@@ -134,66 +125,126 @@ namespace AtmosphereAutopilot
                 prograde_thrust = Vector3.Dot(thrust, imodel.surface_v);
 
                 double current_acc = Vector3.Dot(imodel.sum_acc - imodel.gravity_acc - imodel.noninert_acc, imodel.surface_v);
-                if (current_v > 5.0)
-                    drag_estimate = current_acc - prograde_thrust / imodel.sum_mass;
-                else
-                    drag_estimate = 0.0;
+                drag_estimate = current_acc - prograde_thrust / imodel.sum_mass;
 
                 v_error = desired_v - current_v;
                 desired_acc = Kp_v * v_error;
                 acc_error = desired_acc - current_acc;
                 thrust_error = acc_error * imodel.sum_mass;
 
-                dthrust_dt = (prograde_thrust - prev_thrust) / TimeWarp.fixedDeltaTime;
-                dinput_dt = (prev_input - prev2_input) / TimeWarp.fixedDeltaTime;
-
                 if (prograde_thrust < -0.1)
                     cntrl.mainThrottle = 0.0f;
                 else
                 {
-                    //kti = dthrust_dt / dinput_dt;
-                    //if (double.IsNaN(kti) || double.IsInfinity(kti) || kti < 0.0)
-                    //{
-                    kti = imodel.engines.Sum(m => m.engine.maxThrust * m.engine.thrustPercentage);
-                    //}
-                    double kd = Math.Abs(thrust_error) < relaxation_throttle * kti ? Kd_throttle : 1.0;
-                    cntrl.mainThrottle = Mathf.Clamp01((float)(prev_input + Ki_throttle * kd * thrust_error / kti));
+                    cntrl.mainThrottle = solve_thrust_req(prograde_thrust + thrust_error, prev_input);
                 }
 
                 prev_thrust = prograde_thrust;
             }
             
-            prev2_input = prev_input;
             prev_input = cntrl.mainThrottle;
             return cntrl.mainThrottle;
         }
 
         double prev_thrust;
-        double prev_input, prev2_input;
+        float prev_input;
 
-        [AutoGuiAttr("v_error", false, "G4")]
+        int[] throttle_directions;
+        double[] estimated_max_thrusts;
+
+        float solve_thrust_req(double required_thrust, float prev_throttle)
+        {
+            if (imodel.engines.Count == 0)
+                return 0.0f;
+
+            Common.Realloc(ref throttle_directions, imodel.engines.Count);
+            Common.Realloc(ref estimated_max_thrusts, imodel.engines.Count);
+
+            double predicted_thrust = 0.0;
+            for (int i = 0; i < imodel.engines.Count; i++)
+            {
+                ModuleEngines eng = imodel.engines[i].engine;
+                double e_prograde_thrust = Vector3.Dot(imodel.engines[i].thrust, imodel.surface_v);
+                double e_throttle = eng.currentThrottle / eng.thrustPercentage * 100.0;
+                estimated_max_thrusts[i] = e_prograde_thrust != 0.0 ? e_prograde_thrust / e_throttle : eng.maxThrust;
+                if (eng.useEngineResponseTime)
+                {
+                    throttle_directions[i] = prev_throttle >= eng.currentThrottle ? 1 : -1;
+                    if (Math.Abs(eng.currentThrottle - prev_throttle * eng.thrustPercentage * 0.01) <= 1e-4)
+                    {
+                        throttle_directions[i] = 0;
+                        predicted_thrust += estimated_max_thrusts[i] * prev_throttle;
+                    }
+                    else
+                    {
+                        float spd = throttle_directions[i] > 0 ? eng.engineAccelerationSpeed : eng.engineDecelerationSpeed;
+                        double predict_throttle = Mathf.Lerp(eng.currentThrottle, prev_throttle, TimeWarp.fixedDeltaTime * spd);
+                        predicted_thrust += estimated_max_thrusts[i] * predict_throttle;
+                    }
+                }
+                else
+                    predicted_thrust += estimated_max_thrusts[i] * prev_throttle;
+            }
+
+            bool spool_dir_changed = false;
+            double desired_throttle = 0.0;
+            double t_error = required_thrust - predicted_thrust;
+            int iter_count = 0;
+            do
+            {
+                spool_dir_changed = false;                
+                double thrust_authority = 0.0;
+                for (int i = 0; i < imodel.engines.Count; i++)
+                {
+                    ModuleEngines eng = imodel.engines[i].engine;
+                    if (eng.useEngineResponseTime && throttle_directions[i] != 0)
+                    {
+                        float spd = throttle_directions[i] > 0 ? eng.engineAccelerationSpeed : eng.engineDecelerationSpeed;
+                        thrust_authority += TimeWarp.fixedDeltaTime * spd * estimated_max_thrusts[i];
+                    }
+                    else
+                        thrust_authority += estimated_max_thrusts[i];
+                }
+                if (thrust_authority == 0.0)
+                    return 0.0f;
+                desired_throttle = Common.Clamp(prev_throttle + t_error / thrust_authority, 0.0, 1.0);
+
+                // now check if we changed spooling direction
+                for (int i = 0; i < imodel.engines.Count; i++)
+                {
+                    ModuleEngines eng = imodel.engines[i].engine;
+                    if (eng.useEngineResponseTime)
+                    {
+                        int new_throttle_direction = 0;
+                        if (Math.Abs(eng.currentThrottle - desired_throttle * eng.thrustPercentage * 0.01) > 1e-4)
+                            new_throttle_direction = (desired_throttle > (eng.currentThrottle / eng.thrustPercentage * 100)) ? 1 : -1;
+                        if (throttle_directions[i] != new_throttle_direction)
+                        {
+                            spool_dir_changed = true;
+                            throttle_directions[i] = new_throttle_direction;
+                        }
+                    }
+                }
+                iter_count++;
+            } while (spool_dir_changed && iter_count <= imodel.engines.Count);
+
+            return (float)Common.Clamp(desired_throttle, 0.0, 1.0);
+        }
+
+        [AutoGuiAttr("v_error", false, "G5")]
         double v_error;
 
-        [AutoGuiAttr("desired_acc", false, "G4")]
+        [AutoGuiAttr("desired_acc", false, "G5")]
         double desired_acc;
 
-        [AutoGuiAttr("acc_error", false, "G4")]
+        [AutoGuiAttr("acc_error", false, "G5")]
         double acc_error;
 
-        [AutoGuiAttr("thrust_error", false, "G4")]
+        [AutoGuiAttr("thrust_error", false, "G5")]
         double thrust_error;
 
-        [AutoGuiAttr("dthrust_dt", false, "G4")]
-        double dthrust_dt;
-
-        [AutoGuiAttr("dinput_dt", false, "G4")]
-        double dinput_dt;
-
-        [AutoGuiAttr("kti", false, "G6")]
-        double kti;
-
         [VesselSerializable("use_pid")]
-        [AutoGuiAttr("Use pid", true)]
+        [AutoGuiAttr("Use PID", true)]
         public bool use_pid = false;
 
         PIDController pid = new PIDController();

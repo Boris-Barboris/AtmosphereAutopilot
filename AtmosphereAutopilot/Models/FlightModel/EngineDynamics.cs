@@ -29,7 +29,7 @@ namespace AtmosphereAutopilot
 
     public sealed partial class FlightModel : AutopilotModule
 	{
-        public struct EngineMoment
+        public class EngineMoment
         {
             public EngineMoment(ModuleEngines m, ModuleGimbal g, bool turned_off_gimbal_spd)
             {
@@ -39,6 +39,7 @@ namespace AtmosphereAutopilot
             }
             public ModuleEngines engine;
             public ModuleGimbal gimbal;
+            public Vector3 thrust = Vector3.zero;
             public bool tunred_off_gimbal_spd;
         }
 
@@ -98,6 +99,7 @@ namespace AtmosphereAutopilot
                 }
                 Vector3 tpos = Vector3.zero;
                 Vector3 tdir = Vector3.zero;
+                Vector3 e_thrust = Vector3.zero;
                 int tcount = engines[i].engine.thrustTransforms.Count;
                 foreach (var trans in engines[i].engine.thrustTransforms)
                 {
@@ -108,8 +110,10 @@ namespace AtmosphereAutopilot
                     Vector3 torque_moment = -Vector3.Cross(tpos, tdir);       // minus because Unity's left-handed
                     engines_torque_principal += torque_moment * engines[i].engine.finalThrust / (float)tcount;
                     engines_thrust_principal += engines[i].engine.finalThrust * tdir / (float)tcount;
+                    e_thrust += engines[i].engine.finalThrust / (float)tcount * (-trans.forward);
                 }
                 abs_thrust += engines[i].engine.finalThrust;
+                engines[i].thrust = e_thrust;
             }
         }
 
