@@ -384,7 +384,7 @@ namespace AtmosphereAutopilot
             while (k < grad_training.Size)
             {
                 double k_weight = getAgeWeight(grad_training[k].birth);
-                if (linear || k_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger || grad_training.Size < 2)
+                if (linear || k_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger)
                 {
                     grad_error_weights.Add(k_weight);
                     k++;
@@ -398,7 +398,7 @@ namespace AtmosphereAutopilot
 				for (int j = 0; j < gen_buffers[i].Size; j++)
 				{
 					double decayed_weight = getAgeWeight(gen_buffers[i][j].birth);
-                    if (linear || decayed_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger || gen_buffers[i].Size < 2)
+                    if (linear || decayed_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger)
 					{
 						double weight = decayed_weight * base_gen_weight;
 						gen_error_weights.Add(weight);
