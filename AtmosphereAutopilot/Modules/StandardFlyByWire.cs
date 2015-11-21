@@ -28,7 +28,8 @@ namespace AtmosphereAutopilot
         RollAngularVelocityController rc;
 		YawAngularVelocityController yvc;
         SideslipController yc;
-        AutopilotModule[] gui_list = new AutopilotModule[4];
+        ProgradeThrustController tc;
+        AutopilotModule[] gui_list = new AutopilotModule[5];
 
         internal StandardFlyByWire(Vessel v) :
             base(v, "Standard Fly-By-Wire", 44421322) { }
@@ -39,6 +40,7 @@ namespace AtmosphereAutopilot
             gui_list[1] = rc = modules[typeof(RollAngularVelocityController)] as RollAngularVelocityController;
 			gui_list[2] = yvc = modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
             gui_list[3] = yc = modules[typeof(SideslipController)] as SideslipController;
+            gui_list[4] = tc = modules[typeof(ProgradeThrustController)] as ProgradeThrustController;
         }
 
         protected override void OnActivate() 
@@ -51,6 +53,7 @@ namespace AtmosphereAutopilot
 			yvc.user_controlled = rocket_mode;
             yc.Activate();
             yc.user_controlled = true;
+            tc.Activate();
             MessageManager.post_status_message("Standard Fly-By-Wire enabled");
         }
 
@@ -58,6 +61,7 @@ namespace AtmosphereAutopilot
         {
             pc.Deactivate();
             rc.Deactivate();
+            yvc.Deactivate();
             yc.Deactivate();
             MessageManager.post_status_message("Standard Fly-By-Wire disabled");
         }
@@ -86,6 +90,13 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("moderation_keycode")]
         protected KeyCode moderation_keycode = KeyCode.O;
 
+        [AutoGuiAttr("Cruise control", true)]
+        public bool cruise_control = false;
+
+        [VesselSerializable("cruise_speed")]
+        [AutoGuiAttr("Cruise speed", true, "G4")]
+        public float cruise_speed = 100.0f;
+
         public override void OnUpdate()
         {
             if (Input.GetKeyDown(moderation_keycode))
@@ -98,6 +109,9 @@ namespace AtmosphereAutopilot
         /// <param name="cntrl">Control state to change</param>
         public override void ApplyControl(FlightCtrlState cntrl)
         {
+            if (cruise_control)
+                tc.ApplyControl(cntrl, cruise_speed);
+
             if (vessel.LandedOrSplashed)
                 return;
 

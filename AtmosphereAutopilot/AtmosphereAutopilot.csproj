@@ -77,12 +77,13 @@
     <Compile Include="GUI\GUIStyles.cs" />
     <Compile Include="Math\Matrix.cs" />
     <Compile Include="Modules\AngularVelAdaptiveController.cs" />
+    <Compile Include="Modules\ProgradeThrustController.cs" />
     <Compile Include="Modules\AutopilotModule.cs" />
     <Compile Include="Modules\AoAController.cs" />
     <Compile Include="Modules\StandardFlyByWire.cs" />
     <Compile Include="Modules\StateController.cs" />
     <Compile Include="Common.cs" />
-    <None Include="Controller\PIDController.cs" />
+    <Compile Include="Controller\PIDController.cs" />
     <Compile Include="Modules\TopModuleManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MessageManager.cs" />

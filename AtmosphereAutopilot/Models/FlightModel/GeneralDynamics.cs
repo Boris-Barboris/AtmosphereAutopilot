@@ -37,13 +37,13 @@ namespace AtmosphereAutopilot
 
         //Vector3d vess2planet;
         //[AutoGuiAttr("gravity_acc acc", false, "G6")]
-        Vector3d gravity_acc;
+        public Vector3d gravity_acc;
 
         //[AutoGuiAttr("noninert_acc", false, "G6")]
-        Vector3d noninert_acc;
+        public Vector3d noninert_acc;
 
         [AutoGuiAttr("sum_acc", false, "G3")]
-        Vector3d sum_acc;
+        public Vector3d sum_acc;
 
         [AutoGuiAttr("pitch_gravity_acc", false, "G6")]
         public double pitch_gravity_acc;
