@@ -75,8 +75,9 @@ namespace AtmosphereAutopilot
             }
             if (!ignoreRoll)
             {
-                float axis_factor = Math.Abs(Vector3.Dot(vessel.ReferenceTransform.up, baseTransform.up)) * fwd_airstream_factor;
-                float new_roll_action = roll_input * axis_factor * -Math.Sign(Vector3.Dot(world_com - baseTransform.position, baseTransform.right));
+                float axis_factor = Vector3.Dot(vessel.ReferenceTransform.up, baseTransform.up) * fwd_airstream_factor;
+                float new_roll_action = roll_input * axis_factor * Math.Sign(Vector3.Dot(vessel.ReferenceTransform.up,
+                    Vector3.Cross(world_com - baseTransform.position, baseTransform.forward)));
                 prev_roll_action = prev_roll_action + Common.Clampf(new_roll_action - prev_roll_action, spd_factor * axis_factor);
             }
             if (!ignoreYaw)
