@@ -209,7 +209,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("moder_filter", true, "G6")]
         protected float moder_filter = 3.0f;
 
-        protected Matrix state_mat = new Matrix(3, 1);
+        protected Matrix state_mat = new Matrix(4, 1);
         protected Matrix input_mat = new Matrix(1, 1);
 
         protected LinearSystemModel lin_model;
@@ -239,7 +239,7 @@ namespace AtmosphereAutopilot
                         eq_A[1, 0] = lin_model.A[1, 0];
                         eq_A[1, 1] = 0.0;
                         eq_b[0, 0] = -(lin_model.A[0, 2] + lin_model.C[0, 0]);
-                        eq_b[1, 0] = -(lin_model.A[1, 2] + lin_model.B[1, 0] + lin_model.C[1, 0]);
+                        eq_b[1, 0] = -(lin_model.A[1, 2] + lin_model.A[1, 3] + lin_model.B[1, 0] + lin_model.C[1, 0]);
                         eq_A.old_lu = true;
                         eq_x = eq_A.SolveWith(eq_b);
                         if (!double.IsInfinity(eq_x[0, 0]) && !double.IsNaN(eq_x[0, 0]))
@@ -259,7 +259,7 @@ namespace AtmosphereAutopilot
 
                             // get equilibrium aoa and angular_v for -1.0 input
                             eq_b[0, 0] = -lin_model.C[0, 0] + lin_model.A[0, 2];
-                            eq_b[1, 0] = lin_model.A[1, 2] + lin_model.B[1, 0] - lin_model.C[1, 0];
+                            eq_b[1, 0] = lin_model.A[1, 2] + lin_model.A[1, 3] + lin_model.B[1, 0] - lin_model.C[1, 0];
                             eq_x = eq_A.SolveWith(eq_b);
                             if (!double.IsInfinity(eq_x[0, 0]) && !double.IsNaN(eq_x[0, 0]))
                             {
@@ -284,7 +284,7 @@ namespace AtmosphereAutopilot
                     eq_A[0, 0] = lin_model.A[0, 1];
                     eq_A[0, 1] = lin_model.A[0, 2];
                     eq_A[1, 0] = lin_model.A[1, 1];
-                    eq_A[1, 1] = lin_model.A[1, 2] + lin_model.B[1, 0];
+                    eq_A[1, 1] = lin_model.A[1, 2] + lin_model.A[1, 3] + lin_model.B[1, 0];
                     eq_b[0, 0] = -(lin_model.A[0, 0] * rad_max_aoa + lin_model.C[0, 0]);
                     eq_b[1, 0] = -(lin_model.A[1, 0] * rad_max_aoa + lin_model.C[1, 0]);
                     eq_A.old_lu = true;
@@ -364,7 +364,7 @@ namespace AtmosphereAutopilot
                     eq_A[0, 0] = lin_model.A[0, 0];
                     eq_A[0, 1] = lin_model.A[0, 2];
                     eq_A[1, 0] = lin_model.A[1, 0];
-                    eq_A[1, 1] = lin_model.A[1, 2] + lin_model.B[1, 0];
+                    eq_A[1, 1] = lin_model.A[1, 2] + lin_model.A[1, 3] + lin_model.B[1, 0];
                     eq_b[0, 0] = -(max_g_v + lin_model.C[0, 0]);
                     eq_b[1, 0] = -lin_model.C[1, 0];
                     eq_A.old_lu = true;
@@ -409,10 +409,10 @@ namespace AtmosphereAutopilot
 				double transit_max_aoa = Math.Min(rad_max_aoa, res_max_aoa);
 				state_mat[0, 0] = transit_max_aoa / 2.0;
 				state_mat[2, 0] = -1.0;
+                state_mat[3, 0] = -1.0;
 				input_mat[0, 0] = -1.0;
 				double acc = lin_model.eval_row(1, state_mat, input_mat);
-				float new_dyn_max_v =
-					(float)Math.Sqrt(transit_max_aoa * (-acc));
+				float new_dyn_max_v = (float)Math.Sqrt(transit_max_aoa * (-acc));
 				if (float.IsNaN(new_dyn_max_v))
 				{
 					if (old_dyn_max_v != 0.0f)
@@ -494,7 +494,7 @@ namespace AtmosphereAutopilot
         protected float kacc_smoothing = 10.0f;
 
         [AutoGuiAttr("relaxation_k", true, "G5")]
-        protected float relaxation_k = 1.0f;
+        protected float relaxation_k = 2.0f;
 
         [AutoGuiAttr("relaxation_Kp", true, "G5")]
         protected float relaxation_Kp = 0.5f;
@@ -509,9 +509,9 @@ namespace AtmosphereAutopilot
         {
             float new_kacc_quadr = 0.0f;
             if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
-                new_kacc_quadr = (float)(quadr_Kp * (lin_model.A[1, 2] * lin_model.B[2, 0] + lin_model.B[1, 0]));
+                new_kacc_quadr = (float)(quadr_Kp * (lin_model.A[1, 2] * lin_model.B[2, 0] + lin_model.A[1, 3] * lin_model.B[3, 0] + lin_model.B[1, 0]));
             if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.Stock)
-                new_kacc_quadr = (float)(quadr_Kp * (lin_model.A[1, 2] * lin_model.C[2, 0] + lin_model.B[1, 0]));
+                new_kacc_quadr = (float)(quadr_Kp * (lin_model.A[1, 2] * lin_model.C[2, 0] + lin_model.A[1, 3] * lin_model.B[3, 0] + lin_model.B[1, 0]));
             new_kacc_quadr = Math.Abs(new_kacc_quadr);
             if (float.IsNaN(new_kacc_quadr))
                 return base.get_desired_acc(des_v);
@@ -652,7 +652,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("moder_filter", true, "G6")]
         float moder_filter = 4.0f;
 
-        Matrix state_mat = new Matrix(2, 1);
+        Matrix state_mat = new Matrix(3, 1);
         Matrix input_mat = new Matrix(3, 1);
 
 		[VesselSerializable("wing_leveler")]
@@ -682,10 +682,12 @@ namespace AtmosphereAutopilot
             if (cur_aoa < 0.3 && imodel.dyn_pressure > 100.0)
             {
                 float new_max_input_v =
-                    (float)((imodel.roll_rot_model_gen.C[0, 0] + imodel.roll_rot_model_gen.B[0, 0] + imodel.roll_rot_model_gen.A[0, 1]) /
+                    (float)((imodel.roll_rot_model_gen.C[0, 0] + imodel.roll_rot_model_gen.B[0, 0] +
+                    imodel.roll_rot_model_gen.A[0, 1] + imodel.roll_rot_model_gen.A[0, 2]) /
                         -imodel.roll_rot_model_gen.A[0, 0]);
                 float new_min_input_v =
-                    (float)((imodel.roll_rot_model_gen.C[0, 0] - imodel.roll_rot_model_gen.B[0, 0] - imodel.roll_rot_model_gen.A[0, 1]) /
+                    (float)((imodel.roll_rot_model_gen.C[0, 0] - imodel.roll_rot_model_gen.B[0, 0] -
+                    imodel.roll_rot_model_gen.A[0, 1] - imodel.roll_rot_model_gen.A[0, 2]) /
                         -imodel.roll_rot_model_gen.A[0, 0]);
                 if (!float.IsInfinity(new_max_input_v) && !float.IsNaN(new_max_input_v) &&
                     !float.IsInfinity(new_min_input_v) && !float.IsNaN(new_min_input_v))
@@ -727,6 +729,7 @@ namespace AtmosphereAutopilot
 						float transit_max_angle = leveler_snap_angle * dgr2rad;
 						state_mat[0, 0] = 0.0;
 						state_mat[1, 0] = 1.0;
+                        state_mat[2, 0] = 1.0;
 						input_mat[0, 0] = 1.0;
 						double acc = imodel.roll_rot_model_gen.eval_row(0, state_mat, input_mat);
 						float new_dyn_max_v =
@@ -792,9 +795,11 @@ namespace AtmosphereAutopilot
         {
             float new_kacc_quadr = 0.0f;
             if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
-                new_kacc_quadr = (float)(quadr_Kp * (imodel.roll_rot_model_gen.A[0, 1] * imodel.roll_rot_model_gen.B[1, 0] + imodel.roll_rot_model_gen.B[0, 0]));
+                new_kacc_quadr = (float)(quadr_Kp * (imodel.roll_rot_model_gen.A[0, 1] * imodel.roll_rot_model_gen.B[1, 0] +
+                    imodel.roll_rot_model_gen.A[0, 2] * imodel.roll_rot_model_gen.B[2, 0] + imodel.roll_rot_model_gen.B[0, 0]));
             if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.Stock)
-                new_kacc_quadr = (float)(quadr_Kp * (imodel.roll_rot_model_gen.A[0, 1] * imodel.roll_rot_model_gen.C[1, 0] + imodel.roll_rot_model_gen.B[0, 0]));
+                new_kacc_quadr = (float)(quadr_Kp * (imodel.roll_rot_model_gen.A[0, 1] * imodel.roll_rot_model_gen.C[1, 0] +
+                    imodel.roll_rot_model_gen.A[0, 2] * imodel.roll_rot_model_gen.B[2, 0] + imodel.roll_rot_model_gen.B[0, 0]));
             new_kacc_quadr = Math.Abs(new_kacc_quadr);
             if (float.IsNaN(new_kacc_quadr))
                 return base.get_desired_acc(des_v);

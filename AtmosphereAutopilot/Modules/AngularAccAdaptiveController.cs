@@ -103,7 +103,7 @@ namespace AtmosphereAutopilot
                 output = 0.0f;
 
             // fighting numerical precision issues in KSP
-            if (Mathf.Abs(output) < 0.006f)
+            if (axis == ROLL && Mathf.Abs(output) < 0.001f)
                 output = 0.0f;
 
 			ControlUtils.set_raw_output(cntrl, axis, output);
@@ -194,7 +194,7 @@ namespace AtmosphereAutopilot
             : base(vessel, module_name, wnd_id, axis)
         { }
 
-        protected Matrix cur_state = new Matrix(3, 1);
+        protected Matrix cur_state = new Matrix(4, 1);
         protected Matrix input_mat = new Matrix(1, 1);
 
         [AutoGuiAttr("model_predicted_acc", false, "G6")]
@@ -229,6 +229,7 @@ namespace AtmosphereAutopilot
                 cur_state[0, 0] = imodel.AoA(axis);
                 cur_state[1, 0] = imodel.AngularVel(axis);
                 cur_state[2, 0] = imodel.ControlSurfPos(axis);
+                cur_state[3, 0] = imodel.GimbalPos(axis);
                 input_mat[0, 0] = cur_state[2, 0];
                 double cur_acc_prediction = lin_model.eval_row(1, cur_state, input_mat);
 
@@ -264,17 +265,19 @@ namespace AtmosphereAutopilot
                 // get model prediction for next frame
                 cur_state[0, 0] = imodel.AoA(axis);
                 cur_state[1, 0] = imodel.AngularVel(axis);
-                cur_state[2, 0] = imodel.ControlSurfPos(axis);
-                input_mat[0, 0] = cur_state[2, 0];
+                cur_state[2, 0] = imodel.GimbalPos(axis);
+                input_mat[0, 0] = imodel.ControlSurfPos(axis);
                 double cur_acc_prediction = lin_model_undelayed.eval_row(1, cur_state, input_mat);
 
                 double acc_error = target_value - cur_acc_prediction;
-                new_input = (float)(cur_state[2, 0] + acc_error / authority);
+                new_input = (float)(input_mat[0, 0] + acc_error / authority);
                 new_input = Common.Clampf(new_input, 1.0f);
 
                 if (Math.Abs(new_input - input_mat[0, 0]) / TimeWarp.fixedDeltaTime > SyncModuleControlSurface.CSURF_SPD)
                 {
                     // we're exceeding control surface speed
+                    cur_state[3, 0] = cur_state[2, 0];
+                    cur_state[2, 0] = input_mat[0, 0];
                     if (new_input > input_mat[0, 0])
                         cur_state[2, 0] += TimeWarp.fixedDeltaTime * SyncModuleControlSurface.CSURF_SPD;
                     else
@@ -284,9 +287,11 @@ namespace AtmosphereAutopilot
                     authority = lin_model.B[1, 0];
                     new_input = (float)(cur_state[2, 0] + acc_error / authority);
                     new_input = Common.Clampf(new_input, 1.0f);
-                }
 
-                model_predicted_acc = cur_acc_prediction + authority * (new_input - cur_state[2, 0]);
+                    model_predicted_acc = cur_acc_prediction + authority * (new_input - cur_state[2, 0]);
+                }
+                else
+                    model_predicted_acc = cur_acc_prediction + authority * (new_input - input_mat[0, 0]);                
             }            
 
             if (write_telemetry)
@@ -312,6 +317,20 @@ namespace AtmosphereAutopilot
         }
     }
 
+    public sealed class YawAngularAccController : PitchYawAngularAccController
+    {
+        internal YawAngularAccController(Vessel vessel)
+            : base(vessel, "Yaw ang acc controller", 77821331, YAW)
+        { }
+
+        public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+        {
+            base.InitializeDependencies(modules);
+            lin_model = imodel.yaw_rot_model;
+            lin_model_undelayed = imodel.yaw_rot_model_undelayed;
+        }
+    }
+
 	public sealed class RollAngularAccController : AngularAccAdaptiveController
 	{
 		internal RollAngularAccController(Vessel vessel)
@@ -326,7 +345,7 @@ namespace AtmosphereAutopilot
             yc = modules[typeof(YawAngularAccController)] as AngularAccAdaptiveController;
         }
 
-        Matrix cur_state = new Matrix(2, 1);
+        Matrix cur_state = new Matrix(3, 1);
         Matrix input_mat = new Matrix(3, 1);
 
         [AutoGuiAttr("model_predicted_acc", false, "G6")]
@@ -357,6 +376,7 @@ namespace AtmosphereAutopilot
                 // get model prediction for next frame
                 cur_state[0, 0] = imodel.AngularVel(ROLL);
                 cur_state[1, 0] = imodel.ControlSurfPos(ROLL);
+                cur_state[2, 0] = imodel.GimbalPos(ROLL);
                 input_mat[0, 0] = cur_state[1, 0];
                 input_mat[1, 0] = FlightModel.far_exponential_blend(imodel.ControlSurfPos(YAW), yc.output);
                 input_mat[2, 0] = imodel.AoA(YAW);
@@ -392,19 +412,21 @@ namespace AtmosphereAutopilot
 
                 // get model prediction for next frame
                 cur_state[0, 0] = imodel.AngularVel(ROLL);
-                cur_state[1, 0] = imodel.ControlSurfPos(ROLL);
-                input_mat[0, 0] = cur_state[1, 0];
+                cur_state[1, 0] = imodel.GimbalPos(ROLL);
+                input_mat[0, 0] = imodel.ControlSurfPos(ROLL);
                 input_mat[1, 0] = FlightModel.stock_actuator_blend(imodel.ControlSurfPos(YAW), yc.output);
                 input_mat[2, 0] = imodel.AoA(YAW);
                 double cur_acc_prediction = imodel.roll_rot_model_undelayed.eval_row(0, cur_state, input_mat);
 
                 double acc_error = target_value - cur_acc_prediction;
-                new_input = (float)(cur_state[1, 0] + acc_error / authority);
+                new_input = (float)(input_mat[0, 0] + acc_error / authority);
                 new_input = Common.Clampf(new_input, 1.0f);
 
                 if (Math.Abs(new_input - input_mat[0, 0]) / TimeWarp.fixedDeltaTime > SyncModuleControlSurface.CSURF_SPD)
                 {
                     // we're exceeding control surface speed
+                    cur_state[2, 0] = cur_state[1, 0];
+                    cur_state[1, 0] = input_mat[0, 0];
                     if (new_input > input_mat[0, 0])
                         cur_state[1, 0] += TimeWarp.fixedDeltaTime * SyncModuleControlSurface.CSURF_SPD;
                     else
@@ -414,9 +436,11 @@ namespace AtmosphereAutopilot
                     authority = imodel.roll_rot_model.B[0, 0];
                     new_input = (float)(cur_state[1, 0] + acc_error / authority);
                     new_input = Common.Clampf(new_input, 1.0f);
-                }
 
-                model_predicted_acc = cur_acc_prediction + authority * (new_input - cur_state[1, 0]);
+                    model_predicted_acc = cur_acc_prediction + authority * (new_input - cur_state[1, 0]);
+                }
+                else
+                    model_predicted_acc = cur_acc_prediction + authority * (new_input - input_mat[0, 0]);
             }
 
             if (write_telemetry)
@@ -425,20 +449,6 @@ namespace AtmosphereAutopilot
             }
 
             return new_input;
-        }
-	}
-
-	public sealed class YawAngularAccController : PitchYawAngularAccController
-	{
-		internal YawAngularAccController(Vessel vessel)
-            : base(vessel, "Yaw ang acc controller", 77821331, YAW)
-		{ }
-
-        public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
-        {
-            base.InitializeDependencies(modules);
-            lin_model = imodel.yaw_rot_model;
-            lin_model_undelayed = imodel.yaw_rot_model_undelayed;
         }
 	}
 

@@ -31,16 +31,18 @@ namespace AtmosphereAutopilot
 	{
         public class EngineMoment
         {
-            public EngineMoment(ModuleEngines m, ModuleGimbal g, bool turned_off_gimbal_spd)
+            public EngineMoment(ModuleEngines m, ModuleGimbal g, float original_gimbal_spd, bool uses_gimbal_spd)
             {
                 engine = m;
                 gimbal = g;
-                this.tunred_off_gimbal_spd = turned_off_gimbal_spd;
+                this.original_gimbal_spd = original_gimbal_spd;
+                this.uses_gimbal_spd = uses_gimbal_spd;
             }
             public ModuleEngines engine;
             public ModuleGimbal gimbal;
             public Vector3 thrust = Vector3.zero;
-            public bool tunred_off_gimbal_spd;
+            public bool uses_gimbal_spd;
+            public float original_gimbal_spd;
         }
 
         public List<EngineMoment> engines = new List<EngineMoment>();
@@ -50,30 +52,81 @@ namespace AtmosphereAutopilot
             var eng_list = vessel.FindPartModulesImplementing<ModuleEngines>();
             return_gimbals();
             engines.Clear();
+            any_gimbals = false;
+            any_gimbal_spds = false;
             foreach (var eng in eng_list)
             {
                 if (eng.isOperational || eng.finalThrust != 0.0f)
                 {
                     ModuleGimbal gimb = eng.part.FindModuleImplementing<ModuleGimbal>();
-                    bool toff = false;
+                    float r_spd = float.PositiveInfinity;
+                    bool gmbspd = false;
                     if (gimb != null)
+                    {
+                        if (!gimb.gimbalLock)
+                            any_gimbals = true;
+                        r_spd = gimb.gimbalResponseSpeed;
                         if (gimb.useGimbalResponseSpeed)
                         {
-                            gimb.useGimbalResponseSpeed = false;        // turn off gimbal response speed
-                            toff = true;
+                            gmbspd = true;
+                            any_gimbal_spds = true;
                         }
-                    engines.Add(new EngineMoment(eng, gimb, toff));
+                    }
+                    engines.Add(new EngineMoment(eng, gimb, r_spd, gmbspd));
+                }
+            }
+            synchronize_gimbals();
+        }
+
+        // give back original gimbal response to engines before clearing engine list
+        void return_gimbals()
+        {            
+            foreach (EngineMoment em in engines)
+            {
+                if (em.gimbal != null)
+                {
+                    em.gimbal.useGimbalResponseSpeed = em.uses_gimbal_spd;
+                    em.gimbal.gimbalResponseSpeed = em.original_gimbal_spd;
                 }
             }
         }
 
-        void return_gimbals()
+        //[AutoGuiAttr("gimbal_spd_norm", false, "G4")]
+        public float gimbal_spd_norm = float.PositiveInfinity;
+
+        //[AutoGuiAttr("any_gimbals", false)]
+        public bool any_gimbals = false;
+
+        //[AutoGuiAttr("any_gimbal_spds", false)]
+        public bool any_gimbal_spds = false;
+
+        // make all gimbals on vessel synchronous
+        void synchronize_gimbals()
         {
-            // give back gimbal response to engines before clearing engine list
-            foreach (EngineMoment em in engines)
+            gimbal_spd_norm = float.PositiveInfinity;
+            if (any_gimbals && any_gimbal_spds)
             {
-                if (em.gimbal != null && em.tunred_off_gimbal_spd)
-                    em.gimbal.useGimbalResponseSpeed = true;
+                // find minimum normalized gimbaling speed
+                for (int i = 0; i < engines.Count; i++)
+                {
+                    ModuleGimbal mg = engines[i].gimbal;
+                    if (mg != null)
+                    {
+                        float norm_spd = engines[i].original_gimbal_spd;
+                        if (norm_spd < gimbal_spd_norm)
+                            gimbal_spd_norm = norm_spd;
+                    }
+                }
+                // apply it
+                for (int i = 0; i < engines.Count; i++)
+                {
+                    ModuleGimbal mg = engines[i].gimbal;
+                    if (mg != null)
+                    {
+                        mg.useGimbalResponseSpeed = true;
+                        mg.gimbalResponseSpeed = gimbal_spd_norm;
+                    }
+                }
             }
         }
 
@@ -131,14 +184,14 @@ namespace AtmosphereAutopilot
         // engines_torque = engines_torque_k0 + user_input * engines_torque_k1
         void get_gimbal_authority()
         {
-            if ((prev_abs_thrust != 0.0f) && (abs_thrust != 0.0f) && (input_buf[0].Size >= 2))
+            if (any_gimbals && (prev_abs_thrust != 0.0f) && (abs_thrust != 0.0f) && (gimbal_buf[0].Size >= 2))
             {
                 Vector3 scaled_prev_torque = prev_engines_torque / prev_abs_thrust;
                 Vector3 scaled_cur_torque = engines_torque_principal / abs_thrust;
                 for (int axis = 0; axis < 3; axis++)
                 {
-                    float cur_cntrl = input_buf[axis].getLast();
-                    float last_cntrl = input_buf[axis].getFromTail(1);
+                    float cur_cntrl = gimbal_buf[axis].getLast();
+                    float last_cntrl = gimbal_buf[axis].getFromTail(1);
                     if (Math.Abs(cur_cntrl - last_cntrl) > 0.05)            // only significant input signal changes are analyzed
                     {
                         float k1 = (scaled_cur_torque[axis] - scaled_prev_torque[axis]) / (cur_cntrl - last_cntrl);

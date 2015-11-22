@@ -39,6 +39,8 @@ FBW uses three controllers - pitch, roll and yaw. Pitch is handled by "Pitch ang
 Hotkey for FBW is letter P, autoPilot. Hardcoded.
 Default hotkey for Moderation is letter O, mOderation. Can be changed in Global_settings.cfg file.
 
+Cruise control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
+
 # Default Modules descriptions
 
 ## Flight Model
@@ -144,3 +146,20 @@ Short GUI description:
 * _cubic barrier_ - default value 1.0 seconds. AoA controller uses quadratic descend profile for long evolutions and cubic for short (less than "cubic barrier" seconds). Used to prevent overshooting.
 * _cubic KP_ - default value 0.3. Gain for cubic profile steepness evaluation.
 * _cubic mode_ - true if controller is now in cubic mode.
+
+## Prograde thrust controller
+Hybrid model-reference or PID controller. Input: desired surface velocity. Output: throttle. Can be switched to PID control and manually tuned, if user is not satisfied with it's performance.
+
+Short GUI description:
+* _pid Kp_ - if used in PID mode, it's the proportional PID gain.
+* _pid Ki_ - integrad PID gain.
+* _pid Kd_ - derivative PID gain.
+* _desired v_ - self explanatory.
+* _current v_ - self explanatory.
+* _break spd margin_ - when surface speed is exceeding desired by this margin, brakes will be used. On groud breaks are used without margin.
+* _Use breaks_ - controller is using "Breaks" action group.
+* _prograde thrust_ - thrust vector projection on prograde direction.
+* _Kp v_ - proportional gain on velocity error. Default value - 100, e.g. on 1 m/s error it will be 1g desired acceleration. Decrease if don't like overshooting on very slow jets.
+* _acc filter k_ - default value 10. Filter gain for acceleration moving average. Magic number.
+* _relaxation acc error_ - default value 5 m/s. Error margin for filter activation. Magic number.
+* _use PID_ - toggle if you want to manually tune controller, or using strange engines.

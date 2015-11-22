@@ -71,7 +71,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("prograde_thrust", false, "G5")]
         public double prograde_thrust;
 
-        [AutoGuiAttr("drag_estimate", false, "G5")]
+        //[AutoGuiAttr("drag_estimate", false, "G5")]
         public double drag_estimate;
 
         [VesselSerializable("Kp_v")]
@@ -82,7 +82,7 @@ namespace AtmosphereAutopilot
         public double acc_filter_k = 10.0;
 
         [AutoGuiAttr("relaxation_acc_error", true, "G5")]
-        protected double relaxation_acc_error = 1.0;
+        protected double relaxation_acc_error = 5.0;
 
         /// <summary>
         /// Main control function

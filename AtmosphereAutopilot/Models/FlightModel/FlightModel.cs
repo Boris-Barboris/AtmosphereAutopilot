@@ -40,6 +40,7 @@ namespace AtmosphereAutopilot
 			{
                 input_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
                 csurf_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
+                gimbal_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
                 angular_v_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
                 angular_acc_buf[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
                 aoa_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
@@ -86,6 +87,8 @@ namespace AtmosphereAutopilot
 
         CircularBuffer<float>[] csurf_buf = new CircularBuffer<float>[3];   // True control surface action values
 
+        CircularBuffer<float>[] gimbal_buf = new CircularBuffer<float>[3];   // True gimbal action values
+
         CircularBuffer<float>[] angular_v_buf = new CircularBuffer<float>[3];
 
         CircularBuffer<double>[] angular_acc_buf = new CircularBuffer<double>[3];
@@ -115,6 +118,15 @@ namespace AtmosphereAutopilot
         /// Lagged control surface position for pitch, roll or yaw. [-1.0, 1.0].
         /// </summary>
         public float ControlSurfPos(int axis) { return csurf_buf[axis].getLast(); }
+
+        /// <summary>
+        /// Lagged gimbal position history for pitch, roll or yaw. [-1.0, 1.0].
+        /// </summary>
+        public CircularBuffer<float> GimbalPosHistory(int axis) { return gimbal_buf[axis]; }
+        /// <summary>
+        /// Lagged gimbal position for pitch, roll or yaw. [-1.0, 1.0].
+        /// </summary>
+        public float GimbalPos(int axis) { return gimbal_buf[axis].getLast(); }
 
 		/// <summary>
 		/// Angular velocity history for pitch, roll or yaw. Radians per second.

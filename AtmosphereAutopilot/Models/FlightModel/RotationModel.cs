@@ -372,6 +372,15 @@ namespace AtmosphereAutopilot
                 }
                 else
                     csurf_buf[i].Put(0.0f);
+                if (any_gimbals)
+                {
+                    if (gimbal_buf[i].Size >= 1 && sequential_dt)
+                        gimbal_buf[i].Put(exponential_blend(gimbal_buf[i].getLast(), raw_input, gimbal_spd_norm, 0.0f));
+                    else
+                        gimbal_buf[i].Put(raw_input);
+                }
+                else
+                    gimbal_buf[i].Put(0.0f);
             }
         }
 
@@ -395,6 +404,23 @@ namespace AtmosphereAutopilot
         {
             float max_delta = TimeWarp.fixedDeltaTime * SyncModuleControlSurface.CSURF_SPD;
             return prev + Common.Clampf(desire - prev, max_delta);
+        }
+
+        public static float stock_blend_custom(float prev, float desire, float spd)
+        {
+            float max_delta = TimeWarp.fixedDeltaTime * spd;
+            return prev + Common.Clampf(desire - prev, max_delta);
+        }
+
+        public static float exponential_blend(float prev, float desire, float spd, float snap_margin)
+        {
+            float error = desire - prev;
+            if (Mathf.Abs(error) >= snap_margin)
+            {
+                return Mathf.Lerp(prev, desire, TimeWarp.fixedDeltaTime * spd);
+            }
+            else
+                return desire;
         }
 
         List<ModuleRCS> rcs_thrusters;
