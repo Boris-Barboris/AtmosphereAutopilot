@@ -146,12 +146,7 @@ namespace AtmosphereAutopilot
                 }
                 thrust_error = acc_error * imodel.sum_mass;
 
-                if (prograde_thrust < -0.1)
-                    cntrl.mainThrottle = 0.0f;
-                else
-                {
-                    cntrl.mainThrottle = solve_thrust_req(prograde_thrust + thrust_error, prev_input);
-                }
+                cntrl.mainThrottle = solve_thrust_req(prograde_thrust + thrust_error, prev_input);
 
                 prev_thrust = prograde_thrust;
             }
