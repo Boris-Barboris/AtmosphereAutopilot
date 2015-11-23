@@ -159,7 +159,7 @@ Short GUI description:
 * _break spd margin_ - when surface speed is exceeding desired by this margin, brakes will be used. On groud breaks are used without margin.
 * _Use breaks_ - controller is using "Breaks" action group.
 * _prograde thrust_ - thrust vector projection on prograde direction.
-* _Kp v_ - proportional gain on velocity error. Default value - 100, e.g. on 1 m/s error it will be 1g desired acceleration. Decrease if don't like overshooting on very slow jets.
+* _Kp v_ - proportional gain on velocity error. Default value - 1, e.g. on 1 m/s error it will be 1 m/s^2 desired acceleration. Decrease if don't like overshooting on very slow jets.
 * _acc filter k_ - default value 10. Filter gain for acceleration moving average. Magic number.
-* _relaxation acc error_ - default value 5 m/s. Error margin for filter activation. Magic number.
+* _relaxation acc error_ - default value 0.1 m/s^2. Error margin for filter activation. Magic number.
 * _use PID_ - toggle if you want to manually tune controller, or using strange engines.

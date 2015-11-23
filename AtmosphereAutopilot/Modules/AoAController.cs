@@ -74,8 +74,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("output_v", false, "G6")]
         protected float output_v;
 
-        [AutoGuiAttr("des_aoa_equilibr_v", false, "G6")]
-        protected float des_aoa_equilibr_v;
+        [AutoGuiAttr("cur_aoa_equilibr_v", false, "G6")]
+        protected float cur_aoa_equilibr_v;
 
         [AutoGuiAttr("filter_k", true, "G6")]
         protected float filter_k = 4.0f;
@@ -148,14 +148,13 @@ namespace AtmosphereAutopilot
                     eq_x = eq_A.SolveWith(eq_b);
                     double new_eq_v = eq_x[0, 0];
                     if (!double.IsInfinity(new_eq_v) && !double.IsNaN(new_eq_v))
-                        des_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, des_aoa_equilibr_v, filter_k);
+                        cur_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, cur_aoa_equilibr_v, filter_k);
                 }
                 catch (MSingularException) { }
+                //cur_aoa_equilibr_v += 0.5f * (float)get_roll_aoa_deriv();
             }
             else
-                des_aoa_equilibr_v = 0.0f;
-
-            //des_aoa_equilibr_v += (float)get_roll_aoa_deriv(desired_aoa);
+                cur_aoa_equilibr_v = 0.0f;
 
             // parabolic descend to desired angle of attack
             double error = Common.Clampf(desired_aoa - cur_aoa, Mathf.Abs(v_controller.res_max_aoa - v_controller.res_min_aoa));
@@ -182,12 +181,12 @@ namespace AtmosphereAutopilot
                 double t_cubic = -Math.Pow(Math.Abs(error / k_cubic), 0.33);
                 double t_step = Math.Min(0.0, t_cubic + TimeWarp.fixedDeltaTime);
                 if (t >= -relaxation_frame * TimeWarp.fixedDeltaTime)
-                    descend_v = relaxation_factor * error / TimeWarp.fixedDeltaTime;
+                    descend_v = relaxation_factor * error / Math.Max((relaxation_frame * TimeWarp.fixedDeltaTime), TimeWarp.fixedDeltaTime);
                 else
                     descend_v = k_cubic * (t_step * t_step * t_step - t_cubic * t_cubic * t_cubic) * Math.Sign(error) / TimeWarp.fixedDeltaTime;
             }
 
-            output_v = (float)(descend_v + des_aoa_equilibr_v);
+            output_v = (float)(descend_v + cur_aoa_equilibr_v);
 
             ControlUtils.neutralize_user_input(cntrl, axis);
             v_controller.user_controlled = false;
@@ -196,10 +195,10 @@ namespace AtmosphereAutopilot
             return output_v;
         }
 
-        double get_roll_aoa_deriv(float desired_aoa)
+        double get_roll_aoa_deriv()
         {
-            Vector3 pitch_aoa = new Vector3(axis == PITCH ? desired_aoa : imodel.AoA(PITCH), 0.0f, 0.0f);
-            Vector3 yaw_aoa = new Vector3(0.0f, axis == YAW ? desired_aoa : imodel.AoA(YAW), 0.0f);
+            Vector3 pitch_aoa = new Vector3(imodel.AoA(PITCH), 0.0f, 0.0f);
+            Vector3 yaw_aoa = new Vector3(0.0f, imodel.AoA(YAW), 0.0f);
             Vector3 ang_v = new Vector3(0.0f, 0.0f, imodel.AngularVel(ROLL));
             Vector3 plane_vel = Vector3.Cross(ang_v, pitch_aoa + yaw_aoa);
             if (axis == PITCH)

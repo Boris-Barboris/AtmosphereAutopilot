@@ -76,13 +76,15 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("Kp_v")]
         [AutoGuiAttr("Kp_v", true, "G5")]
-        public double Kp_v = 100.0;
+        public double Kp_v = 1.0;
 
         [AutoGuiAttr("acc_filter_k", true, "G5")]
         public double acc_filter_k = 10.0;
 
         [AutoGuiAttr("relaxation_acc_error", true, "G5")]
-        protected double relaxation_acc_error = 5.0;
+        protected double relaxation_acc_error = 0.1;
+
+        protected Vector3d surfspd_dir;
 
         /// <summary>
         /// Main control function
@@ -127,25 +129,27 @@ namespace AtmosphereAutopilot
             }
             else
             {
+                surfspd_dir = imodel.surface_v.normalized;
                 Vector3 thrust = imodel.cntrl_part_to_world * imodel.engines_thrust_principal;
-                prograde_thrust = Vector3.Dot(thrust, imodel.surface_v);
+                prograde_thrust = Vector3.Dot(thrust, surfspd_dir);
 
-                double current_acc = Vector3.Dot(imodel.sum_acc, imodel.surface_v);
-                drag_estimate = current_acc - prograde_thrust / imodel.sum_mass;
+                double current_acc = Vector3.Dot(imodel.sum_acc, surfspd_dir);
+                drag_estimate = current_acc - prograde_thrust / imodel.sum_mass - Vector3d.Dot(imodel.gravity_acc, surfspd_dir) -
+                    Vector3d.Dot(imodel.noninert_acc, surfspd_dir);
 
                 v_error = desired_v - current_v;
                 desired_acc = Kp_v * v_error;
-                if (Math.Abs(acc_error) < relaxation_acc_error)
+                if (Math.Abs(desired_acc - current_acc) < relaxation_acc_error)
                 {
                     // we're on low error regime, let's smooth out acceleration error using exponential moving average
                     acc_error = Common.simple_filter(desired_acc - current_acc, acc_error, acc_filter_k);
                 }
                 else
                 {
-                    acc_error = desired_acc - current_acc;                    
+                    acc_error = desired_acc - current_acc;              
                 }
-                thrust_error = acc_error * imodel.sum_mass;
 
+                thrust_error = acc_error * imodel.sum_mass;
                 cntrl.mainThrottle = solve_thrust_req(prograde_thrust + thrust_error, prev_input);
 
                 prev_thrust = prograde_thrust;
@@ -173,9 +177,10 @@ namespace AtmosphereAutopilot
             for (int i = 0; i < imodel.engines.Count; i++)
             {
                 ModuleEngines eng = imodel.engines[i].engine;
-                double e_prograde_thrust = Vector3.Dot(imodel.engines[i].thrust, imodel.surface_v);
+                double e_prograde_thrust = Vector3.Dot(imodel.engines[i].thrust, surfspd_dir);
                 double e_throttle = eng.currentThrottle / eng.thrustPercentage * 100.0;
-                estimated_max_thrusts[i] = e_prograde_thrust != 0.0 ? e_prograde_thrust / e_throttle : eng.maxThrust;
+                estimated_max_thrusts[i] = 
+                    e_prograde_thrust != 0.0 ? e_prograde_thrust / e_throttle : eng.maxThrust;
                 if (eng.useEngineResponseTime)
                 {
                     throttle_directions[i] = prev_throttle >= eng.currentThrottle ? 1 : -1;
