@@ -50,7 +50,8 @@ namespace AtmosphereAutopilot
         /// Main control function
         /// </summary>
         /// <param name="desired_acceleration">Desired acceleration in planet (rotating) reference frame.</param>
-        public void ApplyControl(FlightCtrlState state, Vector3d desired_acceleration)
+        /// <param name="jerk">Desired acceleration expected derivative.</param>
+        public void ApplyControl(FlightCtrlState state, Vector3d desired_acceleration, Vector3d jerk)
         {
             target_acc = desired_acceleration;
             current_acc = imodel.sum_acc;
@@ -65,16 +66,16 @@ namespace AtmosphereAutopilot
             Vector3d normal_lift_acc = target_lift_acc - Vector3d.Project(target_lift_acc, imodel.surface_v);
             Vector3d desired_right_direction = Vector3d.Cross(normal_lift_acc, vessel.ReferenceTransform.up).normalized;
 
-            double craft_max_g = pitch_c.max_aoa_v * imodel.surface_v.magnitude - imodel.pitch_gravity_acc - imodel.pitch_noninert_acc;
+            double craft_max_g = Math.Max(0.01, pitch_c.max_aoa_v * imodel.surface_v.magnitude - imodel.pitch_gravity_acc - imodel.pitch_noninert_acc);
 
             // let's apply roll to maintain desired_right_direction
-            Vector3d right_vector_tangential = vessel.ReferenceTransform.right - Vector3d.Project(vessel.ReferenceTransform.right, imodel.surface_v);
             double roll_angle = Math.Sign(Vector3d.Dot(vessel.ReferenceTransform.right, normal_lift_acc)) *
                 Math.Acos(Math.Min(Math.Max(Vector3d.Dot(desired_right_direction, vessel.ReferenceTransform.right), -1.0), 1.0));
             // rolling to pitch up is not always as efficient as pitching down
-            //if (normal_lift_acc.magnitude < craft_max_g * 0.5)
-            //    if (Math.Abs(roll_angle) > 90.0 * dgr2rad)
-            //        roll_angle = roll_angle - 180.0 * dgr2rad * Math.Sign(roll_angle);
+            double spine_up = Vector3d.Dot(desired_right_direction, Vector3d.Cross(imodel.surface_v, imodel.gravity_acc));
+            if (normal_lift_acc.magnitude < craft_max_g * 0.5)
+                if (Math.Abs(roll_angle) > 90.0 * dgr2rad && spine_up < 0.0)
+                    roll_angle = roll_angle - 180.0 * dgr2rad * Math.Sign(roll_angle);
             // generate desired roll angular_v
             roll_c.user_controlled = false;
             roll_c.ApplyControl(state, get_desired_roll_v(roll_angle));
@@ -88,18 +89,20 @@ namespace AtmosphereAutopilot
             // let's find equilibrium AoA for desired lift
             desired_aoa = get_desired_aoa(imodel.pitch_rot_model, desired_pitch_v, 0.0);
             if (float.IsNaN(desired_aoa) || float.IsInfinity(desired_aoa))
-                desired_aoa = imodel.AoA(PITCH);
-            aoa_c.ApplyControl(state, desired_aoa);
+                desired_aoa = 0.0f;
+            aoa_c.user_controlled = false;
+            aoa_c.ApplyControl(state, desired_aoa, 0.0f);
 
             // yaw sideslip
-            double desired_yaw_lift = Vector3.Dot(imodel.yaw_tangent, normal_lift_acc);
-            double desired_yaw_acc = desired_yaw_lift + imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
-            double desired_yaw_v = desired_yaw_acc / imodel.surface_v.magnitude;
+            desired_yaw_lift = Vector3.Dot(imodel.yaw_tangent, normal_lift_acc);
+            desired_yaw_acc = desired_yaw_lift + imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
+            desired_yaw_v = desired_yaw_acc / imodel.surface_v.magnitude;
             // let's find equilibrium sideslip for desired lift
             desired_sideslip = get_desired_aoa(imodel.yaw_rot_model, desired_yaw_v, 0.0);
             if (float.IsNaN(desired_sideslip) || float.IsInfinity(desired_sideslip))
-                desired_sideslip = imodel.AoA(YAW);
-            side_c.ApplyControl(state, desired_sideslip);
+                desired_sideslip = 0.0f;
+            side_c.user_controlled = false;
+            side_c.ApplyControl(state, desired_sideslip, 0.0f);
         }
 
         [AutoGuiAttr("target_acc", false, "G3")]
@@ -107,6 +110,15 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("current_acc", false, "G3")]
         protected Vector3d current_acc;
+
+        [AutoGuiAttr("desired_yaw_lift", false, "G5")]
+        protected double desired_yaw_lift;
+
+        [AutoGuiAttr("desired_yaw_acc", false, "G5")]
+        protected double desired_yaw_acc;
+
+        [AutoGuiAttr("desired_yaw_v", false, "G5")]
+        protected double desired_yaw_v;
 
         # region Roll
 

@@ -425,7 +425,7 @@ namespace AtmosphereAutopilot
                     A[1, 2] = yaw_coeffs.k2_gen;
                     B[1, 0] = (reaction_torque[YAW] + get_rcs_authority(YAW)) / MOI[YAW];
                 }
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 + engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.k0_gen + yaw_coeffs.et0;
             }
             else
@@ -435,7 +435,7 @@ namespace AtmosphereAutopilot
                 A[1, 0] = 0.0;
                 A[1, 2] = 0.0;
                 B[1, 0] = (reaction_torque[YAW] + get_rcs_authority(YAW)) / MOI[YAW];
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.et0;
             }
             if (any_gimbals && any_gimbal_spds)
@@ -482,7 +482,7 @@ namespace AtmosphereAutopilot
                     A[1, 2] = yaw_coeffs.k2;
                     B[1, 0] = (reaction_torque[YAW] + get_rcs_authority(YAW)) / MOI[YAW];
                 }
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 + engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.k0 + yaw_coeffs.et0;
             }
             else
@@ -492,7 +492,7 @@ namespace AtmosphereAutopilot
                 A[1, 0] = 0.0;
                 A[1, 2] = 0.0;
                 B[1, 0] = (reaction_torque[YAW] + get_rcs_authority(YAW)) / MOI[YAW];
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.et0;
             }
             if (any_gimbals && any_gimbal_spds)
@@ -526,7 +526,7 @@ namespace AtmosphereAutopilot
                 A[1, 0] = yaw_coeffs.k1;
                 B[0, 0] = -yaw_coeffs.Cl2 / vessel.srfSpeed;
                 B[1, 0] = (reaction_torque[YAW] + get_rcs_authority(YAW)) / MOI[YAW] + yaw_coeffs.k2;
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + yaw_coeffs.Cl0 + engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.k0 + yaw_coeffs.et0;
             }
             else
@@ -535,7 +535,7 @@ namespace AtmosphereAutopilot
                 A[1, 0] = 0.0;
                 B[0, 0] = 0.0;
                 B[1, 0] = (reaction_torque[YAW] + get_rcs_authority(YAW)) / MOI[YAW];
-                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc - engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
+                C[0, 0] = -(yaw_gravity_acc + yaw_noninert_acc + engines_thrust_principal[PITCH] / sum_mass) / vessel.srfSpeed;
                 C[1, 0] = yaw_coeffs.et0;
             }
             if (any_gimbals && any_gimbal_spds)

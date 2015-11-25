@@ -23,12 +23,14 @@ namespace AtmosphereAutopilot
 
         protected override void OnActivate()
         {
-            acc_c.Activate();   
+            acc_c.Activate();
+            MessageManager.post_status_message("Cruise Flight enabled");
         }
 
         protected override void OnDeactivate()
         {
             acc_c.Deactivate();
+            MessageManager.post_status_message("Cruise Flight disabled");
         }
 
         public override void ApplyControl(FlightCtrlState cntrl)
@@ -47,7 +49,7 @@ namespace AtmosphereAutopilot
             // up acceleration
             desired_acc += planet2vesNorm * up_acceleration;
 
-            acc_c.ApplyControl(cntrl, desired_acc);
+            acc_c.ApplyControl(cntrl, desired_acc, Vector3d.zero);
         }
 
         [AutoGuiAttr("Acceleration controller GUI", true)]

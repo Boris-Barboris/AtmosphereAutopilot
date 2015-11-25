@@ -122,7 +122,7 @@ namespace AtmosphereAutopilot
 				yvc.ApplyControl(cntrl, 0.0f);
 			}
 			else
-				yc.ApplyControl(cntrl, 0.0f);
+				yc.ApplyControl(cntrl, 0.0f, 0.0f);
 			rc.ApplyControl(cntrl, 0.0f);
         }
 

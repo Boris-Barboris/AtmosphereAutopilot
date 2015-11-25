@@ -23,14 +23,14 @@ using UnityEngine;
 namespace AtmosphereAutopilot
 {
 
-    public abstract class AoAController : SISOController
+    public abstract class AoAController : AutopilotModule
     {
         FlightModel imodel;
         PitchYawAngularVelocityController v_controller;
 
         int axis;
 
-        internal AoAController(Vessel v, string cntrl_name, int wnd_id, int axis) : base(v, cntrl_name, wnd_id)
+        internal AoAController(Vessel v, string cntrl_name, int wnd_id, int axis) : base(v, wnd_id, cntrl_name)
         {
             this.axis = axis;
         }
@@ -101,11 +101,13 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("cubic mode", false)]
         protected bool cubic = false;
 
+        public bool user_controlled = true;
+
         /// <summary>
         /// Main control function
         /// </summary>
         /// <param name="cntrl">Control state to change</param>
-        public override float ApplyControl(FlightCtrlState cntrl, float target_value)
+        public float ApplyControl(FlightCtrlState cntrl, float target_value, float target_derivative)
         {
             if (imodel.dyn_pressure <= 100.0 || !v_controller.moderate_aoa)
             {
@@ -116,7 +118,7 @@ namespace AtmosphereAutopilot
 
             cur_aoa = imodel.AoA(axis);
 
-            float user_input = Common.Clampf(ControlUtils.get_neutralized_user_input(cntrl, YAW), 1.0f);
+            float user_input = Common.Clampf(ControlUtils.get_neutralized_user_input(cntrl, axis), 1.0f);
             if (user_controlled || user_input != 0.0f)
             {
                 if (user_input >= 0.0f)
@@ -140,7 +142,7 @@ namespace AtmosphereAutopilot
                 eq_A[0, 1] = model.A[0, 2];
                 eq_A[1, 0] = model.A[1, 1];
                 eq_A[1, 1] = model.A[1, 2] + model.B[1, 0] + model.A[1, 3];
-                eq_b[0, 0] = -(model.A[0, 0] * cur_aoa + model.C[0, 0]);
+                eq_b[0, 0] = target_derivative - (model.A[0, 0] * cur_aoa + model.C[0, 0]);
                 eq_b[1, 0] = -(model.A[1, 0] * cur_aoa + model.C[1, 0]);
                 eq_A.old_lu = true;
                 try

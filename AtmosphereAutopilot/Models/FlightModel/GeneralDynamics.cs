@@ -86,7 +86,7 @@ namespace AtmosphereAutopilot
             prev_orb_vel = orb_vel;
 
             // pitch
-            pitch_tangent = Vector3.Cross(vessel.srf_velocity, vessel.ReferenceTransform.right).normalized;
+            pitch_tangent = Vector3d.Cross(surface_v.normalized, vessel.ReferenceTransform.right).normalized;
             double pitch_total_acc = Vector3d.Dot(sum_acc, pitch_tangent);
             pitch_gravity_acc = Vector3d.Dot(gravity_acc, pitch_tangent);
             pitch_noninert_acc = Vector3d.Dot(noninert_acc, pitch_tangent);
@@ -94,7 +94,7 @@ namespace AtmosphereAutopilot
             lift_acc = pitch_total_acc - pitch_noninert_acc - pitch_gravity_acc - pitch_engine_acc;
 
             // yaw
-            yaw_tangent = Vector3.Cross(vessel.srf_velocity, vessel.ReferenceTransform.forward).normalized;
+            yaw_tangent = Vector3d.Cross(surface_v.normalized, vessel.ReferenceTransform.forward).normalized;
             double yaw_total_acc = Vector3d.Dot(sum_acc, yaw_tangent);
             yaw_gravity_acc = Vector3d.Dot(gravity_acc, yaw_tangent);
             yaw_noninert_acc = Vector3d.Dot(noninert_acc, yaw_tangent);
