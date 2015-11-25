@@ -189,19 +189,19 @@ namespace AtmosphereAutopilot
         protected float min_input_v;
 
         [AutoGuiAttr("max_g_aoa", false, "G6")]
-        protected float max_g_aoa;
+        public float max_g_aoa;
 
         [AutoGuiAttr("min_g_aoa", false, "G6")]
         protected float min_g_aoa;
 
         [AutoGuiAttr("max_g_v", false, "G6")]
-        protected float max_g_v;
+        public float max_g_v;
 
         [AutoGuiAttr("min_g_v", false, "G6")]
         protected float min_g_v;
 
         [AutoGuiAttr("max_aoa_v", false, "G6")]
-        protected float max_aoa_v;
+        public float max_aoa_v;
 
         [AutoGuiAttr("min_aoa_v", false, "G6")]
         protected float min_aoa_v;
@@ -247,8 +247,8 @@ namespace AtmosphereAutopilot
                             if (eq_x[0, 0] < 0.0)
                             {
                                 // plane is statically unstable, eq_x solution is equilibrium on it's minimal stable aoa
-                                min_input_aoa = (float)Common.simple_filter(0.6 * eq_x[0, 0], min_input_aoa, moder_filter);
-                                min_input_v = (float)Common.simple_filter(0.6 * eq_x[1, 0], min_input_v, moder_filter);
+                                min_input_aoa = (float)Common.simple_filter(0.6 * eq_x[0, 0], min_input_aoa, moder_filter / 2.0);
+                                min_input_v = (float)Common.simple_filter(0.6 * eq_x[1, 0], min_input_v, moder_filter / 2.0);
                             }
                             else
                             {
@@ -266,8 +266,8 @@ namespace AtmosphereAutopilot
                                 if (eq_x[0, 0] >= 0.0)
                                 {
                                     // plane is statically unstable, eq_x solution is equilibrium on it's maximal stable aoa
-                                    max_input_aoa = (float)Common.simple_filter(0.6 * eq_x[0, 0], max_input_aoa, moder_filter);
-                                    max_input_v = (float)Common.simple_filter(0.6 * eq_x[1, 0], max_input_v, moder_filter);
+                                    max_input_aoa = (float)Common.simple_filter(0.6 * eq_x[0, 0], max_input_aoa, moder_filter / 2.0);
+                                    max_input_v = (float)Common.simple_filter(0.6 * eq_x[1, 0], max_input_v, moder_filter / 2.0);
                                 }
                                 else
                                 {
@@ -412,7 +412,7 @@ namespace AtmosphereAutopilot
                 state_mat[3, 0] = -1.0;
 				input_mat[0, 0] = -1.0;
 				double acc = lin_model.eval_row(1, state_mat, input_mat);
-				float new_dyn_max_v = (float)Math.Sqrt(transit_max_aoa * (-acc));
+				float new_dyn_max_v = 0.8f * (float)Math.Sqrt(transit_max_aoa * (-acc));
 				if (float.IsNaN(new_dyn_max_v))
 				{
 					if (old_dyn_max_v != 0.0f)
@@ -644,10 +644,10 @@ namespace AtmosphereAutopilot
 		}
 
         [AutoGuiAttr("max_input_v", false, "G6")]
-        float max_input_v;
+        public float max_input_v;
 
         [AutoGuiAttr("min_input_v", false, "G6")]
-        float min_input_v;
+        public float min_input_v;
 
         [AutoGuiAttr("moder_filter", true, "G6")]
         float moder_filter = 4.0f;
@@ -749,7 +749,7 @@ namespace AtmosphereAutopilot
             // desired_v moderation section
             if (des_v >= 0.0f)
             {
-                float normalized_des_v = user_input ? des_v / max_v_construction : des_v / max_input_v;
+                float normalized_des_v = user_input ? des_v / max_v_construction : des_v / Math.Min(max_input_v, max_v_construction);
                 if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
                     normalized_des_v = 0.0f;
                 normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
@@ -758,7 +758,7 @@ namespace AtmosphereAutopilot
             }
             else
             {
-                float normalized_des_v = user_input ? des_v / -max_v_construction : des_v / min_input_v;
+                float normalized_des_v = user_input ? des_v / -max_v_construction : des_v / Math.Max(min_input_v, -max_v_construction);
                 if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
                     normalized_des_v = 0.0f;
                 normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);

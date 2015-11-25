@@ -35,7 +35,7 @@ namespace AtmosphereAutopilot
 		Dictionary<Type, AutopilotModule> cur_ves_modules;
 
         // All high-level autopilot modules, created for this vessel
-        List<StateController> HighLevelControllers = new List<StateController>();
+        Dictionary<Type, StateController> HighLevelControllers = new Dictionary<Type, StateController>();
 
         // Currently active high-level autopilot
         StateController active_controller = null;
@@ -69,12 +69,12 @@ namespace AtmosphereAutopilot
                 foreach (var module_type in cur_ves_modules.Keys)
                     if (!module_type.Equals(typeof(TopModuleManager)))
                         if (module_type.IsSubclassOf(typeof(StateController)))
-                            HighLevelControllers.Add((StateController)cur_ves_modules[module_type]);
+                            HighLevelControllers.Add(module_type, (StateController)cur_ves_modules[module_type]);
 
                 if (HighLevelControllers.Count <= 0)
                     throw new InvalidOperationException("No high-level autopilot modules were found");
                 else
-                    active_controller = HighLevelControllers[0];
+                    active_controller = HighLevelControllers[typeof(StandardFlyByWire)];
 			}
 
             if (active_controller != null)
@@ -104,7 +104,7 @@ namespace AtmosphereAutopilot
             GUILayout.BeginVertical();
             Active = GUILayout.Toggle(Active, "MASTER SWITCH", GUIStyles.toggleButtonStyle);
             GUILayout.Space(10);
-            foreach (var controller in HighLevelControllers)
+            foreach (var controller in HighLevelControllers.Values)
             {
                 GUILayout.BeginHorizontal();
                 bool pressed = GUILayout.Toggle(controller.Active, controller.ModuleName, GUIStyles.toggleButtonStyle);

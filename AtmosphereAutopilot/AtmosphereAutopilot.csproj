@@ -72,11 +72,13 @@
     <Compile Include="Models\FlightModel\RotationModel.cs" />
     <Compile Include="Models\FlightModel\EngineDynamics.cs" />
     <Compile Include="Models\LinearSystemModel.cs" />
+    <Compile Include="Modules\AccelerationController.cs" />
     <Compile Include="Modules\AngularAccAdaptiveController.cs" />
     <Compile Include="Models\FlightModel\FlightModel.cs" />
     <Compile Include="GUI\GUIStyles.cs" />
     <Compile Include="Math\Matrix.cs" />
     <Compile Include="Modules\AngularVelAdaptiveController.cs" />
+    <Compile Include="Modules\CruiseController.cs" />
     <Compile Include="Modules\ProgradeThrustController.cs" />
     <Compile Include="Modules\AutopilotModule.cs" />
     <Compile Include="Modules\AoAController.cs" />

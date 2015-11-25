@@ -76,10 +76,10 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("Kp_v")]
         [AutoGuiAttr("Kp_v", true, "G5")]
-        public double Kp_v = 1.0;
+        public double Kp_v = 0.5;
 
         [AutoGuiAttr("acc_filter_k", true, "G5")]
-        public double acc_filter_k = 10.0;
+        public double acc_filter_k = 1.0;
 
         [AutoGuiAttr("relaxation_acc_error", true, "G5")]
         protected double relaxation_acc_error = 0.1;
@@ -184,7 +184,7 @@ namespace AtmosphereAutopilot
                 if (eng.useEngineResponseTime)
                 {
                     throttle_directions[i] = prev_throttle >= eng.currentThrottle ? 1 : -1;
-                    if (Math.Abs(eng.currentThrottle - prev_throttle * eng.thrustPercentage * 0.01) <= 1e-4)
+                    if (Mathf.Abs(eng.currentThrottle - prev_throttle * eng.thrustPercentage * 0.01f) <= 1e-4f)
                     {
                         throttle_directions[i] = 0;
                         predicted_thrust += estimated_max_thrusts[i] * prev_throttle;
@@ -203,7 +203,7 @@ namespace AtmosphereAutopilot
             bool spool_dir_changed = false;
             double desired_throttle = 0.0;
             double t_error = required_thrust - predicted_thrust;
-            int iter_count = 0;
+            iter_count = 0;
             do
             {
                 spool_dir_changed = false;                
@@ -244,6 +244,9 @@ namespace AtmosphereAutopilot
 
             return (float)Common.Clamp(desired_throttle, 0.0, 1.0);
         }
+
+        [AutoGuiAttr("iter_count", false)]
+        protected int iter_count;
 
         [AutoGuiAttr("v_error", false, "G5")]
         double v_error;

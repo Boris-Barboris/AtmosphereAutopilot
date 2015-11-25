@@ -64,10 +64,10 @@ namespace AtmosphereAutopilot
         public double yaw_noninert_acc;
 
         //[AutoGuiAttr("pitch_tangent", false, "G6")]
-        Vector3d pitch_tangent;
+        public Vector3d pitch_tangent;
 
         //[AutoGuiAttr("yaw_tangent", false, "G6")]
-        Vector3d yaw_tangent;
+        public Vector3d yaw_tangent;
 
         Vector3d prev_orb_vel;
 
