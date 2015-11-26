@@ -450,30 +450,23 @@ namespace AtmosphereAutopilot
             normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
             if (moderated)
             {
-                if (des_v >= 0.0f)
-                {
-                    scaled_aoa = Common.Clampf((res_max_aoa - cur_aoa) * 2.0f / (res_max_aoa - res_min_aoa), 1.0f);
-                    if (scaled_aoa < 0.0f)
-						scaled_restrained_v = (float)((scaled_aoa + 1.0) *
-                            Math.Min(res_equilibr_v_upper, normalized_des_v * max_v_construction + v_offset) +
-							scaled_aoa * Math.Min(transit_max_v, max_v_construction));
-					else
-						scaled_restrained_v = (float)(normalized_des_v * ((1.0 - scaled_aoa) * 
-							Math.Min(res_equilibr_v_upper - v_offset, max_v_construction) +
-							scaled_aoa * Math.Min(transit_max_v - v_offset, max_v_construction)) + v_offset);
-                }
+                float max_v = Mathf.Min(max_v_construction, transit_max_v);
+                float min_v = -max_v;
+                // upper aoa limit moderation
+                scaled_aoa_up = Common.Clampf((res_max_aoa - cur_aoa) * 2.0f / (res_max_aoa - res_min_aoa), 1.0f);
+                if (scaled_aoa_up < 0.0f)
+                    max_v = Mathf.Min(max_v, 2.0f * scaled_aoa_up * max_v + Math.Min(res_equilibr_v_upper, max_v));
                 else
-                {
-                    scaled_aoa = Common.Clampf((res_min_aoa - cur_aoa) * 2.0f / (res_min_aoa - res_max_aoa), 1.0f);
-                    if (scaled_aoa < 0.0f)
-                        scaled_restrained_v = (float)((scaled_aoa + 1.0) *
-                            Math.Max(res_equilibr_v_lower, normalized_des_v * max_v_construction + v_offset) -
-                            scaled_aoa * Math.Min(transit_max_v, max_v_construction));
-                    else
-                        scaled_restrained_v = (float)(normalized_des_v * ((1.0 - scaled_aoa) *
-                            Math.Min(-res_equilibr_v_lower - v_offset, max_v_construction) +
-                            scaled_aoa * Math.Min(transit_max_v - v_offset, max_v_construction)) + v_offset);
-                }
+                    max_v = Mathf.Min(max_v, scaled_aoa_up * max_v + (1.0f - scaled_aoa_up) * Math.Min(res_equilibr_v_upper, max_v));
+                // lower aoa limit moderation
+                scaled_aoa_down = Common.Clampf((res_min_aoa - cur_aoa) * 2.0f / (res_min_aoa - res_max_aoa), 1.0f);
+                if (scaled_aoa_down < 0.0f)
+                    min_v = Mathf.Max(min_v, 2.0f * scaled_aoa_down * min_v + Math.Max(res_equilibr_v_lower, min_v));
+                else
+                    min_v = Mathf.Max(min_v, scaled_aoa_down * min_v + (1.0f - scaled_aoa_down) * Math.Max(res_equilibr_v_lower, min_v));
+                // now let's restrain v
+                scaled_restrained_v = Common.Clampf(v_offset, min_v, max_v);
+                scaled_restrained_v = Mathf.Lerp(scaled_restrained_v, des_v >= 0.0 ? max_v : min_v, Mathf.Abs(normalized_des_v));
             }
             else
                 scaled_restrained_v = transit_max_v * normalized_des_v + v_offset;
@@ -594,8 +587,11 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("res_equolibr_v_lower", false, "G6")]
         public float res_equilibr_v_lower;
 
-        [AutoGuiAttr("scaled_aoa", false, "G6")]
-        protected float scaled_aoa;
+        [AutoGuiAttr("scaled_aoa_up", false, "G4")]
+        protected float scaled_aoa_up;
+
+        [AutoGuiAttr("scaled_aoa_down", false, "G4")]
+        protected float scaled_aoa_down;
 
         [AutoGuiAttr("scaled_restr_v", false, "G6")]
         protected float scaled_restrained_v;

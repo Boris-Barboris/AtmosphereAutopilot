@@ -103,7 +103,7 @@ namespace AtmosphereAutopilot
                 output = 0.0f;
 
             // fighting numerical precision issues in KSP
-            if (Mathf.Abs(output) < 0.008f)
+            if (Mathf.Abs(output) < 0.006f)
                 output = 0.0f;
 
 			ControlUtils.set_raw_output(cntrl, axis, output);

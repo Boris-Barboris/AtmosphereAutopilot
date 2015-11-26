@@ -87,20 +87,29 @@ namespace AtmosphereAutopilot
             double desired_pitch_acc = desired_pitch_lift + imodel.pitch_gravity_acc + imodel.pitch_noninert_acc;
             double desired_pitch_v = desired_pitch_acc / imodel.surface_v.magnitude;
             // let's find equilibrium AoA for desired lift
-            desired_aoa = get_desired_aoa(imodel.pitch_rot_model, desired_pitch_v, 0.0);
+            desired_aoa = get_desired_aoa(imodel.pitch_rot_model_gen, desired_pitch_v, 0.0);
             if (float.IsNaN(desired_aoa) || float.IsInfinity(desired_aoa))
                 desired_aoa = 0.0f;
             aoa_c.user_controlled = false;
             aoa_c.ApplyControl(state, desired_aoa, 0.0f);
 
             // yaw sideslip
-            desired_yaw_lift = Vector3.Dot(imodel.yaw_tangent, normal_lift_acc);
-            desired_yaw_acc = desired_yaw_lift + imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
-            desired_yaw_v = desired_yaw_acc / imodel.surface_v.magnitude;
-            // let's find equilibrium sideslip for desired lift
-            desired_sideslip = get_desired_aoa(imodel.yaw_rot_model, desired_yaw_v, 0.0);
-            if (float.IsNaN(desired_sideslip) || float.IsInfinity(desired_sideslip))
+            if (Math.Abs(roll_angle) > 10.0 * dgr2rad)
+            {
+                desired_yaw_lift = 0.0;
                 desired_sideslip = 0.0f;
+            }
+            else
+            {
+                desired_yaw_lift = Vector3.Dot(imodel.yaw_tangent, normal_lift_acc);
+                desired_yaw_acc = desired_yaw_lift + imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
+                desired_yaw_v = desired_yaw_acc / imodel.surface_v.magnitude;
+                // let's find equilibrium sideslip for desired lift
+                //if (Math.Abs(desired_yaw_lift) < 0.01f)
+                desired_sideslip = (float)Common.simple_filter(get_desired_aoa(imodel.yaw_rot_model_gen, desired_yaw_v, 0.0), desired_sideslip, sideslip_filter_k);
+                if (float.IsNaN(desired_sideslip) || float.IsInfinity(desired_sideslip) || Math.Abs(desired_sideslip) < 0.03f)
+                    desired_sideslip = 0.0f;
+            }
             side_c.user_controlled = false;
             side_c.ApplyControl(state, desired_sideslip, 0.0f);
         }
@@ -119,6 +128,9 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("desired_yaw_v", false, "G5")]
         protected double desired_yaw_v;
+
+        [AutoGuiAttr("sideslip_filter_k", true, "G4")]
+        protected double sideslip_filter_k = 2.0;
 
         # region Roll
 
