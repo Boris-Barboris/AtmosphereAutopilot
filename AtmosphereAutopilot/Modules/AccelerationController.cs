@@ -94,7 +94,7 @@ namespace AtmosphereAutopilot
             aoa_c.ApplyControl(state, desired_aoa, 0.0f);
 
             // yaw sideslip
-            if (Math.Abs(roll_angle) > 10.0 * dgr2rad)
+            if (Math.Abs(roll_angle) > 5.0 * dgr2rad)
             {
                 desired_yaw_lift = 0.0;
                 desired_sideslip = 0.0f;
@@ -107,7 +107,7 @@ namespace AtmosphereAutopilot
                 // let's find equilibrium sideslip for desired lift
                 //if (Math.Abs(desired_yaw_lift) < 0.01f)
                 desired_sideslip = (float)Common.simple_filter(get_desired_aoa(imodel.yaw_rot_model_gen, desired_yaw_v, 0.0), desired_sideslip, sideslip_filter_k);
-                if (float.IsNaN(desired_sideslip) || float.IsInfinity(desired_sideslip) || Math.Abs(desired_sideslip) < 0.03f)
+                if (float.IsNaN(desired_sideslip) || float.IsInfinity(desired_sideslip) || Math.Abs(desired_sideslip) < 0.001f)
                     desired_sideslip = 0.0f;
             }
             side_c.user_controlled = false;
@@ -130,7 +130,7 @@ namespace AtmosphereAutopilot
         protected double desired_yaw_v;
 
         [AutoGuiAttr("sideslip_filter_k", true, "G4")]
-        protected double sideslip_filter_k = 2.0;
+        protected double sideslip_filter_k = 10.0;
 
         # region Roll
 
@@ -212,7 +212,7 @@ namespace AtmosphereAutopilot
         float get_desired_aoa(LinearSystemModel rotation_model, double desired_v, double desired_aoa_deriv)
         {
             aoa_A[0, 0] = rotation_model.A[0, 0];
-            aoa_A[0, 1] = rotation_model.A[0, 2] + rotation_model.A[0, 3];
+            aoa_A[0, 1] = rotation_model.A[0, 2] + rotation_model.A[0, 3] + rotation_model.B[0, 0];
             aoa_A[1, 0] = rotation_model.A[1, 0];
             aoa_A[1, 1] = rotation_model.A[1, 2] + rotation_model.A[1, 3] + rotation_model.B[1, 0];
             aoa_B[0, 0] = desired_aoa_deriv - desired_v - rotation_model.C[0, 0];

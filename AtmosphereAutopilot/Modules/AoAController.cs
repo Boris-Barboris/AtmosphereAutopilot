@@ -74,8 +74,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("output_v", false, "G6")]
         protected float output_v;
 
-        [AutoGuiAttr("cur_aoa_equilibr_v", false, "G6")]
-        protected float cur_aoa_equilibr_v;
+        [AutoGuiAttr("desired_aoa_equilibr_v", false, "G6")]
+        protected float desired_aoa_equilibr_v;
 
         [AutoGuiAttr("filter_k", true, "G6")]
         protected float filter_k = 4.0f;
@@ -130,7 +130,7 @@ namespace AtmosphereAutopilot
             else
                 desired_aoa = (float)Common.Clamp(target_value, v_controller.res_min_aoa, v_controller.res_max_aoa);
 
-            // Let's find equilibrium angular v on current_aoa
+            // Let's find equilibrium angular v on desired_aoa
             LinearSystemModel model;
             if (Math.Abs(cur_aoa) < 0.3f)
             {
@@ -139,24 +139,24 @@ namespace AtmosphereAutopilot
                 else
                     model = lin_model_gen;
                 eq_A[0, 0] = model.A[0, 1];
-                eq_A[0, 1] = model.A[0, 2];
+                eq_A[0, 1] = model.A[0, 2] + model.A[0, 3] + model.B[0, 0];
                 eq_A[1, 0] = model.A[1, 1];
                 eq_A[1, 1] = model.A[1, 2] + model.B[1, 0] + model.A[1, 3];
-                eq_b[0, 0] = target_derivative - (model.A[0, 0] * cur_aoa + model.C[0, 0]);
-                eq_b[1, 0] = -(model.A[1, 0] * cur_aoa + model.C[1, 0]);
+                eq_b[0, 0] = target_derivative - (model.A[0, 0] * desired_aoa + model.C[0, 0]);
+                eq_b[1, 0] = -(model.A[1, 0] * desired_aoa + model.C[1, 0]);
                 eq_A.old_lu = true;
                 try
                 {
                     eq_x = eq_A.SolveWith(eq_b);
                     double new_eq_v = eq_x[0, 0];
                     if (!double.IsInfinity(new_eq_v) && !double.IsNaN(new_eq_v))
-                        cur_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, cur_aoa_equilibr_v, filter_k);
+                        desired_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, desired_aoa_equilibr_v, filter_k);
                 }
                 catch (MSingularException) { }
                 //cur_aoa_equilibr_v += 0.5f * (float)get_roll_aoa_deriv();
             }
             else
-                cur_aoa_equilibr_v = 0.0f;
+                desired_aoa_equilibr_v = 0.0f;
 
             // parabolic descend to desired angle of attack
             double error = Common.Clampf(desired_aoa - cur_aoa, Mathf.Abs(v_controller.res_max_aoa - v_controller.res_min_aoa));
@@ -188,7 +188,7 @@ namespace AtmosphereAutopilot
                     descend_v = k_cubic * (t_step * t_step * t_step - t_cubic * t_cubic * t_cubic) * Math.Sign(error) / TimeWarp.fixedDeltaTime;
             }
 
-            output_v = (float)(descend_v + cur_aoa_equilibr_v);
+            output_v = (float)(descend_v + desired_aoa_equilibr_v);
 
             ControlUtils.neutralize_user_input(cntrl, axis);
             v_controller.user_controlled = false;

@@ -172,7 +172,7 @@ namespace AtmosphereAutopilot
 
         float prev_abs_thrust = 0.0f;
 
-        Vector3 prev_engines_torque;
+        Vector3 prev_engines_torque, prev_engines_thrust;
 
         [AutoGuiAttr("e_torq_k0", false, "G3")]
         Vector3 engines_torque_k0;
@@ -180,32 +180,59 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("e_torq_k1", false, "G3")]
         Vector3 engines_torque_k1;
 
+        [AutoGuiAttr("e_thrust_k0", false, "G3")]
+        Vector3 engines_thrust_k0;
+
+        [AutoGuiAttr("e_thrust_k1", false, "G3")]
+        Vector3 engines_thrust_k1;
+
         // Stupid linear authority of gimbals, verry approximate but simple and effective.
         // engines_torque = engines_torque_k0 + user_input * engines_torque_k1
+        // engines_thrust = engines_thrust_k0 + user_input * engines_thrust_k1
         void get_gimbal_authority()
         {
             if (any_gimbals && (prev_abs_thrust != 0.0f) && (abs_thrust != 0.0f) && (gimbal_buf[0].Size >= 2))
             {
                 Vector3 scaled_prev_torque = prev_engines_torque / prev_abs_thrust;
                 Vector3 scaled_cur_torque = engines_torque_principal / abs_thrust;
+                Vector3 scaled_prev_thrust = prev_engines_thrust / prev_abs_thrust;
+                Vector3 scaled_cur_thrust = engines_thrust_principal / abs_thrust;
                 for (int axis = 0; axis < 3; axis++)
                 {
+                    // prepare thrust index workaround
+                    int t_axis = ROLL;
+                    if (axis == PITCH)
+                        t_axis = YAW;
+                    if (axis == YAW)
+                        t_axis = PITCH;
+
                     float cur_cntrl = gimbal_buf[axis].getLast();
                     float last_cntrl = gimbal_buf[axis].getFromTail(1);
-                    if (Math.Abs(cur_cntrl - last_cntrl) > 0.05)            // only significant input signal changes are analyzed
+                    if (Math.Abs(cur_cntrl - last_cntrl) > 0.02)            // only significant input signal changes are analyzed
                     {
+                        // torque
                         float k1 = (scaled_cur_torque[axis] - scaled_prev_torque[axis]) / (cur_cntrl - last_cntrl);
                         if (k1 < 0.0f)
                             k1 = 0.0f;
                         float k0 = scaled_cur_torque[axis] - cur_cntrl * k1;
                         engines_torque_k0[axis] = k0 * abs_thrust;
                         engines_torque_k1[axis] = k1 * abs_thrust;
+                        // thrust
+                        k1 = (scaled_cur_thrust[t_axis] - scaled_prev_thrust[t_axis]) / (cur_cntrl - last_cntrl);
+                        k0 = scaled_cur_thrust[t_axis] - cur_cntrl * k1;
+                        engines_thrust_k0[axis] = k0 * abs_thrust;
+                        engines_thrust_k1[axis] = k1 * abs_thrust;
                     }
                     else
                     {
+                        // torque
                         float k1 = engines_torque_k1[axis] / abs_thrust;
                         float k0 = scaled_cur_torque[axis] - cur_cntrl * k1;
                         engines_torque_k0[axis] = k0 * abs_thrust;
+                        // thrust
+                        k1 = engines_thrust_k1[axis] / abs_thrust;
+                        k0 = scaled_cur_thrust[t_axis] - cur_cntrl * k1;
+                        engines_thrust_k0[axis] = k0 * abs_thrust;
                     }
                 }
             }
@@ -213,9 +240,12 @@ namespace AtmosphereAutopilot
             {
                 engines_torque_k0 = engines_torque_principal;
                 engines_torque_k1 = Vector3d.zero;
+                engines_thrust_k0 = engines_thrust_principal;
+                engines_thrust_k1 = Vector3d.zero;
             }
             prev_abs_thrust = abs_thrust;
             prev_engines_torque = engines_torque_principal;
+            prev_engines_thrust = engines_thrust_principal;
         }
     }
 }

@@ -238,7 +238,7 @@ namespace AtmosphereAutopilot
                         eq_A[0, 1] = lin_model.A[0, 1];
                         eq_A[1, 0] = lin_model.A[1, 0];
                         eq_A[1, 1] = 0.0;
-                        eq_b[0, 0] = -(lin_model.A[0, 2] + lin_model.C[0, 0]);
+                        eq_b[0, 0] = -(lin_model.A[0, 2] + lin_model.A[0, 3] + lin_model.B[0, 0] + lin_model.C[0, 0]);
                         eq_b[1, 0] = -(lin_model.A[1, 2] + lin_model.A[1, 3] + lin_model.B[1, 0] + lin_model.C[1, 0]);
                         eq_A.old_lu = true;
                         eq_x = eq_A.SolveWith(eq_b);
@@ -258,7 +258,7 @@ namespace AtmosphereAutopilot
                             }
 
                             // get equilibrium aoa and angular_v for -1.0 input
-                            eq_b[0, 0] = -lin_model.C[0, 0] + lin_model.A[0, 2];
+                            eq_b[0, 0] = -lin_model.C[0, 0] + lin_model.A[0, 2] + lin_model.A[0, 3] + lin_model.B[0, 0];
                             eq_b[1, 0] = lin_model.A[1, 2] + lin_model.A[1, 3] + lin_model.B[1, 0] - lin_model.C[1, 0];
                             eq_x = eq_A.SolveWith(eq_b);
                             if (!double.IsInfinity(eq_x[0, 0]) && !double.IsNaN(eq_x[0, 0]))
@@ -282,7 +282,7 @@ namespace AtmosphereAutopilot
 
                     // get equilibrium v for max_aoa
                     eq_A[0, 0] = lin_model.A[0, 1];
-                    eq_A[0, 1] = lin_model.A[0, 2];
+                    eq_A[0, 1] = lin_model.A[0, 2] + lin_model.A[0, 3] + lin_model.B[0, 0];
                     eq_A[1, 0] = lin_model.A[1, 1];
                     eq_A[1, 1] = lin_model.A[1, 2] + lin_model.A[1, 3] + lin_model.B[1, 0];
                     eq_b[0, 0] = -(lin_model.A[0, 0] * rad_max_aoa + lin_model.C[0, 0]);
@@ -355,14 +355,14 @@ namespace AtmosphereAutopilot
                     }
                     // get equilibrium aoa and angular v for max_g g-force
                     max_g_v = (float)Common.simple_filter(
-                        (max_g_force * 9.81 + gravity_acc) / vessel.srfSpeed,
+                        (max_g_force * 9.81 + gravity_acc) / imodel.surface_v_magnitude,
                         max_g_v, moder_filter);
                     min_g_v = (float)Common.simple_filter(
-                        (-max_g_force * 9.81 + gravity_acc) / vessel.srfSpeed,
+                        (-max_g_force * 9.81 + gravity_acc) / imodel.surface_v_magnitude,
                         min_g_v, moder_filter);
-                    // get equilibrium v for max_aoa
+                    // get equilibrium aoa for max_g
                     eq_A[0, 0] = lin_model.A[0, 0];
-                    eq_A[0, 1] = lin_model.A[0, 2];
+                    eq_A[0, 1] = lin_model.A[0, 2] + lin_model.A[0, 3] + lin_model.B[0, 0];
                     eq_A[1, 0] = lin_model.A[1, 0];
                     eq_A[1, 1] = lin_model.A[1, 2] + lin_model.A[1, 3] + lin_model.B[1, 0];
                     eq_b[0, 0] = -(max_g_v + lin_model.C[0, 0]);
@@ -710,7 +710,7 @@ namespace AtmosphereAutopilot
 			{
 				Vector3 planet2ves = (vessel.ReferenceTransform.position - vessel.mainBody.position).normalized;
 				float zenith_angle = Vector3.Angle(planet2ves, vessel.ReferenceTransform.up);
-				if (zenith_angle > 20.0f && zenith_angle < 160.0f && vessel.srfSpeed > 10.0)
+				if (zenith_angle > 20.0f && zenith_angle < 160.0f && imodel.surface_v_magnitude > 10.0)
 				{
 					Vector3 right_horizont_vector = Vector3.Cross(planet2ves, vessel.srf_velocity);
 					Vector3 right_project = Vector3.ProjectOnPlane(vessel.ReferenceTransform.right, Vector3.Cross(vessel.srf_velocity, right_horizont_vector));

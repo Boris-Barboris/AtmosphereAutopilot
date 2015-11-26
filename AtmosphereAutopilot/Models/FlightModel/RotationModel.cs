@@ -46,6 +46,8 @@ namespace AtmosphereAutopilot
         //[AutoGuiAttr("world_v", false, "G4")]
         public Vector3d surface_v;
 
+        public double surface_v_magnitude;
+
         [AutoGuiAttr("Vessel mass", false, "G6")]
         public float sum_mass = 0.0f;
 
@@ -273,6 +275,7 @@ namespace AtmosphereAutopilot
             }
             angular_vel -= world_to_cntrl_part * vessel.mainBody.angularVelocity;     // remember that unity physics reference frame is rotating
             surface_v += Krakensbane.GetFrameVelocity();
+            surface_v_magnitude = surface_v.magnitude;
         }
 
         static Vector3 get_rotated_moi(Vector3 inertia_tensor, Quaternion rotation)

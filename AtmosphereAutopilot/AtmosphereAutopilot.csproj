@@ -50,7 +50,6 @@
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="BackgroundThread.cs" />
     <None Include="Controller\PDController.cs" />
-    <None Include="FixedKrakensbane.cs" />
     <Compile Include="ListSelector.cs" />
     <Compile Include="ListView.cs" />
     <None Include="Math\GradientDescend.cs" />
