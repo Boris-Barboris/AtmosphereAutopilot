@@ -91,7 +91,7 @@ namespace AtmosphereAutopilot
             }
         }
 
-        //[AutoGuiAttr("gimbal_spd_norm", false, "G4")]
+        [AutoGuiAttr("gimbal_spd_norm", false, "G4")]
         public float gimbal_spd_norm = float.PositiveInfinity;
 
         //[AutoGuiAttr("any_gimbals", false)]

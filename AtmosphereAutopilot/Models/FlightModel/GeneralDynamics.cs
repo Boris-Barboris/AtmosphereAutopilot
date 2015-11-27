@@ -70,6 +70,7 @@ namespace AtmosphereAutopilot
         public Vector3d yaw_tangent;
 
         Vector3d prev_orb_vel;
+        Vector3d prev_gravity_acc, prev_noninert_acc, prev_angines_thrust;
 
         void update_dynamics()
         {
@@ -77,8 +78,8 @@ namespace AtmosphereAutopilot
 
             //vess2planet = vessel.mainBody.position - vessel.ReferenceTransform.position;
             //gravity_acc = vess2planet.normalized * (vessel.mainBody.gMagnitudeAtCenter / vess2planet.sqrMagnitude);
-            gravity_acc = integrator.gForce;
-            noninert_acc = integrator.CoriolisAcc + integrator.CentrifugalAcc;
+            gravity_acc = prev_gravity_acc;
+            noninert_acc = prev_noninert_acc;
 
             Vector3d orb_vel = surface_v;
 
@@ -86,7 +87,7 @@ namespace AtmosphereAutopilot
             prev_orb_vel = orb_vel;
 
             // pitch
-            pitch_tangent = Vector3d.Cross(surface_v.normalized, vessel.ReferenceTransform.right).normalized;
+            pitch_tangent = Vector3d.Cross(prev_orb_vel.normalized, vessel.ReferenceTransform.right).normalized;
             double pitch_total_acc = Vector3d.Dot(sum_acc, pitch_tangent);
             pitch_gravity_acc = Vector3d.Dot(gravity_acc, pitch_tangent);
             pitch_noninert_acc = Vector3d.Dot(noninert_acc, pitch_tangent);
@@ -94,12 +95,16 @@ namespace AtmosphereAutopilot
             lift_acc = pitch_total_acc - pitch_noninert_acc - pitch_gravity_acc - pitch_engine_acc;
 
             // yaw
-            yaw_tangent = Vector3d.Cross(surface_v.normalized, vessel.ReferenceTransform.forward).normalized;
+            yaw_tangent = Vector3d.Cross(prev_orb_vel.normalized, vessel.ReferenceTransform.forward).normalized;
             double yaw_total_acc = Vector3d.Dot(sum_acc, yaw_tangent);
             yaw_gravity_acc = Vector3d.Dot(gravity_acc, yaw_tangent);
             yaw_noninert_acc = Vector3d.Dot(noninert_acc, yaw_tangent);
             yaw_engine_acc = Vector3d.Dot(cntrl_part_to_world * engines_thrust_principal / sum_mass, yaw_tangent);
             slide_acc = yaw_total_acc - yaw_noninert_acc - yaw_gravity_acc - yaw_engine_acc;
+
+            prev_gravity_acc = FlightGlobals.getGeeForceAtPosition(CoM);
+            prev_noninert_acc = FlightGlobals.getCoriolisAcc(surface_v, vessel.mainBody) +
+                FlightGlobals.getCentrifugalAcc(CoM, vessel.mainBody);
         }
     }
 }
