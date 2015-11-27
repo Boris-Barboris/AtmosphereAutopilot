@@ -47,27 +47,33 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("pitch_gravity_acc", false, "G6")]
         public double pitch_gravity_acc;
+		public double prev_pitch_gravity_acc;
 
         [AutoGuiAttr("pitch_engine_acc", false, "G6")]
         public double pitch_engine_acc;
 
         [AutoGuiAttr("pitch_noninert_acc", false, "G6")]
         public double pitch_noninert_acc;
+		public double prev_pitch_noninert_acc;
 
         [AutoGuiAttr("yaw_gravity_acc", false, "G6")]
         public double yaw_gravity_acc;
+		public double prev_yaw_gravity_acc;
 
         [AutoGuiAttr("yaw_engine_acc", false, "G6")]
         public double yaw_engine_acc;
 
         [AutoGuiAttr("yaw_noninert_acc", false, "G6")]
         public double yaw_noninert_acc;
+		public double prev_yaw_noninert_acc;
 
         //[AutoGuiAttr("pitch_tangent", false, "G6")]
         public Vector3d pitch_tangent;
+		Vector3d prev_pitch_tangent;
 
         //[AutoGuiAttr("yaw_tangent", false, "G6")]
         public Vector3d yaw_tangent;
+		Vector3d prev_yaw_tangent;
 
         Vector3d prev_orb_vel;
         Vector3d prev_gravity_acc, prev_noninert_acc;
@@ -79,39 +85,47 @@ namespace AtmosphereAutopilot
         {
             dyn_pressure = vessel.atmDensity * vessel.srfSpeed * vessel.srfSpeed;
 
-            gravity_acc = prev_gravity_acc;
-            noninert_acc = prev_noninert_acc;
+			gravity_acc = FlightGlobals.getGeeForceAtPosition(CoM);
+			noninert_acc = FlightGlobals.getCoriolisAcc(surface_v, vessel.mainBody) +
+				FlightGlobals.getCentrifugalAcc(CoM, vessel.mainBody);
 
-            Vector3d orb_vel = surface_v;
+			sum_acc = (surface_v - prev_orb_vel) / TimeWarp.fixedDeltaTime;
+			prev_orb_vel = surface_v;
 
-            sum_acc = (orb_vel - prev_orb_vel) / TimeWarp.fixedDeltaTime;
-            prev_orb_vel = orb_vel;
-
-            Vector3 prev_thrust_world = (prev_cntrl2world * engines_thrust_principal.normalized) * engines_thrust_principal.magnitude;
+            Vector3 prev_thrust_world = prev_cntrl2world * engines_thrust_principal;
 
             // pitch
-            pitch_tangent = Vector3d.Cross(prev_orb_vel.normalized, prev_right).normalized;
-            double pitch_total_acc = Vector3d.Dot(sum_acc, pitch_tangent);
-            pitch_gravity_acc = Vector3d.Dot(gravity_acc, pitch_tangent);
-            pitch_noninert_acc = Vector3d.Dot(noninert_acc, pitch_tangent);
-            pitch_engine_acc = Vector3d.Dot(prev_thrust_world / prev_mass, pitch_tangent);
-            lift_acc = pitch_total_acc - pitch_noninert_acc - pitch_gravity_acc - pitch_engine_acc;
+			pitch_tangent = Vector3d.Cross(surface_v.normalized, vessel.ReferenceTransform.right).normalized;
+            double pitch_total_acc = Vector3d.Dot(sum_acc, prev_pitch_tangent);
+			pitch_gravity_acc = Vector3d.Dot(gravity_acc, prev_pitch_tangent);
+			pitch_noninert_acc = Vector3d.Dot(noninert_acc, prev_pitch_tangent);
+			pitch_engine_acc = Vector3d.Dot(prev_thrust_world / prev_mass, prev_pitch_tangent);
+			lift_acc = pitch_total_acc - prev_pitch_noninert_acc - prev_pitch_gravity_acc - pitch_engine_acc;
 
             // yaw
-            yaw_tangent = Vector3d.Cross(prev_orb_vel.normalized, prev_forward).normalized;
-            double yaw_total_acc = Vector3d.Dot(sum_acc, yaw_tangent);
-            yaw_gravity_acc = Vector3d.Dot(gravity_acc, yaw_tangent);
-            yaw_noninert_acc = Vector3d.Dot(noninert_acc, yaw_tangent);
-            yaw_engine_acc = Vector3d.Dot(prev_thrust_world / prev_mass, yaw_tangent);
-            slide_acc = yaw_total_acc - yaw_noninert_acc - yaw_gravity_acc - yaw_engine_acc;
-
-            prev_gravity_acc = FlightGlobals.getGeeForceAtPosition(CoM);
-            prev_noninert_acc = FlightGlobals.getCoriolisAcc(surface_v, vessel.mainBody) +
-                FlightGlobals.getCentrifugalAcc(CoM, vessel.mainBody);
-            prev_mass = sum_mass;
-            prev_cntrl2world = cntrl_part_to_world;
-            prev_right = vessel.ReferenceTransform.right;
-            prev_forward = vessel.ReferenceTransform.forward;
+			yaw_tangent = Vector3d.Cross(surface_v.normalized, vessel.ReferenceTransform.forward).normalized;
+			double yaw_total_acc = Vector3d.Dot(sum_acc, prev_yaw_tangent);
+			yaw_gravity_acc = Vector3d.Dot(gravity_acc, prev_yaw_tangent);
+			yaw_noninert_acc = Vector3d.Dot(noninert_acc, prev_yaw_tangent);
+			yaw_engine_acc = Vector3d.Dot(prev_thrust_world / prev_mass, prev_yaw_tangent);
+            slide_acc = yaw_total_acc - prev_yaw_noninert_acc - prev_yaw_gravity_acc - yaw_engine_acc;
         }
+
+		void postupdate_dynamics()
+		{
+			// update previous states with current values
+			prev_noninert_acc = noninert_acc;
+			prev_gravity_acc = gravity_acc;
+			prev_mass = sum_mass;
+			prev_cntrl2world = cntrl_part_to_world;
+			prev_right = vessel.ReferenceTransform.right;
+			prev_forward = vessel.ReferenceTransform.forward;
+			prev_pitch_tangent = pitch_tangent;
+			prev_yaw_tangent = yaw_tangent;
+			prev_pitch_gravity_acc = pitch_gravity_acc;
+			prev_pitch_noninert_acc = pitch_noninert_acc;
+			prev_yaw_gravity_acc = yaw_gravity_acc;
+			prev_yaw_noninert_acc = yaw_noninert_acc;
+		}
     }
 }

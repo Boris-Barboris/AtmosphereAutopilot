@@ -164,6 +164,7 @@ namespace AtmosphereAutopilot
 			update_control(state);
 			if (!vessel.LandedOrSplashed)
 				sequential_dt = true;
+			postupdate_dynamics();
 		}
 
         internal bool sequential_dt = false;

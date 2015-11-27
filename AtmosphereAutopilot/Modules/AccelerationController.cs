@@ -50,7 +50,7 @@ namespace AtmosphereAutopilot
         /// Main control function
         /// </summary>
         /// <param name="desired_acceleration">Desired acceleration in planet (rotating) reference frame.</param>
-        /// <param name="jerk">Desired acceleration expected derivative.</param>
+        /// <param name="jerk">Desired acceleration derivative.</param>
         public void ApplyControl(FlightCtrlState state, Vector3d desired_acceleration, Vector3d jerk)
         {
             target_acc = desired_acceleration;
@@ -66,7 +66,8 @@ namespace AtmosphereAutopilot
             Vector3d normal_lift_acc = target_lift_acc - Vector3d.Project(target_lift_acc, imodel.surface_v);
             Vector3d desired_right_direction = Vector3d.Cross(normal_lift_acc, vessel.ReferenceTransform.up).normalized;
 
-            double craft_max_g = Math.Max(0.01, pitch_c.max_aoa_v * imodel.surface_v.magnitude - imodel.pitch_gravity_acc - imodel.pitch_noninert_acc);
+            double craft_max_g = Math.Max(0.01, pitch_c.max_aoa_v * imodel.surface_v.magnitude -
+				imodel.prev_pitch_gravity_acc - imodel.prev_pitch_noninert_acc);
 
             // let's apply roll to maintain desired_right_direction
             double roll_angle = Math.Sign(Vector3d.Dot(vessel.ReferenceTransform.right, normal_lift_acc)) *
@@ -85,7 +86,7 @@ namespace AtmosphereAutopilot
             // pitch AoA
             double desired_pitch_lift = Vector3.Dot(imodel.pitch_tangent, normal_lift_acc);
             double desired_pitch_acc = desired_pitch_lift + imodel.pitch_gravity_acc + imodel.pitch_noninert_acc;
-            double desired_pitch_v = desired_pitch_acc / imodel.surface_v.magnitude;
+            double desired_pitch_v = desired_pitch_acc / imodel.surface_v_magnitude;
             // let's find equilibrium AoA for desired lift
             desired_aoa = get_desired_aoa(imodel.pitch_rot_model_gen, desired_pitch_v, 0.0);
             if (float.IsNaN(desired_aoa) || float.IsInfinity(desired_aoa))
@@ -103,7 +104,7 @@ namespace AtmosphereAutopilot
             {
                 desired_yaw_lift = Vector3.Dot(imodel.yaw_tangent, normal_lift_acc);
                 desired_yaw_acc = desired_yaw_lift + imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
-                desired_yaw_v = desired_yaw_acc / imodel.surface_v.magnitude;
+                desired_yaw_v = desired_yaw_acc / imodel.surface_v_magnitude;
                 // let's find equilibrium sideslip for desired lift
                 //if (Math.Abs(desired_yaw_lift) < 0.01f)
                 desired_sideslip = (float)Common.simple_filter(get_desired_aoa(imodel.yaw_rot_model_gen, desired_yaw_v, 0.0), desired_sideslip, sideslip_filter_k);
