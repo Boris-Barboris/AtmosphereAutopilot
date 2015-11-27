@@ -214,8 +214,8 @@ namespace AtmosphereAutopilot
                     continue;
                 }
                 Quaternion part_to_cntrl = part.partTransform.rotation * world_to_cntrl_part;   // from part to root part rotation
-                Vector3 moi = Vector3.zero;
-                Vector3 am = Vector3.zero;
+                Vector3 moi = Vector3d.zero;
+                Vector3 am = Vector3d.zero;
                 float mass = 0.0f;
                 if (part.rb != null)
                 {
