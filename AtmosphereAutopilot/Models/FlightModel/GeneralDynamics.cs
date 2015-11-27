@@ -90,7 +90,6 @@ namespace AtmosphereAutopilot
 				FlightGlobals.getCentrifugalAcc(CoM, vessel.mainBody);
 
 			sum_acc = (surface_v - prev_orb_vel) / TimeWarp.fixedDeltaTime;
-			prev_orb_vel = surface_v;
 
             Vector3 prev_thrust_world = prev_cntrl2world * engines_thrust_principal;
 
@@ -114,6 +113,7 @@ namespace AtmosphereAutopilot
 		void postupdate_dynamics()
 		{
 			// update previous states with current values
+            prev_orb_vel = surface_v;
 			prev_noninert_acc = noninert_acc;
 			prev_gravity_acc = gravity_acc;
 			prev_mass = sum_mass;
