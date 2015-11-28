@@ -95,22 +95,23 @@ namespace AtmosphereAutopilot
             aoa_c.ApplyControl(state, desired_aoa, 0.0f);
 
             // yaw sideslip
-            if (Math.Abs(roll_angle) > 5.0 * dgr2rad)
-            {
-                desired_yaw_lift = 0.0;
-                desired_sideslip = 0.0f;
-            }
-            else
-            {
-                desired_yaw_lift = Vector3.Dot(imodel.yaw_tangent, normal_lift_acc);
-                desired_yaw_acc = desired_yaw_lift + imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
-                desired_yaw_v = desired_yaw_acc / imodel.surface_v_magnitude;
-                // let's find equilibrium sideslip for desired lift
-                //if (Math.Abs(desired_yaw_lift) < 0.01f)
-                desired_sideslip = (float)Common.simple_filter(get_desired_aoa(imodel.yaw_rot_model_gen, desired_yaw_v, 0.0), desired_sideslip, sideslip_filter_k);
-                if (float.IsNaN(desired_sideslip) || float.IsInfinity(desired_sideslip) || Math.Abs(desired_sideslip) < 0.001f)
-                    desired_sideslip = 0.0f;
-            }
+            //if (Math.Abs(roll_angle) > 3.0 * dgr2rad)
+            //{
+            //    desired_yaw_lift = 0.0;
+            //    desired_sideslip = 0.0f;
+            //}
+            //else
+            //{
+            //    desired_yaw_lift = Vector3.Dot(imodel.yaw_tangent, normal_lift_acc);
+            //    desired_yaw_acc = desired_yaw_lift + imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
+            //    desired_yaw_v = desired_yaw_acc / imodel.surface_v_magnitude;
+            //    // let's find equilibrium sideslip for desired lift
+            //    //if (Math.Abs(desired_yaw_lift) < 0.01f)
+            //    desired_sideslip = (float)Common.simple_filter(get_desired_aoa(imodel.yaw_rot_model_gen, desired_yaw_v, 0.0), desired_sideslip, sideslip_filter_k);
+            //    if (float.IsNaN(desired_sideslip) || float.IsInfinity(desired_sideslip) || Math.Abs(desired_sideslip) < 0.001f)
+            //        desired_sideslip = 0.0f;
+            //}
+            desired_sideslip = 0.0f;
             side_c.user_controlled = false;
             side_c.ApplyControl(state, desired_sideslip, 0.0f);
         }
@@ -139,7 +140,7 @@ namespace AtmosphereAutopilot
         Matrix roll_input_m = new Matrix(3, 1);
 
         [AutoGuiAttr("roll_acc_factor", false, "G5")]
-        protected double roll_acc_factor = 0.0;
+        public double roll_acc_factor = 0.0;
 
         [AutoGuiAttr("roll_acc_filter", true, "G5")]
         protected double roll_acc_filter = 4.0;
@@ -151,10 +152,10 @@ namespace AtmosphereAutopilot
         protected double roll_relax_frame = 2.0;
 
         [AutoGuiAttr("roll_relax_Kp", true, "G5")]
-        protected double roll_relax_Kp = 0.5;
+        protected double roll_relax_Kp = 0.1;
 
-        [AutoGuiAttr("max_v", false, "G5")]
-        protected double max_v;
+        [AutoGuiAttr("max_roll_v", false, "G5")]
+        public double max_roll_v;
 
         [AutoGuiAttr("cubic", false)]
         protected bool cubic;
@@ -165,24 +166,24 @@ namespace AtmosphereAutopilot
             roll_state_m[1, 0] = 1.0;
             roll_state_m[2, 0] = 1.0;
             roll_input_m[0, 0] = 1.0;
-            double acc = imodel.roll_rot_model_gen.eval_row(0, roll_state_m, roll_input_m);
-            roll_acc_factor = Common.simple_filter(Math.Abs(acc), roll_acc_factor, roll_acc_filter);
+            double roll_max_acc = imodel.roll_rot_model_gen.eval_row(0, roll_state_m, roll_input_m);
+            roll_acc_factor = Common.simple_filter(Math.Abs(roll_max_acc), roll_acc_factor, roll_acc_filter);
 
             // calculate anti-overshooting perameters
             if (angle_error >= 0.0)
-                max_v = Math.Min(roll_c.max_input_v, roll_c.max_v_construction);
+                max_roll_v = Math.Min(roll_c.max_input_v, roll_c.max_v_construction);
             else
-                max_v = Math.Abs(Math.Max(roll_c.min_input_v, -roll_c.max_v_construction));
-            double stop_time = max_v / Math.Max(1e-3, roll_acc_factor) + 2.0f / SyncModuleControlSurface.CSURF_SPD;
+                max_roll_v = Math.Abs(Math.Max(roll_c.min_input_v, -roll_c.max_v_construction));
+            double stop_time = max_roll_v / Math.Max(1e-3, roll_acc_factor) + 2.0f / SyncModuleControlSurface.CSURF_SPD;
             
             // we'll use cubic descend to desired bank angle
             double cubic_k = roll_cubic_K * roll_acc_factor / 6.0;            
-            double stop_angle_frame = Math.Sqrt(max_v / 3.0 / cubic_k);
+            double stop_angle_frame = Math.Sqrt(max_roll_v / 3.0 / cubic_k);
 
             if (angle_error > stop_angle_frame)
             {
                 cubic = false;
-                return (float)max_v * Math.Sign(angle_error);
+                return (float)max_roll_v * Math.Sign(angle_error);
             }
             else
             {
@@ -210,7 +211,7 @@ namespace AtmosphereAutopilot
         Matrix aoa_B = new Matrix(2, 1);
         Matrix eq_x;
 
-        float get_desired_aoa(LinearSystemModel rotation_model, double desired_v, double desired_aoa_deriv)
+        public float get_desired_aoa(LinearSystemModel rotation_model, double desired_v, double desired_aoa_deriv)
         {
             aoa_A[0, 0] = rotation_model.A[0, 0];
             aoa_A[0, 1] = rotation_model.A[0, 2] + rotation_model.A[0, 3] + rotation_model.B[0, 0];
@@ -234,6 +235,19 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("desired_sideslip", false, "G5")]
         protected float desired_sideslip;
 
+        public float max_lift_acceleration(int axis)
+        {
+            if (axis == PITCH)
+            {
+                return (float)(pitch_c.max_aoa_v * imodel.surface_v_magnitude - imodel.prev_pitch_gravity_acc - imodel.prev_pitch_noninert_acc);
+            }
+            else
+                if (axis == YAW)
+                {
+                    return (float)(yaw_c.max_aoa_v * imodel.surface_v_magnitude - imodel.prev_yaw_gravity_acc - imodel.prev_yaw_noninert_acc);
+                }
+            return 0.0f;
+        }
 
         #endregion
 

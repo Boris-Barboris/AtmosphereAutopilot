@@ -133,7 +133,7 @@ namespace AtmosphereAutopilot
                 Vector3 thrust = imodel.cntrl_part_to_world * imodel.engines_thrust_principal;
                 prograde_thrust = Vector3.Dot(thrust, surfspd_dir);
 
-                double current_acc = Vector3.Dot(imodel.sum_acc, surfspd_dir);
+                double current_acc = Vector3.Dot(imodel.sum_acc, imodel.prev_surface_v);
                 drag_estimate = current_acc - prograde_thrust / imodel.sum_mass - Vector3d.Dot(imodel.gravity_acc, surfspd_dir) -
                     Vector3d.Dot(imodel.noninert_acc, surfspd_dir);
 

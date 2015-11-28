@@ -344,7 +344,8 @@ namespace AtmosphereAutopilot
             if (autopilot_module_lists.ContainsKey(ActiveVessel))
             {
                 foreach (var module in autopilot_module_lists[ActiveVessel].Values)
-                    module.OnUpdate();
+                    if (module.Active)
+                        module.OnUpdate();
             }
         }
     }

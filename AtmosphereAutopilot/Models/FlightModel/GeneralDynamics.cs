@@ -75,7 +75,7 @@ namespace AtmosphereAutopilot
         public Vector3d yaw_tangent;
 		Vector3d prev_yaw_tangent;
 
-        Vector3d prev_orb_vel;
+        public Vector3d prev_surface_v;
         Vector3d prev_gravity_acc, prev_noninert_acc;
         float prev_mass = 1.0f;
         Quaternion prev_cntrl2world = Quaternion.identity;
@@ -89,7 +89,7 @@ namespace AtmosphereAutopilot
 			noninert_acc = FlightGlobals.getCoriolisAcc(surface_v, vessel.mainBody) +
 				FlightGlobals.getCentrifugalAcc(CoM, vessel.mainBody);
 
-			sum_acc = (surface_v - prev_orb_vel) / TimeWarp.fixedDeltaTime;
+			sum_acc = (surface_v - prev_surface_v) / TimeWarp.fixedDeltaTime;
 
             Vector3 prev_thrust_world = prev_cntrl2world * engines_thrust_principal;
 
@@ -113,7 +113,7 @@ namespace AtmosphereAutopilot
 		void postupdate_dynamics()
 		{
 			// update previous states with current values
-            prev_orb_vel = surface_v;
+            prev_surface_v = surface_v;
 			prev_noninert_acc = noninert_acc;
 			prev_gravity_acc = gravity_acc;
 			prev_mass = sum_mass;
