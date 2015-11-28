@@ -69,16 +69,16 @@ namespace AtmosphereAutopilot
 
         //[AutoGuiAttr("pitch_tangent", false, "G6")]
         public Vector3d pitch_tangent;
-		Vector3d prev_pitch_tangent;
+		public Vector3d prev_pitch_tangent;
 
         //[AutoGuiAttr("yaw_tangent", false, "G6")]
         public Vector3d yaw_tangent;
-		Vector3d prev_yaw_tangent;
+		public Vector3d prev_yaw_tangent;
 
         public Vector3d prev_surface_v;
         Vector3d prev_gravity_acc, prev_noninert_acc;
         float prev_mass = 1.0f;
-        Quaternion prev_cntrl2world = Quaternion.identity;
+        public Quaternion prev_cntrl2world = Quaternion.identity;
         Vector3 prev_right, prev_forward;
 
         void update_dynamics()

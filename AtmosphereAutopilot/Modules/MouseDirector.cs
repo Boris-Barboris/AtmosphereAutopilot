@@ -39,6 +39,9 @@ namespace AtmosphereAutopilot
 
         public override void ApplyControl(FlightCtrlState cntrl)
         {
+            if (vessel.LandedOrSplashed)
+                return;
+
             Vector3d desired_acc = Vector3d.zero;
             Vector3d planet2ves = vessel.ReferenceTransform.position - vessel.mainBody.position;
             Vector3d planet2vesNorm = planet2ves.normalized;
@@ -86,7 +89,7 @@ namespace AtmosphereAutopilot
                 else
                     max_turn_acc = max_lift * desired_turn_acc_dir;
             }
-            max_turn_acc = strength * max_turn_acc;
+            max_turn_acc = strength * max_turn_acc * (FlightInputHandler.fetch.precisionMode ? 0.4 : 1.0);
 
             // now let's take roll speed and relaxation into account
             max_angular_v = max_turn_acc.magnitude / imodel.surface_v_magnitude;
@@ -107,8 +110,8 @@ namespace AtmosphereAutopilot
                 // we're relaxing now, quadratic descend is good approximation
                 {
                     double tk = (angular_error / max_angular_v) / stop_time_roll;
-                    if (angular_error < relaxation_margin)
-                        tk *= Mathf.Lerp(1.0f, angle_relaxation_k, (float)(1.0f - angular_error / relaxation_margin));
+                    if (Math.Abs(angular_error) < relaxation_margin)
+                        tk *= Mathf.Lerp(1.0f, angle_relaxation_k, (float)(1.0f - Math.Abs(angular_error) / relaxation_margin));
                     desired_acc += max_turn_acc * tk;
                 }
             }
@@ -135,7 +138,7 @@ namespace AtmosphereAutopilot
         protected double stop_time_roll;
 
         [AutoGuiAttr("relaxation_margin", true, "G5")]
-        protected double relaxation_margin = 1.0f * dgr2rad;
+        protected double relaxation_margin = 0.1;
 
         [AutoGuiAttr("angle_relaxation_k", true, "G5")]
         protected float angle_relaxation_k = 0.1f;
@@ -145,7 +148,8 @@ namespace AtmosphereAutopilot
 
         public override void OnUpdate()
         {
-            if (HighLogic.LoadedSceneIsFlight && CameraManager.Instance.currentCameraMode == CameraManager.CameraMode.Flight)
+            if (HighLogic.LoadedSceneIsFlight && CameraManager.Instance.currentCameraMode == CameraManager.CameraMode.Flight &&
+                AtmosphereAutopilot.Instance.ActiveVessel == vessel)
             {
                 camera_correct = true;
                 camera_direction = FlightCamera.fetch.mainCamera.cameraToWorldMatrix.MultiplyPoint(new Vector3(0.0f, 0.0f, -1.0f)) -
@@ -159,11 +163,14 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Acceleration controller GUI", true)]
         protected bool AccCGUI { get { return acc_c.IsShown(); } set { if (value) acc_c.ShowGUI(); else acc_c.UnShowGUI(); } }
 
+        [AutoGuiAttr("Thrust controller GUI", true)]
+        protected bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
+
         [AutoGuiAttr("Cruise control", true)]
         public bool cruise_control = false;
 
         [VesselSerializable("cruise_speed")]
         [AutoGuiAttr("Cruise speed", true, "G5")]
-        public float desired_spd = 0.0f;
+        public float desired_spd = 100.0f;
     }
 }

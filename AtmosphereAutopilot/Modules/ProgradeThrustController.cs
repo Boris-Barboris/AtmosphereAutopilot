@@ -74,7 +74,7 @@ namespace AtmosphereAutopilot
         //[AutoGuiAttr("drag_estimate", false, "G5")]
         public double drag_estimate;
 
-        [VesselSerializable("Kp_v")]
+        [VesselSerializable("Kp_v_factor")]
         [AutoGuiAttr("Kp_v", true, "G5")]
         public double Kp_v = 0.5;
 
@@ -93,7 +93,7 @@ namespace AtmosphereAutopilot
         /// <param name="target_value">Prograde surface speed setpoint</param>
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
         {
-            current_v = imodel.surface_v.magnitude;
+            current_v = imodel.surface_v_magnitude;
             desired_v = target_value;
 
             // apply breaks if needed
@@ -129,11 +129,11 @@ namespace AtmosphereAutopilot
             }
             else
             {
-                surfspd_dir = imodel.surface_v.normalized;
-                Vector3 thrust = imodel.cntrl_part_to_world * imodel.engines_thrust_principal;
+                surfspd_dir = imodel.prev_surface_v.normalized;
+                Vector3 thrust = imodel.prev_cntrl2world * imodel.engines_thrust_principal;
                 prograde_thrust = Vector3.Dot(thrust, surfspd_dir);
 
-                double current_acc = Vector3.Dot(imodel.sum_acc, imodel.prev_surface_v);
+                double current_acc = Vector3.Dot(imodel.sum_acc, surfspd_dir);
                 drag_estimate = current_acc - prograde_thrust / imodel.sum_mass - Vector3d.Dot(imodel.gravity_acc, surfspd_dir) -
                     Vector3d.Dot(imodel.noninert_acc, surfspd_dir);
 
@@ -150,6 +150,7 @@ namespace AtmosphereAutopilot
                 }
 
                 thrust_error = acc_error * imodel.sum_mass;
+                surfspd_dir = imodel.surface_v.normalized;
                 cntrl.mainThrottle = solve_thrust_req(prograde_thrust + thrust_error, prev_input);
 
                 prev_thrust = prograde_thrust;

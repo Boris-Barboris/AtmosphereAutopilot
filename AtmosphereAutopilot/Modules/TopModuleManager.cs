@@ -108,7 +108,7 @@ namespace AtmosphereAutopilot
             {
                 GUILayout.BeginHorizontal();
                 bool pressed = GUILayout.Toggle(controller.Active, controller.ModuleName, GUIStyles.toggleButtonStyle);
-                if (pressed && !controller.Active)
+                if (pressed && !controller.Active && Active)
                 {
                     // we activate new module
                     if (active_controller != null)

@@ -63,20 +63,25 @@ namespace AtmosphereAutopilot
             yaw_c.moderate_g = true;
 
             Vector3d target_lift_acc = target_acc - imodel.gravity_acc - imodel.noninert_acc;
-            Vector3d normal_lift_acc = target_lift_acc - Vector3d.Project(target_lift_acc, imodel.surface_v);
-            Vector3d desired_right_direction = Vector3d.Cross(normal_lift_acc, vessel.ReferenceTransform.up).normalized;
+            Vector3d target_normal_lift_acc = target_lift_acc - Vector3d.Project(target_lift_acc, imodel.surface_v);
+            Vector3d desired_right_direction = Vector3d.Cross(target_normal_lift_acc, vessel.ReferenceTransform.up).normalized;
 
             double craft_max_g = Math.Max(0.01, pitch_c.max_aoa_v * imodel.surface_v.magnitude -
 				imodel.prev_pitch_gravity_acc - imodel.prev_pitch_noninert_acc);
 
             // let's apply roll to maintain desired_right_direction
-            double roll_angle = Math.Sign(Vector3d.Dot(vessel.ReferenceTransform.right, normal_lift_acc)) *
+            double new_roll_angle = Math.Sign(Vector3d.Dot(vessel.ReferenceTransform.right, target_normal_lift_acc)) *
                 Math.Acos(Math.Min(Math.Max(Vector3d.Dot(desired_right_direction, vessel.ReferenceTransform.right), -1.0), 1.0));
             // rolling to pitch up is not always as efficient as pitching down
             double spine_up = Vector3d.Dot(desired_right_direction, Vector3d.Cross(imodel.surface_v, imodel.gravity_acc));
-            if (normal_lift_acc.magnitude < craft_max_g * 0.5)
-                if (Math.Abs(roll_angle) > 90.0 * dgr2rad && spine_up < 0.0)
-                    roll_angle = roll_angle - 180.0 * dgr2rad * Math.Sign(roll_angle);
+            if (target_normal_lift_acc.magnitude < craft_max_g * 0.5)
+                if (Math.Abs(new_roll_angle) > 90.0 * dgr2rad && spine_up < 0.0)
+                    new_roll_angle = new_roll_angle - 180.0 * dgr2rad * Math.Sign(new_roll_angle);
+            // filter it
+            if (new_roll_angle * roll_angle < 0.0 && (Math.Abs(new_roll_angle) < roll_error_filter_margin) && (Math.Abs(roll_angle) < roll_error_filter_margin))
+                roll_angle = Common.simple_filter(new_roll_angle, roll_angle, roll_error_filter_k);
+            else
+                roll_angle = new_roll_angle;
             // generate desired roll angular_v
             roll_c.user_controlled = false;
             roll_c.ApplyControl(state, get_desired_roll_v(roll_angle));
@@ -84,7 +89,14 @@ namespace AtmosphereAutopilot
             // now let's apply pitch and yaw AoA controls
 
             // pitch AoA
-            double desired_pitch_lift = Vector3.Dot(imodel.pitch_tangent, normal_lift_acc);
+
+            Vector3d current_lift = imodel.prev_pitch_tangent * imodel.lift_acc;
+            Vector3d current_normal_lift = current_lift - Vector3d.Project(current_lift, imodel.surface_v);
+            double desired_pitch_lift = 0.0; 
+            if (Vector3d.Angle(current_normal_lift, target_normal_lift_acc) <= 90.0)
+                desired_pitch_lift = Vector3.Dot(imodel.pitch_tangent, target_normal_lift_acc);
+            else
+                desired_pitch_lift = Vector3.Dot(imodel.pitch_tangent, current_normal_lift);
             double desired_pitch_acc = desired_pitch_lift + imodel.pitch_gravity_acc + imodel.pitch_noninert_acc;
             double desired_pitch_v = desired_pitch_acc / imodel.surface_v_magnitude;
             // let's find equilibrium AoA for desired lift
@@ -146,16 +158,25 @@ namespace AtmosphereAutopilot
         protected double roll_acc_filter = 4.0;
 
         [AutoGuiAttr("roll_cubic_K", true, "G5")]
-        protected double roll_cubic_K = 0.2;
+        protected double roll_cubic_K = 0.3;
 
         [AutoGuiAttr("roll_cubic_relax_frame", true, "G5")]
-        protected double roll_relax_frame = 2.0;
+        protected double roll_relax_frame = 10.0;
 
         [AutoGuiAttr("roll_relax_Kp", true, "G5")]
         protected double roll_relax_Kp = 0.1;
 
+        [AutoGuiAttr("roll_error_filter_margin", true, "G5")]
+        protected double roll_error_filter_margin = 3.0 * dgr2rad;
+
+        [AutoGuiAttr("roll_error_filter_k", true, "G5")]
+        protected double roll_error_filter_k = 1.0;
+
         [AutoGuiAttr("max_roll_v", false, "G5")]
         public double max_roll_v;
+
+        [AutoGuiAttr("roll_angle", false, "G5")]
+        protected double roll_angle = 0.0;
 
         [AutoGuiAttr("cubic", false)]
         protected bool cubic;
@@ -174,10 +195,10 @@ namespace AtmosphereAutopilot
                 max_roll_v = Math.Min(roll_c.max_input_v, roll_c.max_v_construction);
             else
                 max_roll_v = Math.Abs(Math.Max(roll_c.min_input_v, -roll_c.max_v_construction));
-            double stop_time = max_roll_v / Math.Max(1e-3, roll_acc_factor) + 2.0f / SyncModuleControlSurface.CSURF_SPD;
+            double stop_time = Math.Min(max_roll_v / Math.Max(1e-3, roll_acc_factor) + 2.0f / SyncModuleControlSurface.CSURF_SPD, 0.5);
             
             // we'll use cubic descend to desired bank angle
-            double cubic_k = roll_cubic_K * roll_acc_factor / 6.0;            
+            double cubic_k = roll_cubic_K * Math.Min(roll_acc_factor / 6.0, max_roll_v / 3.0 / stop_time / stop_time);
             double stop_angle_frame = Math.Sqrt(max_roll_v / 3.0 / cubic_k);
 
             if (angle_error > stop_angle_frame)
