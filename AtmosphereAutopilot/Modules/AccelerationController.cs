@@ -74,12 +74,12 @@ namespace AtmosphereAutopilot
                 Math.Acos(Math.Min(Math.Max(Vector3d.Dot(desired_right_direction, vessel.ReferenceTransform.right), -1.0), 1.0));
             // rolling to pitch up is not always as efficient as pitching down
             double spine_up = Vector3d.Dot(desired_right_direction, Vector3d.Cross(imodel.surface_v, imodel.gravity_acc));
-            if (target_normal_lift_acc.magnitude < craft_max_g * 0.5)
+            if (target_normal_lift_acc.magnitude < craft_max_g * 0.5 || !allow_roll_overs)
                 if (Math.Abs(new_roll_angle) > 90.0 * dgr2rad && spine_up < 0.0)
                     new_roll_angle = new_roll_angle - 180.0 * dgr2rad * Math.Sign(new_roll_angle);
             // filter it
-            if (new_roll_angle * roll_angle < 0.0 && (Math.Abs(new_roll_angle) < roll_error_filter_margin) && (Math.Abs(roll_angle) < roll_error_filter_margin))
-                roll_angle = Common.simple_filter(new_roll_angle, roll_angle, roll_error_filter_k);
+            if ((Math.Abs(new_roll_angle) < roll_error_filter_margin) && (Math.Abs(roll_angle) < roll_error_filter_margin))
+               roll_angle = Common.simple_filter(new_roll_angle, roll_angle, roll_error_filter_k);
             else
                 roll_angle = new_roll_angle;
             // generate desired roll angular_v
@@ -90,15 +90,15 @@ namespace AtmosphereAutopilot
 
             // pitch AoA
 
-            Vector3d current_lift = imodel.prev_pitch_tangent * imodel.lift_acc;
-            Vector3d current_normal_lift = current_lift - Vector3d.Project(current_lift, imodel.surface_v);
-            double desired_pitch_lift = 0.0; 
-            if (Vector3d.Angle(current_normal_lift, target_normal_lift_acc) <= 90.0)
+            Vector3d current_lift_dir = imodel.pitch_tangent;
+            Vector3d current_normal_lift = current_lift_dir - Vector3d.Project(current_lift_dir, imodel.surface_v);
+            desired_pitch_lift = 0.0;
+            if (Math.Abs(roll_angle) < 90.0 * dgr2rad)
                 desired_pitch_lift = Vector3.Dot(imodel.pitch_tangent, target_normal_lift_acc);
             else
-                desired_pitch_lift = Vector3.Dot(imodel.pitch_tangent, current_normal_lift);
-            double desired_pitch_acc = desired_pitch_lift + imodel.pitch_gravity_acc + imodel.pitch_noninert_acc;
-            double desired_pitch_v = desired_pitch_acc / imodel.surface_v_magnitude;
+                desired_pitch_lift = 0.0;
+            desired_pitch_acc = desired_pitch_lift + imodel.pitch_gravity_acc + imodel.pitch_noninert_acc;
+            desired_pitch_v = desired_pitch_acc / imodel.surface_v_magnitude;
             // let's find equilibrium AoA for desired lift
             desired_aoa = get_desired_aoa(imodel.pitch_rot_model_gen, desired_pitch_v, 0.0);
             if (float.IsNaN(desired_aoa) || float.IsInfinity(desired_aoa))
@@ -128,23 +128,34 @@ namespace AtmosphereAutopilot
             side_c.ApplyControl(state, desired_sideslip, 0.0f);
         }
 
-        [AutoGuiAttr("target_acc", false, "G3")]
+        //[AutoGuiAttr("target_acc", false, "G3")]
         protected Vector3d target_acc;
 
-        [AutoGuiAttr("current_acc", false, "G3")]
+        //[AutoGuiAttr("current_acc", false, "G3")]
         protected Vector3d current_acc;
 
-        [AutoGuiAttr("desired_yaw_lift", false, "G5")]
+        //[AutoGuiAttr("desired_yaw_lift", false, "G5")]
         protected double desired_yaw_lift;
 
-        [AutoGuiAttr("desired_yaw_acc", false, "G5")]
+        //[AutoGuiAttr("desired_yaw_acc", false, "G5")]
         protected double desired_yaw_acc;
 
-        [AutoGuiAttr("desired_yaw_v", false, "G5")]
+        //[AutoGuiAttr("desired_yaw_v", false, "G5")]
         protected double desired_yaw_v;
 
-        [AutoGuiAttr("sideslip_filter_k", true, "G4")]
+        //[AutoGuiAttr("sideslip_filter_k", true, "G4")]
         protected double sideslip_filter_k = 10.0;
+
+        [AutoGuiAttr("desired_pitch_lift", false, "G5")]
+        protected double desired_pitch_lift;
+
+        [AutoGuiAttr("desired_pitch_acc", false, "G5")]
+        protected double desired_pitch_acc;
+
+        [AutoGuiAttr("desired_pitch_v", false, "G5")]
+        protected double desired_pitch_v;
+
+        public bool allow_roll_overs = true;
 
         # region Roll
 
@@ -170,7 +181,7 @@ namespace AtmosphereAutopilot
         protected double roll_error_filter_margin = 3.0 * dgr2rad;
 
         [AutoGuiAttr("roll_error_filter_k", true, "G5")]
-        protected double roll_error_filter_k = 1.0;
+        protected double roll_error_filter_k = 0.5;
 
         [AutoGuiAttr("max_roll_v", false, "G5")]
         public double max_roll_v;
@@ -180,6 +191,9 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("cubic", false)]
         protected bool cubic;
+
+        [AutoGuiAttr("snapping_boundary", true, "G5")]
+        protected double snapping_boundary = 3.0 * dgr2rad;
 
         float get_desired_roll_v(double angle_error)
         {
@@ -195,7 +209,7 @@ namespace AtmosphereAutopilot
                 max_roll_v = Math.Min(roll_c.max_input_v, roll_c.max_v_construction);
             else
                 max_roll_v = Math.Abs(Math.Max(roll_c.min_input_v, -roll_c.max_v_construction));
-            double stop_time = Math.Min(max_roll_v / Math.Max(1e-3, roll_acc_factor) + 2.0f / SyncModuleControlSurface.CSURF_SPD, 0.5);
+            double stop_time = Math.Max(max_roll_v / Math.Max(1e-3, roll_acc_factor) + 1.0f / SyncModuleControlSurface.CSURF_SPD, 0.1);
             
             // we'll use cubic descend to desired bank angle
             double cubic_k = roll_cubic_K * Math.Min(roll_acc_factor / 6.0, max_roll_v / 3.0 / stop_time / stop_time);
@@ -208,18 +222,33 @@ namespace AtmosphereAutopilot
             }
             else
             {
-                cubic = true;
                 // we're in cubic section
-                double t = Math.Pow(Math.Abs(angle_error / cubic_k), 1.0 / 3.0);
-                if (t < roll_relax_frame * TimeWarp.fixedDeltaTime)
+                if (Math.Abs(angle_error) < snapping_boundary)
                 {
-                    // relaxation mode
-                    return (float)(roll_relax_Kp * angle_error / TimeWarp.fixedDeltaTime);
+                    // error is too small, let's use snapping code
+                    double new_dyn_max_v = Math.Sqrt(snapping_boundary * roll_acc_factor);
+                    if (!double.IsNaN(new_dyn_max_v))
+                    {
+                        new_dyn_max_v = Common.Clamp(new_dyn_max_v, max_roll_v);
+                        return (float)(roll_c.snapping_Kp * angle_error / snapping_boundary * new_dyn_max_v);
+                    }
+                    else
+                        return (float)(roll_c.snapping_Kp * angle_error / snapping_boundary * max_roll_v * 0.05);
                 }
                 else
                 {
-                    double t_next = Math.Max(0.0, t - TimeWarp.fixedDeltaTime);
-                    return (float)(Math.Sign(angle_error) * cubic_k * (Math.Pow(t, 3) - Math.Pow(t_next, 3)) / TimeWarp.fixedDeltaTime);
+                    cubic = true;
+                    double t = Math.Pow(Math.Abs(angle_error / cubic_k), 1.0 / 3.0);
+                    if (t < roll_relax_frame * TimeWarp.fixedDeltaTime)
+                    {
+                        // relaxation mode
+                        return (float)(roll_relax_Kp * angle_error / TimeWarp.fixedDeltaTime);
+                    }
+                    else
+                    {
+                        double t_next = Math.Max(0.0, t - TimeWarp.fixedDeltaTime);
+                        return (float)(Math.Sign(angle_error) * cubic_k * (Math.Pow(t, 3) - Math.Pow(t_next, 3)) / TimeWarp.fixedDeltaTime);
+                    }
                 }
             }
         }

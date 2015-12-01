@@ -95,7 +95,7 @@ namespace AtmosphereAutopilot
 
         public override void ApplyControl(FlightCtrlState state)
         {
-            if (active_controller != null)
+            if (active_controller != null && vessel.state != Vessel.State.DEAD)
                 active_controller.ApplyControl(state);
         }
 

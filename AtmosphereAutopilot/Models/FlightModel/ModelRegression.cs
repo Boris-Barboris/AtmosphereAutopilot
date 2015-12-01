@@ -51,51 +51,56 @@ namespace AtmosphereAutopilot
                 new int[] { 20, 20 }, pitch_input_method, pitch_output_method);
             pitch_trainer.base_gen_weight = 0.0001f;
             pitch_trainer.max_value_decay = 0.001f;
+            pitch_trainer.min_output_value = 0.05f;
             pitch_trainer.linear_time_decay = 0.005f;
             pitch_trainer.nonlin_time_decay = 0.005f;
             pitch_trainer.linear_err_criteria = 0.02f;
             pitch_trainer.nonlin_trigger = 100;
-            pitch_trainer.nonlin_cutoff_time = 1000;
+            pitch_trainer.nonlin_cutoff_time = 500;
 
             roll_trainer = new OnlineLinTrainer(roll_aero_torque_model, roll_aero_torque_model_gen, IMM_BUF_SIZE,
-                new double[] { 0.01, 0.05, 0.05, 0.05 }, new int[] { 20, 20, 20, 20 }, roll_input_method, roll_output_method);
+                new double[] { 0.01, 0.05, 0.05, 0.05 }, new int[] { 15, 15, 15, 15 }, roll_input_method, roll_output_method);
             roll_trainer.base_gen_weight = 0.001f;
             roll_trainer.max_value_decay = 0.001f;
+            roll_trainer.min_output_value = 0.1f;
             roll_trainer.linear_time_decay = 0.005f;
             roll_trainer.nonlin_time_decay = 0.005f;
             roll_trainer.linear_err_criteria = 0.02f;
             roll_trainer.nonlin_trigger = 100;
-            roll_trainer.nonlin_cutoff_time = 1000;
+            roll_trainer.nonlin_cutoff_time = 500;
 
             yaw_trainer = new OnlineLinTrainer(yaw_aero_torque_model, yaw_aero_torque_model_gen, IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
                 new int[] { 20, 20 }, yaw_input_method, yaw_output_method);
             yaw_trainer.base_gen_weight = 0.0001f;
             yaw_trainer.max_value_decay = 0.001f;
+            yaw_trainer.min_output_value = 0.05f;
             yaw_trainer.linear_time_decay = 0.005f;
             yaw_trainer.nonlin_time_decay = 0.005f;
             yaw_trainer.linear_err_criteria = 0.02f;
             yaw_trainer.nonlin_trigger = 100;
-            yaw_trainer.nonlin_cutoff_time = 1000;
+            yaw_trainer.nonlin_cutoff_time = 500;
 
             pitch_lift_trainer = new OnlineLinTrainer(pitch_lift_model, null, IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
                 new int[] { 20, 20 }, pitch_lift_input_method, pitch_lift_output_method);
             pitch_lift_trainer.base_gen_weight = 0.1f;
             pitch_lift_trainer.max_value_decay = 0.0005f;
+            pitch_lift_trainer.min_output_value = 0.05f;
             pitch_lift_trainer.linear_time_decay = 0.002f;
             pitch_lift_trainer.nonlin_time_decay = 0.002f;
             pitch_lift_trainer.linear_err_criteria = 0.02f;
             pitch_lift_trainer.nonlin_trigger = 100;
-            pitch_lift_trainer.nonlin_cutoff_time = 1000;
+            pitch_lift_trainer.nonlin_cutoff_time = 500;
 
             yaw_lift_trainer = new OnlineLinTrainer(yaw_lift_model, null, IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
                 new int[] { 20, 20 }, yaw_lift_input_method, yaw_lift_output_method);
             yaw_lift_trainer.base_gen_weight = 0.1f;
             yaw_lift_trainer.max_value_decay = 0.0005f;
+            yaw_lift_trainer.min_output_value = 0.05f;
             yaw_lift_trainer.linear_time_decay = 0.002f;
             yaw_lift_trainer.nonlin_time_decay = 0.002f;
             yaw_lift_trainer.linear_err_criteria = 0.02f;
             yaw_lift_trainer.nonlin_trigger = 100;
-            yaw_lift_trainer.nonlin_cutoff_time = 1000;
+            yaw_lift_trainer.nonlin_cutoff_time = 500;
         }
 
         /// <summary>

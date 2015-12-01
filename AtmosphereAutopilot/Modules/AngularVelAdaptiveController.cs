@@ -404,7 +404,7 @@ namespace AtmosphereAutopilot
             // let's get non-overshooting max v value, let's call it transit_max_v
             // we start on 0.0 aoa with transit_max_v and we must not overshoot res_max_aoa
             // while applying -1.0 input all the time
-			if (abs_cur_aoa < 0.26f && (moderate_aoa || moderate_g) && imodel.dyn_pressure > 100.0)
+            if (abs_cur_aoa < 0.26f && moderated && imodel.dyn_pressure > 100.0)
 			{
 				double transit_max_aoa = Math.Min(rad_max_aoa, res_max_aoa);
 				state_mat[0, 0] = transit_max_aoa / 2.0;
@@ -668,7 +668,7 @@ namespace AtmosphereAutopilot
 		float transit_max_v;
 
 		[AutoGuiAttr("snapping_Kp", true, "G5")]
-		float snapping_Kp = 0.25f;
+		public float snapping_Kp = 0.25f;
 
         protected override float process_desired_v(float des_v, bool user_input)
         {

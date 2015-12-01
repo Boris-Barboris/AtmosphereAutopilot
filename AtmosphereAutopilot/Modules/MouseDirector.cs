@@ -10,7 +10,7 @@ namespace AtmosphereAutopilot
     {
         internal MouseDirector(Vessel v)
             : base(v, "Mouse Director", 88437227)
-        { }
+        {}
 
         FlightModel imodel;
         AccelerationController acc_c;
@@ -34,6 +34,8 @@ namespace AtmosphereAutopilot
         {
             acc_c.Deactivate();
             thrust_c.Deactivate();
+            if (indicator != null)
+                indicator.enabled = false;
             MessageManager.post_status_message("Mouse Director disabled");
         }
 
@@ -123,7 +125,7 @@ namespace AtmosphereAutopilot
         }
 
         [AutoGuiAttr("strength", true, "G5")]
-        public float strength = 0.9f;
+        public float strength = 0.95f;
 
         [AutoGuiAttr("roll_stop_k", true, "G5")]
         protected float roll_stop_k = 1.0f;
@@ -138,7 +140,7 @@ namespace AtmosphereAutopilot
         protected double stop_time_roll;
 
         [AutoGuiAttr("relaxation_margin", true, "G5")]
-        protected double relaxation_margin = 0.1;
+        protected double relaxation_margin = 0.01;
 
         [AutoGuiAttr("angle_relaxation_k", true, "G5")]
         protected float angle_relaxation_k = 0.1f;
@@ -146,18 +148,32 @@ namespace AtmosphereAutopilot
         bool camera_correct = false;
         Vector3 camera_direction;
 
+        static CenterIndicator indicator;
+        static Camera camera_attached;
+
         public override void OnUpdate()
         {
-            if (HighLogic.LoadedSceneIsFlight && CameraManager.Instance.currentCameraMode == CameraManager.CameraMode.Flight &&
-                AtmosphereAutopilot.Instance.ActiveVessel == vessel)
+            if (HighLogic.LoadedSceneIsFlight && CameraManager.Instance.currentCameraMode == CameraManager.CameraMode.Flight)
             {
                 camera_correct = true;
-                camera_direction = FlightCamera.fetch.mainCamera.cameraToWorldMatrix.MultiplyPoint(new Vector3(0.0f, 0.0f, -1.0f)) -
+                Camera maincamera = FlightCamera.fetch.mainCamera;
+                camera_direction = maincamera.cameraToWorldMatrix.MultiplyPoint(new Vector3(0.0f, 0.0f, -1.0f)) -
                     FlightCamera.fetch.mainCamera.transform.position;
                 // let's draw a couple of lines to show direction
+                if (indicator == null || camera_attached != maincamera)
+                {
+                    indicator = maincamera.gameObject.GetComponent<CenterIndicator>();
+                    if (indicator == null)
+                        indicator = maincamera.gameObject.AddComponent<CenterIndicator>();
+                    camera_attached = maincamera;
+                }
+                indicator.enabled = true;
             }
             else
+            {
                 camera_correct = false;
+                indicator.enabled = false;
+            }
         }
 
         [AutoGuiAttr("Acceleration controller GUI", true)]
@@ -172,5 +188,33 @@ namespace AtmosphereAutopilot
         [VesselSerializable("cruise_speed")]
         [AutoGuiAttr("Cruise speed", true, "G5")]
         public float desired_spd = 100.0f;
+
+        public class CenterIndicator: MonoBehaviour
+        {
+            Material mat = new Material(Shader.Find("KSP/Sprite"));
+
+            Vector3 startVector = new Vector3(0.494f, 0.5f, -0.001f);
+            Vector3 endVector = new Vector3(0.506f, 0.5f, -0.001f);
+
+            public bool enabled = false;
+
+            public void OnPostRender()
+            {
+                if (enabled)
+                {
+                    GL.PushMatrix();
+                    mat.SetPass(0);
+                    mat.color = Color.red;
+                    GL.LoadOrtho();
+                    GL.Begin(GL.LINES);
+                    GL.Color(Color.red);
+                    GL.Vertex(startVector);
+                    GL.Vertex(endVector);
+                    GL.End();
+                    GL.PopMatrix();
+                    enabled = false;
+                }
+            }
+        }
     }
 }
