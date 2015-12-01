@@ -44,7 +44,7 @@ Cruise control - throttle automation to maintain speed setpoint. Handeled by "Pr
 ## Mouse Director
 Mouse Director (MD) is declarative autopilot, crafted with idea to let the user to define desired airspeed direction with camera position. Autopilot then tries to comply with this surface-relative velocity setpoint. MD is inherently-linear, so only relatively small angles of attack are allowed. All AoA and G moderations are forcefully turned on during it's work.
 
-MD uses "Acceleration controller", wich uses two AoA controllers: pitch "AoA controller" and yaw "Sideslip controller", and "Roll ang vel controller" for roll. Currently, planar asymmetry of a plane is not taken into account (sideslip noise is still too noticeble in zero-lift convergence problem), Sideslip is always at zero setpoint. If your craft requires nonzero sideslip to fly straight, MD is not a very good solution right now, use FbW in the rocket mode.
+MD uses "Acceleration controller", wich uses two AoA controllers: pitch "AoA controller" and yaw "Sideslip controller", and "Roll ang vel controller" for roll. Currently, planar asymmetry of a plane is not taken into account (sideslip noise is still too noticeable in zero-lift convergence problem), sideslip is always at zero setpoint. If your craft requires nonzero sideslip to fly straight, MD is not a very good solution right now, use FbW in the _rocket mode_.
 
 Short GUI description:
 * _strength_ - default value 0.95. Measure of agressiveness of acceleration output of MD. Precise control multiplies output acceleration by the factor of 0.4.
@@ -90,22 +90,22 @@ Short GUI description (consult source code for more deatils and insight):
 * two vectors on engine torque linear estimations. They are used to adress gimbaling capabilities of a craft.
 
 ## Acceleration controller
-Middle-level controller, follows a setpoint of acceleration vector in surface-relative reference frame. Input: acceleration and jerk. Output: AoA, Sideslip and roll angular velocity.
+Middle-level controller, follows a setpoint of acceleration vector in surface-relative reference frame. Input: acceleration and jerk. Output: AoA, sideslip and roll angular velocity.
 
 Short GUI description:
-* _desired pitch lift_ - desired lift-induced acceleration, projected to spinal vector.
-* _desired pitch acc_ - desired total acceleration, projected to spinal vector.
-* _desired pitch v_ - corresponding to previous value desired angular velocity.
-* _roll acc factor_ - acceleration factor estimate of roll rotation model.
+* _desired pitch lift_ - desired lift-induced acceleration, projected on spinal vector.
+* _desired pitch acc_ - desired total acceleration, projected on spinal vector.
+* _desired pitch v_ - desired angular velocity for pitch, calculated from previous value.
+* _roll acc factor_ - angular acceleration factor estimate of roll rotation model.
 * _roll acc filter_ - default value 4.0. filter gain for smoothing _roll acc factor_ evolution noise.
-* _roll cubic K_ - default value 0.3. Cubic descend gain for roll. Increase for faster roll control, decrease for lower overshooting and oscillations.
-* _roll cubic relax frame_ - default value 10.0. Relaxation frame for cubic descend phase. Magic nubmer.
+* _roll cubic K_ - default value 0.3. Cubic descent gain for roll. Increase for faster roll control, decrease for lower overshooting and oscillations.
+* _roll cubic relax frame_ - default value 10.0. Relaxation frame for cubic descent phase. Magic nubmer.
 * _roll relax Kp_ - default value 0.1. Relaxation gain for roll.
 * _roll error filter margin_ - margin for smoothing _roll angle_ oscillations. Magic number.
 * _roll error filter k_ - filter gain for _roll angle_ smoothing on relaxation regime.
 * _max roll v_ - estimate of constrained maximum roll angular velocity.
 * _roll angle_ - current bank error in radians.
-* _cubic_ - true when in cubic descend regime.
+* _cubic_ - true when in cubic descent regime.
 * _snapping boundary_ - default vaulue 0.05236 (3 degrees in radians). On low bank error modes we will transition from cubic relaxation to proportional relaxation (like in roll controller wing leveler code).
 * _desired aoa_ - output to "AoA controller".
 * _desired sideslip_ - output to "Sideslip controller".
@@ -135,10 +135,10 @@ Short GUI description:
 * _max\min g v_ - respective equilibrium angular velocities.
 * _max\min aoa v_ - equlibrium angular velocities for set by user AoA limit.
 * _moder filter_ - default value - 3.0. Used to filter out rapid changes or oscillations in flight model to provide more smooth boundary condition evolution. Magic number.
-* _quadr Kp_ - default value - 0.3. Contoller uses parabolic descend model of angular velocity to it's desired value. Those descend parameters are governed by this koefficient. Larger values may cause overshoot from wrong control surface lag handling. Lower values will slow down control. Magic number.
+* _quadr Kp_ - default value - 0.3. Contoller uses parabolic descent model of angular velocity to it's desired value. Those descent parameters are governed by this koefficient. Larger values may cause overshoot from wrong control surface lag handling. Lower values will slow down control. Magic number.
 * _kacc quadr_ - parabollic steepness of control, governed by control utilities authority and craft characteristics. Should be positive.
 * _kacc smoothing_ - default value - 10.0. Filter gain for slow and smooth "kacc quadr" evolution. Magic number.
-* _relaxation k_ - default value - 1.0. Controller uses relaxed linear descend on very small velocity error regimes. This koefficient governs relaxation frame size.
+* _relaxation k_ - default value - 1.0. Controller uses relaxed linear descent on very small velocity error regimes. This koefficient governs relaxation frame size.
 * _relaxation Kp_ - default value - 0.5. Relaxation gain itself.
 * _relaxation frame_ - default value - 1. How many velocity frames will be averaged as current angular velocity. This is an old deprecated way of fighting oscillations, keep it 1.
 * _relax count_ - for how many frames velocity is in relaxation state.
@@ -181,7 +181,7 @@ Short GUI description:
 * _filter k_ - filter gain to smooth changes in equilibrium v estimation. Default value - 4.0.
 * _relaxation frame_ - relaxation frame count, used for close-to desired behaviour. Default value - 2.
 * _relaxation factor_ - default value 0.1. Proportional gain of relaxation smoothing.
-* _cubic barrier_ - default value 1.0 seconds. AoA controller uses quadratic descend profile for long evolutions and cubic for short (less than "cubic barrier" seconds). Used to prevent overshooting.
+* _cubic barrier_ - default value 1.0 seconds. AoA controller uses quadratic descent profile for long evolutions and cubic for short (less than "cubic barrier" seconds). Used to prevent overshooting.
 * _cubic KP_ - default value 0.3. Gain for cubic profile steepness evaluation.
 * _cubic mode_ - true if controller is now in cubic mode.
 
