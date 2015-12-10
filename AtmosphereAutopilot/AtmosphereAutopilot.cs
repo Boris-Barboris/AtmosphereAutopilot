@@ -55,6 +55,7 @@ namespace AtmosphereAutopilot
             DontDestroyOnLoad(this);
             determine_aerodynamics();
             get_csurf_module();
+            get_gimbal_modules();
             initialize_types();
             initialize_hotkeys();
             initialize_thread();
@@ -111,6 +112,15 @@ namespace AtmosphereAutopilot
                 if (control_surface_module_type == null)
                     throw new Exception("AtmosphereAutopilot could not bind to FAR FARControllableSurface class");
             }
+        }
+
+        public static Dictionary<Type, ConstructorInfo> gimbal_module_wrapper_map = new Dictionary<Type, ConstructorInfo>(4);
+
+        void get_gimbal_modules()
+        {
+            gimbal_module_wrapper_map.Add(typeof(ModuleGimbal), typeof(StockGimbal).GetConstructors()[0]);
+            if (kmGimbal.do_reflections())
+                gimbal_module_wrapper_map.Add(kmGimbal.gimbal_type, typeof(kmGimbal).GetConstructors()[0]);
         }
 
         void initialize_types()

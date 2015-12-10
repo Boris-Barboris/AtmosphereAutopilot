@@ -46,6 +46,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GimbalWrappers.cs" />
     <Compile Include="AppLauncher.cs" />
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="BackgroundThread.cs" />

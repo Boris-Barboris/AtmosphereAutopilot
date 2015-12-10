@@ -47,21 +47,31 @@ namespace AtmosphereAutopilot
                     ConfigNode gimbal_node;
                     if ((gimbal_node = part.nodes.GetNode("MODULE", "name", "ModuleGimbal")) != null)
                     {
-                        part.RemoveNode(gimbal_node);
-                        List<ConfigNode> backup_nodes = new List<ConfigNode>();
-
-                        for (int i = 0; i < part.nodes.Count; i++)
-                            backup_nodes.Add(part.nodes[i]);
-                        part.nodes.Clear();
-
-                        part.nodes.Add(gimbal_node);
-                        for (int i = 0; i < backup_nodes.Count; i++)
-                            part.nodes.Add(backup_nodes[i]);
-                        Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains ModuleGimbal. Nodes count is " +
-                            (backup_nodes.Count + 1).ToString());
+                        move_node_first(gimbal_node, part);
+                        Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains ModuleGimbal, moving it");
                     }
+                    else
+                        if ((gimbal_node = part.nodes.GetNode("MODULE", "name", "KM_Gimbal_3")) != null)
+                        {
+                            move_node_first(gimbal_node, part);
+                            Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains KM_Gimbal_3, moving it");
+                        }
                 }
                 ready = true;
+            }
+
+            void move_node_first(ConfigNode node, ConfigNode partNode)
+            {
+                partNode.RemoveNode(node);
+                List<ConfigNode> backup_nodes = new List<ConfigNode>();
+
+                for (int i = 0; i < partNode.nodes.Count; i++)
+                    backup_nodes.Add(partNode.nodes[i]);
+                partNode.nodes.Clear();
+
+                partNode.nodes.Add(node);
+                for (int i = 0; i < backup_nodes.Count; i++)
+                    partNode.nodes.Add(backup_nodes[i]);
             }
         }
     }

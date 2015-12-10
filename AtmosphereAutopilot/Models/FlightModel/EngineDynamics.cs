@@ -21,6 +21,7 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 using System.IO;
+using System.Reflection;
 
 namespace AtmosphereAutopilot
 {
@@ -31,18 +32,14 @@ namespace AtmosphereAutopilot
 	{
         public class EngineMoment
         {
-            public EngineMoment(ModuleEngines m, ModuleGimbal g, float original_gimbal_spd, bool uses_gimbal_spd)
+            public EngineMoment(ModuleEngines m, IGimbal g)
             {
                 engine = m;
                 gimbal = g;
-                this.original_gimbal_spd = original_gimbal_spd;
-                this.uses_gimbal_spd = uses_gimbal_spd;
             }
             public ModuleEngines engine;
-            public ModuleGimbal gimbal;
+            public IGimbal gimbal;
             public Vector3 thrust = Vector3.zero;
-            public bool uses_gimbal_spd;
-            public float original_gimbal_spd;
         }
 
         public List<EngineMoment> engines = new List<EngineMoment>();
@@ -58,21 +55,24 @@ namespace AtmosphereAutopilot
             {
                 if (eng.isOperational || eng.finalThrust != 0.0f)
                 {
-                    ModuleGimbal gimb = eng.part.FindModuleImplementing<ModuleGimbal>();
-                    float r_spd = float.PositiveInfinity;
-                    bool gmbspd = false;
-                    if (gimb != null)
+                    IGimbal gimb = null;
+                    foreach (Type moduleType in AtmosphereAutopilot.gimbal_module_wrapper_map.Keys)
                     {
-                        if (!gimb.gimbalLock)
-                            any_gimbals = true;
-                        r_spd = gimb.gimbalResponseSpeed;
-                        if (gimb.useGimbalResponseSpeed)
+                        PartModule gimbal_module = eng.part.Modules[moduleType.Name];
+                        if (gimbal_module != null)
                         {
-                            gmbspd = true;
-                            any_gimbal_spds = true;
+                            gimb = (IGimbal)AtmosphereAutopilot.gimbal_module_wrapper_map[moduleType].
+                                Invoke(new []{ gimbal_module });
+                            if (gimb.Active)
+                            {
+                                any_gimbals = true;
+                                if (gimb.UseGimbalSpeed)
+                                    any_gimbal_spds = true;
+                            }
+                            break;
                         }
                     }
-                    engines.Add(new EngineMoment(eng, gimb, r_spd, gmbspd));
+                    engines.Add(new EngineMoment(eng, gimb));
                 }
             }
             synchronize_gimbals();
@@ -84,10 +84,7 @@ namespace AtmosphereAutopilot
             foreach (EngineMoment em in engines)
             {
                 if (em.gimbal != null)
-                {
-                    em.gimbal.useGimbalResponseSpeed = em.uses_gimbal_spd;
-                    em.gimbal.gimbalResponseSpeed = em.original_gimbal_spd;
-                }
+                    em.gimbal.Restore();
             }
         }
 
@@ -109,10 +106,11 @@ namespace AtmosphereAutopilot
                 // find minimum normalized gimbaling speed
                 for (int i = 0; i < engines.Count; i++)
                 {
-                    ModuleGimbal mg = engines[i].gimbal;
+                    IGimbal mg = engines[i].gimbal;
                     if (mg != null)
                     {
-                        float norm_spd = engines[i].original_gimbal_spd;
+                        float norm_spd = mg.UseGimbalSpeed ?
+                            mg.GimbalSpeed : float.PositiveInfinity;
                         if (norm_spd < gimbal_spd_norm)
                             gimbal_spd_norm = norm_spd;
                     }
@@ -120,12 +118,9 @@ namespace AtmosphereAutopilot
                 // apply it
                 for (int i = 0; i < engines.Count; i++)
                 {
-                    ModuleGimbal mg = engines[i].gimbal;
+                    IGimbal mg = engines[i].gimbal;
                     if (mg != null)
-                    {
-                        mg.useGimbalResponseSpeed = true;
-                        mg.gimbalResponseSpeed = gimbal_spd_norm;
-                    }
+                        mg.Modify(gimbal_spd_norm);
                 }
             }
         }
@@ -248,4 +243,5 @@ namespace AtmosphereAutopilot
             prev_engines_thrust = engines_thrust_principal;
         }
     }
+
 }
