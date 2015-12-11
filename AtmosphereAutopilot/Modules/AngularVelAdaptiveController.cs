@@ -227,7 +227,7 @@ namespace AtmosphereAutopilot
 
             if (moderate_aoa && imodel.dyn_pressure > 100.0)
             {
-                if (abs_cur_aoa < 0.35f)
+                if (abs_cur_aoa < rad_max_aoa * 1.5f)
                 {
                     // We're in linear regime so we can update our limitations
 
@@ -336,8 +336,8 @@ namespace AtmosphereAutopilot
             if (moderate_g && imodel.dyn_pressure > 100.0)
             {
                 moderated = true;
-                
-                if (Math.Abs(lin_model.A[0, 0]) > 1e-5 && abs_cur_aoa < 0.35f)
+
+                if (Math.Abs(lin_model.A[0, 0]) > 1e-5 && abs_cur_aoa < rad_max_aoa * 1.5f)
                 {
                     // model may be sane, let's update limitations
                     double gravity_acc = 0.0;
@@ -404,7 +404,7 @@ namespace AtmosphereAutopilot
             // let's get non-overshooting max v value, let's call it transit_max_v
             // we start on 0.0 aoa with transit_max_v and we must not overshoot res_max_aoa
             // while applying -1.0 input all the time
-            if (abs_cur_aoa < 0.26f && moderated && imodel.dyn_pressure > 100.0)
+            if (abs_cur_aoa < rad_max_aoa * 1.5f && moderated && imodel.dyn_pressure > 100.0)
 			{
 				double transit_max_aoa = Math.Min(rad_max_aoa, res_max_aoa);
 				state_mat[0, 0] = transit_max_aoa / 2.0;
@@ -455,13 +455,13 @@ namespace AtmosphereAutopilot
                 // upper aoa limit moderation
                 scaled_aoa_up = Common.Clampf((res_max_aoa - cur_aoa) * 2.0f / (res_max_aoa - res_min_aoa), 1.0f);
                 if (scaled_aoa_up < 0.0f)
-                    max_v = Mathf.Min(max_v, 2.0f * scaled_aoa_up * max_v + Math.Min(res_equilibr_v_upper, max_v));
+                    max_v = Mathf.Min(max_v, scaled_aoa_up * max_v + Math.Min(res_equilibr_v_upper, max_v));
                 else
                     max_v = Mathf.Min(max_v, scaled_aoa_up * max_v + (1.0f - scaled_aoa_up) * Math.Min(res_equilibr_v_upper, max_v));
                 // lower aoa limit moderation
                 scaled_aoa_down = Common.Clampf((res_min_aoa - cur_aoa) * 2.0f / (res_min_aoa - res_max_aoa), 1.0f);
                 if (scaled_aoa_down < 0.0f)
-                    min_v = Mathf.Max(min_v, 2.0f * scaled_aoa_down * min_v + Math.Max(res_equilibr_v_lower, min_v));
+                    min_v = Mathf.Max(min_v, scaled_aoa_down * min_v + Math.Max(res_equilibr_v_lower, min_v));
                 else
                     min_v = Mathf.Max(min_v, scaled_aoa_down * min_v + (1.0f - scaled_aoa_down) * Math.Max(res_equilibr_v_lower, min_v));
                 // now let's restrain v

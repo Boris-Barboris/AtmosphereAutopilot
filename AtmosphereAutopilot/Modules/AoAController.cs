@@ -132,31 +132,26 @@ namespace AtmosphereAutopilot
 
             // Let's find equilibrium angular v on desired_aoa
             LinearSystemModel model;
-            if (Math.Abs(cur_aoa) < 0.3f)
-            {
-                if (Math.Abs(cur_aoa - desired_aoa) < 1e-2)
-                    model = lin_model;
-                else
-                    model = lin_model_gen;
-                eq_A[0, 0] = model.A[0, 1];
-                eq_A[0, 1] = model.A[0, 2] + model.A[0, 3] + model.B[0, 0];
-                eq_A[1, 0] = model.A[1, 1];
-                eq_A[1, 1] = model.A[1, 2] + model.B[1, 0] + model.A[1, 3];
-                eq_b[0, 0] = target_derivative - (model.A[0, 0] * cur_aoa + model.C[0, 0]);
-                eq_b[1, 0] = -(model.A[1, 0] * cur_aoa + model.C[1, 0]);
-                eq_A.old_lu = true;
-                try
-                {
-                    eq_x = eq_A.SolveWith(eq_b);
-                    double new_eq_v = eq_x[0, 0];
-                    if (!double.IsInfinity(new_eq_v) && !double.IsNaN(new_eq_v))
-                        cur_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, cur_aoa_equilibr_v, filter_k);
-                }
-                catch (MSingularException) { }
-                //cur_aoa_equilibr_v += 0.5f * (float)get_roll_aoa_deriv();
-            }
+            if (Math.Abs(cur_aoa - desired_aoa) < 1e-2)
+                model = lin_model;
             else
-                cur_aoa_equilibr_v = 0.0f;
+                model = lin_model_gen;
+            eq_A[0, 0] = model.A[0, 1];
+            eq_A[0, 1] = model.A[0, 2] + model.A[0, 3] + model.B[0, 0];
+            eq_A[1, 0] = model.A[1, 1];
+            eq_A[1, 1] = model.A[1, 2] + model.B[1, 0] + model.A[1, 3];
+            eq_b[0, 0] = target_derivative - (model.A[0, 0] * cur_aoa + model.C[0, 0]);
+            eq_b[1, 0] = -(model.A[1, 0] * cur_aoa + model.C[1, 0]);
+            eq_A.old_lu = true;
+            try
+            {
+                eq_x = eq_A.SolveWith(eq_b);
+                double new_eq_v = eq_x[0, 0];
+                if (!double.IsInfinity(new_eq_v) && !double.IsNaN(new_eq_v))
+                    cur_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, cur_aoa_equilibr_v, filter_k);
+            }
+            catch (MSingularException) { }
+            //cur_aoa_equilibr_v += 0.5f * (float)get_roll_aoa_deriv();
 
             // parabolic descend to desired angle of attack
             double error = Common.Clampf(desired_aoa - cur_aoa, Mathf.Abs(v_controller.res_max_aoa - v_controller.res_min_aoa));
