@@ -377,7 +377,7 @@ namespace AtmosphereAutopilot
                     csurf_buf[i].Put(0.0f);
                 if (any_gimbals)
                 {
-                    if (gimbal_buf[i].Size >= 1 && sequential_dt)
+                    if (gimbal_buf[i].Size >= 1 && sequential_dt && !float.IsPositiveInfinity(gimbal_spd_norm))
                         gimbal_buf[i].Put(exponential_blend(gimbal_buf[i].getLast(), raw_input, gimbal_spd_norm, 0.0f));
                     else
                         gimbal_buf[i].Put(raw_input);

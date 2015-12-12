@@ -27,8 +27,8 @@ namespace AtmosphereAutopilot
 
         public bool Active
         {
-            get { return module.gimbalLock; }
-            set { module.gimbalLock = value; }
+            get { return !module.gimbalLock; }
+            set { module.gimbalLock = !value; }
         }
 
         public bool UseGimbalSpeed
