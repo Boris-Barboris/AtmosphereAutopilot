@@ -128,7 +128,7 @@ namespace AtmosphereAutopilot
         public float strength = 0.95f;
 
         [AutoGuiAttr("roll_stop_k", true, "G5")]
-        protected float roll_stop_k = 1.0f;
+        protected float roll_stop_k = 1.2f;
 
         [AutoGuiAttr("angular error", false, "G5")]
         protected double angular_error;

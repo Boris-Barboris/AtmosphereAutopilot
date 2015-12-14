@@ -444,34 +444,36 @@ namespace AtmosphereAutopilot
             }
 
             // desired_v moderation section
-            float normalized_des_v = des_v / max_v_construction;
-            if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
-                normalized_des_v = 0.0f;
-            normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
-            if (moderated)
+            if (user_controlled)
             {
-                float max_v = Mathf.Min(max_v_construction, transit_max_v);
-                float min_v = -max_v;
-                // upper aoa limit moderation
-                scaled_aoa_up = Common.Clampf((res_max_aoa - cur_aoa) * 2.0f / (res_max_aoa - res_min_aoa), 1.0f);
-                if (scaled_aoa_up < 0.0f)
-                    max_v = Mathf.Min(max_v, scaled_aoa_up * max_v + Math.Min(res_equilibr_v_upper, max_v));
+                float normalized_des_v = des_v / max_v_construction;
+                if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
+                    normalized_des_v = 0.0f;
+                normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
+                if (moderated)
+                {
+                    float max_v = Mathf.Min(max_v_construction, transit_max_v);
+                    float min_v = -max_v;
+                    // upper aoa limit moderation
+                    scaled_aoa_up = Common.Clampf((res_max_aoa - cur_aoa) * 2.0f / (res_max_aoa - res_min_aoa), 1.0f);
+                    if (scaled_aoa_up < 0.0f)
+                        max_v = Mathf.Min(max_v, scaled_aoa_up * max_v + Math.Min(res_equilibr_v_upper, max_v));
+                    else
+                        max_v = Mathf.Min(max_v, scaled_aoa_up * max_v + (1.0f - scaled_aoa_up) * Math.Min(res_equilibr_v_upper, max_v));
+                    // lower aoa limit moderation
+                    scaled_aoa_down = Common.Clampf((res_min_aoa - cur_aoa) * 2.0f / (res_min_aoa - res_max_aoa), 1.0f);
+                    if (scaled_aoa_down < 0.0f)
+                        min_v = Mathf.Max(min_v, scaled_aoa_down * min_v + Math.Max(res_equilibr_v_lower, min_v));
+                    else
+                        min_v = Mathf.Max(min_v, scaled_aoa_down * min_v + (1.0f - scaled_aoa_down) * Math.Max(res_equilibr_v_lower, min_v));
+                    // now let's restrain v
+                    scaled_restrained_v = Common.Clampf(v_offset, min_v, max_v);
+                    scaled_restrained_v = Mathf.Lerp(scaled_restrained_v, des_v >= 0.0 ? max_v : min_v, Mathf.Abs(normalized_des_v));
+                }
                 else
-                    max_v = Mathf.Min(max_v, scaled_aoa_up * max_v + (1.0f - scaled_aoa_up) * Math.Min(res_equilibr_v_upper, max_v));
-                // lower aoa limit moderation
-                scaled_aoa_down = Common.Clampf((res_min_aoa - cur_aoa) * 2.0f / (res_min_aoa - res_max_aoa), 1.0f);
-                if (scaled_aoa_down < 0.0f)
-                    min_v = Mathf.Max(min_v, scaled_aoa_down * min_v + Math.Max(res_equilibr_v_lower, min_v));
-                else
-                    min_v = Mathf.Max(min_v, scaled_aoa_down * min_v + (1.0f - scaled_aoa_down) * Math.Max(res_equilibr_v_lower, min_v));
-                // now let's restrain v
-                scaled_restrained_v = Common.Clampf(v_offset, min_v, max_v);
-                scaled_restrained_v = Mathf.Lerp(scaled_restrained_v, des_v >= 0.0 ? max_v : min_v, Mathf.Abs(normalized_des_v));
+                    scaled_restrained_v = transit_max_v * normalized_des_v + v_offset;
+                des_v = scaled_restrained_v;
             }
-            else
-                scaled_restrained_v = transit_max_v * normalized_des_v + v_offset;
-            
-            des_v = scaled_restrained_v;
             return des_v;
         }
 
