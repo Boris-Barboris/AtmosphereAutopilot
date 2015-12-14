@@ -444,7 +444,7 @@ namespace AtmosphereAutopilot
             }
 
             // desired_v moderation section
-            float normalized_des_v = user_input ? des_v / max_v_construction : des_v / transit_max_v;
+            float normalized_des_v = des_v / max_v_construction;
             if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
                 normalized_des_v = 0.0f;
             normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
