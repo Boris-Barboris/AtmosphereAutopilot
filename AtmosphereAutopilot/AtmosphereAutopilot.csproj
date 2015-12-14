@@ -84,6 +84,7 @@
     <Compile Include="Modules\ProgradeThrustController.cs" />
     <Compile Include="Modules\AutopilotModule.cs" />
     <Compile Include="Modules\AoAController.cs" />
+    <Compile Include="Modules\GravityTurnFlyByWire.cs" />
     <Compile Include="Modules\StandardFlyByWire.cs" />
     <Compile Include="Modules\StateController.cs" />
     <Compile Include="Common.cs" />

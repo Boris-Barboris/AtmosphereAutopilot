@@ -140,8 +140,8 @@ namespace AtmosphereAutopilot
             eq_A[0, 1] = model.A[0, 2] + model.A[0, 3] + model.B[0, 0];
             eq_A[1, 0] = model.A[1, 1];
             eq_A[1, 1] = model.A[1, 2] + model.B[1, 0] + model.A[1, 3];
-            eq_b[0, 0] = target_derivative - (model.A[0, 0] * cur_aoa + model.C[0, 0]);
-            eq_b[1, 0] = -(model.A[1, 0] * cur_aoa + model.C[1, 0]);
+            eq_b[0, 0] = target_derivative - (model.A[0, 0] * desired_aoa + model.C[0, 0]);
+            eq_b[1, 0] = -(model.A[1, 0] * desired_aoa + model.C[1, 0]);
             eq_A.old_lu = true;
             try
             {
