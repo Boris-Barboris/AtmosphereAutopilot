@@ -97,9 +97,9 @@
     <None Include="csurf_sync.cfg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Global_settings.cfg">
+    <Content Include="Global_settings.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Include="icon.png">

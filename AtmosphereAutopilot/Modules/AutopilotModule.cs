@@ -104,7 +104,7 @@ namespace AtmosphereAutopilot
         public bool DeserializeVesselSpecific()
         {
             return AutoSerialization.Deserialize(this, module_name.Replace(' ', '_'),
-                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/designs/" + vessel.vesselName + ".cfg",
+                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/designs/" + vessel.vesselName + ".txt",
                 typeof(VesselSerializable), OnDeserialize);
         }
 
@@ -114,7 +114,7 @@ namespace AtmosphereAutopilot
         public bool DeserializeGlobalSpecific()
         {
             return AutoSerialization.Deserialize(this, module_name.Replace(' ', '_'),
-                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.cfg",
+                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.txt",
                 typeof(GlobalSerializable), OnDeserialize);
         }
 
@@ -125,10 +125,10 @@ namespace AtmosphereAutopilot
         {
             BeforeSerialized();
             AutoSerialization.Serialize(this, module_name.Replace(' ', '_'),
-                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/designs/" + vessel.vesselName + ".cfg",
+                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/designs/" + vessel.vesselName + ".txt",
                 typeof(VesselSerializable), OnSerialize);
             AutoSerialization.Serialize(this, module_name.Replace(' ', '_'),
-                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.cfg",
+                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.txt",
                 typeof(GlobalSerializable), OnSerialize);
         }
 
