@@ -58,7 +58,7 @@ namespace AtmosphereAutopilot
                     IGimbal gimb = null;
                     foreach (Type moduleType in AtmosphereAutopilot.gimbal_module_wrapper_map.Keys)
                     {
-                        PartModule gimbal_module = eng.part.Modules[moduleType.Name];
+                        PartModule gimbal_module = findModuleByName(eng.part, moduleType.Name);
                         if (gimbal_module != null)
                         {
                             gimb = (IGimbal)AtmosphereAutopilot.gimbal_module_wrapper_map[moduleType].
@@ -76,6 +76,14 @@ namespace AtmosphereAutopilot
                 }
             }
             synchronize_gimbals();
+        }
+
+        PartModule findModuleByName(Part p, string name)
+        {
+            for (int i = 0; i < p.Modules.Count; i++)
+                if (p.Modules[i].moduleName.Equals(name))
+                    return p.Modules[i];
+            return null;
         }
 
         // give back original gimbal response to engines before clearing engine list
