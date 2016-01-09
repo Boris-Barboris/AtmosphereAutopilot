@@ -94,19 +94,51 @@ namespace System.Collections.Generic
             }
         }
 
+        int prev_query = int.MaxValue;
+        int prev_list_index = 0;
+        int prev_index_shift = 0;
+
         int get_list_index(ref int lin_index)
         {
             if (lists.Count == 0)
                 throw new InvalidOperationException("ListView is empty");
             int i = 0;
-            while (lists[i].Count <= lin_index)
+            if (lin_index < prev_query)
             {
-                lin_index -= lists[i].Count;
-                i++;
-                if (i >= lists.Count)
-                    throw new InvalidOperationException("index too large");
+                prev_query = lin_index;
+                prev_index_shift = 0;
+                while (lists[i].Count <= lin_index)
+                {
+                    prev_index_shift += lists[i].Count;
+                    lin_index -= lists[i].Count;
+                    i++;
+                    if (i >= lists.Count)
+                        throw new InvalidOperationException("index too large");
+                }
             }
+            else
+            {
+                i = prev_list_index;
+                prev_query = lin_index;
+                lin_index -= prev_index_shift;
+                while (lists[i].Count <= lin_index)
+                {
+                    prev_index_shift += lists[i].Count;
+                    lin_index -= lists[i].Count;
+                    i++;
+                    if (i >= lists.Count)
+                        throw new InvalidOperationException("index too large");
+                }
+            }
+            prev_list_index = i;
             return i;
+        }
+
+        public void reset_cached_index()
+        {
+            prev_query = int.MaxValue;
+            prev_list_index = 0;
+            prev_index_shift = 0;
         }
 
         public int IndexOf(T item)

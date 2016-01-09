@@ -46,9 +46,9 @@ namespace AtmosphereAutopilot
         // Generalization buffer is being used as generality augmentor
 		CircularBuffer<GenStruct>[] gen_buffers;
         // Error weight buffers
-        List<double> imm_error_weights = new List<double>();
-        List<double> grad_error_weights = new List<double>();
-		List<double> gen_error_weights = new List<double>();
+        //List<double> imm_error_weights = new List<double>();
+        //List<double> grad_error_weights = new List<double>();
+		//List<double> gen_error_weights = new List<double>();
         
         // Views to adapt inputs for Approximator
         ListView<Vector> input_view;
@@ -61,8 +61,9 @@ namespace AtmosphereAutopilot
         // time is used for generalization measures aging
         int cur_time = 0;
 
-        // model to train
-        public readonly LinApprox linmodel, genmodel;
+        // models to train
+        public readonly List<LinApproxTask> tasks = new List<LinApproxTask>();
+        //public readonly LinApprox linmodel, genmodel;
         readonly int input_count;
 
         struct GenStruct
@@ -78,12 +79,13 @@ namespace AtmosphereAutopilot
             }
         }
 
-        public OnlineLinTrainer(LinApprox linprox_main, LinApprox linprox_gen, int imm_buf_size, double[] gen_triggers, int[] gen_buf_sizes,
-            Action<Vector> input_method, Func<double> output_method)
+        public OnlineLinTrainer(int imm_buf_size, double[] gen_triggers, int[] gen_buf_sizes,
+            Action<Vector> input_method, Func<double> output_method, params LinApproxTask[] tasks)
         {
-            this.linmodel = linprox_main;
-            this.genmodel = linprox_gen;
-            input_count = linmodel.input_count;
+            foreach (var t in tasks)
+                this.tasks.Add(t);
+            input_count = tasks[0].linmodel.input_count;
+            linearity_check_task = tasks[0];
             // Immediate and gradient buffer initialization
             imm_buf_inputs = new CircularBuffer<Vector>(imm_buf_size, true);
             imm_buf_vectors = new VectorArray(input_count, imm_buf_size);
@@ -117,12 +119,36 @@ namespace AtmosphereAutopilot
             input_update_dlg = input_method;
             output_update_dlg = output_method;
             // Preallocate buffers for matrix operations in linear approximator
-            linmodel.preallocate((int)(imm_buf_size * 1.5) + gen_buf_sizes.Sum());
-            if (genmodel != null)
-                genmodel.preallocate((int)(imm_buf_size * 1.5) + gen_buf_sizes.Sum());
+            foreach (var t in tasks)
+                t.linmodel.preallocate((int)(imm_buf_size * 1.5) + gen_buf_sizes.Sum());
             // Misc
             inputs_changed = new bool[input_count];
             nothing_changed = new bool[input_count];
+            reassigned = new bool[input_count];
+        }
+
+        /// <summary>
+        /// Approximator to train on this particular data set with weight parameters
+        /// </summary>
+        public class LinApproxTask
+        {
+            public LinApprox linmodel;
+
+            [AutoGuiAttr("base gen weight", true, "G7")]
+            public volatile float base_gen_weight;
+
+            [AutoGuiAttr("linear decay factor", true, "G6")]
+            public volatile float linear_time_decay;
+
+            [AutoGuiAttr("nonlinear decay factor", true, "G6")]
+            public volatile float nonlin_time_decay;
+
+            [AutoGuiAttr("zero immediate", true)]
+            public volatile bool zero_immediate = true;
+
+            public delegate bool critiqueDlg(bool[] inputs_changed, bool[] values_overwritten);
+
+            public critiqueDlg validator;
         }
 
         #region DataSourceThread
@@ -157,6 +183,7 @@ namespace AtmosphereAutopilot
         #region TrainingThread
 
         bool[] nothing_changed;
+        bool[] reassigned;
 
         public void Train()
         {
@@ -173,19 +200,23 @@ namespace AtmosphereAutopilot
                 {
                     if (input_view.Count > 0)
                     {
+                        reset_view_caches();
                         update_singularity(input_view);
-                        linmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
-                        linmodel.weighted_lsqr(imm_training_inputs, imm_training_outputs, imm_error_weights, nothing_changed);
-						linmodel.signalUpdated();
+                        for (int i = 0; i < tasks.Count; i++)
+                        {
+                            LinApprox linmodel = tasks[i].linmodel;
+                            set_parameters(tasks[i]);
+                            linmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
+                            bool redo = tasks[i].validator(inputs_changed, reassigned);
+                            if (redo)
+                                linmodel.weighted_lsqr(input_view, output_view, weight_view, reassigned);
+                            if (tasks[i].zero_immediate)
+                                linmodel.weighted_lsqr(imm_training_inputs, imm_training_outputs, imm_error_weights, nothing_changed);
+                            linmodel.signalUpdated();
+                        }
+                        check_linearity();
+                        clear_old_records();
                     }
-					if (genmodel != null && gen_list_view.Count > 0)
-                    {
-                        return_equal_weights();
-                        genmodel.weighted_lsqr(input_view, output_view, weight_view, inputs_changed);
-                        genmodel.weighted_lsqr(imm_training_inputs, imm_training_outputs, imm_error_weights, nothing_changed);
-						genmodel.signalUpdated();
-                    }
-                    check_linearity();
                 }
             }
         }
@@ -268,34 +299,45 @@ namespace AtmosphereAutopilot
 		ListSelector<GenStruct, Vector> grad_input_selector;
 		ListSelector<GenStruct, double> grad_output_selector;
 
+        List<int> imm_weights_dummys = new List<int>();
+        ListSelector<int, double> imm_error_weights;
+        ListSelector<GenStruct, double> gen_error_weights;
+        ListSelector<GenStruct, double> grad_error_weights;
+
         void create_views()
         {
 			gen_list_view = new ListView<GenStruct>(gen_buffers);
+
 			gen_inputs_selector = new ListSelector<GenStruct, Vector>(gen_list_view, cv => cv.coord);
 			gen_output_selector = new ListSelector<GenStruct, double>(gen_list_view, cv => cv.val);
 			grad_input_selector = new ListSelector<GenStruct, Vector>(grad_training, gs => gs.coord);
             grad_output_selector = new ListSelector<GenStruct, double>(grad_training, gs => gs.val);
+
+            imm_error_weights = new ListSelector<int, double>(imm_weights_dummys, imm_weight_func);
+            gen_error_weights = new ListSelector<GenStruct, double>(gen_list_view, gen_weight_func);
+            grad_error_weights = new ListSelector<GenStruct, double>(grad_training, grad_weight_func);
+
 			input_view = new ListView<Vector>(imm_training_inputs, grad_input_selector, gen_inputs_selector);
             output_view = new ListView<double>(imm_training_outputs, grad_output_selector, gen_output_selector);
             weight_view = new ListView<double>(imm_error_weights, grad_error_weights, gen_error_weights);
         }
 
-        [AutoGuiAttr("base gen weight", true, "G8")]
-        public volatile float base_gen_weight = 0.1f;
+        void reset_view_caches()
+        {
+            input_view.reset_cached_index();
+            output_view.reset_cached_index();
+            weight_view.reset_cached_index();
+        }
 
         // Age decay factors for weights of inputs
 
-        //[AutoGuiAttr("weight decay factor", false)]
-        public volatile float weight_time_decay = 0.02f;
+        float weight_time_decay = 0.02f;
 
-        [AutoGuiAttr("linear decay factor", true, "G6")]
-        public volatile float linear_time_decay = 0.02f;
+        float base_gen_weight = 0.1f;
 
-        [AutoGuiAttr("nonlinear decay factor", true, "G6")]
-        public volatile float nonlin_time_decay = 0.5f;
+        float linear_time_decay = 0.02f;
 
-        [AutoGuiAttr("min gen weight", false, "G6")]
-        public volatile float min_gen_weight = 0.005f;
+        float nonlin_time_decay = 0.5f;
 
         [AutoGuiAttr("nonlin_cutoff_time", true)]
         public volatile int nonlin_cutoff_time  = 1000;
@@ -312,16 +354,22 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("nonlin_cycles", false)]
         int nonlin_cycles = 0;
 
+        /// <summary>
+        /// What approximator to use as linearity judge
+        /// </summary>
+        public LinApproxTask linearity_check_task;
+
         void check_linearity()
         {
             if (imm_training_inputs.Size > 0)
             {
                 double sum_error = 0.0;
+                LinApprox linmodel = linearity_check_task.linmodel;
                 for (int i = 0; i < imm_training_inputs.Size; i++)
                 {
                     Vector input = imm_training_inputs[i];
                     double true_output = imm_training_outputs[i];
-                    double lin_output = (genmodel == null ? linmodel.eval_training(input) : genmodel.eval_training(input));
+                    double lin_output = linmodel.eval_training(input);
                     double scaled_err = (lin_output - true_output) / max_output_value;
                     sum_error += Math.Abs(scaled_err);
                 }
@@ -329,7 +377,7 @@ namespace AtmosphereAutopilot
                 {
                     Vector input = grad_training[i].coord;
                     double true_output = grad_training[i].val;
-                    double lin_output = (genmodel == null ? linmodel.eval_training(input) : genmodel.eval_training(input));
+                    double lin_output = linmodel.eval_training(input);
                     double scaled_err = (lin_output - true_output) / max_output_value;
                     sum_error += Math.Abs(scaled_err);
                 }
@@ -342,16 +390,19 @@ namespace AtmosphereAutopilot
                 //linear_param = (float)sum_error;
                 //linear = sum_error < linear_err_criteria;
                 if (linear)
-                {
-                    weight_time_decay = linear_time_decay;
                     nonlin_cycles = 0;
-                }
                 else
-                {
-                    weight_time_decay = nonlin_time_decay;
-                    nonlin_cycles += last_time_elapsed * added_to_imm;
-                }
+                    nonlin_cycles = Math.Min(1000, nonlin_cycles + 1);
             }
+        }
+
+        void set_parameters(LinApproxTask task)
+        {
+            base_gen_weight = task.base_gen_weight;
+            if (linear)
+                weight_time_decay = task.linear_time_decay;
+            else
+                weight_time_decay = task.nonlin_time_decay;
         }
 
         [AutoGuiAttr("gen_space_fill_k", false, "G6")]
@@ -367,61 +418,56 @@ namespace AtmosphereAutopilot
 
         bool gen_element_removed = false;
 
+        double imm_weight_func(int index)
+        {
+            int birth = cur_time - (imm_training_inputs.Size - index - 1) * last_time_elapsed;
+            return getAgeWeight(birth);
+        }
+
+        double gen_weight_func(GenStruct record)
+        {
+            return base_gen_weight * getAgeWeight(record.birth);
+        }
+
+        double grad_weight_func(GenStruct record)
+        {
+            return getAgeWeight(record.birth);
+        }
+
+        //double popul_ratio = 1.0;
+
         void update_weights()
         {
             // Immediate buffer error weights
-            imm_error_weights.Clear();
-            for (int i = 0; i < imm_training_inputs.Size; i++)
-            {
-                int birth = cur_time - (imm_training_inputs.Size - i - 1) * last_time_elapsed;
-                imm_error_weights.Add(getAgeWeight(birth));
-            }
-			// get cutoff decayed weight
-			min_gen_weight = (float)getAgeWeight(cur_time - nonlin_cutoff_time);
-            // Gradient buffer error weights
-            grad_error_weights.Clear();
+            while (imm_training_inputs.Size > imm_weights_dummys.Count)
+                imm_weights_dummys.Add(imm_weights_dummys.Count);
+            // Evaluate generalization population ratio
+            //popul_ratio = (double)imm_training_inputs.Size / (double)gen_error_weights.Count;
+        }
+
+        void clear_old_records()
+        {
+            // Gradient buffer cleaning
             int k = 0;
             while (k < grad_training.Size)
             {
-                double k_weight = getAgeWeight(grad_training[k].birth);
-                if (linear || k_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger)
-                {
-                    grad_error_weights.Add(k_weight);
+                if (linear || (cur_time - grad_training[k].birth) < nonlin_cutoff_time || nonlin_cycles < nonlin_trigger)
                     k++;
-                }
                 else
-					grad_training.Get();
-            }                
-            // Generalization buffer weights
-            gen_error_weights.Clear();
+                    grad_training.Get();
+            }
+            // Generalization buffer cleaning
             for (int i = 0; i < gen_buffers.Length; i++)
-				for (int j = 0; j < gen_buffers[i].Size; j++)
-				{
-					double decayed_weight = getAgeWeight(gen_buffers[i][j].birth);
-                    if (linear || decayed_weight >= min_gen_weight || nonlin_cycles < nonlin_trigger || gen_buffers[i].Size <= 1)
-					{
-						double weight = decayed_weight * base_gen_weight;
-						gen_error_weights.Add(weight);
-					}
-					else
-					{
-						// we need to delete this record from generalization space, it's too old
-						gen_buffers[i].Get();
-						gen_element_removed = true;
-						j--;
-					}
-				}
-			gen_space_fill_k = gen_error_weights.Count / (float)gen_space_size;
-			double popul_ratio = (double)imm_training_inputs.Size / (double)gen_error_weights.Count;
-            for (int i = 0; i < gen_error_weights.Count; i++)
-                gen_error_weights[i] *= popul_ratio;
-        }
-
-        void return_equal_weights()
-        {
-			double popul_ratio = (double)imm_training_inputs.Size / (double)gen_error_weights.Count;
-            for (int i = 0; i < gen_error_weights.Count; i++)
-                gen_error_weights[i] /= popul_ratio * base_gen_weight;
+            {
+                k = 0;
+                while (k < gen_buffers[i].Size - 1)
+                {
+                    if (linear || (cur_time - gen_buffers[i][k].birth) < nonlin_cutoff_time || nonlin_cycles < nonlin_trigger)
+                        k++;
+                    else
+                        gen_buffers[i].Get();
+                }
+            }
         }
 
         void update_singularity(IList<Vector> input_list)

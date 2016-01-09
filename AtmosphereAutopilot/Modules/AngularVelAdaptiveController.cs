@@ -422,6 +422,8 @@ namespace AtmosphereAutopilot
 				}
 				else
 				{
+                    if (new_dyn_max_v < res_equilibr_v_upper * 1.2 || new_dyn_max_v < -res_equilibr_v_lower * 1.2)
+                        new_dyn_max_v = 1.2f * Math.Max(Math.Abs(res_equilibr_v_upper), Math.Abs(res_equilibr_v_lower));
 					new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
 					transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
 					old_dyn_max_v = transit_max_v;
@@ -457,13 +459,13 @@ namespace AtmosphereAutopilot
                     // upper aoa limit moderation
                     scaled_aoa_up = Common.Clampf((res_max_aoa - cur_aoa) * 2.0f / (res_max_aoa - res_min_aoa), 1.0f);
                     if (scaled_aoa_up < 0.0f)
-                        max_v = Mathf.Min(max_v, scaled_aoa_up * max_v + Math.Min(res_equilibr_v_upper, max_v));
+                        max_v = Mathf.Min(max_v, scaled_aoa_up * max_v + (1.0f + scaled_aoa_up) * Math.Min(res_equilibr_v_upper, max_v));
                     else
                         max_v = Mathf.Min(max_v, scaled_aoa_up * max_v + (1.0f - scaled_aoa_up) * Math.Min(res_equilibr_v_upper, max_v));
                     // lower aoa limit moderation
                     scaled_aoa_down = Common.Clampf((res_min_aoa - cur_aoa) * 2.0f / (res_min_aoa - res_max_aoa), 1.0f);
                     if (scaled_aoa_down < 0.0f)
-                        min_v = Mathf.Max(min_v, scaled_aoa_down * min_v + Math.Max(res_equilibr_v_lower, min_v));
+                        min_v = Mathf.Max(min_v, scaled_aoa_down * min_v + (1.0f + scaled_aoa_down) * Math.Max(res_equilibr_v_lower, min_v));
                     else
                         min_v = Mathf.Max(min_v, scaled_aoa_down * min_v + (1.0f - scaled_aoa_down) * Math.Max(res_equilibr_v_lower, min_v));
                     // now let's restrain v

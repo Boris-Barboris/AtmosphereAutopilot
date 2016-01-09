@@ -36,9 +36,13 @@ namespace AtmosphereAutopilot
         {
             GUILayout.BeginVertical();
             AutoGUI.AutoDrawObject(trainer);
-            GUILayout.Label("linmodel " + String.Join(",", trainer.linmodel.pars.Select(v => v.ToString("G5")).ToArray()), GUIStyles.labelStyleRight);
-            if (trainer.genmodel != null)
-                GUILayout.Label("genmodel " + String.Join(",", trainer.genmodel.pars.Select(v => v.ToString("G5")).ToArray()), GUIStyles.labelStyleRight);
+            for (int i = 0; i < trainer.tasks.Count; i++)
+            {
+                GUILayout.Space(4.0f);
+                AutoGUI.AutoDrawObject(trainer.tasks[i]);
+                LinApprox linmodel = trainer.tasks[i].linmodel;
+                GUILayout.Label("linmodel " + String.Join(",", linmodel.pars.Select(v => v.ToString("G5")).ToArray()), GUIStyles.labelStyleRight);
+            }
             GUILayout.EndVertical();
             GUI.DragWindow();
         }

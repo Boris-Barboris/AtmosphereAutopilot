@@ -45,7 +45,7 @@ namespace AtmosphereAutopilot
                 angular_acc_buf[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
                 aoa_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
 			}
-            initialize_ann_tainers();
+            initialize_lin_tainers();
             integrator = vessel.GetComponent<FlightIntegrator>();
 		}
 

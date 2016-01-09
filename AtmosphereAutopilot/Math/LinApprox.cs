@@ -57,7 +57,7 @@ namespace AtmosphereAutopilot
             return res;
         }
 
-        readonly double[] tpars;                            // training linear koefficients
+        internal readonly double[] tpars;                   // training linear koefficients
 
 		volatile bool updated_flag = false;					// is set to true when training parameters are ready
 
