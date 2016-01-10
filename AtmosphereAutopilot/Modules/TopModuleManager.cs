@@ -80,6 +80,7 @@ namespace AtmosphereAutopilot
             if (active_controller != null)
                 active_controller.Activate();
 			vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
+            MessageManager.post_status_message("Autopilot module manager enabled");
         }
 
         protected override void OnDeactivate()
@@ -91,6 +92,7 @@ namespace AtmosphereAutopilot
                     cur_ves_modules[module_type].Deactivate();
                 }
             vessel.OnAutopilotUpdate -= new FlightInputCallback(ApplyControl);
+            MessageManager.post_status_message("Autopilot module manager disabled");
         }
 
         public override void ApplyControl(FlightCtrlState state)

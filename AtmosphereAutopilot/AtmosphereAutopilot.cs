@@ -348,7 +348,6 @@ namespace AtmosphereAutopilot
 				{
                     AutopilotModule module = autopilot_module_lists[ActiveVessel][pair.Key];
 					module.Active = !module.Active;
-					MessageManager.post_status_message(module.ModuleName + (module.Active ? " enabled" : " disabled"));
 				}
 			}
             if (autopilot_module_lists.ContainsKey(ActiveVessel))

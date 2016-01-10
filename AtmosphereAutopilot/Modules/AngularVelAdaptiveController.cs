@@ -170,6 +170,8 @@ namespace AtmosphereAutopilot
 			min_input_aoa = -max_input_aoa;
 			max_g_aoa = max_input_aoa;
 			min_g_aoa = -max_g_aoa;
+            if (axis == PITCH)
+                max_v_construction = 0.7f;
 		}
 
         protected Matrix eq_A = new Matrix(2, 2);
