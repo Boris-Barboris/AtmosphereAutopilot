@@ -165,13 +165,13 @@ namespace System.Collections.Generic
             set { buffer[(index + head) % capacity] = value; }
         }
 
-		public T getLast()
-		{
+        public T getLast()
+        {
             if (size <= 0)
                 return buffer[0];
             else
                 return this[size - 1];
-		}
+        }
 
         public void Skip(int count)
         {

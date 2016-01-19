@@ -212,9 +212,9 @@ namespace AtmosphereAutopilot
             base(v, "Sideslip controller", 88437222, YAW) { }
     }
 
-	public sealed class PitchAoAController : AoAController
-	{
-		internal PitchAoAController(Vessel v) :
-			base(v, "AoA controller", 88437223, PITCH) { }
-	}
+    public sealed class PitchAoAController : AoAController
+    {
+        internal PitchAoAController(Vessel v) :
+            base(v, "AoA controller", 88437223, PITCH) { }
+    }
 }

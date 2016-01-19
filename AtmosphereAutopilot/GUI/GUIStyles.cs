@@ -22,17 +22,17 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-	/// <summary>
-	/// Collection of standard for AtmosphereAutopilot AutoGUI styles
-	/// </summary>
+    /// <summary>
+    /// Collection of standard for AtmosphereAutopilot AutoGUI styles
+    /// </summary>
     public static class GUIStyles
     {
-		public static GUISkin skin { get; private set; }
-		public static GUIStyle labelStyleLeft { get; private set; }
-		public static GUIStyle labelStyleCenter { get; private set; }
-		public static GUIStyle labelStyleRight { get; private set; }
-		public static GUIStyle textBoxStyle { get; private set; }
-		public static GUIStyle toggleButtonStyle { get; private set; }
+        public static GUISkin skin { get; private set; }
+        public static GUIStyle labelStyleLeft { get; private set; }
+        public static GUIStyle labelStyleCenter { get; private set; }
+        public static GUIStyle labelStyleRight { get; private set; }
+        public static GUIStyle textBoxStyle { get; private set; }
+        public static GUIStyle toggleButtonStyle { get; private set; }
 
         internal static void Init()
         {

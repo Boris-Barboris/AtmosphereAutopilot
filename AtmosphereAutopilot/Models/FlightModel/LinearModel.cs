@@ -28,7 +28,7 @@ namespace AtmosphereAutopilot
     using Vector = VectorArray.Vector;
 
     public sealed partial class FlightModel : AutopilotModule
-	{
+    {
         public readonly LinearSystemModel pitch_rot_model_gen = new LinearSystemModel(4, 1);
         public readonly LinearSystemModel roll_rot_model_gen = new LinearSystemModel(3, 3);
         public readonly LinearSystemModel yaw_rot_model_gen = new LinearSystemModel(4, 1);

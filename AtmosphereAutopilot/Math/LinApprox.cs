@@ -59,24 +59,24 @@ namespace AtmosphereAutopilot
 
         internal readonly double[] tpars;                   // training linear koefficients
 
-		volatile bool updated_flag = false;					// is set to true when training parameters are ready
+        volatile bool updated_flag = false;                 // is set to true when training parameters are ready
 
         public void update_from_training()
         {
-			if (updated_flag)
-			{
-				updated_flag = false;
-				lock (tpars)
-				{
-					tpars.CopyTo(pars, 0);
-				}
-			}
+            if (updated_flag)
+            {
+                updated_flag = false;
+                lock (tpars)
+                {
+                    tpars.CopyTo(pars, 0);
+                }
+            }
         }
 
-		public void signalUpdated()
-		{
-			updated_flag = true;
-		}
+        public void signalUpdated()
+        {
+            updated_flag = true;
+        }
         
         Matrix X, Y, XtW, XtWX, XtWY;                       // matrix storages
 
@@ -99,20 +99,20 @@ namespace AtmosphereAutopilot
             
             // fill X and Y matrix
             Matrix.Realloc(icount, params_varied, ref X);
-			Matrix.Realloc(icount, 1, ref Y);
+            Matrix.Realloc(icount, 1, ref Y);
             for (int i = 0; i < icount; i++)
             {
                 X[i, 0] = 1.0;
-				Y[i, 0] = outputs[i];
+                Y[i, 0] = outputs[i];
                 int j = 0;
                 for (int input = 0; input < input_count; input++)
-					if (inputs_varied[input])
-					{
-						j++;
-						X[i, j] = inputs[i][input];
-					}
-					else
-						Y[i, 0] -= inputs[i][input] * tpars[input + 1];
+                    if (inputs_varied[input])
+                    {
+                        j++;
+                        X[i, j] = inputs[i][input];
+                    }
+                    else
+                        Y[i, 0] -= inputs[i][input] * tpars[input + 1];
             }
 
             Matrix.Transpose(X, ref XtW);

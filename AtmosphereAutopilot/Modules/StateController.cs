@@ -27,36 +27,36 @@ namespace AtmosphereAutopilot
     /// </summary>
     public abstract class StateController : AutopilotModule
     {
-		protected StateController(Vessel cur_vessel, string module_name, int wnd_id)
-			: base(cur_vessel, wnd_id, module_name)
-		{ }
+        protected StateController(Vessel cur_vessel, string module_name, int wnd_id)
+            : base(cur_vessel, wnd_id, module_name)
+        { }
 
-		/// <summary>
-		/// Main control function of high-level autopilot.
-		/// </summary>
-		/// <param name="cntrl">Control state to change</param>
-		public abstract void ApplyControl(FlightCtrlState cntrl);
+        /// <summary>
+        /// Main control function of high-level autopilot.
+        /// </summary>
+        /// <param name="cntrl">Control state to change</param>
+        public abstract void ApplyControl(FlightCtrlState cntrl);
 
-	}
+    }
 
-	/// <summary>
-	/// Flight control state controller with SIMO base class
-	/// </summary>
-	public abstract class SISOController : AutopilotModule
-	{
-		protected SISOController(Vessel cur_vessel, string module_name, int wnd_id)
-			: base(cur_vessel, wnd_id, module_name)
-		{ }
+    /// <summary>
+    /// Flight control state controller with SIMO base class
+    /// </summary>
+    public abstract class SISOController : AutopilotModule
+    {
+        protected SISOController(Vessel cur_vessel, string module_name, int wnd_id)
+            : base(cur_vessel, wnd_id, module_name)
+        { }
 
-		/// <summary>
-		/// Main control function of service autopilot.
-		/// </summary>
-		/// <param name="cntrl">Control state to change</param>
-		/// <param name="target_value">Desired controlled value</param>
-		public abstract float ApplyControl(FlightCtrlState cntrl, float target_value);
+        /// <summary>
+        /// Main control function of service autopilot.
+        /// </summary>
+        /// <param name="cntrl">Control state to change</param>
+        /// <param name="target_value">Desired controlled value</param>
+        public abstract float ApplyControl(FlightCtrlState cntrl, float target_value);
 
         public bool user_controlled = false;
-	}
+    }
 
     public static class ControlUtils
     {
@@ -127,15 +127,15 @@ namespace AtmosphereAutopilot
             }
         }
 
-		public static float getControlFromState(FlightCtrlState state, int axis)
-		{
-			if (axis == PITCH)
-				return state.pitch;
-			if (axis == ROLL)
-				return state.roll;
-			if (axis == YAW)
-				return state.yaw;
-			return 0.0f;
-		}
+        public static float getControlFromState(FlightCtrlState state, int axis)
+        {
+            if (axis == PITCH)
+                return state.pitch;
+            if (axis == ROLL)
+                return state.roll;
+            if (axis == YAW)
+                return state.yaw;
+            return 0.0f;
+        }
     }
 }

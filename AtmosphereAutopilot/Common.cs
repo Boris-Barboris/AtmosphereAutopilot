@@ -73,10 +73,10 @@ namespace AtmosphereAutopilot
             return mat;
         }
 
-		public static double simple_filter(double new_value, double old_value, double k)
-		{
-			return (old_value * k + new_value) / (k + 1.0);
-		}
+        public static double simple_filter(double new_value, double old_value, double k)
+        {
+            return (old_value * k + new_value) / (k + 1.0);
+        }
 
         public static Vector3 divideVector(Vector3 lhs, Vector3 rhs)
         {
@@ -185,9 +185,9 @@ namespace AtmosphereAutopilot
             return y0 + dy1 * dt + 0.5 * dy2 * dt * dt;
         }
 
-		public static string ToString(this Vector3d v, string format)
-		{
-			return '(' + v.x.ToString(format) + ", " + v.y.ToString(format) + ", " + v.z.ToString(format) + ')';
-		}
+        public static string ToString(this Vector3d v, string format)
+        {
+            return '(' + v.x.ToString(format) + ", " + v.y.ToString(format) + ", " + v.z.ToString(format) + ')';
+        }
     }
 }

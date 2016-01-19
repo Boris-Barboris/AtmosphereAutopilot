@@ -67,7 +67,7 @@ namespace AtmosphereAutopilot
             Vector3d desired_right_direction = Vector3d.Cross(target_normal_lift_acc, vessel.ReferenceTransform.up).normalized;
 
             double craft_max_g = Math.Max(0.01, pitch_c.max_aoa_v * imodel.surface_v.magnitude -
-				imodel.prev_pitch_gravity_acc - imodel.prev_pitch_noninert_acc);
+                imodel.prev_pitch_gravity_acc - imodel.prev_pitch_noninert_acc);
 
             // let's apply roll to maintain desired_right_direction
             double new_roll_angle = Math.Sign(Vector3d.Dot(vessel.ReferenceTransform.right, target_normal_lift_acc)) *
@@ -107,6 +107,7 @@ namespace AtmosphereAutopilot
             aoa_c.ApplyControl(state, desired_aoa, 0.0f);
 
             // yaw sideslip
+
             //if (Math.Abs(roll_angle) > 3.0 * dgr2rad)
             //{
             //    desired_yaw_lift = 0.0;
@@ -114,16 +115,16 @@ namespace AtmosphereAutopilot
             //}
             //else
             //{
-            //    desired_yaw_lift = Vector3.Dot(imodel.yaw_tangent, normal_lift_acc);
-            //    desired_yaw_acc = desired_yaw_lift + imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
-            //    desired_yaw_v = desired_yaw_acc / imodel.surface_v_magnitude;
-            //    // let's find equilibrium sideslip for desired lift
-            //    //if (Math.Abs(desired_yaw_lift) < 0.01f)
-            //    desired_sideslip = (float)Common.simple_filter(get_desired_aoa(imodel.yaw_rot_model_gen, desired_yaw_v, 0.0), desired_sideslip, sideslip_filter_k);
-            //    if (float.IsNaN(desired_sideslip) || float.IsInfinity(desired_sideslip) || Math.Abs(desired_sideslip) < 0.001f)
-            //        desired_sideslip = 0.0f;
+            desired_yaw_lift = 0.0; // Vector3.Dot(imodel.yaw_tangent, normal_lift_acc);
+            desired_yaw_acc = desired_yaw_lift + imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
+            desired_yaw_v = desired_yaw_acc / imodel.surface_v_magnitude;
+            // let's find equilibrium sideslip for desired lift
+            //if (Math.Abs(desired_yaw_lift) < 0.01f)
+            desired_sideslip = (float)Common.simple_filter(get_desired_aoa(imodel.yaw_rot_model_gen, desired_yaw_v, 0.0), desired_sideslip, sideslip_filter_k);
+            if (float.IsNaN(desired_sideslip) || float.IsInfinity(desired_sideslip) || Math.Abs(desired_sideslip) < 0.001f)
+                desired_sideslip = 0.0f;
             //}
-            desired_sideslip = 0.0f;
+            //desired_sideslip = 0.0f;
             side_c.user_controlled = false;
             side_c.ApplyControl(state, desired_sideslip, 0.0f);
         }

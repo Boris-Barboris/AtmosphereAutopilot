@@ -23,38 +23,38 @@ using UnityEngine;
 namespace AtmosphereAutopilot
 {
 
-	/// <summary>
-	/// Controls angular velocity
-	/// </summary>
-	public abstract class AngularVelAdaptiveController : SISOController
-	{
-		protected int axis;
+    /// <summary>
+    /// Controls angular velocity
+    /// </summary>
+    public abstract class AngularVelAdaptiveController : SISOController
+    {
+        protected int axis;
 
         protected FlightModel imodel;
-		protected AngularAccAdaptiveController acc_controller;
+        protected AngularAccAdaptiveController acc_controller;
 
-		/// <summary>
-		/// Create controller instance
-		/// </summary>
-		/// <param name="vessel">Vessel to control</param>
-		/// <param name="module_name">Name of controller</param>
-		/// <param name="wnd_id">unique for types window id</param>
-		/// <param name="axis">Pitch = 0, roll = 1, yaw = 2</param>
-		/// <param name="model">Flight model instance for adaptive control</param>
-		protected AngularVelAdaptiveController(Vessel vessel, string module_name,
-			int wnd_id, int axis)
-			: base(vessel, module_name, wnd_id)
-		{
-			this.axis = axis;
+        /// <summary>
+        /// Create controller instance
+        /// </summary>
+        /// <param name="vessel">Vessel to control</param>
+        /// <param name="module_name">Name of controller</param>
+        /// <param name="wnd_id">unique for types window id</param>
+        /// <param name="axis">Pitch = 0, roll = 1, yaw = 2</param>
+        /// <param name="model">Flight model instance for adaptive control</param>
+        protected AngularVelAdaptiveController(Vessel vessel, string module_name,
+            int wnd_id, int axis)
+            : base(vessel, module_name, wnd_id)
+        {
+            this.axis = axis;
             AutoTrim = false;
-		}
+        }
 
-		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
-		{
-			this.imodel = modules[typeof(FlightModel)] as FlightModel;
-		}
+        public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+        {
+            this.imodel = modules[typeof(FlightModel)] as FlightModel;
+        }
 
-		protected override void OnActivate() 
+        protected override void OnActivate() 
         {
             imodel.Activate();
             acc_controller.Activate();
@@ -66,7 +66,7 @@ namespace AtmosphereAutopilot
             acc_controller.Deactivate();
         }
 
-		double time_in_regime = 0.0;
+        double time_in_regime = 0.0;
 
         [AutoGuiAttr("angular vel", false, "G8")]
         protected float vel;
@@ -84,13 +84,13 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("prev_input", false, "G6")]
         protected float prev_input;
 
-		/// <summary>
-		/// Main control function
-		/// </summary>
-		/// <param name="cntrl">Control state to change</param>
+        /// <summary>
+        /// Main control function
+        /// </summary>
+        /// <param name="cntrl">Control state to change</param>
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
-		{
-            vel = imodel.AngularVel(axis);				    // get angular velocity
+        {
+            vel = imodel.AngularVel(axis);                  // get angular velocity
 
             float user_input = ControlUtils.get_neutralized_user_input(cntrl, axis);
 
@@ -118,7 +118,7 @@ namespace AtmosphereAutopilot
 
             output_acc = get_desired_acc(desired_v);            // produce output
 
-			// check if we're stable on given input value
+            // check if we're stable on given input value
             if (AutoTrim && vessel == AtmosphereAutopilot.Instance.ActiveVessel)
             {
                 if (Math.Abs(vel) < 0.002f)
@@ -137,7 +137,7 @@ namespace AtmosphereAutopilot
             acc_controller.ApplyControl(cntrl, output_acc);
 
             return output_acc;
-		}
+        }
 
         [VesselSerializable("max_v_construction")]
         [AutoGuiAttr("Max v construction", true, "G8")]
@@ -153,12 +153,12 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("AutoTrim")]
         [AutoGuiAttr("AutoTrim", true)]
         public bool AutoTrim { get; set; }
-	}
+    }
 
 
-	//
-	// Three realizations
-	//
+    //
+    // Three realizations
+    //
 
     public abstract class PitchYawAngularVelocityController : AngularVelAdaptiveController
     {
@@ -166,13 +166,13 @@ namespace AtmosphereAutopilot
             int wnd_id, int axis)
             : base(vessel, module_name, wnd_id, axis)
         {
-			max_input_aoa = max_aoa * dgr2rad;
-			min_input_aoa = -max_input_aoa;
-			max_g_aoa = max_input_aoa;
-			min_g_aoa = -max_g_aoa;
+            max_input_aoa = max_aoa * dgr2rad;
+            min_input_aoa = -max_input_aoa;
+            max_g_aoa = max_input_aoa;
+            min_g_aoa = -max_g_aoa;
             if (axis == PITCH)
                 max_v_construction = 0.7f;
-		}
+        }
 
         protected Matrix eq_A = new Matrix(2, 2);
         protected Matrix eq_b = new Matrix(2, 1);
@@ -332,7 +332,7 @@ namespace AtmosphereAutopilot
                     res_equilibr_v_lower = min_aoa_v;
                 }
 
-				moderated = true;
+                moderated = true;
             }
 
             if (moderate_g && imodel.dyn_pressure > 100.0)
@@ -407,32 +407,32 @@ namespace AtmosphereAutopilot
             // we start on 0.0 aoa with transit_max_v and we must not overshoot res_max_aoa
             // while applying -1.0 input all the time
             if (abs_cur_aoa < rad_max_aoa * 1.5f && moderated && imodel.dyn_pressure > 100.0)
-			{
-				double transit_max_aoa = Math.Min(rad_max_aoa, res_max_aoa);
-				state_mat[0, 0] = transit_max_aoa / 2.0;
-				state_mat[2, 0] = -1.0;
+            {
+                double transit_max_aoa = Math.Min(rad_max_aoa, res_max_aoa);
+                state_mat[0, 0] = transit_max_aoa / 2.0;
+                state_mat[2, 0] = -1.0;
                 state_mat[3, 0] = -1.0;
-				input_mat[0, 0] = -1.0;
-				double acc = lin_model.eval_row(1, state_mat, input_mat);
-				float new_dyn_max_v = 0.8f * (float)Math.Sqrt(transit_max_aoa * (-acc));
-				if (float.IsNaN(new_dyn_max_v))
-				{
-					if (old_dyn_max_v != 0.0f)
-						transit_max_v = old_dyn_max_v;
-					else
-						old_dyn_max_v = max_v_construction;
-				}
-				else
-				{
+                input_mat[0, 0] = -1.0;
+                double acc = lin_model.eval_row(1, state_mat, input_mat);
+                float new_dyn_max_v = 0.8f * (float)Math.Sqrt(transit_max_aoa * (-acc));
+                if (float.IsNaN(new_dyn_max_v))
+                {
+                    if (old_dyn_max_v != 0.0f)
+                        transit_max_v = old_dyn_max_v;
+                    else
+                        old_dyn_max_v = max_v_construction;
+                }
+                else
+                {
                     if (new_dyn_max_v < res_equilibr_v_upper * 1.2 || new_dyn_max_v < -res_equilibr_v_lower * 1.2)
                         new_dyn_max_v = 1.2f * Math.Max(Math.Abs(res_equilibr_v_upper), Math.Abs(res_equilibr_v_lower));
-					new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
-					transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
-					old_dyn_max_v = transit_max_v;
-				}
-			}
-			else
-				transit_max_v = max_v_construction;
+                    new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
+                    transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
+                    old_dyn_max_v = transit_max_v;
+                }
+            }
+            else
+                transit_max_v = max_v_construction;
             
             // if the user is in charge, let's hold surface-relative angular elocity
             float v_offset = 0.0f;
@@ -602,9 +602,11 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("scaled_restr_v", false, "G6")]
         protected float scaled_restrained_v;
 
+        [VesselSerializable("moderate_aoa")]
         [AutoGuiAttr("Moderate AoA", true, null)]
         public bool moderate_aoa = true;
 
+        [VesselSerializable("moderate_g")]
         [AutoGuiAttr("Moderate G-force", true, null)]
         public bool moderate_g = true;
 
@@ -614,7 +616,7 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("max_g_force")]
         [AutoGuiAttr("max G-force", true, "G6")]
-        protected float max_g_force = 10.0f;
+        protected float max_g_force = 15.0f;
     }
 
     public sealed class PitchAngularVelocityController : PitchYawAngularVelocityController
@@ -623,27 +625,27 @@ namespace AtmosphereAutopilot
             : base(vessel, "Pitch ang vel controller", 1234444, PITCH)
         { }
 
-		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
-		{
-			base.InitializeDependencies(modules);
-			this.acc_controller = modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
+        public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+        {
+            base.InitializeDependencies(modules);
+            this.acc_controller = modules[typeof(PitchAngularAccController)] as PitchAngularAccController;
             this.lin_model = imodel.pitch_rot_model_gen;
-		}
+        }
     }
 
-	public sealed class RollAngularVelocityController : AngularVelAdaptiveController
-	{
-		internal RollAngularVelocityController(Vessel vessel)
+    public sealed class RollAngularVelocityController : AngularVelAdaptiveController
+    {
+        internal RollAngularVelocityController(Vessel vessel)
             : base(vessel, "Roll ang vel controller", 1234445, ROLL)
-		{
+        {
             max_v_construction = 3.0f;
         }
 
-		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
-		{
-			base.InitializeDependencies(modules);
-			this.acc_controller = modules[typeof(RollAngularAccController)] as RollAngularAccController;
-		}
+        public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+        {
+            base.InitializeDependencies(modules);
+            this.acc_controller = modules[typeof(RollAngularAccController)] as RollAngularAccController;
+        }
 
         [AutoGuiAttr("max_input_v", false, "G6")]
         public float max_input_v;
@@ -657,24 +659,24 @@ namespace AtmosphereAutopilot
         Matrix state_mat = new Matrix(3, 1);
         Matrix input_mat = new Matrix(3, 1);
 
-		[VesselSerializable("wing_leveler")]
-		[GlobalSerializable("wing_leveler")]
-		[AutoGuiAttr("Wing leveler", true)]
-		public bool wing_leveler = true;
-		
-		[AutoGuiAttr("Snap angle", true, "G4")]
-		public float leveler_snap_angle = 3.0f;
+        [VesselSerializable("wing_leveler")]
+        [GlobalSerializable("wing_leveler")]
+        [AutoGuiAttr("Wing leveler", true)]
+        public bool wing_leveler = true;
+        
+        [AutoGuiAttr("Snap angle", true, "G4")]
+        public float leveler_snap_angle = 3.0f;
 
-		[AutoGuiAttr("angle_btw_hor", false, "G5")]
-		float angle_btw_hor;
+        [AutoGuiAttr("angle_btw_hor", false, "G5")]
+        float angle_btw_hor;
 
-		[AutoGuiAttr("angle_btw_hor_sin", false, "G5")]
-		float angle_btw_hor_sin;
+        [AutoGuiAttr("angle_btw_hor_sin", false, "G5")]
+        float angle_btw_hor_sin;
 
-		float transit_max_v;
+        float transit_max_v;
 
-		[AutoGuiAttr("snapping_Kp", true, "G5")]
-		public float snapping_Kp = 0.25f;
+        [AutoGuiAttr("snapping_Kp", true, "G5")]
+        public float snapping_Kp = 0.25f;
 
         protected override float process_desired_v(float des_v, bool user_input)
         {
@@ -710,43 +712,43 @@ namespace AtmosphereAutopilot
                 min_input_v = -max_v_construction;
             }
 
-			// wing level snapping
-			float snapping_vel = 0.0f;
+            // wing level snapping
+            float snapping_vel = 0.0f;
             if (wing_leveler && user_input && des_v == 0.0f && kacc_quadr > 1e-6 && imodel.dyn_pressure > 0.0)
-			{
-				Vector3 planet2ves = (vessel.ReferenceTransform.position - vessel.mainBody.position).normalized;
-				float zenith_angle = Vector3.Angle(planet2ves, vessel.ReferenceTransform.up);
-				if (zenith_angle > 20.0f && zenith_angle < 160.0f && imodel.surface_v_magnitude > 10.0)
-				{
-					Vector3 right_horizont_vector = Vector3.Cross(planet2ves, vessel.srf_velocity);
-					Vector3 right_project = Vector3.ProjectOnPlane(vessel.ReferenceTransform.right, Vector3.Cross(vessel.srf_velocity, right_horizont_vector));
-					Vector3 roll_vector = Vector3.Cross(vessel.ReferenceTransform.right, right_project.normalized);
-					angle_btw_hor_sin = -Vector3.Dot(roll_vector, vessel.ReferenceTransform.up);
-					if (Math.Abs(angle_btw_hor_sin) <= Math.Sin(leveler_snap_angle * dgr2rad))
-					{
-						angle_btw_hor = Mathf.Asin(angle_btw_hor_sin);
-						float dt = TimeWarp.fixedDeltaTime;
+            {
+                Vector3 planet2ves = (vessel.ReferenceTransform.position - vessel.mainBody.position).normalized;
+                float zenith_angle = Vector3.Angle(planet2ves, vessel.ReferenceTransform.up);
+                if (zenith_angle > 20.0f && zenith_angle < 160.0f && imodel.surface_v_magnitude > 10.0)
+                {
+                    Vector3 right_horizont_vector = Vector3.Cross(planet2ves, vessel.srf_velocity);
+                    Vector3 right_project = Vector3.ProjectOnPlane(vessel.ReferenceTransform.right, Vector3.Cross(vessel.srf_velocity, right_horizont_vector));
+                    Vector3 roll_vector = Vector3.Cross(vessel.ReferenceTransform.right, right_project.normalized);
+                    angle_btw_hor_sin = -Vector3.Dot(roll_vector, vessel.ReferenceTransform.up);
+                    if (Math.Abs(angle_btw_hor_sin) <= Math.Sin(leveler_snap_angle * dgr2rad))
+                    {
+                        angle_btw_hor = Mathf.Asin(angle_btw_hor_sin);
+                        float dt = TimeWarp.fixedDeltaTime;
 
-						// Non-overshooting velocity for leveler_snap_angle
-						float transit_max_angle = leveler_snap_angle * dgr2rad;
-						state_mat[0, 0] = 0.0;
-						state_mat[1, 0] = 1.0;
+                        // Non-overshooting velocity for leveler_snap_angle
+                        float transit_max_angle = leveler_snap_angle * dgr2rad;
+                        state_mat[0, 0] = 0.0;
+                        state_mat[1, 0] = 1.0;
                         state_mat[2, 0] = 1.0;
-						input_mat[0, 0] = 1.0;
-						double acc = imodel.roll_rot_model_gen.eval_row(0, state_mat, input_mat);
-						float new_dyn_max_v =
-							(float)Math.Sqrt(transit_max_angle * acc);
-						if (!float.IsNaN(new_dyn_max_v))
-						{
-							new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
-							transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
-							snapping_vel = snapping_Kp * angle_btw_hor / transit_max_angle * transit_max_v;
-							if (Math.Abs(snapping_vel) > Math.Abs(angle_btw_hor) / dt)
-								snapping_vel = angle_btw_hor / dt;
-						}
-					}
-				}
-			}
+                        input_mat[0, 0] = 1.0;
+                        double acc = imodel.roll_rot_model_gen.eval_row(0, state_mat, input_mat);
+                        float new_dyn_max_v =
+                            (float)Math.Sqrt(transit_max_angle * acc);
+                        if (!float.IsNaN(new_dyn_max_v))
+                        {
+                            new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
+                            transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
+                            snapping_vel = snapping_Kp * angle_btw_hor / transit_max_angle * transit_max_v;
+                            if (Math.Abs(snapping_vel) > Math.Abs(angle_btw_hor) / dt)
+                                snapping_vel = angle_btw_hor / dt;
+                        }
+                    }
+                }
+            }
 
             // desired_v moderation section
             if (des_v >= 0.0f)
@@ -768,7 +770,7 @@ namespace AtmosphereAutopilot
                 des_v = normalized_des_v * scaled_restrained_v;
             }
 
-			return des_v + snapping_vel;
+            return des_v + snapping_vel;
         }
 
         [AutoGuiAttr("quadr Kp", true, "G6")]
@@ -866,20 +868,20 @@ namespace AtmosphereAutopilot
             }
             return desired_deriv;
         }
-	}
+    }
 
     public sealed class YawAngularVelocityController : PitchYawAngularVelocityController
-	{
-		internal YawAngularVelocityController(Vessel vessel)
+    {
+        internal YawAngularVelocityController(Vessel vessel)
             : base(vessel, "Yaw ang vel controller", 1234446, YAW)
-		{ }
+        { }
 
-		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
-		{
-			base.InitializeDependencies(modules);
-			this.acc_controller = modules[typeof(YawAngularAccController)] as YawAngularAccController;
+        public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+        {
+            base.InitializeDependencies(modules);
+            this.acc_controller = modules[typeof(YawAngularAccController)] as YawAngularAccController;
             this.lin_model = imodel.yaw_rot_model_gen;
-		}
-	}
+        }
+    }
 
 }

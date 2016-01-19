@@ -26,7 +26,7 @@ namespace AtmosphereAutopilot
     {
         PitchAngularVelocityController pc;
         RollAngularVelocityController rc;
-		YawAngularVelocityController yvc;
+        YawAngularVelocityController yvc;
         PitchAoAController ac;
         SideslipController yc;
         AutopilotModule[] gui_list = new AutopilotModule[5];
@@ -38,7 +38,7 @@ namespace AtmosphereAutopilot
         {
             gui_list[0] = pc = modules[typeof(PitchAngularVelocityController)] as PitchAngularVelocityController;
             gui_list[1] = rc = modules[typeof(RollAngularVelocityController)] as RollAngularVelocityController;
-			gui_list[2] = yvc = modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
+            gui_list[2] = yvc = modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
             gui_list[3] = ac = modules[typeof(PitchAoAController)] as PitchAoAController;
             gui_list[4] = yc = modules[typeof(SideslipController)] as SideslipController;
         }
@@ -72,8 +72,8 @@ namespace AtmosphereAutopilot
                 return;
 
             ac.ApplyControl(cntrl, 0.0f, 0.0f);
-			yc.ApplyControl(cntrl, 0.0f, 0.0f);
-			rc.ApplyControl(cntrl, 0.0f);
+            yc.ApplyControl(cntrl, 0.0f, 0.0f);
+            rc.ApplyControl(cntrl, 0.0f);
         }
 
         protected override void _drawGUI(int id)
@@ -87,8 +87,8 @@ namespace AtmosphereAutopilot
                 else
                     module.UnShowGUI();
             }
-			GUILayout.Space(5.0f);
-			AutoGUI.AutoDrawObject(this);
+            GUILayout.Space(5.0f);
+            AutoGUI.AutoDrawObject(this);
             GUILayout.EndVertical();
             GUI.DragWindow();
         }

@@ -96,7 +96,7 @@ namespace AtmosphereAutopilot
             }
             // Generalization space initialization
             gen_space = new GridSpace<GenStruct>(ann.input_count, gen_cells, l_gen_bound, u_gen_bound);
-			linear_gen_buff = gen_space.Linearized;
+            linear_gen_buff = gen_space.Linearized;
             gen_space.put_method = GenBufPutCriteria;
             // Delegates assignment
             input_update_dlg = input_method;
@@ -201,15 +201,15 @@ namespace AtmosphereAutopilot
             if (imm_training_inputs.Size >= cell_batch)         // there is enough material for generalization averaging
             {
                 double val = 0.0;
-				int dim = ann.input_count;
+                int dim = ann.input_count;
                 for (int i = 0; i < dim; i++)
-					coord_vector[i] = 0.0;
+                    coord_vector[i] = 0.0;
                 // Average state over cell_batch samples
                 for (int i = 0; i < cell_batch; i++)
                 {
                     val += imm_training_outputs.getFromTail(i);
-					for (int j = 0; j < dim; j++)
-						coord_vector[j] += imm_training_inputs.getFromTail(i)[j];
+                    for (int j = 0; j < dim; j++)
+                        coord_vector[j] += imm_training_inputs.getFromTail(i)[j];
                 }
                 val /= (double)cell_batch;
                 coord_vector.Scale(1.0/(double)cell_batch);

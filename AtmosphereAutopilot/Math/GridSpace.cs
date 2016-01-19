@@ -81,10 +81,10 @@ namespace AtmosphereAutopilot
             }
         }
 
-		public CellValue Get(Vector coord)
+        public CellValue Get(Vector coord)
         {
             int index = getLinearIndex(coord);
-			return storage[index];
+            return storage[index];
         }
 
         public bool Remove(CellValue val)
@@ -94,7 +94,7 @@ namespace AtmosphereAutopilot
         }
 
         /// <summary>
-		/// get one-dimensional index of cell from coordinate vector
+        /// get one-dimensional index of cell from coordinate vector
         /// </summary>
         public int getLinearIndex(Vector coord)
         {

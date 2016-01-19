@@ -23,16 +23,16 @@ using System.Reflection;
 
 namespace AtmosphereAutopilot
 {
-	public sealed class TopModuleManager : StateController
+    public sealed class TopModuleManager : StateController
     {
-		internal TopModuleManager(Vessel vessel)
-			: base(vessel, "Autopilot module manager", 24888888)
-		{
-			cur_ves_modules = AtmosphereAutopilot.Instance.autopilot_module_lists[vessel];
-		}
+        internal TopModuleManager(Vessel vessel)
+            : base(vessel, "Autopilot module manager", 24888888)
+        {
+            cur_ves_modules = AtmosphereAutopilot.Instance.autopilot_module_lists[vessel];
+        }
 
         // All finished autopilot modules, created for this vessel
-		Dictionary<Type, AutopilotModule> cur_ves_modules;
+        Dictionary<Type, AutopilotModule> cur_ves_modules;
 
         // All high-level autopilot modules, created for this vessel
         Dictionary<Type, StateController> HighLevelControllers = new Dictionary<Type, StateController>();
@@ -43,21 +43,21 @@ namespace AtmosphereAutopilot
         protected override void OnActivate()
         {
             // If this top_manager is the only module loaded for this vessel
-			if (cur_ves_modules.Count == 1)
-			{
-				// We need to create all those modules. Module type needs to define constructor of
-				// Constructor(Vessel v) prototype.
+            if (cur_ves_modules.Count == 1)
+            {
+                // We need to create all those modules. Module type needs to define constructor of
+                // Constructor(Vessel v) prototype.
                 foreach (var module_type in AtmosphereAutopilot.Instance.autopilot_module_types)
-				{
+                {
                     if (module_type.Equals(typeof(TopModuleManager)))
                         continue;
-					var constructor = module_type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, 
+                    var constructor = module_type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, 
                         new[] { typeof(Vessel) }, null);
                     if (constructor == null)
                         throw new NullReferenceException(module_type.Name + " module has no void(Vessel) constructor.");
-					cur_ves_modules[module_type] = (AutopilotModule)constructor.Invoke(new[] { vessel });
-				}
-				// Then we need to resolve relations and deserialize
+                    cur_ves_modules[module_type] = (AutopilotModule)constructor.Invoke(new[] { vessel });
+                }
+                // Then we need to resolve relations and deserialize
                 foreach (var module_type in cur_ves_modules.Keys)
                     if (!module_type.Equals(typeof(TopModuleManager)))
                     {
@@ -75,11 +75,11 @@ namespace AtmosphereAutopilot
                     throw new InvalidOperationException("No high-level autopilot modules were found");
                 else
                     active_controller = HighLevelControllers[typeof(StandardFlyByWire)];
-			}
+            }
 
             if (active_controller != null)
                 active_controller.Activate();
-			vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
+            vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);
             MessageManager.post_status_message("Autopilot module manager enabled");
         }
 

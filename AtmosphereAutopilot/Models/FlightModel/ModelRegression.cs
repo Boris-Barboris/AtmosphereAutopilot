@@ -29,7 +29,7 @@ namespace AtmosphereAutopilot
     using TrainerTask = OnlineLinTrainer.LinApproxTask;
 
     public sealed partial class FlightModel : AutopilotModule
-	{
+    {
         //public Vector3d model_acc = Vector3d.zero;
 
         LinApprox pitch_aero_torque_model = new LinApprox(2);

@@ -44,11 +44,11 @@ namespace AtmosphereAutopilot
         VectorArray grad_training_vectors;
         CircularBuffer<GenStruct> grad_training;
         // Generalization buffer is being used as generality augmentor
-		CircularBuffer<GenStruct>[] gen_buffers;
+        CircularBuffer<GenStruct>[] gen_buffers;
         // Error weight buffers
         //List<double> imm_error_weights = new List<double>();
         //List<double> grad_error_weights = new List<double>();
-		//List<double> gen_error_weights = new List<double>();
+        //List<double> gen_error_weights = new List<double>();
         
         // Views to adapt inputs for Approximator
         ListView<Vector> input_view;
@@ -68,14 +68,14 @@ namespace AtmosphereAutopilot
 
         struct GenStruct
         {
-			public Vector coord;
+            public Vector coord;
             public double val;
             public int birth;
             public GenStruct(double value, int time, Vector v)
             {
                 val = value;
                 birth = time;
-				coord = v;
+                coord = v;
             }
         }
 
@@ -91,7 +91,7 @@ namespace AtmosphereAutopilot
             imm_buf_vectors = new VectorArray(input_count, imm_buf_size);
             imm_training_inputs = new CircularBuffer<Vector>(imm_buf_size, true);
             imm_training_vectors = new VectorArray(input_count, imm_buf_size);
-			grad_training = new CircularBuffer<GenStruct>(imm_buf_size / 2, true);
+            grad_training = new CircularBuffer<GenStruct>(imm_buf_size / 2, true);
             grad_training_vectors = new VectorArray(input_count, imm_buf_size / 2);
             imm_buf_outputs = new CircularBuffer<double>(imm_buf_size, true);
             imm_training_outputs = new CircularBuffer<double>(imm_buf_size, true);
@@ -104,17 +104,17 @@ namespace AtmosphereAutopilot
                     grad_training[i] = new GenStruct(0.0, 0, grad_training_vectors[i]);
             }
             // Generalization space initialization
-			this.gen_triggers = gen_triggers;
-			gen_space_size = 0;
-			gen_buffers = new CircularBuffer<GenStruct>[input_count];
-			for (int i = 0; i < input_count; i++)
-			{
-				gen_buffers[i] = new CircularBuffer<GenStruct>(gen_buf_sizes[i], true);
-				gen_space_size += gen_buf_sizes[i];
-				VectorArray gen_array = new VectorArray(input_count, gen_buf_sizes[i]);
-				for (int j = 0; j < gen_buf_sizes[i]; j++)
-					gen_buffers[i][j] = new GenStruct(0.0, 0, gen_array[j]);
-			}
+            this.gen_triggers = gen_triggers;
+            gen_space_size = 0;
+            gen_buffers = new CircularBuffer<GenStruct>[input_count];
+            for (int i = 0; i < input_count; i++)
+            {
+                gen_buffers[i] = new CircularBuffer<GenStruct>(gen_buf_sizes[i], true);
+                gen_space_size += gen_buf_sizes[i];
+                VectorArray gen_array = new VectorArray(input_count, gen_buf_sizes[i]);
+                for (int j = 0; j < gen_buf_sizes[i]; j++)
+                    gen_buffers[i][j] = new GenStruct(0.0, 0, gen_array[j]);
+            }
             // Delegates assignment
             input_update_dlg = input_method;
             output_update_dlg = output_method;
@@ -259,23 +259,23 @@ namespace AtmosphereAutopilot
                             Vector wrt = grad_training.getWritingCell().coord;
                             Vector v2write = imm_training_inputs[0];
                             v2write.DeepCopy(wrt);
-							grad_training.Put(new GenStruct(imm_training_outputs[0], cur_time - imm_training_inputs.Size * last_time_elapsed, wrt));
+                            grad_training.Put(new GenStruct(imm_training_outputs[0], cur_time - imm_training_inputs.Size * last_time_elapsed, wrt));
                         }
-						// let's update generalization buffers
-						Vector new_coord = imm_training_inputs[0];
-						for (int j = 0; j < input_count; j++)
-						{
-							int cur_add_time = cur_time - imm_training_inputs.Size * last_time_elapsed;
-							var prev_cell = gen_buffers[j].getLast();
-							if (gen_buffers[j].Size == 0 ||
-								Math.Abs(prev_cell.coord[j] - new_coord[j]) >
-								(gen_buffers[j].Size / (double)gen_buffers[j].Capacity) * gen_triggers[j])
-							{
-								var cell = gen_buffers[j].getWritingCell();
-								new_coord.DeepCopy(cell.coord);
-								gen_buffers[j].Put(new GenStruct(prev_output, cur_add_time, cell.coord));
-							}
-						}
+                        // let's update generalization buffers
+                        Vector new_coord = imm_training_inputs[0];
+                        for (int j = 0; j < input_count; j++)
+                        {
+                            int cur_add_time = cur_time - imm_training_inputs.Size * last_time_elapsed;
+                            var prev_cell = gen_buffers[j].getLast();
+                            if (gen_buffers[j].Size == 0 ||
+                                Math.Abs(prev_cell.coord[j] - new_coord[j]) >
+                                (gen_buffers[j].Size / (double)gen_buffers[j].Capacity) * gen_triggers[j])
+                            {
+                                var cell = gen_buffers[j].getWritingCell();
+                                new_coord.DeepCopy(cell.coord);
+                                gen_buffers[j].Put(new GenStruct(prev_output, cur_add_time, cell.coord));
+                            }
+                        }
                     }
                     Vector writing_cell = imm_training_inputs.getWritingCell();
                     imm_buf_inputs.Get().DeepCopy(writing_cell);
@@ -289,15 +289,15 @@ namespace AtmosphereAutopilot
             }
         }
 
-		public double[] gen_triggers;
+        public double[] gen_triggers;
 
-		ListView<GenStruct> gen_list_view;
+        ListView<GenStruct> gen_list_view;
 
         ListSelector<GenStruct, Vector> gen_inputs_selector;
         ListSelector<GenStruct, double> gen_output_selector;
 
-		ListSelector<GenStruct, Vector> grad_input_selector;
-		ListSelector<GenStruct, double> grad_output_selector;
+        ListSelector<GenStruct, Vector> grad_input_selector;
+        ListSelector<GenStruct, double> grad_output_selector;
 
         List<int> imm_weights_dummys = new List<int>();
         ListSelector<int, double> imm_error_weights;
@@ -306,18 +306,18 @@ namespace AtmosphereAutopilot
 
         void create_views()
         {
-			gen_list_view = new ListView<GenStruct>(gen_buffers);
+            gen_list_view = new ListView<GenStruct>(gen_buffers);
 
-			gen_inputs_selector = new ListSelector<GenStruct, Vector>(gen_list_view, cv => cv.coord);
-			gen_output_selector = new ListSelector<GenStruct, double>(gen_list_view, cv => cv.val);
-			grad_input_selector = new ListSelector<GenStruct, Vector>(grad_training, gs => gs.coord);
+            gen_inputs_selector = new ListSelector<GenStruct, Vector>(gen_list_view, cv => cv.coord);
+            gen_output_selector = new ListSelector<GenStruct, double>(gen_list_view, cv => cv.val);
+            grad_input_selector = new ListSelector<GenStruct, Vector>(grad_training, gs => gs.coord);
             grad_output_selector = new ListSelector<GenStruct, double>(grad_training, gs => gs.val);
 
             imm_error_weights = new ListSelector<int, double>(imm_weights_dummys, imm_weight_func);
             gen_error_weights = new ListSelector<GenStruct, double>(gen_list_view, gen_weight_func);
             grad_error_weights = new ListSelector<GenStruct, double>(grad_training, grad_weight_func);
 
-			input_view = new ListView<Vector>(imm_training_inputs, grad_input_selector, gen_inputs_selector);
+            input_view = new ListView<Vector>(imm_training_inputs, grad_input_selector, gen_inputs_selector);
             output_view = new ListView<double>(imm_training_outputs, grad_output_selector, gen_output_selector);
             weight_view = new ListView<double>(imm_error_weights, grad_error_weights, gen_error_weights);
         }
@@ -386,7 +386,7 @@ namespace AtmosphereAutopilot
                 //double lin_output = linmodel.eval_training(input);
                 //sum_error = Math.Abs((lin_output - true_output) / max_output_value);
                 linear_param = (float)(sum_error / (double)(imm_training_inputs.Size + grad_training.Size));
-				linear = linear_param < linear_err_criteria;
+                linear = linear_param < linear_err_criteria;
                 //linear_param = (float)sum_error;
                 //linear = sum_error < linear_err_criteria;
                 if (linear)
@@ -408,13 +408,13 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("gen_space_fill_k", false, "G6")]
         public volatile float gen_space_fill_k;
 
-		[AutoGuiAttr("nonlin_trigger", true)]
+        [AutoGuiAttr("nonlin_trigger", true)]
         public int nonlin_trigger = 100;
 
         [AutoGuiAttr("grad_buf_length", false)]
         int grad_buf_length { get { return grad_training.Size; } }
 
-		int gen_space_size;
+        int gen_space_size;
 
         bool gen_element_removed = false;
 
@@ -500,16 +500,16 @@ namespace AtmosphereAutopilot
         void reset_time()
         {
             for (int i = 0; i < gen_buffers.Length; i++)
-				for (int j = 0; j < gen_buffers[i].Size; j++)
-				{
-					var cur_struct = gen_buffers[i][j];
-					int cur_age = Math.Min(cur_time - cur_struct.birth, max_age);
-					gen_buffers[i][j] = new GenStruct(cur_struct.val, max_age - cur_age, cur_struct.coord);
-				}            
+                for (int j = 0; j < gen_buffers[i].Size; j++)
+                {
+                    var cur_struct = gen_buffers[i][j];
+                    int cur_age = Math.Min(cur_time - cur_struct.birth, max_age);
+                    gen_buffers[i][j] = new GenStruct(cur_struct.val, max_age - cur_age, cur_struct.coord);
+                }            
             for (int i = 0; i < grad_training.Size; i++)
             {
                 int cur_age = Math.Min(cur_time - grad_training[i].birth, max_age);
-				grad_training[i] = new GenStruct(grad_training[i].val, max_age - cur_age, grad_training[i].coord);
+                grad_training[i] = new GenStruct(grad_training[i].val, max_age - cur_age, grad_training[i].coord);
             }
             cur_time = max_age;
         }

@@ -24,16 +24,16 @@ using UnityEngine;
 namespace AtmosphereAutopilot
 {
 
-	/// <summary>
-	/// Represents autopilot module, wich can be turned on and off.
-	/// It has GUI and can be serialized. Derived classes need to implement
-	/// OnActivate and OnDeactivate.
-	/// </summary>
+    /// <summary>
+    /// Represents autopilot module, wich can be turned on and off.
+    /// It has GUI and can be serialized. Derived classes need to implement
+    /// OnActivate and OnDeactivate.
+    /// </summary>
     public abstract class AutopilotModule : GUIWindow, ISerializable
     {
-		public const int PITCH = 0;
-		public const int ROLL = 1;
-		public const int YAW = 2;
+        public const int PITCH = 0;
+        public const int ROLL = 1;
+        public const int YAW = 2;
 
         public const float rad2dgr = (float)(180.0 / Math.PI);
         public const float dgr2rad = (float)(Math.PI / 180.0);
@@ -49,12 +49,12 @@ namespace AtmosphereAutopilot
             this.module_name = module_name;
         }
 
-		/// <summary>
-		/// If this module is dependent on other modules, you should get references to
-		/// required ones in this call.
-		/// </summary>
-		/// <param name="modules">Map of autopilot modules, instanced for this vessel.</param>
-		public virtual void InitializeDependencies(Dictionary<Type, AutopilotModule> modules) { }
+        /// <summary>
+        /// If this module is dependent on other modules, you should get references to
+        /// required ones in this call.
+        /// </summary>
+        /// <param name="modules">Map of autopilot modules, instanced for this vessel.</param>
+        public virtual void InitializeDependencies(Dictionary<Type, AutopilotModule> modules) { }
 
         public void Activate()
         {
@@ -74,7 +74,7 @@ namespace AtmosphereAutopilot
             enabled = false;
         }
 
-		protected abstract void OnDeactivate();
+        protected abstract void OnDeactivate();
 
         public bool Active
         {
@@ -98,9 +98,9 @@ namespace AtmosphereAutopilot
 
         #region Serialization
 
-		/// <summary>
-		/// Deserialize vessel-specific fields. Optional OnDeserialize callback is used.
-		/// </summary>
+        /// <summary>
+        /// Deserialize vessel-specific fields. Optional OnDeserialize callback is used.
+        /// </summary>
         public bool DeserializeVesselSpecific()
         {
             return AutoSerialization.Deserialize(this, module_name.Replace(' ', '_'),
@@ -108,9 +108,9 @@ namespace AtmosphereAutopilot
                 typeof(VesselSerializable), OnDeserialize);
         }
 
-		/// <summary>
+        /// <summary>
         /// Deserialize global fields. Optional OnDeserialize callback is used.
-		/// </summary>
+        /// </summary>
         public bool DeserializeGlobalSpecific()
         {
             return AutoSerialization.Deserialize(this, module_name.Replace(' ', '_'),
@@ -118,9 +118,9 @@ namespace AtmosphereAutopilot
                 typeof(GlobalSerializable), OnDeserialize);
         }
 
-		/// <summary>
-		/// Serialize global and vessel data to files. BeforeSerialized and OnSerialize callbacks are used.
-		/// </summary>
+        /// <summary>
+        /// Serialize global and vessel data to files. BeforeSerialized and OnSerialize callbacks are used.
+        /// </summary>
         public virtual void Serialize()
         {
             BeforeSerialized();
@@ -136,11 +136,11 @@ namespace AtmosphereAutopilot
 
         protected virtual void BeforeDeserialized() { }
 
-		/// <summary>
-		/// Deserialize global data and then vessel-specific. Optional BeforeDeserialized and OnDeserialize 
-		/// callbacks are used.
-		/// </summary>
-		/// <returns>true if nothing crashed</returns>
+        /// <summary>
+        /// Deserialize global data and then vessel-specific. Optional BeforeDeserialized and OnDeserialize 
+        /// callbacks are used.
+        /// </summary>
+        /// <returns>true if nothing crashed</returns>
         public virtual bool Deserialize()
         {
             BeforeDeserialized();
@@ -159,12 +159,12 @@ namespace AtmosphereAutopilot
         protected float WindowLeft { get { return window.xMin; } set { window.xMin = value; } }
 
         [GlobalSerializable("window_y")]
-		protected float WindowTop { get { return window.yMin; } set { window.yMin = value; } }
+        protected float WindowTop { get { return window.yMin; } set { window.yMin = value; } }
 
         [GlobalSerializable("window_width")]
-		protected float WindowWidth { get { return window.width; } set { window.width = value; } }
+        protected float WindowWidth { get { return window.width; } set { window.width = value; } }
 
-		/// <inheritdoc />
+        /// <inheritdoc />
         protected override void _drawGUI(int id)
         {
             GUILayout.BeginVertical();

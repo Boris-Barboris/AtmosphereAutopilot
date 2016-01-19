@@ -37,9 +37,9 @@ namespace AtmosphereAutopilot
 
         protected override void CtrlSurfaceUpdate(Vector3 vel)
         {
-			if (vessel.transform == null)
-				return;
-			
+            if (vessel.transform == null)
+                return;
+            
             Vector3 world_com = vessel.CoM + vessel.rb_velocity * TimeWarp.fixedDeltaTime;
             float pitch_input = ignorePitch ? 0.0f : vessel.ctrlState.pitch;
             float roll_input = ignoreRoll ? 0.0f : vessel.ctrlState.roll;

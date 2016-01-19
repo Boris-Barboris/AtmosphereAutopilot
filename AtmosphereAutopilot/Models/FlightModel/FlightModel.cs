@@ -27,47 +27,47 @@ namespace AtmosphereAutopilot
 
     using Vector = VectorArray.Vector;
 
-	/// <summary>
-	/// Short-term motion model. Is responsible for angular velocity, angular acceleration, control signal and 
-	/// angle of attack evaluation and storage. Executes analysis of pitch, roll and yaw evolution and control authority.
-	/// </summary>
+    /// <summary>
+    /// Short-term motion model. Is responsible for angular velocity, angular acceleration, control signal and 
+    /// angle of attack evaluation and storage. Executes analysis of pitch, roll and yaw evolution and control authority.
+    /// </summary>
     public sealed partial class FlightModel : AutopilotModule
-	{
-		internal FlightModel(Vessel v):
+    {
+        internal FlightModel(Vessel v):
             base(v, 34278832, "Flight model")
-		{
-			for (int i = 0; i < 3; i++)
-			{
+        {
+            for (int i = 0; i < 3; i++)
+            {
                 input_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
                 csurf_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
                 gimbal_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
                 angular_v_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
                 angular_acc_buf[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
                 aoa_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
-			}
+            }
             initialize_lin_tainers();
             integrator = vessel.GetComponent<FlightIntegrator>();
-		}
+        }
 
         FlightIntegrator integrator;
 
-		protected override void OnActivate()
-		{
+        protected override void OnActivate()
+        {
             sequential_dt = false;
-			vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
-			vessel.OnPostAutopilotUpdate += new FlightInputCallback(OnPostAutopilot);
+            vessel.OnPreAutopilotUpdate += new FlightInputCallback(OnPreAutopilot);
+            vessel.OnPostAutopilotUpdate += new FlightInputCallback(OnPostAutopilot);
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_pitch_ann);
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_roll_ann);
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_yaw_ann);
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_pitch_lift);
             AtmosphereAutopilot.Instance.BackgroundThread.add_func(train_yaw_lift);
             AtmosphereAutopilot.Instance.BackgroundThread.Start();
-		}
+        }
 
-		protected override void OnDeactivate()
-		{
-			vessel.OnPreAutopilotUpdate -= new FlightInputCallback(OnPreAutopilot);
-			vessel.OnPostAutopilotUpdate -= new FlightInputCallback(OnPostAutopilot);
+        protected override void OnDeactivate()
+        {
+            vessel.OnPreAutopilotUpdate -= new FlightInputCallback(OnPreAutopilot);
+            vessel.OnPostAutopilotUpdate -= new FlightInputCallback(OnPostAutopilot);
             AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_pitch_ann);
             AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_roll_ann);
             AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_yaw_ann);
@@ -75,9 +75,9 @@ namespace AtmosphereAutopilot
             AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_yaw_lift);
             return_gimbals();
             sequential_dt = false;
-		}
+        }
 
-		static readonly int BUFFER_SIZE = 8;
+        static readonly int BUFFER_SIZE = 8;
 
 
 
@@ -102,9 +102,9 @@ namespace AtmosphereAutopilot
         #region BufferExports
 
         /// <summary>
-		/// Control signal history for pitch, roll or yaw. [-1.0, 1.0].
-		/// </summary>
-		public CircularBuffer<float> ControlInputHistory(int axis) { return input_buf[axis]; }
+        /// Control signal history for pitch, roll or yaw. [-1.0, 1.0].
+        /// </summary>
+        public CircularBuffer<float> ControlInputHistory(int axis) { return input_buf[axis]; }
         /// <summary>
         /// Control signal for pitch, roll or yaw. [-1.0, 1.0].
         /// </summary>
@@ -128,23 +128,23 @@ namespace AtmosphereAutopilot
         /// </summary>
         public float GimbalPos(int axis) { return gimbal_buf[axis].getLast(); }
 
-		/// <summary>
-		/// Angular velocity history for pitch, roll or yaw. Radians per second.
-		/// </summary>
+        /// <summary>
+        /// Angular velocity history for pitch, roll or yaw. Radians per second.
+        /// </summary>
         public CircularBuffer<float> AngularVelHistory(int axis) { return angular_v_buf[axis]; }
         /// <summary>
         /// Angular velocity for pitch, roll or yaw. Radians per second.
         /// </summary>
         public float AngularVel(int axis) { return angular_v_buf[axis].getLast(); }
 
-		/// <summary>
+        /// <summary>
         /// Angular acceleration hitory for pitch, roll or yaw. Radians per second per second.
-		/// </summary>
-		public CircularBuffer<double> AngularAccHistory(int axis) { return angular_acc_buf[axis]; }
+        /// </summary>
+        public CircularBuffer<double> AngularAccHistory(int axis) { return angular_acc_buf[axis]; }
         /// <summary>
         /// Angular acceleration for pitch, roll or yaw. Radians per second per second.
         /// </summary>
-		public double AngularAcc(int axis) { return angular_acc_buf[axis].getLast(); }
+        public double AngularAcc(int axis) { return angular_acc_buf[axis].getLast(); }
 
         /// <summary>
         /// Angle of attack hitory for pitch, roll or yaw. Radians.
@@ -155,24 +155,24 @@ namespace AtmosphereAutopilot
         /// </summary>
         public float AoA(int axis) { return aoa_buf[axis].getLast(); }
 
-		#endregion
+        #endregion
 
 
 
-        void OnPostAutopilot(FlightCtrlState state)		// update control input
-		{
-			update_control(state);
-			if (!vessel.LandedOrSplashed)
-				sequential_dt = true;
-			postupdate_dynamics();
-		}
+        void OnPostAutopilot(FlightCtrlState state)     // update control input
+        {
+            update_control(state);
+            if (!vessel.LandedOrSplashed)
+                sequential_dt = true;
+            postupdate_dynamics();
+        }
 
         internal bool sequential_dt = false;
 
-		void OnPreAutopilot(FlightCtrlState state)		// workhorse function
-		{
+        void OnPreAutopilot(FlightCtrlState state)      // workhorse function
+        {
             update_moments();
-			update_velocity_acc();
+            update_velocity_acc();
             update_aoa();
             update_engine_moments();
             get_gimbal_authority();
@@ -190,7 +190,7 @@ namespace AtmosphereAutopilot
                     update_yaw_rot_model();
                 }
             }
-		}
+        }
 
         #region Serialization
 
@@ -205,22 +205,22 @@ namespace AtmosphereAutopilot
 
         #region GUI
 
-		static readonly string[] axis_names = { "pitch", "roll", "yaw" };
+        static readonly string[] axis_names = { "pitch", "roll", "yaw" };
         const float rad2degree = (float)(180.0 / Math.PI);
 
-		protected override void _drawGUI(int id)
-		{
-			GUILayout.BeginVertical();
-			for (int i = 0; i < 3; i++)
-			{
+        protected override void _drawGUI(int id)
+        {
+            GUILayout.BeginVertical();
+            for (int i = 0; i < 3; i++)
+            {
                 GUILayout.Label("=======" + axis_names[i] + "=======");
-				GUILayout.Label("ang vel = " + angular_v_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
+                GUILayout.Label("ang vel = " + angular_v_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label("ang acc = " + angular_acc_buf[i].getLast().ToString("G8"), GUIStyles.labelStyleLeft);
                 GUILayout.Label("AoA = " + (aoa_buf[i].getLast() * rad2degree).ToString("G8"), GUIStyles.labelStyleLeft);
-			}
+            }
             AutoGUI.AutoDrawObject(this);
-			GUILayout.EndVertical();
-			GUI.DragWindow();
+            GUILayout.EndVertical();
+            GUI.DragWindow();
         }
 
         OnlineLinTrainerWindow pitch_lin_wnd, roll_lin_wnd, yaw_lin_wnd,

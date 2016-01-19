@@ -26,7 +26,7 @@ namespace AtmosphereAutopilot
     {
         PitchAngularVelocityController pc;
         RollAngularVelocityController rc;
-		YawAngularVelocityController yvc;
+        YawAngularVelocityController yvc;
         SideslipController yc;
         ProgradeThrustController tc;
         AutopilotModule[] gui_list = new AutopilotModule[5];
@@ -38,7 +38,7 @@ namespace AtmosphereAutopilot
         {
             gui_list[0] = pc = modules[typeof(PitchAngularVelocityController)] as PitchAngularVelocityController;
             gui_list[1] = rc = modules[typeof(RollAngularVelocityController)] as RollAngularVelocityController;
-			gui_list[2] = yvc = modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
+            gui_list[2] = yvc = modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
             gui_list[3] = yc = modules[typeof(SideslipController)] as SideslipController;
             gui_list[4] = tc = modules[typeof(ProgradeThrustController)] as ProgradeThrustController;
         }
@@ -49,8 +49,8 @@ namespace AtmosphereAutopilot
             pc.user_controlled = true;
             rc.Activate();
             rc.user_controlled = true;
-			yvc.Activate();
-			yvc.user_controlled = rocket_mode;
+            yvc.Activate();
+            yvc.user_controlled = rocket_mode;
             yc.Activate();
             yc.user_controlled = true;
             tc.Activate();
@@ -66,9 +66,9 @@ namespace AtmosphereAutopilot
             MessageManager.post_status_message("Standard Fly-By-Wire disabled");
         }
 
-		[VesselSerializable("rocket_mode")]
-		[AutoGuiAttr("Rocket mode", true)]
-		public bool rocket_mode = false;
+        [VesselSerializable("rocket_mode")]
+        [AutoGuiAttr("Rocket mode", true)]
+        public bool rocket_mode = false;
 
         [AutoGuiAttr("Moderation", true)]
         public bool moderation_switch
@@ -116,14 +116,14 @@ namespace AtmosphereAutopilot
                 return;
 
             pc.ApplyControl(cntrl, 0.0f);
-			if (rocket_mode)
-			{
-				yvc.user_controlled = true;
-				yvc.ApplyControl(cntrl, 0.0f);
-			}
-			else
-				yc.ApplyControl(cntrl, 0.0f, 0.0f);
-			rc.ApplyControl(cntrl, 0.0f);
+            if (rocket_mode)
+            {
+                yvc.user_controlled = true;
+                yvc.ApplyControl(cntrl, 0.0f);
+            }
+            else
+                yc.ApplyControl(cntrl, 0.0f, 0.0f);
+            rc.ApplyControl(cntrl, 0.0f);
         }
 
         protected override void _drawGUI(int id)
@@ -137,8 +137,8 @@ namespace AtmosphereAutopilot
                 else
                     module.UnShowGUI();
             }
-			GUILayout.Space(5.0f);
-			AutoGUI.AutoDrawObject(this);
+            GUILayout.Space(5.0f);
+            AutoGUI.AutoDrawObject(this);
             GUILayout.EndVertical();
             GUI.DragWindow();
         }

@@ -23,46 +23,46 @@ using System.IO;
 
 namespace AtmosphereAutopilot
 {
-	/// <summary>
+    /// <summary>
     /// Controls angular acceleration. Meant to be used by AngularVelAdaptiveController
-	/// </summary>
-	public abstract class AngularAccAdaptiveController : SISOController
-	{
-		protected int axis;
+    /// </summary>
+    public abstract class AngularAccAdaptiveController : SISOController
+    {
+        protected int axis;
 
-		protected FlightModel imodel;
+        protected FlightModel imodel;
 
-		// Telemetry writers
-		protected StreamWriter controlWriter, v_writer, acc_writer, prediction_writer,
+        // Telemetry writers
+        protected StreamWriter controlWriter, v_writer, acc_writer, prediction_writer,
             desire_acc_writer, aoa_writer, airspd_writer, density_writer, outputWriter;
 
-		/// <summary>
-		/// Create controller instance.
-		/// </summary>
-		/// <param name="vessel">Vessel to control</param>
-		/// <param name="module_name">Name of controller</param>
-		/// <param name="wnd_id">unique for types window id</param>
-		/// <param name="axis">Pitch = 0, roll = 1, yaw = 2</param>
+        /// <summary>
+        /// Create controller instance.
+        /// </summary>
+        /// <param name="vessel">Vessel to control</param>
+        /// <param name="module_name">Name of controller</param>
+        /// <param name="wnd_id">unique for types window id</param>
+        /// <param name="axis">Pitch = 0, roll = 1, yaw = 2</param>
         protected AngularAccAdaptiveController(Vessel vessel, string module_name,
             int wnd_id, int axis)
-			: base(vessel, module_name, wnd_id)
-		{
-			this.axis = axis;
-		}
+            : base(vessel, module_name, wnd_id)
+        {
+            this.axis = axis;
+        }
 
-		public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
-		{
-			this.imodel = modules[typeof(FlightModel)] as FlightModel;
-		}
+        public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
+        {
+            this.imodel = modules[typeof(FlightModel)] as FlightModel;
+        }
 
-		protected override void OnActivate()
-		{
+        protected override void OnActivate()
+        {
             imodel.Activate();
-		}
+        }
 
         protected override void OnDeactivate()
         {
-			write_telemetry = false;
+            write_telemetry = false;
             imodel.Deactivate();
         }
 
@@ -75,13 +75,13 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("output", false, "G6")]
         public float output;
 
-		/// <summary>
-		/// Main control function
-		/// </summary>
-		/// <param name="cntrl">Control state to change</param>
+        /// <summary>
+        /// Main control function
+        /// </summary>
+        /// <param name="cntrl">Control state to change</param>
         /// <param name="target_value">Desired angular acceleration</param>
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
-		{
+        {
             acc = (float)imodel.AngularAcc(axis);
             //model_acc = (float)imodel.model_acc[axis];
             desired_acc = target_value;
@@ -92,21 +92,21 @@ namespace AtmosphereAutopilot
                 acc_writer.Write(acc.ToString("G8") + ',');
                 v_writer.Write(imodel.AngularVel(axis).ToString("G8") + ',');
                 //prediction_writer.Write(target_value.ToString("G8") + ',');
-				aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');
-				airspd_writer.Write((imodel.up_srf_v + imodel.fwd_srf_v).magnitude.ToString("G8") + ',');
-				density_writer.Write(vessel.atmDensity.ToString("G8") + ',');
+                aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');
+                airspd_writer.Write((imodel.up_srf_v + imodel.fwd_srf_v).magnitude.ToString("G8") + ',');
+                density_writer.Write(vessel.atmDensity.ToString("G8") + ',');
             }
 
             float cur_input_raw = get_required_input(cntrl, desired_acc);
-			output = cur_input_raw;
+            output = cur_input_raw;
             if (float.IsNaN(output) || float.IsInfinity(output))
                 output = 0.0f;
 
-            // fighting numerical precision issues in KSP
-            if (Mathf.Abs(output) < 0.006f)
+            // fighting numerical precision issues
+            if (axis == ROLL && imodel.dyn_pressure > 1000.0 && Mathf.Abs(output) < 0.006f)
                 output = 0.0f;
 
-			ControlUtils.set_raw_output(cntrl, axis, output);
+            ControlUtils.set_raw_output(cntrl, axis, output);
 
             if (write_telemetry)
             {
@@ -115,7 +115,7 @@ namespace AtmosphereAutopilot
             }
 
             return output;
-		}
+        }
 
         protected virtual float get_required_input(FlightCtrlState cntrl, float target_value)
         {
@@ -127,28 +127,28 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("Write telemetry", true)]
         protected bool write_telemetry 
-		{
-			get { return _write_telemetry; }
-			set
-			{
-				if (value)
-				{
+        {
+            get { return _write_telemetry; }
+            set
+            {
+                if (value)
+                {
                     if (!_write_telemetry)
                     {
                         create_writers();
-						_write_telemetry = value;
+                        _write_telemetry = value;
                     }
-				}
-				else
-				{
+                }
+                else
+                {
                     if (_write_telemetry)
                     {
                         close_writers();
                         _write_telemetry = value;
-                    }					
-				}
-			}
-		}		
+                    }                   
+                }
+            }
+        }       
         bool _write_telemetry = false;
 
         [AutoGuiAttr("DEBUG desired acc", false, "G8")]
@@ -180,12 +180,12 @@ namespace AtmosphereAutopilot
             outputWriter.Close();
         }
 
-	}
+    }
 
 
-	//
-	// Three realizations
-	//
+    //
+    // Three realizations
+    //
 
     public abstract class PitchYawAngularAccController : AngularAccAdaptiveController
     {
@@ -331,11 +331,11 @@ namespace AtmosphereAutopilot
         }
     }
 
-	public sealed class RollAngularAccController : AngularAccAdaptiveController
-	{
-		internal RollAngularAccController(Vessel vessel)
+    public sealed class RollAngularAccController : AngularAccAdaptiveController
+    {
+        internal RollAngularAccController(Vessel vessel)
             : base(vessel, "Roll ang acc controller", 77821330, ROLL)
-		{ }
+        { }
 
         AngularAccAdaptiveController yc;
 
@@ -450,6 +450,6 @@ namespace AtmosphereAutopilot
 
             return new_input;
         }
-	}
+    }
 
 }

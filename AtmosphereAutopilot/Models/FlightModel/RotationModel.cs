@@ -28,7 +28,7 @@ namespace AtmosphereAutopilot
     using Vector = VectorArray.Vector;
 
     public sealed partial class FlightModel : AutopilotModule
-	{
+    {
         //[AutoGuiAttr("angular_vel", false, "G8")]
         Vector3 angular_vel = Vector3.zero;
 
@@ -292,7 +292,7 @@ namespace AtmosphereAutopilot
         {
             for (int i = 0; i < 3; i++)
             {
-                angular_v_buf[i].Put(angular_vel[i]);	        // update angular velocity
+                angular_v_buf[i].Put(angular_vel[i]);           // update angular velocity
                 if (angular_v_buf[i].Size >= 2 && sequential_dt)
                     angular_acc_buf[i].Put(
                         Common.derivative1_short(
@@ -303,9 +303,9 @@ namespace AtmosphereAutopilot
             // update surface velocity
         }
 
-        public Vector3 up_srf_v;		// velocity, projected to vessel up direction
-        public Vector3 fwd_srf_v;		// velocity, projected to vessel forward direction
-        public Vector3 right_srf_v;		// velocity, projected to vessel right direction
+        public Vector3 up_srf_v;        // velocity, projected to vessel up direction
+        public Vector3 fwd_srf_v;       // velocity, projected to vessel forward direction
+        public Vector3 right_srf_v;     // velocity, projected to vessel right direction
 
         void update_aoa()
         {

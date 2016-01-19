@@ -24,26 +24,26 @@ using System.Reflection;
 
 namespace AtmosphereAutopilot
 {
-	/// <summary>
-	/// Attribute for auto-rendered parameters. Use it on property or field to draw it
-	/// by AutoGUI.AutoDrawObject method. Supports all basic types and IEnumarable.
-	/// </summary>
+    /// <summary>
+    /// Attribute for auto-rendered parameters. Use it on property or field to draw it
+    /// by AutoGUI.AutoDrawObject method. Supports all basic types and IEnumarable.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, Inherited = true)]
     public class AutoGuiAttr : Attribute
     {
         internal string value_name;
-		internal bool editable;
-		internal string format;
+        internal bool editable;
+        internal string format;
         internal object[] format_arr;
 
-		/// <summary>
-		/// Set this property or field as auto-renderable.
-		/// </summary>
-		/// <param name="value_name">Displayed element name</param>
-		/// <param name="editable">Can be edited by user. Use for basic types only!</param>
-		/// <param name="format">If type provides ToString(string format) method, this format string
-		/// will be used. You can set it to null if not required</param>
-		public AutoGuiAttr(string value_name, bool editable, string format = null)
+        /// <summary>
+        /// Set this property or field as auto-renderable.
+        /// </summary>
+        /// <param name="value_name">Displayed element name</param>
+        /// <param name="editable">Can be edited by user. Use for basic types only!</param>
+        /// <param name="format">If type provides ToString(string format) method, this format string
+        /// will be used. You can set it to null if not required</param>
+        public AutoGuiAttr(string value_name, bool editable, string format = null)
         {
             this.value_name = value_name;
             this.editable = editable;
@@ -53,44 +53,44 @@ namespace AtmosphereAutopilot
     }
 
 
-	/// <summary>
-	/// Interface for all windows.
-	/// </summary>
+    /// <summary>
+    /// Interface for all windows.
+    /// </summary>
     public interface IWindow
     {
-		/// <summary>
-		/// OnGUI Unity event handler
-		/// </summary>
+        /// <summary>
+        /// OnGUI Unity event handler
+        /// </summary>
         void OnGUI();
 
-		/// <summary>
-		/// Returns true if window is shown.
-		/// </summary>
+        /// <summary>
+        /// Returns true if window is shown.
+        /// </summary>
         bool IsShown();
 
-		/// <summary>
-		/// Toggle window shown\unshown state
-		/// </summary>
+        /// <summary>
+        /// Toggle window shown\unshown state
+        /// </summary>
         bool ToggleGUI();
 
-		/// <summary>
-		/// Hide window. Use for F2 event.
-		/// </summary>
+        /// <summary>
+        /// Hide window. Use for F2 event.
+        /// </summary>
         void HideGUI();
 
-		/// <summary>
-		/// Unhide window. Use for F2 event.
-		/// </summary>
+        /// <summary>
+        /// Unhide window. Use for F2 event.
+        /// </summary>
         void UnHideGUI();
 
-		/// <summary>
-		/// Show window.
-		/// </summary>
+        /// <summary>
+        /// Show window.
+        /// </summary>
         void ShowGUI();
 
-		/// <summary>
-		/// Do not show window.
-		/// </summary>
+        /// <summary>
+        /// Do not show window.
+        /// </summary>
         void UnShowGUI();
     }
 
@@ -106,12 +106,12 @@ namespace AtmosphereAutopilot
         bool gui_hidden = false;
         protected Rect window;
 
-		/// <summary>
-		/// Create window instance.
-		/// </summary>
-		/// <param name="wndname">Window header</param>
-		/// <param name="wnd_id">Unique for Unity engine id</param>
-		/// <param name="window">Initial window position rectangle</param>
+        /// <summary>
+        /// Create window instance.
+        /// </summary>
+        /// <param name="wndname">Window header</param>
+        /// <param name="wnd_id">Unique for Unity engine id</param>
+        /// <param name="window">Initial window position rectangle</param>
         internal GUIWindow(string wndname, int wnd_id, Rect window)
         {
             this.wndname = wndname;
@@ -119,18 +119,18 @@ namespace AtmosphereAutopilot
             this.window = window;
         }
 
-		/// <summary>
-		/// Get window header.
-		/// </summary>
+        /// <summary>
+        /// Get window header.
+        /// </summary>
         public string WindowName { get { return wndname; } }
 
-		/// <inheritdoc />
+        /// <inheritdoc />
         public bool IsShown()
         {
             return gui_shown;
         }
 
-		/// <inheritdoc />
+        /// <inheritdoc />
         public void OnGUI()
         {
             if (!gui_shown || gui_hidden)
@@ -144,42 +144,42 @@ namespace AtmosphereAutopilot
             OnGUICustom();
         }
 
-		/// <summary>
-		/// Called after each _drawGUI call
-		/// </summary>
+        /// <summary>
+        /// Called after each _drawGUI call
+        /// </summary>
         protected virtual void OnGUICustom() { }
 
-		/// <inheritdoc />
+        /// <inheritdoc />
         public bool ToggleGUI()
         {
             return gui_shown = !gui_shown;
         }
 
-		/// <summary>
-		/// Main drawing function
-		/// </summary>
-		/// <param name="id">Unique window id. Just ignore it in function realization.</param>
+        /// <summary>
+        /// Main drawing function
+        /// </summary>
+        /// <param name="id">Unique window id. Just ignore it in function realization.</param>
         protected abstract void _drawGUI(int id);
 
-		/// <inheritdoc />
+        /// <inheritdoc />
         public virtual void HideGUI()
         {
             gui_hidden = true;
         }
 
-		/// <inheritdoc />
+        /// <inheritdoc />
         public virtual void UnHideGUI()
         {
             gui_hidden = false;
         }
 
-		/// <inheritdoc />
+        /// <inheritdoc />
         public virtual void ShowGUI()
         {
             gui_shown = true;
         }
 
-		/// <inheritdoc />
+        /// <inheritdoc />
         public virtual void UnShowGUI()
         {
             gui_shown = false;
@@ -187,23 +187,23 @@ namespace AtmosphereAutopilot
     }
 
 
-	/// <summary>
-	/// Automatic property and field rendering functionality.
-	/// </summary>
+    /// <summary>
+    /// Automatic property and field rendering functionality.
+    /// </summary>
     public static class AutoGUI
     {
-		// optimization structures
-		static Dictionary<Type, PropertyInfo[]> property_list = new Dictionary<Type, PropertyInfo[]>();
-		static Dictionary<Type, FieldInfo[]> field_list = new Dictionary<Type, FieldInfo[]>();
+        // optimization structures
+        static Dictionary<Type, PropertyInfo[]> property_list = new Dictionary<Type, PropertyInfo[]>();
+        static Dictionary<Type, FieldInfo[]> field_list = new Dictionary<Type, FieldInfo[]>();
         static Dictionary<object, object[]> custom_attrs = new Dictionary<object, object[]>();
-		static Dictionary<Type, MethodInfo> toStringMethods = new Dictionary<Type, MethodInfo>();
-		static Dictionary<Type, MethodInfo> parseMethods = new Dictionary<Type, MethodInfo>();
-		static readonly Type[] formatStrTypes = { typeof(string) };
+        static Dictionary<Type, MethodInfo> toStringMethods = new Dictionary<Type, MethodInfo>();
+        static Dictionary<Type, MethodInfo> parseMethods = new Dictionary<Type, MethodInfo>();
+        static readonly Type[] formatStrTypes = { typeof(string) };
 
-		/// <summary>
-		/// Render class instace using AutoGuiAttr markup.
-		/// </summary>
-		/// <param name="obj">object to render to current GUILayout.</param>
+        /// <summary>
+        /// Render class instace using AutoGuiAttr markup.
+        /// </summary>
+        /// <param name="obj">object to render to current GUILayout.</param>
         public static void AutoDrawObject(object obj)
         {
             Type type = obj.GetType();
@@ -213,26 +213,26 @@ namespace AtmosphereAutopilot
                 draw_primitive(obj);
                 return;
             }
-			
-			// properties
-			if (!property_list.ContainsKey(type))
-				property_list[type] = type.GetProperties(BindingFlags.Instance | 
-					BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-			foreach (var property in property_list[type])
-				draw_element(property, obj);
-
-			// fields
-			if (!field_list.ContainsKey(type))
-				field_list[type] = type.GetFields(BindingFlags.Instance |
+            
+            // properties
+            if (!property_list.ContainsKey(type))
+                property_list[type] = type.GetProperties(BindingFlags.Instance | 
                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-			foreach (var field in field_list[type])
+            foreach (var property in property_list[type])
+                draw_element(property, obj);
+
+            // fields
+            if (!field_list.ContainsKey(type))
+                field_list[type] = type.GetFields(BindingFlags.Instance |
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            foreach (var field in field_list[type])
                 draw_element(field, obj);
         }
 
 
-		#region FieldPropertyUniversal
+        #region FieldPropertyUniversal
 
-		static object[] GetCustomAttributes(object element, Type atttype, bool inherit)
+        static object[] GetCustomAttributes(object element, Type atttype, bool inherit)
         {
             PropertyInfo p = element as PropertyInfo;
             if (p != null)
@@ -286,19 +286,19 @@ namespace AtmosphereAutopilot
             return null;
         }
 
-		#endregion
+        #endregion
 
 
-		static void draw_primitive(object obj)
+        static void draw_primitive(object obj)
         {
             GUILayout.Label(obj.ToString(), GUIStyles.labelStyleRight);
         }
 
-		/// <summary>
-		/// Main rendering function.
-		/// </summary>
-		/// <param name="element">Field or property info to render</param>
-		/// <param name="obj">Object instance</param>
+        /// <summary>
+        /// Main rendering function.
+        /// </summary>
+        /// <param name="element">Field or property info to render</param>
+        /// <param name="obj">Object instance</param>
         static void draw_element(object element, object obj)
         {
             if (!custom_attrs.ContainsKey(element))
@@ -313,7 +313,7 @@ namespace AtmosphereAutopilot
             if (element_type == null)
                 return;
 
-			// If element is collection
+            // If element is collection
             if (typeof(IEnumerable).IsAssignableFrom(element_type))
             {
                 IEnumerable list = GetValue(element, obj) as IEnumerable;
@@ -323,7 +323,7 @@ namespace AtmosphereAutopilot
                     GUILayout.Label(att.value_name + ':', GUIStyles.labelStyleLeft);
                     GUILayout.BeginVertical();
                     foreach (object lel in list)
-                        AutoDrawObject(lel);		// render each member
+                        AutoDrawObject(lel);        // render each member
                     GUILayout.EndVertical();
                     GUILayout.EndHorizontal();
                     return;
@@ -356,9 +356,9 @@ namespace AtmosphereAutopilot
                 return;
             }
 
-			if (!toStringMethods.ContainsKey(element_type))
-				toStringMethods[element_type] = element_type.GetMethod("ToString", formatStrTypes);
-			MethodInfo ToStringFormat = toStringMethods[element_type];
+            if (!toStringMethods.ContainsKey(element_type))
+                toStringMethods[element_type] = element_type.GetMethod("ToString", formatStrTypes);
+            MethodInfo ToStringFormat = toStringMethods[element_type];
             if (!att.editable)
             {
                 if (ToStringFormat != null && att.format != null)
@@ -376,9 +376,9 @@ namespace AtmosphereAutopilot
                 val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);
                 try
                 {
-					if (!parseMethods.ContainsKey(element_type))
-						parseMethods[element_type] = element_type.GetMethod("Parse", formatStrTypes);
-					var ParseMethod = parseMethods[element_type];
+                    if (!parseMethods.ContainsKey(element_type))
+                        parseMethods[element_type] = element_type.GetMethod("Parse", formatStrTypes);
+                    var ParseMethod = parseMethods[element_type];
                     if (ParseMethod != null)
                         SetValue(element, obj, ParseMethod.Invoke(null, new[] { val_holder }));
                 }

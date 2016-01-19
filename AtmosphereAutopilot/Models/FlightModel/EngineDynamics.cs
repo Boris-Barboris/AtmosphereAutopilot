@@ -29,7 +29,7 @@ namespace AtmosphereAutopilot
     using Vector = VectorArray.Vector;
 
     public sealed partial class FlightModel : AutopilotModule
-	{
+    {
         public class EngineMoment
         {
             public EngineMoment(ModuleEngines m, IGimbal g)

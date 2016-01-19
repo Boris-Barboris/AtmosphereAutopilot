@@ -26,18 +26,18 @@ namespace AtmosphereAutopilot
     [KSPAddon(KSPAddon.Startup.MainMenu, true)]
     public sealed class AtmosphereAutopilot: MonoBehaviour
     {
-		// List of all autopilot modules, that need to be created for vessel
+        // List of all autopilot modules, that need to be created for vessel
         internal List<Type> autopilot_module_types = new List<Type>();
 
-		// Map of vessel - module list relation
+        // Map of vessel - module list relation
         internal Dictionary<Vessel, Dictionary<Type, AutopilotModule>> autopilot_module_lists =
-			new Dictionary<Vessel, Dictionary<Type, AutopilotModule>>();
+            new Dictionary<Vessel, Dictionary<Type, AutopilotModule>>();
 
-		// Hotkeys for module activation
+        // Hotkeys for module activation
         Dictionary<Type, KeyCode> module_hotkeys = new Dictionary<Type, KeyCode>();
 
         // Application launcher window
-		AppLauncherWindow applauncher = new AppLauncherWindow();
+        AppLauncherWindow applauncher = new AppLauncherWindow();
 
         /// <summary>
         /// Get AtmosphereAutopilot addon class instance
@@ -47,11 +47,11 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// Get current active (controlled by player) vessel
         /// </summary>
-		public Vessel ActiveVessel { get; private set; }
+        public Vessel ActiveVessel { get; private set; }
 
         void Start()
         {
-			Debug.Log("[AtmosphereAutopilot]: starting up!"); 
+            Debug.Log("[AtmosphereAutopilot]: starting up!"); 
             DontDestroyOnLoad(this);
             determine_aerodynamics();
             get_csurf_module();
@@ -67,7 +67,7 @@ namespace AtmosphereAutopilot
             GameEvents.onGamePause.Add(OnApplicationPause);
             GameEvents.onGameUnpause.Add(OnApplicationUnpause);
             Instance = this;
-			ActiveVessel = null;
+            ActiveVessel = null;
         }
 
         public enum AerodinamycsModel
@@ -91,7 +91,7 @@ namespace AtmosphereAutopilot
                 {
                     far_assembly = a;
                     AeroModel = AerodinamycsModel.FAR;
-					Debug.Log("[AtmosphereAutopilot]: FAR aerodynamics detected");
+                    Debug.Log("[AtmosphereAutopilot]: FAR aerodynamics detected");
                     return;
                 }
             }
@@ -198,25 +198,25 @@ namespace AtmosphereAutopilot
                 AtmosphereAutopilot.Instance.BackgroundThread.Resume();
         }
 
-		void load_manager_for_vessel(Vessel v)
+        void load_manager_for_vessel(Vessel v)
         {
-			if (v == null)
-				return;
+            if (v == null)
+                return;
             if (!autopilot_module_lists.ContainsKey(v))
             {
                 Debug.Log("[AtmosphereAutopilot]: new vessel, creating new module map");
                 autopilot_module_lists[v] = new Dictionary<Type, AutopilotModule>();
             }
             if (!autopilot_module_lists[v].ContainsKey(typeof(TopModuleManager)))
-                autopilot_module_lists[v][typeof(TopModuleManager)] = new TopModuleManager(v);		
+                autopilot_module_lists[v][typeof(TopModuleManager)] = new TopModuleManager(v);      
         }
 
         void vesselSwitch(Vessel v)
         {
             serialize_active_modules();
-			Debug.Log("[AtmosphereAutopilot]: vessel switch to " + v.vesselName);
+            Debug.Log("[AtmosphereAutopilot]: vessel switch to " + v.vesselName);
             load_manager_for_vessel(v);
-			ActiveVessel = v;
+            ActiveVessel = v;
             foreach (Vessel c in autopilot_module_lists.Keys)
                 if (autopilot_module_lists[c].ContainsKey(typeof(FlightModel)))
                     (autopilot_module_lists[c][typeof(FlightModel)] as FlightModel).sequential_dt = false;
@@ -236,31 +236,31 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// Get set of AutopilotModule instances, created for arbitrary vessel.
         /// </summary>
-		public Dictionary<Type, AutopilotModule> getVesselModules(Vessel v)
-		{
+        public Dictionary<Type, AutopilotModule> getVesselModules(Vessel v)
+        {
             if (autopilot_module_lists.ContainsKey(v))
                 return autopilot_module_lists[v];
             else
                 return null;
-		}
+        }
 
 
-		#region AppLauncherSection
+        #region AppLauncherSection
 
-		ApplicationLauncherButton launcher_btn;
+        ApplicationLauncherButton launcher_btn;
 
         // Called when applauncher is ready for population
         void onAppLauncherLoad()
         {
             if (ApplicationLauncher.Ready)
             {
-				bool hidden;
-				bool contains = ApplicationLauncher.Instance.Contains(launcher_btn, out hidden);
-				if (!contains)
-					launcher_btn = ApplicationLauncher.Instance.AddModApplication(
-						OnALTrue, OnALFalse, OnHover, OnALUnHover, null, null, 
+                bool hidden;
+                bool contains = ApplicationLauncher.Instance.Contains(launcher_btn, out hidden);
+                if (!contains)
+                    launcher_btn = ApplicationLauncher.Instance.AddModApplication(
+                        OnALTrue, OnALFalse, OnHover, OnALUnHover, null, null, 
                         ApplicationLauncher.AppScenes.FLIGHT | ApplicationLauncher.AppScenes.MAPVIEW,
-						GameDatabase.Instance.GetTexture("AtmosphereAutopilot/icon", false));
+                        GameDatabase.Instance.GetTexture("AtmosphereAutopilot/icon", false));
             }
         }
 
@@ -270,12 +270,12 @@ namespace AtmosphereAutopilot
             applauncher.show_while_hover = false;
         }
 
-		void OnHover()
-		{
-			applauncher.ShowGUI();
-			applauncher.show_while_hover = false;
+        void OnHover()
+        {
+            applauncher.ShowGUI();
+            applauncher.show_while_hover = false;
             applauncher.set_x_position(Mouse.screenPos.x);
-		}
+        }
 
         void OnALFalse()
         {
@@ -288,16 +288,16 @@ namespace AtmosphereAutopilot
                 applauncher.show_while_hover = true;
         }
 
-		#endregion
+        #endregion
 
-		#region UI
+        #region UI
 
-		bool styles_init = false;
+        bool styles_init = false;
 
         void OnGUI()
         {
-			if (ActiveVessel == null)
-				return;
+            if (ActiveVessel == null)
+                return;
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
             if (!styles_init)
@@ -315,8 +315,8 @@ namespace AtmosphereAutopilot
         void OnHideUI()
         {
             applauncher.HideGUI();
-			if (ActiveVessel == null)
-				return;
+            if (ActiveVessel == null)
+                return;
             foreach (var pair in autopilot_module_lists[ActiveVessel])
                 pair.Value.HideGUI();
         }
@@ -324,32 +324,32 @@ namespace AtmosphereAutopilot
         void OnShowUI()
         {
             applauncher.UnHideGUI();
-			if (ActiveVessel == null)
-				return;
+            if (ActiveVessel == null)
+                return;
             foreach (var pair in autopilot_module_lists[ActiveVessel])
                 pair.Value.UnHideGUI();
         }
 
-		#endregion
+        #endregion
 
-		void Update()
+        void Update()
         {
             // Handle keyboard hotkeys here
             if (InputLockManager.IsLocked(ControlTypes.ALL_SHIP_CONTROLS))
                 return;
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
-			if (ActiveVessel == null)
-				return;
-			foreach (var pair in module_hotkeys)
-			{
-				if (Input.GetKeyDown(pair.Value) &&
+            if (ActiveVessel == null)
+                return;
+            foreach (var pair in module_hotkeys)
+            {
+                if (Input.GetKeyDown(pair.Value) &&
                     autopilot_module_lists.ContainsKey(ActiveVessel))
-				{
+                {
                     AutopilotModule module = autopilot_module_lists[ActiveVessel][pair.Key];
-					module.Active = !module.Active;
-				}
-			}
+                    module.Active = !module.Active;
+                }
+            }
             if (autopilot_module_lists.ContainsKey(ActiveVessel))
             {
                 foreach (var module in autopilot_module_lists[ActiveVessel].Values)

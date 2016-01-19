@@ -23,9 +23,9 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-	/// <summary>
-	/// Base class for auto-serializable fields and properties
-	/// </summary>
+    /// <summary>
+    /// Base class for auto-serializable fields and properties
+    /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, Inherited = true)]
     public class AutoSerializableAttr : Attribute
     {
@@ -36,18 +36,18 @@ namespace AtmosphereAutopilot
         }
     }
 
-	/// <summary>
-	/// Use this attribute to make this field auto-serializable to vessel-specific config.
-	/// </summary>
+    /// <summary>
+    /// Use this attribute to make this field auto-serializable to vessel-specific config.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, Inherited = true)]
     public class VesselSerializable : AutoSerializableAttr
     {
         public VesselSerializable(string node_name) : base(node_name) { }
     }
 
-	/// <summary>
-	/// Use this attribute to make this field auto-serializable to global config.
-	/// </summary>
+    /// <summary>
+    /// Use this attribute to make this field auto-serializable to global config.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, Inherited = true)]
     public class GlobalSerializable : AutoSerializableAttr
     {
@@ -63,22 +63,22 @@ namespace AtmosphereAutopilot
     }
 
 
-	/// <summary>
-	/// Automatic property and field value serialization/deserialization functionality
-	/// </summary>
+    /// <summary>
+    /// Automatic property and field value serialization/deserialization functionality
+    /// </summary>
     public static class AutoSerialization
     {
-		/// <summary>
-		/// Deserialize object from file
-		/// </summary>
-		/// <param name="obj">Object to deserialize</param>
-		/// <param name="node_name">Node to search for in file</param>
-		/// <param name="filename">full file path</param>
-		/// <param name="attribute_type">Type of attributes to deserialize</param>
-		/// <param name="OnDeserialize">Callback for custom behaviour, 
-		/// called after automatic part is over and didn't crash. Gets node, 
-		/// from wich object was deserialized and attribute type.</param>
-		/// <returns>true if node_name node was found and used to deserialize the object</returns>
+        /// <summary>
+        /// Deserialize object from file
+        /// </summary>
+        /// <param name="obj">Object to deserialize</param>
+        /// <param name="node_name">Node to search for in file</param>
+        /// <param name="filename">full file path</param>
+        /// <param name="attribute_type">Type of attributes to deserialize</param>
+        /// <param name="OnDeserialize">Callback for custom behaviour, 
+        /// called after automatic part is over and didn't crash. Gets node, 
+        /// from wich object was deserialized and attribute type.</param>
+        /// <returns>true if node_name node was found and used to deserialize the object</returns>
         public static bool Deserialize(object obj, string node_name, string filename, Type attribute_type, Action<ConfigNode, Type> OnDeserialize = null)
         {
             if (System.IO.File.Exists(filename))
@@ -105,18 +105,18 @@ namespace AtmosphereAutopilot
             return false;
         }
 
-		/// <summary>
-		/// Serialize object to file
-		/// </summary>
-		/// <param name="obj">Object to serialize</param>
-		/// <param name="node_name">Node to create in file</param>
-		/// <param name="filename">full file path</param>
-		/// <param name="attribute_type">Type of attributes to serialize</param>
-		/// <param name="OnSerialize">Callback for custom behaviour, 
-		/// called after automatic part is over and didn't crash. Gets node, 
-		/// to wich object was serialized to and attribute type.</param>
+        /// <summary>
+        /// Serialize object to file
+        /// </summary>
+        /// <param name="obj">Object to serialize</param>
+        /// <param name="node_name">Node to create in file</param>
+        /// <param name="filename">full file path</param>
+        /// <param name="attribute_type">Type of attributes to serialize</param>
+        /// <param name="OnSerialize">Callback for custom behaviour, 
+        /// called after automatic part is over and didn't crash. Gets node, 
+        /// to wich object was serialized to and attribute type.</param>
         public static void Serialize(object obj, string node_name, string filename, Type attribute_type,
-			Action<ConfigNode, Type> OnSerialize = null)
+            Action<ConfigNode, Type> OnSerialize = null)
         {
             string dir = System.IO.Path.GetDirectoryName(filename);
             if (!System.IO.Directory.Exists(dir))
