@@ -73,6 +73,7 @@
     <Compile Include="Models\FlightModel\RotationModel.cs" />
     <Compile Include="Models\FlightModel\EngineDynamics.cs" />
     <Compile Include="Models\LinearSystemModel.cs" />
+    <None Include="Modules\DirectorController.cs" />
     <Compile Include="Modules\AccelerationController.cs" />
     <Compile Include="Modules\AngularAccAdaptiveController.cs" />
     <Compile Include="Models\FlightModel\FlightModel.cs" />

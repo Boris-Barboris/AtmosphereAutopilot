@@ -132,10 +132,10 @@ namespace AtmosphereAutopilot
 
             // Let's find equilibrium angular v on desired_aoa
             LinearSystemModel model;
-            if (Math.Abs(cur_aoa - desired_aoa) < 1e-2)
-                model = lin_model;
-            else
-                model = lin_model_gen;
+            //if (Math.Abs(cur_aoa - desired_aoa) < 1e-2)
+            //    model = lin_model_gen;
+            //else
+            model = lin_model_gen;
             eq_A[0, 0] = model.A[0, 1];
             eq_A[0, 1] = model.A[0, 2] + model.A[0, 3] + model.B[0, 0];
             eq_A[1, 0] = model.A[1, 1];

@@ -109,11 +109,11 @@ namespace AtmosphereAutopilot
         /// <param name="cntrl">Control state to change</param>
         public override void ApplyControl(FlightCtrlState cntrl)
         {
-            if (cruise_control)
-                tc.ApplyControl(cntrl, cruise_speed);
-
             if (vessel.LandedOrSplashed)
                 return;
+
+            if (cruise_control)
+                tc.ApplyControl(cntrl, cruise_speed);
 
             pc.ApplyControl(cntrl, 0.0f);
             if (rocket_mode)

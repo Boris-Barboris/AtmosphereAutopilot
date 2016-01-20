@@ -23,10 +23,10 @@ using UnityEngine;
 namespace AtmosphereAutopilot
 {
 
-    public sealed class AccelerationController: AutopilotModule
+    public sealed class DirectorController: AutopilotModule
     {
-        internal AccelerationController(Vessel v)
-            : base(v, 88437225, "Acceleration controller")
+        internal DirectorController(Vessel v)
+            : base(v, 88437227, "Velocity director")
         { }
 
         PitchAoAController aoa_c;
@@ -62,21 +62,88 @@ namespace AtmosphereAutopilot
             roll_c.Deactivate();
         }
 
+        [AutoGuiAttr("strength", true, "G4")]
+        public double strength = 0.95;
+
+        [AutoGuiAttr("roll_stop_k", true, "G5")]
+        protected float roll_stop_k = 1.2f;
+
+        [AutoGuiAttr("angular error", false, "G5")]
+        protected double angular_error;
+
+        [AutoGuiAttr("max_angular_v", false, "G5")]
+        protected double max_angular_v;
+
+        [AutoGuiAttr("stop_time_roll", false, "G5")]
+        protected double stop_time_roll;
+
+        [AutoGuiAttr("relaxation_margin", true, "G5")]
+        protected double relaxation_margin = 0.01;
+
+        [AutoGuiAttr("angle_relaxation_k", true, "G5")]
+        protected float angle_relaxation_k = 0.1f;
+
         /// <summary>
         /// Main control function
         /// </summary>
-        /// <param name="desired_acceleration">Desired acceleration in planet (rotating) reference frame.</param>
-        /// <param name="jerk">Desired acceleration derivative.</param>
-        public void ApplyControl(FlightCtrlState state, Vector3d desired_acceleration, Vector3d jerk)
+        /// <param name="desired_vel">Desired velocity direction in surface reference frame.</param>
+        /// <param name="desired_acceleration">Desired acceleration.</param>
+        public void ApplyControl(FlightCtrlState state, Vector3d desired_vel, Vector3d desired_acceleration)
         {
+            Vector3d planet2ves = vessel.ReferenceTransform.position - vessel.mainBody.position;
+            Vector3d planet2vesNorm = planet2ves.normalized;
+
+            // centrifugal acceleration to stay on desired altitude
+            Vector3d level_acc = -planet2vesNorm * (imodel.surface_v - Vector3d.Project(imodel.surface_v, planet2vesNorm)).sqrMagnitude / planet2ves.magnitude;
+            
+            // Rotation vector
+            Vector3d desired_turn_acc_dir = Vector3d.Cross(
+                Vector3d.Cross(imodel.surface_v, desired_vel).normalized,
+                imodel.surface_v).normalized;
+            angular_error = Vector3d.Angle(imodel.surface_v.normalized, desired_vel) * dgr2rad;
+            
+            double max_lift_acc = max_lift_acceleration(PITCH);
+            double max_sideslip_acc = max_lift_acceleration(YAW);
+
+            // let's find this craft's maximum acceleration toward desired_turn_acc_dir without stalling
+            // it can be solved from simple quadratic equation
+            Vector3d max_turn_acc = non_stall_turn_acceleration(desired_turn_acc_dir, max_lift_acc);
+            max_turn_acc = strength * max_turn_acc * (FlightInputHandler.fetch.precisionMode ? 0.4 : 1.0);
+
+            // now let's take roll speed and relaxation into account
+            double max_angular_v = max_turn_acc.magnitude / imodel.surface_v_magnitude;
+            double t1 = max_roll_v / roll_acc_factor;
+            double t2 = (90.0 * dgr2rad - t1 * t1 * roll_acc_factor) / t1 / roll_acc_factor;
+            double stop_time_roll = roll_stop_k * (2.0 * t1 + t2);
+            if (double.IsNaN(stop_time_roll) || double.IsInfinity(stop_time_roll))
+                stop_time_roll = 2.0;
+
+            // now let's generate desired acceleration
+            if (angular_error / max_angular_v > stop_time_roll)
+            {
+                // we're far away from relaxation, let's simply produce maximum acceleration
+                desired_acc += max_turn_acc;
+            }
+            else
+            {
+                // we're relaxing now, quadratic descend is good approximation
+                {
+                    double tk = (angular_error / max_angular_v) / stop_time_roll;
+                    if (Math.Abs(angular_error) < relaxation_margin)
+                        tk *= Mathf.Lerp(1.0f, angle_relaxation_k, (float)(1.0f - Math.Abs(angular_error) / relaxation_margin));
+                    desired_acc += max_turn_acc * tk;
+                }
+            }
+
+            acc_c.ApplyControl(cntrl, desired_acc, Vector3d.zero);
+
+
             target_acc = desired_acceleration;
             current_acc = imodel.sum_acc;
 
             // we need aoa moderation for AoA controllers to work
             pitch_c.moderate_aoa = true;
-            pitch_c.moderate_g = true;
             yaw_c.moderate_aoa = true;
-            yaw_c.moderate_g = true;
 
             Vector3d target_lift_acc = target_acc - imodel.gravity_acc - imodel.noninert_acc;
             Vector3d target_normal_lift_acc = target_lift_acc - Vector3d.Project(target_lift_acc, imodel.surface_v);
@@ -131,16 +198,16 @@ namespace AtmosphereAutopilot
             //}
             //else
             //{
-            //desired_yaw_lift = 0.0; // Vector3.Dot(imodel.yaw_tangent, normal_lift_acc);
-            //desired_yaw_acc = desired_yaw_lift + imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
-            //desired_yaw_v = desired_yaw_acc / imodel.surface_v_magnitude;
-            //// let's find equilibrium sideslip for desired lift
-            ////if (Math.Abs(desired_yaw_lift) < 0.01f)
-            //desired_sideslip = (float)Common.simple_filter(get_desired_aoa(imodel.yaw_rot_model_gen, desired_yaw_v, 0.0), desired_sideslip, sideslip_filter_k);
-            //if (float.IsNaN(desired_sideslip) || float.IsInfinity(desired_sideslip) || Math.Abs(desired_sideslip) < 0.001f)
-            //    desired_sideslip = 0.0f;
+            desired_yaw_lift = 0.0; // Vector3.Dot(imodel.yaw_tangent, normal_lift_acc);
+            desired_yaw_acc = desired_yaw_lift + imodel.yaw_gravity_acc + imodel.yaw_noninert_acc;
+            desired_yaw_v = desired_yaw_acc / imodel.surface_v_magnitude;
+            // let's find equilibrium sideslip for desired lift
+            //if (Math.Abs(desired_yaw_lift) < 0.01f)
+            desired_sideslip = (float)Common.simple_filter(get_desired_aoa(imodel.yaw_rot_model_gen, desired_yaw_v, 0.0), desired_sideslip, sideslip_filter_k);
+            if (float.IsNaN(desired_sideslip) || float.IsInfinity(desired_sideslip) || Math.Abs(desired_sideslip) < 0.001f)
+                desired_sideslip = 0.0f;
             //}
-            desired_sideslip = 0.0f;
+            //desired_sideslip = 0.0f;
             side_c.user_controlled = false;
             side_c.ApplyControl(state, desired_sideslip, 0.0f);
         }
@@ -172,13 +239,54 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("desired_pitch_v", false, "G5")]
         protected double desired_pitch_v;
 
+        /// <summary>
+        /// Allow rotating belly-up to prevent too large negative g-forces
+        /// </summary>
         public bool allow_roll_overs = true;
+
+        public Vector3d non_stall_turn_acceleration(Vector3d desired_turn_acc_dir, double max_lift_acc)
+        {
+            Vector3d max_turn_acc = Vector3d.zero;
+            Vector3d rest_lift = imodel.pitch_tangent * (-imodel.pitch_gravity_acc - imodel.pitch_noninert_acc);
+            double b = 2.0 * Vector3d.Dot(rest_lift, desired_turn_acc_dir);
+            double a = desired_turn_acc_dir.sqrMagnitude;
+            double c = rest_lift.sqrMagnitude - max_lift_acc * max_lift_acc;
+            if (Math.Abs(a) > 1e-10)
+            {
+                double discriminant = b * b - 4.0 * a * c;
+                if (discriminant < 0.0)
+                {
+                    // we'll stall anyways, so let's just do a max-force turn
+                    max_turn_acc = max_lift_acc * desired_turn_acc_dir;
+                }
+                else
+                {
+                    double disc_root = Math.Sqrt(discriminant);
+                    double k = (-b + disc_root) / 2.0 / a;
+                    max_turn_acc = desired_turn_acc_dir * k;
+                }
+            }
+            else
+            {
+                if (Math.Abs(b) > 1e-10)
+                {
+                    double k = -c / b;
+                    max_turn_acc = desired_turn_acc_dir * k;
+                }
+                else
+                    max_turn_acc = max_lift_acc * desired_turn_acc_dir;
+            }
+            return max_turn_acc;
+        }
 
         # region Roll
 
         Matrix roll_state_m = new Matrix(3, 1);
         Matrix roll_input_m = new Matrix(3, 1);
 
+        /// <summary>
+        /// Max roll angular acceleration
+        /// </summary>
         [AutoGuiAttr("roll_acc_factor", false, "G5")]
         public double roll_acc_factor = 0.0;
 
@@ -200,6 +308,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("roll_error_filter_k", true, "G5")]
         protected double roll_error_filter_k = 0.5;
 
+        /// <summary>
+        /// Max roll angular velocity
+        /// </summary>
         [AutoGuiAttr("max_roll_v", false, "G5")]
         public double max_roll_v;
 
@@ -212,7 +323,12 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("snapping_boundary", true, "G5")]
         protected double snapping_boundary = 3.0 * dgr2rad;
 
-        float get_desired_roll_v(double angle_error)
+        /// <summary>
+        /// calculate input for roll controller
+        /// </summary>
+        /// <param name="angle_error">Roll error</param>
+        /// <returns>desired roll angular velocity</returns>
+        public float get_desired_roll_v(double angle_error)
         {
             roll_state_m[0, 0] = 0.0;
             roll_state_m[1, 0] = 1.0;

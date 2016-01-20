@@ -351,8 +351,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("linear_param", false, "G6")]
         public volatile float linear_param;
 
-        [AutoGuiAttr("nonlin_cycles", false)]
-        int nonlin_cycles = 0;
+        [AutoGuiAttr("nonlin_time", false)]
+        int nonlin_time = 0;
 
         /// <summary>
         /// What approximator to use as linearity judge
@@ -390,9 +390,9 @@ namespace AtmosphereAutopilot
                 //linear_param = (float)sum_error;
                 //linear = sum_error < linear_err_criteria;
                 if (linear)
-                    nonlin_cycles = 0;
+                    nonlin_time = 0;
                 else
-                    nonlin_cycles = Math.Min(1000, nonlin_cycles + 1);
+                    nonlin_time = Math.Min(1000, nonlin_time + last_time_elapsed);
             }
         }
 
@@ -415,8 +415,6 @@ namespace AtmosphereAutopilot
         int grad_buf_length { get { return grad_training.Size; } }
 
         int gen_space_size;
-
-        bool gen_element_removed = false;
 
         double imm_weight_func(int index)
         {
@@ -451,23 +449,26 @@ namespace AtmosphereAutopilot
             int k = 0;
             while (k < grad_training.Size)
             {
-                if (linear || (cur_time - grad_training[k].birth) < nonlin_cutoff_time || nonlin_cycles < nonlin_trigger)
+                if (linear || (cur_time - grad_training[k].birth) < nonlin_cutoff_time || nonlin_time < nonlin_trigger)
                     k++;
                 else
                     grad_training.Get();
             }
             // Generalization buffer cleaning
+            int gen_count = 0;
             for (int i = 0; i < gen_buffers.Length; i++)
             {
                 k = 0;
                 while (k < gen_buffers[i].Size - 1)
                 {
-                    if (linear || (cur_time - gen_buffers[i][k].birth) < nonlin_cutoff_time || nonlin_cycles < nonlin_trigger)
+                    if (linear || (cur_time - gen_buffers[i][k].birth) < nonlin_cutoff_time || nonlin_time < nonlin_trigger)
                         k++;
                     else
                         gen_buffers[i].Get();
                 }
+                gen_count += gen_buffers[i].Size;
             }
+            gen_space_fill_k = gen_count / (float)gen_space_size;
         }
 
         void update_singularity(IList<Vector> input_list)
