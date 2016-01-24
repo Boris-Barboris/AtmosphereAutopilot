@@ -212,7 +212,7 @@ namespace AtmosphereAutopilot
                 GUILayout.EndHorizontal();
                 GUILayout.BeginHorizontal();
                 yvc.moderate_aoa = GUILayout.Toggle(yvc.moderate_aoa, "Moderate Sideslip", GUIStyles.toggleButtonStyle);
-                float.TryParse(GUILayout.TextField(pvc.max_aoa.ToString("G4"), GUIStyles.textBoxStyle), out yvc.max_aoa);
+                float.TryParse(GUILayout.TextField(yvc.max_aoa.ToString("G4"), GUIStyles.textBoxStyle), out yvc.max_aoa);
                 GUILayout.EndHorizontal();
                 GUILayout.BeginHorizontal();
                 yvc.moderate_g = GUILayout.Toggle(yvc.moderate_g, "Moderate side-G", GUIStyles.toggleButtonStyle);
