@@ -198,7 +198,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Thrust controller GUI", true)]
         protected bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
 
-        [AutoGuiAttr("Cruise control", true)]
+        [AutoGuiAttr("Speed control", true)]
         public bool cruise_control = false;
 
         [VesselSerializable("cruise_speed")]

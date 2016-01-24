@@ -33,6 +33,7 @@ namespace AtmosphereAutopilot
         public static GUIStyle labelStyleRight { get; private set; }
         public static GUIStyle textBoxStyle { get; private set; }
         public static GUIStyle toggleButtonStyle { get; private set; }
+        public static GUIStyle toggleButtonStyleRight { get; private set; }
 
         internal static void Init()
         {
@@ -63,6 +64,12 @@ namespace AtmosphereAutopilot
             toggleButtonStyle.margin = new RectOffset(4, 4, 1, 1);
             toggleButtonStyle.fontSize = 12;
             toggleButtonStyle.stretchWidth = true;
+
+            toggleButtonStyleRight = new GUIStyle(skin.button);
+            toggleButtonStyleRight.alignment = TextAnchor.MiddleRight;
+            toggleButtonStyleRight.margin = new RectOffset(4, 4, 1, 1);
+            toggleButtonStyleRight.fontSize = 12;
+            toggleButtonStyleRight.stretchWidth = true;
         }
 
         static Color old_background, old_color, old_content;

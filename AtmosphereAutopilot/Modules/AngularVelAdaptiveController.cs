@@ -616,7 +616,7 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("max_g_force")]
         [AutoGuiAttr("max G-force", true, "G6")]
-        protected float max_g_force = 15.0f;
+        public float max_g_force = 15.0f;
     }
 
     public sealed class PitchAngularVelocityController : PitchYawAngularVelocityController
@@ -638,7 +638,7 @@ namespace AtmosphereAutopilot
         internal RollAngularVelocityController(Vessel vessel)
             : base(vessel, "Roll ang vel controller", 1234445, ROLL)
         {
-            max_v_construction = 3.0f;
+            max_v_construction = 4.0f;
         }
 
         public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)

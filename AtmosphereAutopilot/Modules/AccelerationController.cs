@@ -74,9 +74,7 @@ namespace AtmosphereAutopilot
 
             // we need aoa moderation for AoA controllers to work
             pitch_c.moderate_aoa = true;
-            pitch_c.moderate_g = true;
             yaw_c.moderate_aoa = true;
-            yaw_c.moderate_g = true;
 
             Vector3d target_lift_acc = target_acc - imodel.gravity_acc - imodel.noninert_acc;
             Vector3d target_normal_lift_acc = target_lift_acc - Vector3d.Project(target_lift_acc, imodel.surface_v);

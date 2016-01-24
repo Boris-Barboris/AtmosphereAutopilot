@@ -459,7 +459,7 @@ namespace AtmosphereAutopilot
             for (int i = 0; i < gen_buffers.Length; i++)
             {
                 k = 0;
-                while (k < gen_buffers[i].Size - 1)
+                while (k < gen_buffers[i].Size - 2)
                 {
                     if (linear || (cur_time - gen_buffers[i][k].birth) < nonlin_cutoff_time || nonlin_time < nonlin_trigger)
                         k++;

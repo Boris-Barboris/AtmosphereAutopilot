@@ -1,13 +1,31 @@
+Cruise_Flight
+{
+	window_x = 52
+	window_y = 213
+	window_width = 240
+}
+Gravity_turn_Fly-By-Wire
+{
+	window_x = 57
+	window_y = 453
+	window_width = 240
+}
 Autopilot_module_manager
 {
 	window_x = 50
 	window_y = 80
-	window_width = 240
+	window_width = 200
+}
+settings_wnd
+{
+	window_x = 351
+	window_y = 82
+	window_width = 200
 }
 Flight_model
 {
-	window_x = 1507
-	window_y = 95
+	window_x = 1601
+	window_y = 89
 	window_width = 240
 }
 Acceleration_controller
@@ -38,8 +56,8 @@ Pitch_ang_vel_controller
 {
 	user_input_deriv_clamp = 5
 	AutoTrim = False
-	window_x = 168
-	window_y = 291
+	window_x = 310
+	window_y = 285
 	window_width = 240
 }
 Roll_ang_vel_controller
@@ -47,28 +65,22 @@ Roll_ang_vel_controller
 	wing_leveler = True
 	user_input_deriv_clamp = 10
 	AutoTrim = False
-	window_x = 661
-	window_y = 290
+	window_x = 813
+	window_y = 288
 	window_width = 240
 }
 Yaw_ang_vel_controller
 {
 	user_input_deriv_clamp = 5
 	AutoTrim = False
-	window_x = 417
-	window_y = 293
+	window_x = 565
+	window_y = 287
 	window_width = 240
 }
 Mouse_Director
 {
 	window_x = 52
 	window_y = 219
-	window_width = 240
-}
-Cruise_Flight
-{
-	window_x = 52
-	window_y = 213
 	window_width = 240
 }
 Prograde_thrust_controller
@@ -85,8 +97,8 @@ Sideslip_controller
 }
 AoA_controller
 {
-	window_x = 50
-	window_y = 80
+	window_x = 601
+	window_y = 753
 	window_width = 240
 }
 Standard_Fly-By-Wire
