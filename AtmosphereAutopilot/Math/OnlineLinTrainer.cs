@@ -373,19 +373,19 @@ namespace AtmosphereAutopilot
                     double scaled_err = (lin_output - true_output) / max_output_value;
                     sum_error += Math.Abs(scaled_err);
                 }
-                for (int i = 0; i < grad_training.Size; i++)
-                {
-                    Vector input = grad_training[i].coord;
-                    double true_output = grad_training[i].val;
-                    double lin_output = linmodel.eval_training(input);
-                    double scaled_err = (lin_output - true_output) / max_output_value;
-                    sum_error += Math.Abs(scaled_err);
-                }
+                //for (int i = 0; i < grad_training.Size; i++)
+                //{
+                //    Vector input = grad_training[i].coord;
+                //    double true_output = grad_training[i].val;
+                //    double lin_output = linmodel.eval_training(input);
+                //    double scaled_err = (lin_output - true_output) / max_output_value;
+                //    sum_error += Math.Abs(scaled_err);
+                //}
                 //Vector input = imm_training_inputs.getLast();
                 //double true_output = imm_training_outputs.getLast();
                 //double lin_output = linmodel.eval_training(input);
                 //sum_error = Math.Abs((lin_output - true_output) / max_output_value);
-                linear_param = (float)(sum_error / (double)(imm_training_inputs.Size + grad_training.Size));
+                linear_param = (float)(sum_error / (double)(imm_training_inputs.Size));// + grad_training.Size));
                 linear = linear_param < linear_err_criteria;
                 //linear_param = (float)sum_error;
                 //linear = sum_error < linear_err_criteria;
@@ -452,7 +452,10 @@ namespace AtmosphereAutopilot
                 if (linear || (cur_time - grad_training[k].birth) < nonlin_cutoff_time || nonlin_time < nonlin_trigger)
                     k++;
                 else
+                {
                     grad_training.Get();
+                    break;
+                }
             }
             // Generalization buffer cleaning
             int gen_count = 0;
@@ -464,7 +467,10 @@ namespace AtmosphereAutopilot
                     if (linear || (cur_time - gen_buffers[i][k].birth) < nonlin_cutoff_time || nonlin_time < nonlin_trigger)
                         k++;
                     else
+                    {
                         gen_buffers[i].Get();
+                        break;
+                    }
                 }
                 gen_count += gen_buffers[i].Size;
             }
