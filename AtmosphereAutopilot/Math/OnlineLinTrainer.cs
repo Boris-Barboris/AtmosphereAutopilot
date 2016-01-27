@@ -153,6 +153,7 @@ namespace AtmosphereAutopilot
 
         #region DataSourceThread
 
+        [AutoGuiAttr("time_elapsed", false)]
         volatile int last_time_elapsed = 0;
 
         public void UpdateState(int time_elapsed)

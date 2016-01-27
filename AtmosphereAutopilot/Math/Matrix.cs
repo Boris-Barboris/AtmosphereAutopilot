@@ -739,7 +739,6 @@ namespace AtmosphereAutopilot
         // Matrix multiplication (memory-efficient)
         public static Matrix Multiply(Matrix m1, Matrix m2, ref Matrix output)
         {
-            if (m1.cols != m2.rows) throw new MException("Wrong dimension of matrix!");
             return StupidMultiply(m1, m2, ref output);
         }
 

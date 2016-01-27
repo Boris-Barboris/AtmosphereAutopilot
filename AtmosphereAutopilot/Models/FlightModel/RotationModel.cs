@@ -37,11 +37,8 @@ namespace AtmosphereAutopilot
 
         public Vector3 AM;
 
-        [AutoGuiAttr("CoM", false, "G5")]
+        //[AutoGuiAttr("CoM", false, "G5")]
         public Vector3 CoM;
-
-        Vector3 partial_CoM;
-        Vector3 cur_CoM;
 
         //[AutoGuiAttr("world_v", false, "G4")]
         public Vector3d surface_v;
@@ -50,9 +47,6 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("Vessel mass", false, "G6")]
         public float sum_mass = 0.0f;
-
-        // It's too expensive to iterate over all parts every physics frame, so we'll stick with 20 most massive
-        const int PartsMax = 20;
 
         struct PartMass
         {
@@ -71,7 +65,6 @@ namespace AtmosphereAutopilot
             }
         }
 
-        List<PartMass> massive_parts = new List<PartMass>(PartsMax);
         Vector3 partial_MOI = Vector3.zero;
         Vector3 partial_AM = Vector3.zero;
 
@@ -91,13 +84,13 @@ namespace AtmosphereAutopilot
             if (moments_cycle_counter == 0)
             {
                 check_csurfaces();
-                get_moments(true);
+                get_moments();
                 reaction_torque = get_sas_authority();
                 get_rcs_characteristics();
                 get_engines();
             }
             else
-                get_moments(true);
+                get_moments();
             moments_cycle_counter = (moments_cycle_counter + 1) % FullMomentFreq;
         }
         
@@ -122,64 +115,27 @@ namespace AtmosphereAutopilot
             return res;
         }
 
-        Vector3 findPartialWorldCoM()
-        {
-            Vector3 result = Vector3.zero;
-            float mass = 0.0f;
-            foreach (var pm in massive_parts)
-            {
-                if (pm.part.State == PartStates.DEAD || !pm.part.isAttached)
-                    continue;
-                if (pm.part.rb != null)
-                {
-                    result += pm.part.rb.worldCenterOfMass * pm.part.rb.mass;
-                    mass += pm.part.rb.mass;
-                }
-                else
-                {
-                    float pmass = pm.part.mass + pm.part.GetResourceMass();
-                    mass += pmass;
-                    result += (pm.part.partTransform.position + pm.part.partTransform.rotation * pm.part.CoMOffset) * pmass;
-                }
-            }
-            if (mass > 0.0f)
-                result /= mass;
-            return result;
-        }
-
         // Rotations of the currently controlling part of the vessel
         public Quaternion world_to_cntrl_part;
         public Quaternion cntrl_part_to_world;
 
-        void get_moments(bool all_parts)
+        void get_moments()
         {
             cntrl_part_to_world = vessel.ReferenceTransform.rotation;
             world_to_cntrl_part = cntrl_part_to_world.Inverse();            // from world to control part rotation
             CoM = vessel.findWorldCenterOfMass();
-            if (all_parts)
-            {
-                MOI = Vector3d.zero;
-                AM = Vector3d.zero;
-                massive_parts.Clear();
-                sum_mass = 0.0f;
-                cur_CoM = CoM;
-            }
-            else
-            {
-                partial_MOI = Vector3.zero;
-                partial_AM = Vector3.zero;
-                cur_CoM = partial_CoM = findPartialWorldCoM();
-            }
+            MOI = Vector3d.zero;
+            AM = Vector3d.zero;
+            sum_mass = 0.0f;
 
-            int indexing = all_parts ? vessel.parts.Count : massive_parts.Count;
+            int indexing = vessel.parts.Count;
 
             // Get velocity
             surface_v = Vector3d.zero;
             Vector3d v_impulse = Vector3d.zero;
-            double v_mass = 0.0;
             for (int pi = 0; pi < indexing; pi++)
             {
-                Part part = all_parts ? vessel.parts[pi] : massive_parts[pi].part;
+                Part part = vessel.parts[pi];
                 if (part.physicalSignificance == Part.PhysicalSignificance.NONE)
                     continue;
                 if (part.vessel != vessel || part.State == PartStates.DEAD)
@@ -198,29 +154,25 @@ namespace AtmosphereAutopilot
                     mass = part.mass + part.GetResourceMass();
                     v_impulse += part.vel * mass;
                 }
-                v_mass += mass;
+                sum_mass += mass;
             }
-            surface_v = v_impulse / v_mass;
+            surface_v = v_impulse / sum_mass;
 
             // Get angular velocity
             for (int pi = 0; pi < indexing; pi++)
             {
-                Part part = all_parts ? vessel.parts[pi] : massive_parts[pi].part;
-                if (part.physicalSignificance == Part.PhysicalSignificance.NONE)
+                Part part = vessel.parts[pi];
+                if (part.physicalSignificance == Part.PhysicalSignificance.NONE ||
+                    part.vessel != vessel || part.State == PartStates.DEAD)
                     continue;
-                if (part.vessel != vessel || part.State == PartStates.DEAD)
-                {
-                    moments_cycle_counter = 0;      // iterating over old part list
-                    continue;
-                }
-                Quaternion part_to_cntrl = part.partTransform.rotation * world_to_cntrl_part;   // from part to root part rotation
+                Quaternion part_to_cntrl = world_to_cntrl_part * part.transform.rotation;   // from part to root part rotation
                 Vector3 moi = Vector3d.zero;
                 Vector3 am = Vector3d.zero;
                 float mass = 0.0f;
                 if (part.rb != null)
                 {
                     mass = part.rb.mass;
-                    Vector3 world_pv = part.rb.worldCenterOfMass - cur_CoM;
+                    Vector3 world_pv = part.rb.worldCenterOfMass - CoM;
                     Vector3 pv = world_to_cntrl_part * world_pv;
                     Vector3 impulse = mass * (world_to_cntrl_part * (part.rb.velocity - surface_v));
                     // from part.rb principal frame to root part rotation
@@ -238,54 +190,44 @@ namespace AtmosphereAutopilot
                 else
                 {
                     mass = part.mass + part.GetResourceMass();
-                    Vector3 world_pv = part.partTransform.position + part.partTransform.rotation * part.CoMOffset - cur_CoM;
+                    Vector3 world_pv = part.partTransform.position + part.partTransform.rotation * part.CoMOffset - CoM;
                     Vector3 pv = world_to_cntrl_part * world_pv;
                     Vector3 impulse = mass * (world_to_cntrl_part * (part.vel - surface_v));
                     // MOI of part as offsetted material point
-                    moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
+                    moi = mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
                     // angular moment of part as offsetted material point
-                    am += Vector3.Cross(pv, impulse);
+                    am = Vector3.Cross(pv, impulse);
                 }
-                if (all_parts)
-                {
-                    massive_parts.Add(new PartMass(part, mass));
-                    MOI += moi;
-                    AM -= am;                   // minus because left handed Unity
-                    sum_mass += mass;
-                }
-                else
-                {
-                    partial_MOI += moi;
-                    partial_AM -= am;           // minus because left handed Unity
-                }
+                MOI += moi;
+                AM -= am;                   // minus because left-handed Unity                
             }
-            if (all_parts)
-            {
-                /*
-                massive_parts.Sort(PartMass.Comparison);
-                if (massive_parts.Count > PartsMax)
-                    massive_parts.RemoveRange(PartsMax, massive_parts.Count - PartsMax);
-                */
-                angular_vel = Common.divideVector(AM, MOI);
-            }
-            else
-            {
-                angular_vel = Common.divideVector(partial_AM, partial_MOI);
-                surface_v -= Vector3.Cross(cur_CoM - CoM, cntrl_part_to_world * angular_vel);
-            }
-            angular_vel -= world_to_cntrl_part * vessel.mainBody.angularVelocity;     // remember that unity physics reference frame is rotating
+            angular_vel = Common.divideVector(AM, MOI);
+            angular_vel -= world_to_cntrl_part * vessel.mainBody.angularVelocity;     // unity physics reference frame is rotating
             surface_v += Krakensbane.GetFrameVelocity();
             surface_v_magnitude = surface_v.magnitude;
         }
 
-        static Vector3 get_rotated_moi(Vector3 inertia_tensor, Quaternion rotation)
+        static Matrix rot_matrix = new Matrix(3, 3);
+        static Matrix rot_matrix_t = new Matrix(3, 3);
+        static Matrix tmp_mat = new Matrix(3, 3);
+        static Matrix tmp_mat2 = new Matrix(3, 3);
+        static Matrix new_inert = new Matrix(3, 3);
+
+        public static Vector3 get_rotated_moi(Vector3 inertia_tensor, Quaternion rotation)
         {
-            Matrix4x4 inert_matrix = Matrix4x4.zero;
+            Common.rotationMatrix(rotation, rot_matrix);
+            Matrix.Transpose(rot_matrix, ref rot_matrix_t);
+            optimized_inert_mult(rot_matrix, inertia_tensor, tmp_mat);
+            Matrix.Multiply(rot_matrix, tmp_mat, ref tmp_mat2);
+            Matrix.Multiply(tmp_mat2, rot_matrix_t, ref new_inert);
+            return new Vector3((float)new_inert[0, 0], (float)new_inert[1, 1], (float)new_inert[2, 2]);
+        }
+
+        public static void optimized_inert_mult(Matrix rot_matrix, Vector3 inert_tensor, Matrix res)
+        {
             for (int i = 0; i < 3; i++)
-                inert_matrix[i, i] = inertia_tensor[i];
-            Matrix4x4 rot_matrix = Common.rotationMatrix(rotation);
-            Matrix4x4 new_inert = (rot_matrix * inert_matrix) * rot_matrix.transpose;
-            return new Vector3(new_inert[0, 0], new_inert[1, 1], new_inert[2, 2]);
+                for (int j = 0; j < 3; j++)
+                    res[i, j] = rot_matrix[i, j] * inert_tensor[j];
         }
 
         void update_velocity_acc()

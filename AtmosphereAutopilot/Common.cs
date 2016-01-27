@@ -56,10 +56,8 @@ namespace AtmosphereAutopilot
         /// </summary>
         /// <param name="q">Rotation</param>
         /// <returns>Transformation matrix representing rotation</returns>
-        public static Matrix4x4 rotationMatrix(Quaternion q)
+        public static void rotationMatrix(Quaternion q, Matrix mat)
         {
-            Matrix4x4 mat = Matrix4x4.zero;
-            mat[3, 3] = 1.0f;
             q = normalizeQuaternion(q);
             mat[0, 0] = 1.0f - 2.0f * q.y * q.y - 2.0f * q.z * q.z;
             mat[1, 0] = 2.0f * q.x * q.y + 2.0f * q.z * q.w;
@@ -70,7 +68,6 @@ namespace AtmosphereAutopilot
             mat[0, 2] = 2.0f * q.x * q.z + 2.0f * q.y * q.w;
             mat[1, 2] = 2.0f * q.y * q.z - 2.0f * q.x * q.w;
             mat[2, 2] = 1.0f - 2.0f * q.x * q.x - 2.0f * q.y * q.y;
-            return mat;
         }
 
         public static double simple_filter(double new_value, double old_value, double k)

@@ -75,7 +75,7 @@ namespace AtmosphereAutopilot
         protected float output_v;
 
         [AutoGuiAttr("desired_aoa_equilibr_v", false, "G6")]
-        protected float cur_aoa_equilibr_v;
+        protected float desired_aoa_equilibr_v;
 
         [AutoGuiAttr("filter_k", true, "G6")]
         protected float filter_k = 4.0f;
@@ -148,7 +148,7 @@ namespace AtmosphereAutopilot
                 eq_x = eq_A.SolveWith(eq_b);
                 double new_eq_v = eq_x[0, 0];
                 if (!double.IsInfinity(new_eq_v) && !double.IsNaN(new_eq_v))
-                    cur_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, cur_aoa_equilibr_v, filter_k);
+                    desired_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, desired_aoa_equilibr_v, filter_k);
             }
             catch (MSingularException) { }
             //cur_aoa_equilibr_v += 0.5f * (float)get_roll_aoa_deriv();
@@ -183,7 +183,7 @@ namespace AtmosphereAutopilot
                     descend_v = k_cubic * (t_step * t_step * t_step - t_cubic * t_cubic * t_cubic) * Math.Sign(error) / TimeWarp.fixedDeltaTime;
             }
 
-            output_v = (float)(descend_v + cur_aoa_equilibr_v);
+            output_v = (float)(descend_v + desired_aoa_equilibr_v);
 
             ControlUtils.neutralize_user_input(cntrl, axis);
             v_controller.user_controlled = false;
