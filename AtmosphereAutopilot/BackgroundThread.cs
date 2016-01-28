@@ -120,7 +120,7 @@ namespace AtmosphereAutopilot
                 if (stop)
                     return;
                 if (!success)
-                    Thread.Sleep(0);
+                    Thread.Sleep(5);
                 if (que_flag)
                 {
                     que_flag = false;

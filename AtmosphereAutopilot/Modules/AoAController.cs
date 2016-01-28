@@ -77,8 +77,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("des_aoa_equil_v", false, "G6")]
         protected float desired_aoa_equilibr_v;
 
-        [AutoGuiAttr("filter_k", true, "G6")]
-        protected float filter_k = 4.0f;
+        [AutoGuiAttr("v_filter_k", true, "G6")]
+        protected float v_filter_k = 0.0f;
 
         protected LinearSystemModel lin_model_gen, lin_model;
 
@@ -96,7 +96,7 @@ namespace AtmosphereAutopilot
         protected float cubic_barrier = 1.0f;
 
         [AutoGuiAttr("cubic_KP", true, "G6")]
-        protected float cubic_kp = 0.3f;
+        protected float cubic_kp = 0.2f;
 
         [AutoGuiAttr("cubic mode", false)]
         protected bool cubic = false;
@@ -107,6 +107,8 @@ namespace AtmosphereAutopilot
         /// Main control function
         /// </summary>
         /// <param name="cntrl">Control state to change</param>
+        /// <param name="target_value">Desired AoA in radians</param>
+        /// <param name="target_derivative">Desired AoA derivative</param>
         public float ApplyControl(FlightCtrlState cntrl, float target_value, float target_derivative)
         {
             if (imodel.dyn_pressure <= 100.0 || !v_controller.moderate_aoa)
@@ -131,11 +133,7 @@ namespace AtmosphereAutopilot
                 desired_aoa = (float)Common.Clamp(target_value, v_controller.res_min_aoa, v_controller.res_max_aoa);
 
             // Let's find equilibrium angular v on desired_aoa
-            LinearSystemModel model;
-            //if (Math.Abs(cur_aoa - desired_aoa) < 1e-2)
-            //    model = lin_model_gen;
-            //else
-            model = lin_model_gen;
+            LinearSystemModel model = lin_model_gen;
             eq_A[0, 0] = model.A[0, 1];
             eq_A[0, 1] = model.A[0, 2] + model.A[0, 3] + model.B[0, 0];
             eq_A[1, 0] = model.A[1, 1];
@@ -148,7 +146,7 @@ namespace AtmosphereAutopilot
                 eq_x = eq_A.SolveWith(eq_b);
                 double new_eq_v = eq_x[0, 0];
                 if (!double.IsInfinity(new_eq_v) && !double.IsNaN(new_eq_v))
-                    desired_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, desired_aoa_equilibr_v, filter_k);
+                    desired_aoa_equilibr_v = (float)Common.simple_filter(new_eq_v, desired_aoa_equilibr_v, v_filter_k);
             }
             catch (MSingularException) { }
             //cur_aoa_equilibr_v += 0.5f * (float)get_roll_aoa_deriv();

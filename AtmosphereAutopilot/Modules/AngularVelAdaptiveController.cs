@@ -531,61 +531,36 @@ namespace AtmosphereAutopilot
                 kacc_quadr = new_kacc_quadr;
             else
                 kacc_quadr = (float)Common.simple_filter(new_kacc_quadr, kacc_quadr, kacc_smoothing);
-            if (kacc_quadr < 1e-3)
+            if (kacc_quadr < 1e-5)
                 return base.get_desired_acc(des_v);
             first_quadr = false;
-            float v_error = vel - des_v;
+            double v_error = vel - des_v;
             double quadr_x;
             float desired_deriv;
             float dt = TimeWarp.fixedDeltaTime;
-            if (v_error >= 0.0)
+
+            quadr_x = -Math.Sqrt(Math.Abs(v_error) / kacc_quadr);
+            if (quadr_x >= -relaxation_k * dt)
             {
-                quadr_x = -Math.Sqrt(v_error / kacc_quadr);
-                if (quadr_x >= -relaxation_k * dt)
+                if (++relax_count > relaxation_frame)
                 {
-                    if (++relax_count > relaxation_frame)
-                    {
-                        float avg_vel = 0.0f;
-                        for (int i = 0; i < relaxation_frame; i++)
-                            avg_vel += imodel.AngularVelHistory(axis).getFromTail(i);
-                        avg_vel /= (float)relaxation_frame;
-                        v_error = avg_vel - des_v;
-                        if (relax_count > relaxation_frame * 2)
-                            relax_count--;
-                    }
-                    desired_deriv = (float)(relaxation_Kp * -v_error / (Math.Ceiling(relaxation_k) * dt));
+                    float avg_vel = 0.0f;
+                    for (int i = 0; i < relaxation_frame; i++)
+                        avg_vel += imodel.AngularVelHistory(axis).getFromTail(i);
+                    avg_vel /= (float)relaxation_frame;
+                    v_error = avg_vel - des_v;
+                    if (relax_count > relaxation_frame * 2)
+                        relax_count--;
                 }
-                else
-                {
-                    relax_count = 0;
-                    double leftover_dt = Math.Min(dt, -quadr_x);
-                    desired_deriv = (float)(kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) - kacc_quadr * quadr_x * quadr_x) / dt;
-                }
+                desired_deriv = (float)(relaxation_Kp * -v_error / (Math.Ceiling(relaxation_k) * dt));
             }
             else
             {
-                quadr_x = -Math.Sqrt(v_error / -kacc_quadr);
-                if (quadr_x >= -relaxation_k * dt)
-                {
-                    if (++relax_count > relaxation_frame)
-                    {
-                        float avg_vel = 0.0f;
-                        for (int i = 0; i < relaxation_frame; i++)
-                            avg_vel += imodel.AngularVelHistory(axis).getFromTail(i);
-                        avg_vel /= (float)relaxation_frame;
-                        v_error = avg_vel - des_v;
-                        if (relax_count > relaxation_frame * 2)
-                            relax_count--;
-                    }
-                    desired_deriv = (float)(relaxation_Kp * -v_error / (Math.Ceiling(relaxation_k) * dt));
-                }
-                else
-                {
-                    relax_count = 0;
-                    double leftover_dt = Math.Min(dt, -quadr_x);
-                    desired_deriv = (float)(-kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) + kacc_quadr * quadr_x * quadr_x) / dt;
-                }
+                relax_count = 0;
+                double leftover_dt = Math.Min(dt, -quadr_x);
+                desired_deriv = (float)(Math.Sign(v_error) * (kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) - kacc_quadr * quadr_x * quadr_x)) / dt;
             }
+
             return desired_deriv;
         }
 

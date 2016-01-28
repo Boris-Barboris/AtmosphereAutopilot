@@ -416,9 +416,6 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("nonlin_trigger", true)]
         public int nonlin_trigger = 100;
 
-        [AutoGuiAttr("grad_buf_length", false)]
-        int grad_buf_length { get { return grad_training.Size; } }
-
         int gen_space_size;
 
         double imm_weight_func(int index)

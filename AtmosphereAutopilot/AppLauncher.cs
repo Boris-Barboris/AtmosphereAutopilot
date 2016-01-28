@@ -25,7 +25,7 @@ namespace AtmosphereAutopilot
     class AppLauncherWindow : GUIWindow
     {
         public AppLauncherWindow() :
-            base("", 3920049, new Rect(Screen.width - 260, 38, 230, 30))
+            base("", 3920049, new Rect(Screen.width - 230, 38, 230, 30))
         { }
 
         public void set_left(int left)
