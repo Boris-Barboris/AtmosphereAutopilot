@@ -116,7 +116,7 @@ namespace AtmosphereAutopilot
             
             desired_v = process_desired_v(desired_v, user_controlled);      // moderation stage
 
-            output_acc = get_desired_acc(desired_v);            // produce output
+            output_acc = get_desired_acc(desired_v);            // produce output acceleration
 
             // check if we're stable on given input value
             if (AutoTrim && vessel == AtmosphereAutopilot.Instance.ActiveVessel)
@@ -140,14 +140,14 @@ namespace AtmosphereAutopilot
         }
 
         [VesselSerializable("max_v_construction")]
-        [AutoGuiAttr("Max v construction", true, "G8")]
+        [AutoGuiAttr("Max v construction", true, "G6")]
         public float max_v_construction = 0.5f;
 
         protected virtual float process_desired_v(float des_v, bool user_input) { return des_v; }
 
         protected virtual float get_desired_acc(float des_v) { return Kp * (desired_v - vel); }
 
-        [AutoGuiAttr("DEBUG desired_v", false, "G8")]
+        [AutoGuiAttr("DEBUG desired_v", false, "G6")]
         protected float desired_v;
 
         [GlobalSerializable("AutoTrim")]
@@ -179,16 +179,16 @@ namespace AtmosphereAutopilot
         protected Matrix eq_x;
 
         [AutoGuiAttr("max_input_aoa", false, "G6")]
-        protected float max_input_aoa;
+        public float max_input_aoa;
 
         [AutoGuiAttr("max_input_v", false, "G6")]
-        protected float max_input_v;
+        public float max_input_v;
 
         [AutoGuiAttr("min_input_aoa", false, "G6")]
-        protected float min_input_aoa;
+        public float min_input_aoa;
 
         [AutoGuiAttr("min_input_v", false, "G6")]
-        protected float min_input_v;
+        public float min_input_v;
 
         [AutoGuiAttr("max_g_aoa", false, "G6")]
         public float max_g_aoa;
@@ -200,16 +200,22 @@ namespace AtmosphereAutopilot
         public float max_g_v;
 
         [AutoGuiAttr("min_g_v", false, "G6")]
-        protected float min_g_v;
+        public float min_g_v;
 
         [AutoGuiAttr("max_aoa_v", false, "G6")]
         public float max_aoa_v;
 
         [AutoGuiAttr("min_aoa_v", false, "G6")]
-        protected float min_aoa_v;
+        public float min_aoa_v;
+
+        [AutoGuiAttr("staticaly_stable", false)]
+        public bool staticaly_stable = true;
 
         [AutoGuiAttr("moder_filter", true, "G6")]
         protected float moder_filter = 3.0f;
+
+        [AutoGuiAttr("transit_v_mult", true, "G6")]
+        protected float transit_v_mult = 0.5f;
 
         protected Matrix state_mat = new Matrix(4, 1);
         protected Matrix input_mat = new Matrix(1, 1);
@@ -226,9 +232,13 @@ namespace AtmosphereAutopilot
             float cur_aoa = imodel.AoA(axis);
             float abs_cur_aoa = Math.Abs(cur_aoa);
             bool moderated = false;
+            
 
+            // AoA moderation section
             if (moderate_aoa && imodel.dyn_pressure > 100.0)
             {
+                moderated = true;
+
                 if (abs_cur_aoa < rad_max_aoa * 1.5f)
                 {
                     // We're in linear regime so we can update our limitations
@@ -251,12 +261,14 @@ namespace AtmosphereAutopilot
                                 // plane is statically unstable, eq_x solution is equilibrium on it's minimal stable aoa
                                 min_input_aoa = (float)Common.simple_filter(0.6 * eq_x[0, 0], min_input_aoa, moder_filter / 2.0);
                                 min_input_v = (float)Common.simple_filter(0.6 * eq_x[1, 0], min_input_v, moder_filter / 2.0);
+                                staticaly_stable = false;
                             }
                             else
                             {
                                 // plane is statically stable, eq_x solution is equilibrium on it's maximal stable aoa
                                 max_input_aoa = (float)Common.simple_filter(0.98 * eq_x[0, 0], max_input_aoa, moder_filter);
                                 max_input_v = (float)Common.simple_filter(0.98 * eq_x[1, 0], max_input_v, moder_filter);
+                                staticaly_stable = true;
                             }
 
                             // get equilibrium aoa and angular_v for -1.0 input
@@ -331,10 +343,9 @@ namespace AtmosphereAutopilot
                     res_min_aoa = -rad_max_aoa;
                     res_equilibr_v_lower = min_aoa_v;
                 }
-
-                moderated = true;
             }
 
+            // Lift acceleration moderation section
             if (moderate_g && imodel.dyn_pressure > 100.0)
             {
                 moderated = true;
@@ -406,15 +417,15 @@ namespace AtmosphereAutopilot
             // let's get non-overshooting max v value, let's call it transit_max_v
             // we start on 0.0 aoa with transit_max_v and we must not overshoot res_max_aoa
             // while applying -1.0 input all the time
-            if (abs_cur_aoa < rad_max_aoa * 1.5f && moderated && imodel.dyn_pressure > 100.0)
+            if (abs_cur_aoa < rad_max_aoa * 1.5f && moderated)
             {
                 double transit_max_aoa = Math.Min(rad_max_aoa, res_max_aoa);
-                state_mat[0, 0] = transit_max_aoa / 2.0;
+                state_mat[0, 0] = staticaly_stable ? transit_max_aoa / 3.0 : transit_max_aoa;
                 state_mat[2, 0] = -1.0;
                 state_mat[3, 0] = -1.0;
                 input_mat[0, 0] = -1.0;
                 double acc = lin_model.eval_row(1, state_mat, input_mat);
-                float new_dyn_max_v = 0.8f * (float)Math.Sqrt(transit_max_aoa * (-acc));
+                float new_dyn_max_v = transit_v_mult * (float)Math.Sqrt(2.0 * transit_max_aoa * (-acc));
                 if (float.IsNaN(new_dyn_max_v))
                 {
                     if (old_dyn_max_v != 0.0f)
@@ -424,6 +435,8 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
+                    // for cases when static authority is too small to comply to long-term dynamics, 
+                    // we need to artificially increase it
                     if (new_dyn_max_v < res_equilibr_v_upper * 1.2 || new_dyn_max_v < -res_equilibr_v_lower * 1.2)
                         new_dyn_max_v = 1.2f * Math.Max(Math.Abs(res_equilibr_v_upper), Math.Abs(res_equilibr_v_lower));
                     new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
@@ -436,7 +449,7 @@ namespace AtmosphereAutopilot
             
             // if the user is in charge, let's hold surface-relative angular elocity
             float v_offset = 0.0f;
-            if (user_input && vessel.obt_velocity.sqrMagnitude > 1.0)
+            if (user_input && vessel.obt_speed > 1.0)
             {
                 if (FlightUIController.speedDisplayMode == FlightUIController.SpeedDisplayModes.Surface)
                 {

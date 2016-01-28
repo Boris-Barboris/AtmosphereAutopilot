@@ -43,7 +43,7 @@ namespace AtmosphereAutopilot
         protected string module_name;
 
         protected AutopilotModule(Vessel v, int wnd_id, string module_name):
-            base(module_name, wnd_id, new Rect(50.0f, 80.0f, 240.0f, 50.0f))
+            base(module_name, wnd_id, new Rect(50.0f, 80.0f, 200.0f, 50.0f))
         {
             vessel = v;
             this.module_name = module_name;
@@ -156,12 +156,26 @@ namespace AtmosphereAutopilot
         #region GUI
 
         [GlobalSerializable("window_x")]
-        protected float WindowLeft { get { return window.xMin; } set { window.xMin = value; } }
+        protected float WindowLeft { get { return window.xMin; } 
+            set 
+            {
+                float width = window.width;
+                window.xMin = value;
+                window.xMax = window.xMin + width;
+            } 
+        }
 
         [GlobalSerializable("window_y")]
-        protected float WindowTop { get { return window.yMin; } set { window.yMin = value; } }
+        protected float WindowTop { get { return window.yMin; } 
+            set 
+            {
+                float height = window.height;
+                window.yMin = value;
+                window.yMax = window.yMin + height;
+            } 
+        }
 
-        [GlobalSerializable("window_width")]
+        //[GlobalSerializable("window_width")]
         protected float WindowWidth { get { return window.width; } set { window.width = value; } }
 
         /// <inheritdoc />

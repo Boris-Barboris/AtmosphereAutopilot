@@ -43,16 +43,19 @@ namespace AtmosphereAutopilot
             labelStyleLeft.alignment = TextAnchor.MiddleLeft;
             labelStyleLeft.fontSize = 11;
             labelStyleLeft.margin = new RectOffset(2, 2, 1, 1);
+            labelStyleLeft.padding = new RectOffset(1, 1, 1, 1);
 
             labelStyleRight = new GUIStyle(skin.label);
             labelStyleRight.alignment = TextAnchor.MiddleRight;
             labelStyleRight.fontSize = 11;
             labelStyleRight.margin = new RectOffset(2, 2, 1, 1);
+            labelStyleRight.padding = new RectOffset(1, 1, 1, 1);
 
             labelStyleCenter = new GUIStyle(skin.label);
             labelStyleCenter.alignment = TextAnchor.MiddleCenter;
             labelStyleCenter.fontSize = 11;
             labelStyleCenter.margin = new RectOffset(2, 2, 1, 1);
+            labelStyleCenter.padding = new RectOffset(1, 1, 1, 1);
 
             textBoxStyle = new GUIStyle(skin.textField);
             textBoxStyle.alignment = TextAnchor.MiddleCenter;
@@ -62,21 +65,27 @@ namespace AtmosphereAutopilot
             toggleButtonStyle = new GUIStyle(skin.button);
             toggleButtonStyle.alignment = TextAnchor.MiddleCenter;
             toggleButtonStyle.margin = new RectOffset(4, 4, 1, 1);
+            toggleButtonStyle.padding = new RectOffset(4, 4, 2, 2);
+            var button_pressed_style = toggleButtonStyle.onActive;
+            button_pressed_style.textColor = Color.green;
             toggleButtonStyle.fontSize = 12;
+            toggleButtonStyle.onNormal = button_pressed_style;
             toggleButtonStyle.stretchWidth = true;
 
             toggleButtonStyleRight = new GUIStyle(skin.button);
             toggleButtonStyleRight.alignment = TextAnchor.MiddleRight;
             toggleButtonStyleRight.margin = new RectOffset(4, 4, 1, 1);
+            toggleButtonStyleRight.padding = new RectOffset(4, 4, 2, 2);
+            toggleButtonStyleRight.onNormal = button_pressed_style;
             toggleButtonStyleRight.fontSize = 12;
             toggleButtonStyleRight.stretchWidth = true;
         }
 
         static Color old_background, old_color, old_content;
 
-        static Color my_background = new Color(0.0f, 0.0f, 0.0f, 2.5f);
-        static Color my_color = new Color(1.0f, 1.0f, 1.0f, 0.3f);
-        static Color my_content = new Color(1.0f, 0.2f, 0.2f, 3.3f);
+        static Color my_background = new Color(0.0f, 0.0f, 0.0f, 1.7f);
+        static Color my_color = new Color(1.0f, 1.0f, 1.0f, 0.5f);
+        static Color my_content = new Color(1.0f, 0.2f, 0.2f, 2.0f);
 
         internal static void set_colors()
         {

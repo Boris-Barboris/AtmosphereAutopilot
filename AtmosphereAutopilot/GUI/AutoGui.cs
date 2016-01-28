@@ -216,15 +216,23 @@ namespace AtmosphereAutopilot
             
             // properties
             if (!property_list.ContainsKey(type))
-                property_list[type] = type.GetProperties(BindingFlags.Instance | 
-                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            {
+                List<PropertyInfo> properties = new List<PropertyInfo>(type.GetProperties(BindingFlags.Instance |
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static));
+                properties.RemoveAll(pi => pi.GetCustomAttributes(typeof(AutoGuiAttr), true).Length == 0);
+                property_list[type] = properties.ToArray();
+            }
             foreach (var property in property_list[type])
                 draw_element(property, obj);
 
             // fields
             if (!field_list.ContainsKey(type))
-                field_list[type] = type.GetFields(BindingFlags.Instance |
-                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            {
+                List<FieldInfo> fields = new List<FieldInfo>(type.GetFields(BindingFlags.Instance |
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static));
+                fields.RemoveAll(fi => fi.GetCustomAttributes(typeof(AutoGuiAttr), true).Length == 0);
+                field_list[type] = fields.ToArray();
+            }
             foreach (var field in field_list[type])
                 draw_element(field, obj);
         }

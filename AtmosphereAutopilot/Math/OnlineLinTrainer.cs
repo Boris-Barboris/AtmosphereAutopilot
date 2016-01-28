@@ -153,8 +153,11 @@ namespace AtmosphereAutopilot
 
         #region DataSourceThread
 
-        [AutoGuiAttr("time_elapsed", false)]
+        //[AutoGuiAttr("time_elapsed", false)]
         protected int last_time_elapsed = 0;
+
+        [AutoGuiAttr("iteration_time", false)]
+        protected volatile int iteration_time = 0;
 
         public void UpdateState(int time_elapsed)
         {
@@ -245,6 +248,7 @@ namespace AtmosphereAutopilot
             lock (imm_buf_inputs)
             {
                 int count = imm_buf_inputs.Size;
+                iteration_time = count * last_time_elapsed;
                 added_to_imm = count;
                 while (count > 0)
                 {
