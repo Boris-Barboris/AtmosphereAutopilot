@@ -296,15 +296,15 @@ namespace AtmosphereAutopilot
 
         void OnGUI()
         {
-            if (ActiveVessel == null)
-                return;
-            if (!HighLogic.LoadedSceneIsFlight)
-                return;
             if (!styles_init)
             {
                 GUIStyles.Init();
                 styles_init = true;
             }
+            if (ActiveVessel == null)
+                return;
+            if (!HighLogic.LoadedSceneIsFlight)
+                return;            
             GUIStyles.set_colors();
             applauncher.OnGUI();
             foreach (var pair in autopilot_module_lists[ActiveVessel])
