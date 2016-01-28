@@ -347,7 +347,10 @@ namespace AtmosphereAutopilot
                     autopilot_module_lists.ContainsKey(ActiveVessel))
                 {
                     AutopilotModule module = autopilot_module_lists[ActiveVessel][pair.Key];
-                    module.Active = !module.Active;
+                    if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                        module.ToggleGUI();
+                    else
+                        module.Active = !module.Active;
                 }
             }
             if (autopilot_module_lists.ContainsKey(ActiveVessel))
