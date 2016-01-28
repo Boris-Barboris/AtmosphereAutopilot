@@ -477,6 +477,14 @@ namespace AtmosphereAutopilot
             return t;
         }
 
+        public static unsafe Matrix TransposeUnsafe(Matrix m, Matrix res)    // memory-efficient transpose
+        {
+            for (int i = 0; i < m.rows; i++)
+                for (int j = 0; j < m.cols; j++)
+                    res[j, i] = m[i, j];
+            return res;
+        }
+
         public static Matrix Power(Matrix m, int pow)           // Power matrix to exponent
         {
             if (pow == 0) return IdentityMatrix(m.rows, m.cols);
@@ -709,6 +717,18 @@ namespace AtmosphereAutopilot
             return result;
         }
 
+        private static unsafe Matrix StupidMultiplyUnsafe(Matrix m1, Matrix m2, Matrix result)                  // Stupid matrix multiplication
+        {
+            for (int i = 0; i < result.rows; i++)
+                for (int j = 0; j < result.cols; j++)
+                {
+                    result[i, j] = 0.0;
+                    for (int k = 0; k < m1.cols; k++)
+                        result[i, j] += m1[i, k] * m2[k, j];
+                }
+            return result;
+        }
+
         private static Matrix Multiply(Matrix m1, Matrix m2)                         // Matrix multiplication
         {
             if (m1.cols != m2.rows) throw new MException("Wrong dimension of matrix!");
@@ -740,6 +760,11 @@ namespace AtmosphereAutopilot
         public static Matrix Multiply(Matrix m1, Matrix m2, ref Matrix output)
         {
             return StupidMultiply(m1, m2, ref output);
+        }
+
+        public static unsafe Matrix MultiplyUnsafe(Matrix m1, Matrix m2, Matrix output)
+        {
+            return StupidMultiplyUnsafe(m1, m2, output);
         }
 
         private static Matrix Multiply(double n, Matrix m)                          // Multiplication by constant n

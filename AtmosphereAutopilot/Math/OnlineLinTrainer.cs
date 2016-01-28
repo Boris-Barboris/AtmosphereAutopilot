@@ -154,7 +154,7 @@ namespace AtmosphereAutopilot
         #region DataSourceThread
 
         [AutoGuiAttr("time_elapsed", false)]
-        volatile int last_time_elapsed = 0;
+        protected int last_time_elapsed = 0;
 
         public void UpdateState(int time_elapsed)
         {
@@ -226,7 +226,7 @@ namespace AtmosphereAutopilot
         public volatile float min_output_value = 0.01f;
 
         [AutoGuiAttr("max_output_value", false, "G6")]
-        double max_output_value = 0.01;         // maximum absolute value of model output reached in past
+        protected double max_output_value = 0.01;         // maximum absolute value of model output reached in past
 
         //[AutoGuiAttr("inputs_changed", false)]
         readonly bool[] inputs_changed;         // flags that input has changed
