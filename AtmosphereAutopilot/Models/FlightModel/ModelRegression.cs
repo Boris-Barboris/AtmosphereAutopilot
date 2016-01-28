@@ -86,7 +86,7 @@ namespace AtmosphereAutopilot
             pitch_trainer = new OnlineLinTrainer(IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
                 new int[] { 20, 20 }, pitch_input_method, pitch_output_method, pitch_aero_torque_task_gen, pitch_aero_torque_task);
             pitch_trainer.max_value_decay = 0.001f;
-            pitch_trainer.linear_err_criteria = 0.02f;
+            pitch_trainer.linear_err_criteria = 0.01f;
             pitch_trainer.nonlin_trigger = 100;
             pitch_trainer.nonlin_cutoff_time = 500;
 
@@ -126,13 +126,13 @@ namespace AtmosphereAutopilot
             yaw_trainer = new OnlineLinTrainer(IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
                 new int[] { 20, 20 }, yaw_input_method, yaw_output_method, yaw_aero_torque_task_gen, yaw_aero_torque_task);
             yaw_trainer.max_value_decay = 0.001f;
-            yaw_trainer.linear_err_criteria = 0.02f;
+            yaw_trainer.linear_err_criteria = 0.01f;
             yaw_trainer.nonlin_trigger = 100;
             yaw_trainer.nonlin_cutoff_time = 500;
 
             //  Initialize pitch lift trainer
             pitch_lift_task.linmodel = pitch_lift_model;
-            pitch_lift_task.base_gen_weight = 0.1f;
+            pitch_lift_task.base_gen_weight = 2.0f;
             pitch_lift_task.linear_time_decay = 0.002f;
             pitch_lift_task.nonlin_time_decay = 0.005f;
             pitch_lift_task.validator = (a, b) => pitch_lift_validator(pitch_lift_model, a, b);
@@ -146,7 +146,7 @@ namespace AtmosphereAutopilot
 
             //  Initialize yaw lift trainer
             yaw_lift_task.linmodel = yaw_lift_model;
-            yaw_lift_task.base_gen_weight = 0.1f;
+            yaw_lift_task.base_gen_weight = 2.0f;
             yaw_lift_task.linear_time_decay = 0.002f;
             yaw_lift_task.nonlin_time_decay = 0.005f;
             yaw_lift_task.validator = (a, b) => pitch_lift_validator(yaw_lift_model, a, b);

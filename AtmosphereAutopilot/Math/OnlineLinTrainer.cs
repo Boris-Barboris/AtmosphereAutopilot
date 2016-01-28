@@ -397,7 +397,7 @@ namespace AtmosphereAutopilot
                 if (linear)
                     nonlin_time = 0;
                 else
-                    nonlin_time = Math.Min(1000, nonlin_time + last_time_elapsed);
+                    nonlin_time = Math.Min(1000, nonlin_time + iteration_time);
             }
         }
 

@@ -150,7 +150,7 @@ namespace AtmosphereAutopilot
 
         List<Func<bool>> removal_que = new List<Func<bool>>();
         List<Func<bool>> addition_que = new List<Func<bool>>();
-        bool que_flag = false;
+        volatile bool que_flag = false;
 
         /// <summary>
         /// Remove function from thread execution queue.
