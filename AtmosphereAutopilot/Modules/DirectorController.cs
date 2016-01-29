@@ -101,6 +101,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("min_rollover_alt", true, "G5")]
         public double min_rollover_alt = 50.0;
 
+        public double max_lift_acc = 0.0;
+        public double max_sideslip_acc = 0.0;
+
         /// <summary>
         /// Main control function
         /// </summary>
@@ -121,8 +124,8 @@ namespace AtmosphereAutopilot
                 imodel.surface_v).normalized;
             angular_error = Vector3d.Angle(imodel.surface_v.normalized, desired_vel) * dgr2rad;
             
-            double max_lift_acc = Math.Max(0.01, max_lift_acceleration(PITCH));
-            double max_sideslip_acc = Math.Max(0.001, max_lift_acceleration(YAW));
+            max_lift_acc = Math.Max(0.01, max_lift_acceleration(PITCH));
+            max_sideslip_acc = Math.Max(0.001, max_lift_acceleration(YAW));
 
             // let's find this craft's maximum acceleration toward desired_turn_acc_dir without stalling
             // it can be solved from simple quadratic equation

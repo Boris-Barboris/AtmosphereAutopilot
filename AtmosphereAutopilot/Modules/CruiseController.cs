@@ -62,6 +62,13 @@ namespace AtmosphereAutopilot
             MessageManager.post_status_message("Cruise Flight disabled");
         }
 
+        Vector3d desired_velocity = Vector3d.zero;
+        Vector3d planet2ves = Vector3d.zero;
+        Vector3d planet2vesNorm = Vector3d.zero;
+
+        // centrifugal acceleration to stay on desired altitude
+        Vector3d level_acc = Vector3d.zero;
+
         public override void ApplyControl(FlightCtrlState cntrl)
         {
             if (vessel.LandedOrSplashed)
@@ -70,19 +77,23 @@ namespace AtmosphereAutopilot
             if (speed_control)
                 thrust_c.ApplyControl(cntrl, desired_spd);
 
-            Vector3d desired_velocity = Vector3d.zero;
-            Vector3d planet2ves = vessel.ReferenceTransform.position - vessel.mainBody.position;
-            Vector3d planet2vesNorm = planet2ves.normalized;
+            desired_velocity = Vector3d.zero;
+            planet2ves = vessel.ReferenceTransform.position - vessel.mainBody.position;
+            planet2vesNorm = planet2ves.normalized;
 
             // centrifugal acceleration to stay on desired altitude
-            Vector3d level_acc = -planet2vesNorm * (imodel.surface_v - Vector3d.Project(imodel.surface_v, planet2vesNorm)).sqrMagnitude / planet2ves.magnitude;
+            level_acc = -planet2vesNorm * (imodel.surface_v - Vector3d.Project(imodel.surface_v, planet2vesNorm)).sqrMagnitude / planet2ves.magnitude;
 
             switch (current_mode)
             {
+                default:
                 case CruiseMode.LevelFlight:
                     // simply select velocity from axis
                     desired_velocity = Vector3d.Cross(planet2vesNorm, circle_axis);
+                    if (specific_altitude)
+                        desired_velocity = account_for_height(desired_velocity);
                     break;
+
                 case CruiseMode.CourseHold:
                     if (Math.Abs(vessel.latitude) > 80.0)
                     {
@@ -104,8 +115,8 @@ namespace AtmosphereAutopilot
                             sign = 1.0;
                         desired_velocity = right_turn * sign;
                     }
-                    break;
-                default:
+                    if (specific_altitude)
+                        desired_velocity = account_for_height(desired_velocity);
                     break;
             }
 
@@ -158,8 +169,48 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("strength_mult", true, "G5")]
         public double strength_mult = 0.5;
 
-        [AutoGuiAttr("latitude", false, "G5")]
-        public double latitude { get { return vessel.latitude; } }
+        [VesselSerializable("height_relax_time")]
+        [AutoGuiAttr("height_relax_time", true, "G5")]
+        public double height_relax_time = 6.0;
+
+        [VesselSerializable("height_relax_Kp")]
+        [AutoGuiAttr("height_relax_Kp", true, "G5")]
+        public double height_relax_Kp = 0.3;
+
+        [VesselSerializable("max_climb_angle")]
+        [AutoGuiAttr("max_climb_angle", true, "G5")]
+        public double max_climb_angle = 30.0;
+
+        Vector3d account_for_height(Vector3d desired_direction)
+        {
+            double cur_alt = vessel.altitude;
+            double height_error = desired_altitude - cur_alt;
+            double acc = Vector3.Dot(imodel.gravity_acc + imodel.noninert_acc, -planet2vesNorm);    // free-fall vertical acceleration
+            double height_relax_frame = 0.5 * acc * height_relax_time * height_relax_time;
+
+            double relax_transition_k = 0.0;
+            double des_vert_speed = 0.0;
+            double relax_vert_speed = 0.0;
+            Vector3d res = Vector3d.zero;
+
+            if (Math.Abs(height_error) < height_relax_frame)
+            {
+                relax_transition_k = Common.Clamp(2.0 * (height_relax_frame - Math.Abs(height_error)), 0.0, 1.0);
+                // we're in relaxation frame
+                relax_vert_speed = height_relax_Kp * height_error;
+            }
+            
+            // let's assume parabolic ascent\descend
+            des_vert_speed = height_error >= 0.0 ?
+                Math.Sqrt(acc * height_error) :
+                -Math.Sqrt(2.0 * Math.Min(-5.0, (acc - dir_c.strength * strength_mult * 0.8 * dir_c.max_lift_acc)) * height_error);
+            double max_vert_speed = vessel.horizontalSrfSpeed * Math.Tan(max_climb_angle * dgr2rad);
+            des_vert_speed = Common.Clamp(des_vert_speed, max_vert_speed);
+            res = desired_direction * vessel.horizontalSrfSpeed + planet2vesNorm * Common.lerp(des_vert_speed, relax_vert_speed, relax_transition_k);
+            return res.normalized;
+        }
+
+
 
         bool LevelFlightMode
         {
