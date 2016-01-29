@@ -75,6 +75,12 @@ namespace AtmosphereAutopilot
             return (old_value * k + new_value) / (k + 1.0);
         }
 
+        public static double lerp(double a, double b, double k)
+        {
+            k = Common.Clamp(k, 1.0);
+            return a * (1.0 - k) + b * k;
+        }
+
         public static Vector3 divideVector(Vector3 lhs, Vector3 rhs)
         {
             Vector3 result = new Vector3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);

@@ -103,6 +103,12 @@ namespace AtmosphereAutopilot
                 moderation_switch = !moderation_switch;
         }
 
+        bool landed = false;
+        bool need_restore = false;
+        float time_after_takeoff = 0.0f;
+        bool aoa_moder = true;
+        bool g_moder = true;
+
         /// <summary>
         /// Main control function
         /// </summary>
@@ -110,7 +116,33 @@ namespace AtmosphereAutopilot
         public override void ApplyControl(FlightCtrlState cntrl)
         {
             if (vessel.LandedOrSplashed)
+            {
+                landed = true;
+                time_after_takeoff = 0.0f;
                 return;
+            }
+
+            // disable pitch moderation for two seconds after take-off
+            if (landed || need_restore)
+            {
+                if (landed)
+                {
+                    aoa_moder = pc.moderate_aoa;
+                    g_moder = pc.moderate_g;
+                    pc.moderate_aoa = false;
+                    pc.moderate_g = false;
+                    landed = false;
+                    need_restore = true;
+                }
+                if (time_after_takeoff > 2.0f)
+                {
+                    pc.moderate_aoa = aoa_moder;
+                    pc.moderate_g = g_moder;
+                    need_restore = false;
+                }
+                else
+                    time_after_takeoff += TimeWarp.fixedDeltaTime;
+            }
 
             if (cruise_control)
                 tc.ApplyControl(cntrl, cruise_speed);

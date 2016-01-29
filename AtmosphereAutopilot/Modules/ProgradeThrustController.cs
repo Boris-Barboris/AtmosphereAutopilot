@@ -134,8 +134,7 @@ namespace AtmosphereAutopilot
                 prograde_thrust = Vector3.Dot(thrust, surfspd_dir);
 
                 double current_acc = Vector3.Dot(imodel.sum_acc, surfspd_dir);
-                drag_estimate = current_acc - prograde_thrust / imodel.sum_mass - Vector3d.Dot(imodel.gravity_acc, surfspd_dir) -
-                    Vector3d.Dot(imodel.noninert_acc, surfspd_dir);
+                drag_estimate = current_acc - prograde_thrust / imodel.sum_mass - Vector3d.Dot(imodel.gravity_acc + imodel.noninert_acc, surfspd_dir);
 
                 v_error = desired_v - current_v;
                 desired_acc = Kp_v * v_error;
@@ -146,7 +145,7 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
-                    acc_error = desired_acc - current_acc;              
+                    acc_error = desired_acc - current_acc;
                 }
 
                 thrust_error = acc_error * imodel.sum_mass;
@@ -182,32 +181,38 @@ namespace AtmosphereAutopilot
                 double e_throttle = eng.currentThrottle / eng.thrustPercentage * 100.0;
                 estimated_max_thrusts[i] = 
                     e_prograde_thrust != 0.0 ? e_prograde_thrust / e_throttle : eng.maxThrust;
-                if (eng.useEngineResponseTime)
-                {
-                    throttle_directions[i] = prev_throttle >= eng.currentThrottle ? 1 : -1;
-                    if (Mathf.Abs(eng.currentThrottle - prev_throttle * eng.thrustPercentage * 0.01f) <= 1e-4f)
-                    {
-                        throttle_directions[i] = 0;
-                        predicted_thrust += estimated_max_thrusts[i] * prev_throttle;
-                    }
-                    else
-                    {
-                        float spd = throttle_directions[i] > 0 ? eng.engineAccelerationSpeed : eng.engineDecelerationSpeed;
-                        double predict_throttle = Mathf.Lerp(eng.currentThrottle, prev_throttle, TimeWarp.fixedDeltaTime * spd);
-                        predicted_thrust += estimated_max_thrusts[i] * predict_throttle;
-                    }
-                }
-                else
-                    predicted_thrust += estimated_max_thrusts[i] * prev_throttle;
             }
 
             bool spool_dir_changed = false;
             double desired_throttle = 0.0;
-            double t_error = required_thrust - predicted_thrust;
             iter_count = 0;
             do
             {
-                spool_dir_changed = false;                
+                predicted_thrust = 0.0;
+                for (int i = 0; i < imodel.engines.Count; i++)
+                {
+                    ModuleEngines eng = imodel.engines[i].engine;
+                    double e_throttle = eng.currentThrottle / eng.thrustPercentage * 100.0;
+                    if (eng.useEngineResponseTime)
+                    {
+                        throttle_directions[i] = prev_throttle >= eng.currentThrottle ? 1 : -1;
+                        if (Mathf.Abs(eng.currentThrottle - prev_throttle * eng.thrustPercentage * 0.01f) <= 1e-4f)
+                        {
+                            throttle_directions[i] = 0;
+                            predicted_thrust += estimated_max_thrusts[i] * prev_throttle;
+                        }
+                        else
+                        {
+                            float spd = throttle_directions[i] > 0 ? eng.engineAccelerationSpeed : eng.engineDecelerationSpeed;
+                            double predict_throttle = Common.lerp(e_throttle, prev_throttle, TimeWarp.fixedDeltaTime * spd);
+                            predicted_thrust += estimated_max_thrusts[i] * predict_throttle;
+                        }
+                    }
+                    else
+                        predicted_thrust += estimated_max_thrusts[i] * prev_throttle;
+                }
+
+                double t_error = required_thrust - predicted_thrust;
                 double thrust_authority = 0.0;
                 for (int i = 0; i < imodel.engines.Count; i++)
                 {
@@ -225,6 +230,7 @@ namespace AtmosphereAutopilot
                 desired_throttle = Common.Clamp(prev_throttle + t_error / thrust_authority, 0.0, 1.0);
 
                 // now check if we changed spooling direction
+                spool_dir_changed = false;
                 for (int i = 0; i < imodel.engines.Count; i++)
                 {
                     ModuleEngines eng = imodel.engines[i].engine;
@@ -236,10 +242,13 @@ namespace AtmosphereAutopilot
                         if (throttle_directions[i] != new_throttle_direction)
                         {
                             spool_dir_changed = true;
-                            throttle_directions[i] = new_throttle_direction;
+                            //throttle_directions[i] = new_throttle_direction;
                         }
                     }
                 }
+
+                prev_throttle = (float)desired_throttle;
+
                 iter_count++;
             } while (spool_dir_changed && iter_count <= imodel.engines.Count + 2);
 

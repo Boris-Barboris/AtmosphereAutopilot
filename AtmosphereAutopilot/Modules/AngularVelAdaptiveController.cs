@@ -626,7 +626,7 @@ namespace AtmosphereAutopilot
         internal RollAngularVelocityController(Vessel vessel)
             : base(vessel, "Roll ang vel controller", 1234445, ROLL)
         {
-            max_v_construction = 4.0f;
+            max_v_construction = 3.0f;
         }
 
         public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)

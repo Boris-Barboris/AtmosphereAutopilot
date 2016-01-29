@@ -22,59 +22,209 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
+
+    /// <summary>
+    /// Manages cruise flight modes, like heading and altitude holds
+    /// </summary>
     public sealed class CruiseController: StateController
     {
         internal CruiseController(Vessel v)
-            : base(v, "Cruise Flight", 88437226)
+            : base(v, "Cruise Flight controller", 88437226)
         { }
 
         FlightModel imodel;
-        AccelerationController acc_c;
+        DirectorController dir_c;
+        ProgradeThrustController thrust_c;
 
         public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
         {
             imodel = modules[typeof(FlightModel)] as FlightModel;
-            acc_c = modules[typeof(AccelerationController)] as AccelerationController;
+            dir_c = modules[typeof(DirectorController)] as DirectorController;
+            thrust_c = modules[typeof(ProgradeThrustController)] as ProgradeThrustController;
         }
 
         protected override void OnActivate()
         {
-            acc_c.Activate();
+            dir_c.Activate();
+            thrust_c.Activate();
+            imodel.Activate();
             MessageManager.post_status_message("Cruise Flight enabled");
+            
+            // let's set new circle axis
+            circle_axis = Vector3d.Cross(vessel.srf_velocity, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
         }
 
         protected override void OnDeactivate()
         {
-            acc_c.Deactivate();
+            dir_c.Deactivate();
+            thrust_c.Deactivate();
+            imodel.Deactivate();
             MessageManager.post_status_message("Cruise Flight disabled");
         }
 
         public override void ApplyControl(FlightCtrlState cntrl)
         {
-            Vector3d desired_acc = Vector3d.zero;
+            if (vessel.LandedOrSplashed)
+                return;
+
+            if (speed_control)
+                thrust_c.ApplyControl(cntrl, desired_spd);
+
+            Vector3d desired_velocity = Vector3d.zero;
             Vector3d planet2ves = vessel.ReferenceTransform.position - vessel.mainBody.position;
             Vector3d planet2vesNorm = planet2ves.normalized;
 
-            // acceleration to stay on desired altitude
-            desired_acc -= planet2vesNorm * (imodel.surface_v - Vector3d.Project(imodel.surface_v, planet2vesNorm)).sqrMagnitude / planet2ves.magnitude;
+            // centrifugal acceleration to stay on desired altitude
+            Vector3d level_acc = -planet2vesNorm * (imodel.surface_v - Vector3d.Project(imodel.surface_v, planet2vesNorm)).sqrMagnitude / planet2ves.magnitude;
 
-            // right acceleration
-            Vector3d right_v = Vector3d.Cross(planet2vesNorm, imodel.surface_v.normalized).normalized;
-            desired_acc += right_v * right_acceleration;
+            switch (current_mode)
+            {
+                case CruiseMode.LevelFlight:
+                    // simply select velocity from axis
+                    desired_velocity = Vector3d.Cross(planet2vesNorm, circle_axis);
+                    break;
+                case CruiseMode.CourseHold:
+                    if (Math.Abs(vessel.latitude) > 80.0)
+                    {
+                        // we're too close to poles, let's switch to level flight
+                        LevelFlightMode = true;
+                        goto case CruiseMode.LevelFlight;
+                    }
+                    // get direction vector form course
+                    Vector3d north = vessel.mainBody.RotationAxis;
+                    Vector3d north_projected = Vector3.ProjectOnPlane(north, planet2vesNorm);
+                    QuaternionD rotation = QuaternionD.AngleAxis(desired_course, planet2vesNorm);
+                    desired_velocity = rotation * north_projected;
+                    if (Vector3d.Dot(imodel.surface_v, desired_velocity) < 0.0)
+                    {
+                        // we're turning for more than 90 degrees, let's force the turn to be horizontal
+                        Vector3d right_turn = Vector3d.Cross(planet2vesNorm, imodel.surface_v);
+                        double sign = Math.Sign(Vector3d.Dot(right_turn, desired_velocity));
+                        if (sign == 0.0)
+                            sign = 1.0;
+                        desired_velocity = right_turn * sign;
+                    }
+                    break;
+                default:
+                    break;
+            }
 
-            // up acceleration
-            desired_acc += planet2vesNorm * up_acceleration;
-
-            acc_c.ApplyControl(cntrl, desired_acc, Vector3d.zero);
+            double old_str = dir_c.strength;
+            dir_c.strength *= strength_mult;
+            dir_c.ApplyControl(cntrl, desired_velocity, level_acc);
+            dir_c.strength = old_str;
         }
 
-        [AutoGuiAttr("Acceleration controller GUI", true)]
-        protected bool AccCGUI { get { return acc_c.IsShown(); } set { if (value) acc_c.ShowGUI(); else acc_c.UnShowGUI(); } }
+        public enum CruiseMode
+        {
+            LevelFlight,
+            CourseHold,
+            Waypoint
+        }
 
-        [AutoGuiAttr("right_acceleration", true, "G5")]
-        protected double right_acceleration = 0.0;
+        public CruiseMode current_mode = CruiseMode.LevelFlight;
 
-        [AutoGuiAttr("up_acceleration", true, "G5")]
-        protected double up_acceleration = 0.0;
+        // axis to rotate around in level flight mode
+        protected Vector3d circle_axis = Vector3d.zero;
+
+        [AutoGuiAttr("Director controller GUI", true)]
+        protected bool DircGUI { get { return dir_c.IsShown(); } set { if (value) dir_c.ShowGUI(); else dir_c.UnShowGUI(); } }
+
+        [AutoGuiAttr("Thrust controller GUI", true)]
+        protected bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
+
+        [VesselSerializable("desired_course")]
+        [AutoGuiAttr("desired_course", true)]
+        public float desired_course = 90.0f;
+
+        [VesselSerializable("specific_altitude")]
+        [AutoGuiAttr("Specific altitude", true)]
+        public bool specific_altitude = false;
+
+        [VesselSerializable("desired_altitude")]
+        [AutoGuiAttr("desired_altitude", true)]
+        public float desired_altitude = 1000.0f;
+
+        [VesselSerializable("speed_control")]
+        [AutoGuiAttr("Speed control", true)]
+        public bool speed_control = false;
+
+        [VesselSerializable("cruise_speed")]
+        [GlobalSerializable("cruise_speed")]
+        [AutoGuiAttr("Cruise speed", true, "G5")]
+        public float desired_spd = 200.0f;
+
+        [VesselSerializable("strength_mult")]
+        [AutoGuiAttr("strength_mult", true, "G5")]
+        public double strength_mult = 0.5;
+
+        [AutoGuiAttr("latitude", false, "G5")]
+        public double latitude { get { return vessel.latitude; } }
+
+        bool LevelFlightMode
+        {
+            get { return current_mode == CruiseMode.LevelFlight; }
+            set
+            {
+                if (value)
+                {
+                    if (current_mode != CruiseMode.LevelFlight)
+                    {
+                        // let's set new circle axis
+                        circle_axis = Vector3d.Cross(vessel.srf_velocity, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
+                    }
+                    current_mode = CruiseMode.LevelFlight;
+                }
+            }
+        }
+
+        bool CourseHoldMode
+        {
+            get { return current_mode == CruiseMode.CourseHold; }
+            set
+            {
+                if (value)
+                {
+                    if (Math.Abs(vessel.latitude) > 80.0)
+                        return;
+                    if (current_mode != CruiseMode.CourseHold)
+                    {
+                        // TODO
+                    }
+                    current_mode = CruiseMode.CourseHold;
+                }
+            }
+        }
+
+        bool WaypointMode
+        {
+            get { return current_mode == CruiseMode.Waypoint; }
+            set
+            {
+                if (value)
+                {
+                    if (current_mode != CruiseMode.Waypoint)
+                    {
+                        // TODO
+                    }
+                    current_mode = CruiseMode.Waypoint;
+                }
+            }
+        }
+
+        protected override void _drawGUI(int id)
+        {
+            GUILayout.BeginVertical();
+            GUILayout.BeginHorizontal();
+            // three buttons to switch mode
+            LevelFlightMode = GUILayout.Toggle(LevelFlightMode, "Level", GUIStyles.toggleButtonStyle);
+            CourseHoldMode = GUILayout.Toggle(CourseHoldMode, "Course", GUIStyles.toggleButtonStyle);
+            WaypointMode = GUILayout.Toggle(WaypointMode, "Waypoint", GUIStyles.toggleButtonStyle);
+            GUILayout.EndHorizontal();
+            GUILayout.Space(5.0f);
+            AutoGUI.AutoDrawObject(this);
+            GUILayout.EndVertical();
+            GUI.DragWindow();
+        }
     }
 }
