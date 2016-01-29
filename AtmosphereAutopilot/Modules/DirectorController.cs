@@ -99,7 +99,7 @@ namespace AtmosphereAutopilot
         public double max_neg_g = 8.0;
 
         [AutoGuiAttr("min_rollover_alt", true, "G5")]
-        public double min_rollover_alt = 50.0;
+        public double min_rollover_alt = 150.0;
 
         public double max_lift_acc = 0.0;
         public double max_sideslip_acc = 0.0;
@@ -169,6 +169,14 @@ namespace AtmosphereAutopilot
             Vector3d neutral_acc = -imodel.gravity_acc - imodel.noninert_acc;
             Vector3d target_lift_acc = target_acc + neutral_acc;
             Vector3d target_normal_lift_acc = target_lift_acc - Vector3d.Project(target_lift_acc, imodel.surface_v);
+
+            // prevent rolling on small errors
+            if (angular_error < 2e-2 && target_normal_lift_acc.magnitude < neutral_acc.magnitude * 0.3)
+            {
+                target_lift_acc = Vector3d.Project(target_lift_acc, neutral_acc);
+                target_normal_lift_acc = target_lift_acc - Vector3d.Project(target_lift_acc, imodel.surface_v);
+            }
+
             Vector3d desired_right_direction = Vector3d.Cross(target_normal_lift_acc, vessel.ReferenceTransform.up).normalized;
 
             // let's apply roll to maintain desired_right_direction
@@ -353,7 +361,7 @@ namespace AtmosphereAutopilot
             roll_state_m[1, 0] = 1.0;
             roll_state_m[2, 0] = 1.0;
             roll_input_m[0, 0] = 1.0;
-            double roll_max_acc = imodel.roll_rot_model_gen.eval_row(0, roll_state_m, roll_input_m) * ((vessel == FlightGlobals.ActiveVessel && FlightInputHandler.fetch.precisionMode) ? 0.4 : 1.0);
+            double roll_max_acc = imodel.roll_rot_model_gen.eval_row(0, roll_state_m, roll_input_m) * ((vessel == FlightGlobals.ActiveVessel && FlightInputHandler.fetch.precisionMode) ? 0.4 : 1.0) * strength;
             roll_acc_factor = Common.simple_filter(Math.Abs(roll_max_acc), roll_acc_factor, roll_acc_filter);
 
             // calculate anti-overshooting perameters
@@ -361,6 +369,7 @@ namespace AtmosphereAutopilot
                 max_roll_v = Math.Min(roll_c.max_input_v, roll_c.max_v_construction);
             else
                 max_roll_v = Math.Abs(Math.Max(roll_c.min_input_v, -roll_c.max_v_construction));
+            max_roll_v *= strength;
             double stop_time = Math.Max(max_roll_v / Math.Max(1e-3, roll_acc_factor) + 1.0f / SyncModuleControlSurface.CSURF_SPD, 0.1);
             
             // we'll use cubic descend to desired bank angle
@@ -442,12 +451,12 @@ namespace AtmosphereAutopilot
         {
             if (axis == PITCH)
             {
-                return (float)(pitch_c.max_aoa_v * imodel.surface_v_magnitude - imodel.prev_pitch_gravity_acc - imodel.prev_pitch_noninert_acc);
+                return (float)(pitch_c.res_equilibr_v_upper * imodel.surface_v_magnitude - imodel.prev_pitch_gravity_acc - imodel.prev_pitch_noninert_acc);
             }
             else
                 if (axis == YAW)
                 {
-                    return (float)(yaw_c.max_aoa_v * imodel.surface_v_magnitude - imodel.prev_yaw_gravity_acc - imodel.prev_yaw_noninert_acc);
+                    return (float)(yaw_c.res_equilibr_v_upper * imodel.surface_v_magnitude - imodel.prev_yaw_gravity_acc - imodel.prev_yaw_noninert_acc);
                 }
             return 0.0f;
         }

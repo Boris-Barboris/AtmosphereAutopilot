@@ -39,24 +39,40 @@ FBW uses three controllers - pitch, roll and yaw. Pitch is handled by "Pitch ang
 Hotkey for FBW is letter P, autoPilot. Hardcoded.
 Default hotkey for Moderation is letter O, mOderation. Can be changed in Global_settings.cfg file.
 
-Cruise control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
+Speed control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
 
 ## Mouse Director
-Mouse Director (MD) is declarative autopilot, crafted with idea to let the user to define desired airspeed direction with camera position. Autopilot then tries to comply with this surface-relative velocity setpoint. MD is inherently-linear, so only relatively small angles of attack are allowed. All AoA and G moderations are forcefully turned on during it's work.
+Mouse Director (MD) is declarative autopilot, crafted with idea to let the user to define desired airspeed direction with camera position. Autopilot then tries to comply with this surface-relative velocity setpoint. MD is inherently-linear, so only relatively small angles of attack are allowed. All AoA moderations are forcefully turned on during it's work.
 
-MD uses "Acceleration controller", wich uses two AoA controllers: pitch "AoA controller" and yaw "Sideslip controller", and "Roll ang vel controller" for roll. Currently, planar asymmetry of a plane is not taken into account (sideslip noise is still too noticeable in zero-lift convergence problem), sideslip is always at zero setpoint. If your craft requires nonzero sideslip to fly straight, MD is not a very good solution right now, use FbW in the _rocket mode_.
+MD uses "Director controller", wich uses two AoA controllers: pitch "AoA controller" and yaw "Sideslip controller", and "Roll ang vel controller" for roll. Currently, planar asymmetry of a plane is not taken into account (sideslip noise is still too noticeable in zero-lift convergence problem), sideslip is always at zero setpoint. If your craft requires nonzero sideslip to fly straight, MD is not a very good solution right now, use FbW in the _rocket mode_.
 
 Short GUI description:
-* _strength_ - default value 0.95. Measure of agressiveness of acceleration output of MD. Precise control multiplies output acceleration by the factor of 0.4.
-* _roll stop k_ - default value 1.0, used to prevent overshooting, magic number.
-* _angular error_ - error in radians between desired velocity vector and current one.
-* _max angular v_ - estimate on current maneuver maximum angular velocity.
-* _stop time roll_ - estimate on 90-degrees bank maneuver stop time.
-* _relaxation margin_ - default value 0.01 radians. Margin of relaxed acceleration output. Magic number. Increase to fight overshooting (rarely needed).
-* _angle relaxation k_ - default value 0.1. Relaxation gain, magic number. Decrease to fight oscillations.
-* _cruise speed_ - m/s airspeed setpoint for cruise control.
+* _cruise speed_ - m/s airspeed setpoint for speed control.
 
-Cruise control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
+Speed control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
+
+## Cruise Flight controller
+Cruise Flight (CF) is high-level autopilot, designet for travel automation. Just like MD, CF is inherently-linear, so only relatively small angles of attack are allowed. All AoA moderations are forcefully turned on during it's work.
+
+CF uses "Director controller" for controlling velocity vector and "Prograde thrust controller" for throttle automation.
+Functions:
+* Simple leveling.
+* Baromethric (orbital) height and airspeed control.
+* Primitive waypoint functionality, picking point on planet surface (mouse click) on the map and flying to it.
+
+Short GUI description:
+* _Level_ - simple leveling regime. Upon activation, CF will save surface-relative inclination of velocity and will follow it. If altitude is not set, will keep vertical speed at zero.
+* _Course_ - follows azimuth setpoint, set in field _desired course_. If altitude is not set, will keep vertical speed at zero. On high latitudes (>80 degrees) will switch to _Level_ mode.
+* _Waypoint_ - primitive waypoint following. Designed for pick-and-fly functionality. When activated, _pick waypoint_ button appears under mode tabs, as well as waypoint latitude-longtitude representation.
+* _desired course_ - azimuth in degrees to follow in _Course_ mode.
+* _Hold specific altitude_ - activate if want altitude control.
+* _desired altitude_ - desired baromethric altitude in meters above sea level.
+* _Speed control_ - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
+* _Cruise speed_ - m/s airspeed setpoint for speed control.
+* _strength mult_ - default value 0.5. Will be multiplied in the runtime on Director controller's strength to restrain maneuvers. Tune to achieve slover or faster behaviour.
+* _height relax time_ - default value 6.0 seconds. Time frame of proportional control law jurisdiction, related to relaxation behaviour. Tune to prevent overshooting, if really needed.
+* _height relax Kp_ - gain for proportional law, decrease to slow down relaxation.
+* _max climb angle_ - default value 30 degrees. Limit on climb and drop maneuver pitch. Will sometimes be exceeded, it's okay.
 
 # Default Modules descriptions
 
@@ -89,24 +105,34 @@ Short GUI description (consult source code for more deatils and insight):
 * _e thrust_ - engines thrust in craft principal reference frame.
 * two vectors on engine torque linear estimations. They are used to adress gimbaling capabilities of a craft.
 
-## Acceleration controller
-Middle-level controller, follows a setpoint of acceleration vector in surface-relative reference frame. Input: acceleration and jerk. Output: AoA, sideslip and roll angular velocity.
+## Director controller
+Middle-level model-reference controller, follows a setpoint of surface velocity and acceleration vectors. Input: velocity vector and acceleration vector. Output: AoA, sideslip and roll angular velocity.
 
 Short GUI description:
+* _strength_ - default value 0.95. Measure of agressiveness of acceleration output of MD. Precise control multiplies output acceleration by the factor of 0.4.
+* _roll stop k_ - default value 1.0, used to prevent overshooting, magic number.
+* _angular error_ - error in radians between desired velocity vector and current one.
+* _max angular v_ - estimate on current maneuver maximum angular velocity.
+* _stop time roll_ - estimate on 90-degrees bank maneuver stop time.
+* _relaxation margin_ - default value 0.01 radians. Margin of relaxed acceleration output. Magic number. Increase to fight overshooting (rarely needed).
+* _angle relaxation k_ - default value 0.1. Relaxation gain, magic number. Decrease to fight oscillations.
+* _max neg g_ - default value 8.0. Maximum negative g-force tolerate. May be useful for players, who are using G-force effects mods.
+* _min rollover alt_ - default value 150.0 meters. Under this terrain altitude setpoint rolling over to prevent large negative g-force will be forbiden to decrease probability of deadly maneovers.
 * _desired pitch lift_ - desired lift-induced acceleration, projected on spinal vector.
 * _desired pitch acc_ - desired total acceleration, projected on spinal vector.
 * _desired pitch v_ - desired angular velocity for pitch, calculated from previous value.
+* _allow spine down_ - global flag to allow turning spine down to prevent negative G-force.
 * _roll acc factor_ - angular acceleration factor estimate of roll rotation model.
 * _roll acc filter_ - default value 4.0. filter gain for smoothing _roll acc factor_ evolution noise.
 * _roll cubic K_ - default value 0.3. Cubic descent gain for roll. Increase for faster roll control, decrease for lower overshooting and oscillations.
 * _roll cubic relax frame_ - default value 10.0. Relaxation frame for cubic descent phase. Magic nubmer.
 * _roll relax Kp_ - default value 0.1. Relaxation gain for roll.
-* _roll error filter margin_ - margin for smoothing _roll angle_ oscillations. Magic number.
-* _roll error filter k_ - filter gain for _roll angle_ smoothing on relaxation regime.
+* _roll error filter margin_ - default value 3.0. Margin for smoothing _roll angle_ oscillations. Magic number.
+* _roll error filter k_ - default value 0.5. Filter gain for _roll angle_ smoothing on relaxation regime.
 * _max roll v_ - estimate of constrained maximum roll angular velocity.
-* _roll angle_ - current bank error in radians.
-* _cubic_ - true when in cubic descent regime.
-* _snapping boundary_ - default vaulue 0.05236 (3 degrees in radians). On low bank error modes we will transition from cubic relaxation to proportional relaxation (like in roll controller wing leveler code).
+* _roll error_ - current bank error in radians.
+* _roll_cubic_ - true when in cubic descent regime for roll.
+* _snapping boundary_ - default vaulue 3 degrees. On low bank error modes we will transition from cubic relaxation to proportional relaxation (like in roll controller wing leveler code).
 * _desired aoa_ - output to "AoA controller".
 * _desired sideslip_ - output to "Sideslip controller".
 

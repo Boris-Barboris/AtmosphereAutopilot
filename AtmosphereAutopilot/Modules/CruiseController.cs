@@ -23,6 +23,17 @@ using UnityEngine;
 namespace AtmosphereAutopilot
 {
 
+    public struct Waypoint
+    {
+        public Waypoint(double longt, double lat)
+        {
+            longtitude = longt;
+            latitude = lat;
+        }
+        public double longtitude;
+        public double latitude;
+    }
+
     /// <summary>
     /// Manages cruise flight modes, like heading and altitude holds
     /// </summary>
@@ -90,6 +101,7 @@ namespace AtmosphereAutopilot
                 case CruiseMode.LevelFlight:
                     // simply select velocity from axis
                     desired_velocity = Vector3d.Cross(planet2vesNorm, circle_axis);
+                    handle_wide_turn();
                     if (specific_altitude)
                         desired_velocity = account_for_height(desired_velocity);
                     break;
@@ -106,24 +118,54 @@ namespace AtmosphereAutopilot
                     Vector3d north_projected = Vector3.ProjectOnPlane(north, planet2vesNorm);
                     QuaternionD rotation = QuaternionD.AngleAxis(desired_course, planet2vesNorm);
                     desired_velocity = rotation * north_projected;
-                    if (Vector3d.Dot(imodel.surface_v, desired_velocity) < 0.0)
-                    {
-                        // we're turning for more than 90 degrees, let's force the turn to be horizontal
-                        Vector3d right_turn = Vector3d.Cross(planet2vesNorm, imodel.surface_v);
-                        double sign = Math.Sign(Vector3d.Dot(right_turn, desired_velocity));
-                        if (sign == 0.0)
-                            sign = 1.0;
-                        desired_velocity = right_turn * sign;
-                    }
+                    handle_wide_turn();
                     if (specific_altitude)
                         desired_velocity = account_for_height(desired_velocity);
                     break;
+
+                case CruiseMode.Waypoint:
+                    if (!waypoint_entered)
+                    {
+                        // goto simple level flight
+                        goto case CruiseMode.LevelFlight;
+                    }
+                    else
+                    {
+                        // set new axis
+                        Vector3d world_target_pos = vessel.mainBody.GetWorldSurfacePosition(current_waypt.latitude,
+                            current_waypt.longtitude, vessel.altitude);
+                        double dist_to_dest = Vector3d.Distance(world_target_pos, vessel.ReferenceTransform.position);
+                        if (dist_to_dest < 200.0)
+                        {
+                            // we're too close to target, let's switch to level flight
+                            LevelFlightMode = true;
+                            picking_waypoint = false;
+                            MessageManager.post_quick_message("Waypoint reached");
+                            goto case CruiseMode.LevelFlight;
+                        }
+                        // set new axis according to waypoint
+                        circle_axis = Vector3d.Cross(world_target_pos - vessel.mainBody.position, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
+                        goto case CruiseMode.LevelFlight;
+                    }
             }
 
             double old_str = dir_c.strength;
             dir_c.strength *= strength_mult;
             dir_c.ApplyControl(cntrl, desired_velocity, level_acc);
             dir_c.strength = old_str;
+        }
+
+        void handle_wide_turn()
+        {
+            if (Vector3d.Dot(imodel.surface_v, desired_velocity) < 0.0)
+            {
+                // we're turning for more than 90 degrees, let's force the turn to be horizontal
+                Vector3d right_turn = Vector3d.Cross(planet2vesNorm, imodel.surface_v);
+                double sign = Math.Sign(Vector3d.Dot(right_turn, desired_velocity));
+                if (sign == 0.0)
+                    sign = 1.0;
+                desired_velocity = right_turn * sign;
+            }
         }
 
         public enum CruiseMode
@@ -134,6 +176,9 @@ namespace AtmosphereAutopilot
         }
 
         public CruiseMode current_mode = CruiseMode.LevelFlight;
+
+        public Waypoint current_waypt = new Waypoint();
+        bool waypoint_entered = false;
 
         // axis to rotate around in level flight mode
         protected Vector3d circle_axis = Vector3d.zero;
@@ -149,7 +194,7 @@ namespace AtmosphereAutopilot
         public float desired_course = 90.0f;
 
         [VesselSerializable("specific_altitude")]
-        [AutoGuiAttr("Specific altitude", true)]
+        [AutoGuiAttr("Hold specific altitude", true)]
         public bool specific_altitude = false;
 
         [VesselSerializable("desired_altitude")]
@@ -203,10 +248,10 @@ namespace AtmosphereAutopilot
             // let's assume parabolic ascent\descend
             des_vert_speed = height_error >= 0.0 ?
                 Math.Sqrt(acc * height_error) :
-                -Math.Sqrt(2.0 * Math.Min(-5.0, (acc - dir_c.strength * strength_mult * 0.8 * dir_c.max_lift_acc)) * height_error);
+                -Math.Sqrt(Math.Min(-5.0, acc - dir_c.strength * strength_mult * dir_c.max_lift_acc * 0.4) * height_error);
             double max_vert_speed = vessel.horizontalSrfSpeed * Math.Tan(max_climb_angle * dgr2rad);
             des_vert_speed = Common.Clamp(des_vert_speed, max_vert_speed);
-            res = desired_direction * vessel.horizontalSrfSpeed + planet2vesNorm * Common.lerp(des_vert_speed, relax_vert_speed, relax_transition_k);
+            res = desired_direction.normalized * vessel.horizontalSrfSpeed + planet2vesNorm * Common.lerp(des_vert_speed, relax_vert_speed, relax_transition_k);
             return res.normalized;
         }
 
@@ -256,12 +301,23 @@ namespace AtmosphereAutopilot
                 {
                     if (current_mode != CruiseMode.Waypoint)
                     {
-                        // TODO
+                        waypoint_entered = false;
+                        circle_axis = Vector3d.Cross(vessel.srf_velocity, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
+                        start_picking_waypoint();
                     }
                     current_mode = CruiseMode.Waypoint;
                 }
             }
         }
+
+        void start_picking_waypoint()
+        {
+            MapView.EnterMapView();
+            MessageManager.post_quick_message("Pick destination");
+            picking_waypoint = true;            
+        }
+
+        bool picking_waypoint = false;
 
         protected override void _drawGUI(int id)
         {
@@ -272,10 +328,55 @@ namespace AtmosphereAutopilot
             CourseHoldMode = GUILayout.Toggle(CourseHoldMode, "Course", GUIStyles.toggleButtonStyle);
             WaypointMode = GUILayout.Toggle(WaypointMode, "Waypoint", GUIStyles.toggleButtonStyle);
             GUILayout.EndHorizontal();
-            GUILayout.Space(5.0f);
+            // waypoint picking button
+            if (WaypointMode)
+            {
+                if (GUILayout.Button("pick waypoint", GUIStyles.toggleButtonStyle) && !picking_waypoint)
+                    start_picking_waypoint();
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(current_waypt.latitude.ToString("G5"), GUIStyles.labelStyleCenter);
+                GUILayout.Label(current_waypt.longtitude.ToString("G5"), GUIStyles.labelStyleCenter);
+                GUILayout.EndHorizontal();
+            }
             AutoGUI.AutoDrawObject(this);
             GUILayout.EndVertical();
             GUI.DragWindow();
+        }
+
+        public override void OnUpdate()
+        {
+            if (picking_waypoint)
+            {
+                if (!HighLogic.LoadedSceneIsFlight || !MapView.MapIsEnabled)
+                {
+                    // we leaved map without picking
+                    MessageManager.post_quick_message("Cancelled");
+                    picking_waypoint = false;
+                    return;
+                }
+                // Thanks MechJeb!
+                if (Input.GetMouseButtonDown(0) && !window.Contains(Input.mousePosition))
+                {
+                    Ray mouseRay = PlanetariumCamera.Camera.ScreenPointToRay(Input.mousePosition);
+                    mouseRay.origin = ScaledSpace.ScaledToLocalSpace(mouseRay.origin);
+                    Vector3d relOrigin = mouseRay.origin - vessel.mainBody.position;
+                    Vector3d relSurfacePosition;
+                    double curRadius = vessel.mainBody.pqsController.radiusMax;
+                    if (PQS.LineSphereIntersection(relOrigin, mouseRay.direction, curRadius, out relSurfacePosition))
+                    {
+                        Vector3d surfacePoint = vessel.mainBody.position + relSurfacePosition;
+                        current_waypt.longtitude = vessel.mainBody.GetLongitude(surfacePoint);
+                        current_waypt.latitude = vessel.mainBody.GetLatitude(surfacePoint);
+                        picking_waypoint = false;
+                        waypoint_entered = true;
+                        MessageManager.post_quick_message("Picked");
+                    }
+                    else
+                    {
+                        MessageManager.post_quick_message("Missed");
+                    }
+                }
+            }
         }
     }
 }

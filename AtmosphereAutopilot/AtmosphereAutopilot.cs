@@ -335,8 +335,6 @@ namespace AtmosphereAutopilot
         void Update()
         {
             // Handle keyboard hotkeys here
-            if (InputLockManager.IsLocked(ControlTypes.ALL_SHIP_CONTROLS))
-                return;
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
             if (ActiveVessel == null)
