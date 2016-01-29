@@ -140,7 +140,7 @@ namespace AtmosphereAutopilot
             pitch_lift_trainer = new OnlineLinTrainer(IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
                 new int[] { 20, 20 }, pitch_lift_input_method, pitch_lift_output_method, pitch_lift_task);
             pitch_lift_trainer.max_value_decay = 0.0005f;
-            pitch_lift_trainer.linear_err_criteria = 0.02f;
+            pitch_lift_trainer.linear_err_criteria = 0.0005f;
             pitch_lift_trainer.nonlin_trigger = 100;
             pitch_lift_trainer.nonlin_cutoff_time = 500;
 
@@ -154,7 +154,7 @@ namespace AtmosphereAutopilot
             yaw_lift_trainer = new OnlineLinTrainer(IMM_BUF_SIZE, new double[] { 0.01, 0.05 },
                 new int[] { 20, 20 }, yaw_lift_input_method, yaw_lift_output_method, yaw_lift_task);
             yaw_lift_trainer.max_value_decay = 0.0005f;
-            yaw_lift_trainer.linear_err_criteria = 0.02f;
+            yaw_lift_trainer.linear_err_criteria = 0.001f;
             yaw_lift_trainer.nonlin_trigger = 100;
             yaw_lift_trainer.nonlin_cutoff_time = 500;
         }

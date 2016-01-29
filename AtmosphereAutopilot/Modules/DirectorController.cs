@@ -159,7 +159,10 @@ namespace AtmosphereAutopilot
                 }
             }
 
-            target_acc = desired_acceleration + shift_acc;// +level_acc;
+            //if (angular_error > 0.2 || Vector3d.Dot(desired_acceleration, shift_acc) < -0.1)
+            //    target_acc = shift_acc;
+            //else
+            target_acc = desired_acceleration + shift_acc;
             //current_acc = imodel.sum_acc;
 
             // we need aoa moderation for AoA controllers to work

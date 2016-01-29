@@ -76,6 +76,7 @@ namespace AtmosphereAutopilot
         Vector3d desired_velocity = Vector3d.zero;
         Vector3d planet2ves = Vector3d.zero;
         Vector3d planet2vesNorm = Vector3d.zero;
+        Vector3d desired_vert_acc = Vector3d.zero;
 
         // centrifugal acceleration to stay on desired altitude
         Vector3d level_acc = Vector3d.zero;
@@ -91,6 +92,7 @@ namespace AtmosphereAutopilot
             desired_velocity = Vector3d.zero;
             planet2ves = vessel.ReferenceTransform.position - vessel.mainBody.position;
             planet2vesNorm = planet2ves.normalized;
+            desired_vert_acc = Vector3d.zero;
 
             // centrifugal acceleration to stay on desired altitude
             level_acc = -planet2vesNorm * (imodel.surface_v - Vector3d.Project(imodel.surface_v, planet2vesNorm)).sqrMagnitude / planet2ves.magnitude;
@@ -151,7 +153,7 @@ namespace AtmosphereAutopilot
 
             double old_str = dir_c.strength;
             dir_c.strength *= strength_mult;
-            dir_c.ApplyControl(cntrl, desired_velocity, level_acc);
+            dir_c.ApplyControl(cntrl, desired_velocity, level_acc + desired_vert_acc);
             dir_c.strength = old_str;
         }
 
@@ -212,7 +214,7 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("strength_mult")]
         [AutoGuiAttr("strength_mult", true, "G5")]
-        public double strength_mult = 0.5;
+        public double strength_mult = 0.6;
 
         [VesselSerializable("height_relax_time")]
         [AutoGuiAttr("height_relax_time", true, "G5")]
@@ -224,7 +226,7 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("max_climb_angle")]
         [AutoGuiAttr("max_climb_angle", true, "G5")]
-        public double max_climb_angle = 30.0;
+        public double max_climb_angle = 20.0;
 
         Vector3d account_for_height(Vector3d desired_direction)
         {
@@ -238,20 +240,35 @@ namespace AtmosphereAutopilot
             double relax_vert_speed = 0.0;
             Vector3d res = Vector3d.zero;
 
+            Vector3d proportional_acc = Vector3d.zero;
             if (Math.Abs(height_error) < height_relax_frame)
             {
                 relax_transition_k = Common.Clamp(2.0 * (height_relax_frame - Math.Abs(height_error)), 0.0, 1.0);
                 // we're in relaxation frame
                 relax_vert_speed = height_relax_Kp * height_error;
+                // exponential descent
+                proportional_acc = -planet2vesNorm * height_relax_Kp * height_relax_Kp * height_error;
             }
             
             // let's assume parabolic ascent\descend
-            des_vert_speed = height_error >= 0.0 ?
-                Math.Sqrt(acc * height_error) :
-                -Math.Sqrt(Math.Min(-5.0, acc - dir_c.strength * strength_mult * dir_c.max_lift_acc * 0.4) * height_error);
+            Vector3d parabolic_acc = Vector3d.zero;
+            if (height_error >= 0.0)
+            {
+                des_vert_speed = Math.Sqrt(acc * height_error);
+                parabolic_acc = -planet2vesNorm * 0.5 * acc;
+            }
+            else
+            {
+                double vert_acc_descent = 2.0 * Math.Min(-5.0, acc - dir_c.strength * strength_mult * dir_c.max_lift_acc * 0.5);
+                des_vert_speed = -Math.Sqrt(vert_acc_descent * height_error);
+                parabolic_acc = -planet2vesNorm * 0.5 * vert_acc_descent;
+            }
             double max_vert_speed = vessel.horizontalSrfSpeed * Math.Tan(max_climb_angle * dgr2rad);
+            bool apply_acc = Math.Abs(des_vert_speed) < max_vert_speed;
             des_vert_speed = Common.Clamp(des_vert_speed, max_vert_speed);
             res = desired_direction.normalized * vessel.horizontalSrfSpeed + planet2vesNorm * Common.lerp(des_vert_speed, relax_vert_speed, relax_transition_k);
+            if (apply_acc)
+                desired_vert_acc = parabolic_acc * (1.0 - relax_transition_k) + proportional_acc * relax_transition_k;
             return res.normalized;
         }
 

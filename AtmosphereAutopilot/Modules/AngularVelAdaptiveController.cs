@@ -558,7 +558,10 @@ namespace AtmosphereAutopilot
             {
                 relax_count = 0;
                 double leftover_dt = Math.Min(dt, -quadr_x);
-                desired_deriv = (float)(Math.Sign(v_error) * (kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) - kacc_quadr * quadr_x * quadr_x)) / dt;
+                if (double.IsNaN(v_error))
+                    desired_deriv = 0.0f;
+                else
+                    desired_deriv = (float)(Math.Sign(v_error) * (kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) - kacc_quadr * quadr_x * quadr_x)) / dt;
             }
 
             return desired_deriv;

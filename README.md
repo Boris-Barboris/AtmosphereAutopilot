@@ -34,7 +34,7 @@ Main goals:
 * Sideslip handling.
 * Fighting oscillations.
 
-FBW uses three controllers - pitch, roll and yaw. Pitch is handled by "Pitch ang vel controller", roll by "Roll ang vel controller" and yaw is handled by "Sideslip controller" in plane mode, or directly by "Yaw ang vel controller" in "Rocket mode". In Rocket mode pitch and yaw axes are treated the same - it's usefull in case player wants to use FBW for rocket launches. FBW is effective only on small (<25 degrees) AoA values, though control is possible on all regimes. It's just that it's quality will degrade from inadequacy of linearization assumptions. "Moderation" button is toggling all pitch and yaw moderations - usefull for low speed VTOL action or for fighting overmoderation bugs. 
+FBW uses three controllers - pitch, roll and yaw. Pitch is handled by "Pitch ang vel controller", roll by "Roll ang vel controller" and yaw is handled by "Sideslip controller" in plane mode, or directly by "Yaw ang vel controller" in "Rocket mode". In Rocket mode pitch and yaw axes are treated the same - it's usefull in case player wants to use FBW for rocket launches. FBW is effective only on small (<25 degrees) AoA values, though control is possible on all regimes. It's just that it's quality will degrade from inadequacy of linearization assumptions. "Moderation" button is toggling all pitch and yaw moderations - usefull for low speed VTOL action or for fighting overmoderation bugs. Pitch moderation is turned off for 2 seconds after taking-off to prevent overmoderation-related crashes.
 
 Hotkey for FBW is letter P, autoPilot. Hardcoded.
 Default hotkey for Moderation is letter O, mOderation. Can be changed in Global_settings.cfg file.
@@ -63,13 +63,13 @@ Functions:
 Short GUI description:
 * _Level_ - simple leveling regime. Upon activation, CF will save surface-relative inclination of velocity and will follow it. If altitude is not set, will keep vertical speed at zero.
 * _Course_ - follows azimuth setpoint, set in field _desired course_. If altitude is not set, will keep vertical speed at zero. On high latitudes (>80 degrees) will switch to _Level_ mode.
-* _Waypoint_ - primitive waypoint following. Designed for pick-and-fly functionality. When activated, _pick waypoint_ button appears under mode tabs, as well as waypoint latitude-longtitude representation.
+* _Waypoint_ - primitive waypoint following. Designed for pick-and-fly functionality. When activated, _pick waypoint_ button appears under mode tabs, as well as waypoint latitude-longtitude representation. Waypoint control is turned off when destination is closer than 200 meters to be followed by _Level_ mode activation.
 * _desired course_ - azimuth in degrees to follow in _Course_ mode.
 * _Hold specific altitude_ - activate if want altitude control.
 * _desired altitude_ - desired baromethric altitude in meters above sea level.
 * _Speed control_ - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
 * _Cruise speed_ - m/s airspeed setpoint for speed control.
-* _strength mult_ - default value 0.5. Will be multiplied in the runtime on Director controller's strength to restrain maneuvers. Tune to achieve slover or faster behaviour.
+* _strength mult_ - default value 0.6. Will be multiplied in the runtime on Director controller's strength to restrain maneuvers. Tune to achieve slover or faster behaviour.
 * _height relax time_ - default value 6.0 seconds. Time frame of proportional control law jurisdiction, related to relaxation behaviour. Tune to prevent overshooting, if really needed.
 * _height relax Kp_ - gain for proportional law, decrease to slow down relaxation.
 * _max climb angle_ - default value 30 degrees. Limit on climb and drop maneuver pitch. Will sometimes be exceeded, it's okay.
