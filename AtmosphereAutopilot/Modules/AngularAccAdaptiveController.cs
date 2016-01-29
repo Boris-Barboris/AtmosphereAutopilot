@@ -151,7 +151,7 @@ namespace AtmosphereAutopilot
         }       
         bool _write_telemetry = false;
 
-        [AutoGuiAttr("DEBUG desired acc", false, "G8")]
+        [AutoGuiAttr("desired acc", false, "G6")]
         internal float desired_acc { get; private set; }
 
         void create_writers()
@@ -202,7 +202,7 @@ namespace AtmosphereAutopilot
 
         protected double cur_model_acc, prev_model_acc;
 
-        [AutoGuiAttr("authority", false, "G8")]
+        [AutoGuiAttr("authority", false, "G6")]
         protected double authority;
 
         protected LinearSystemModel lin_model, lin_model_undelayed;
@@ -353,7 +353,7 @@ namespace AtmosphereAutopilot
 
         double cur_model_acc, prev_model_acc;
 
-        [AutoGuiAttr("authority", false, "G8")]
+        [AutoGuiAttr("authority", false, "G6")]
         double authority;
 
         protected override float get_required_input(FlightCtrlState cntrl, float target_value)

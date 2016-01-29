@@ -69,10 +69,10 @@ Short GUI description:
 * _desired altitude_ - desired baromethric altitude in meters above sea level.
 * _Speed control_ - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
 * _Cruise speed_ - m/s airspeed setpoint for speed control.
-* _strength mult_ - default value 0.6. Will be multiplied in the runtime on Director controller's strength to restrain maneuvers. Tune to achieve slover or faster behaviour.
+* _strength mult_ - default value 0.75. Will be multiplied in the runtime on Director controller's strength to restrain maneuvers. Tune to achieve slover or faster behaviour.
 * _height relax time_ - default value 6.0 seconds. Time frame of proportional control law jurisdiction, related to relaxation behaviour. Tune to prevent overshooting, if really needed.
 * _height relax Kp_ - gain for proportional law, decrease to slow down relaxation.
-* _max climb angle_ - default value 30 degrees. Limit on climb and drop maneuver pitch. Will sometimes be exceeded, it's okay.
+* _max climb angle_ - default value 20 degrees. Limit on climb and drop maneuver pitch. Will sometimes be exceeded, it's okay.
 
 # Default Modules descriptions
 

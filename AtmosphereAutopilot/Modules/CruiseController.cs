@@ -214,7 +214,7 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("strength_mult")]
         [AutoGuiAttr("strength_mult", true, "G5")]
-        public double strength_mult = 0.6;
+        public double strength_mult = 0.75;
 
         [VesselSerializable("height_relax_time")]
         [AutoGuiAttr("height_relax_time", true, "G5")]
@@ -247,7 +247,9 @@ namespace AtmosphereAutopilot
                 // we're in relaxation frame
                 relax_vert_speed = height_relax_Kp * height_error;
                 // exponential descent
-                proportional_acc = -planet2vesNorm * height_relax_Kp * height_relax_Kp * height_error;
+                double cur_vert_speed = Vector3d.Dot(imodel.surface_v, planet2vesNorm);
+                if (cur_vert_speed * height_error > 0.0)
+                    proportional_acc = -planet2vesNorm * height_relax_Kp * cur_vert_speed;
             }
             
             // let's assume parabolic ascent\descend
