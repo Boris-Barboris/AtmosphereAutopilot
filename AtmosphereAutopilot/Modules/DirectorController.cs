@@ -187,7 +187,7 @@ namespace AtmosphereAutopilot
                 Math.Acos(Math.Min(Math.Max(Vector3d.Dot(desired_right_direction, vessel.ReferenceTransform.right), -1.0), 1.0));
             // rolling to pitch up is not always as efficient as pitching down
             double spine_to_zenith = Vector3d.Dot(desired_right_direction, Vector3d.Cross(imodel.surface_v, imodel.gravity_acc));
-            if (target_normal_lift_acc.magnitude < max_neg_g * 9.81 || !allow_spine_down || vessel.terrainAltitude < min_rollover_alt)
+            if (target_normal_lift_acc.magnitude < max_neg_g * 9.81 || !allow_spine_down || vessel.heightFromTerrain < min_rollover_alt)
                 if (Math.Abs(new_roll_error) > 90.0 * dgr2rad && spine_to_zenith < 0.0)
                     new_roll_error = new_roll_error - 180.0 * dgr2rad * Math.Sign(new_roll_error);
             // filter it
