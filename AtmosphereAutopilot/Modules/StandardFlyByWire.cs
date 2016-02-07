@@ -147,14 +147,19 @@ namespace AtmosphereAutopilot
             if (cruise_control)
                 tc.ApplyControl(cntrl, cruise_speed);
 
+			pc.user_controlled = true;
             pc.ApplyControl(cntrl, 0.0f);
-            if (rocket_mode)
-            {
-                yvc.user_controlled = true;
-                yvc.ApplyControl(cntrl, 0.0f);
-            }
-            else
-                yc.ApplyControl(cntrl, 0.0f, 0.0f);
+			if (rocket_mode)
+			{
+				yvc.user_controlled = true;
+				yvc.ApplyControl(cntrl, 0.0f);
+			}
+			else
+			{
+				yc.user_controlled = true;
+				yc.ApplyControl(cntrl, 0.0f, 0.0f);
+			}
+			rc.user_controlled = true;
             rc.ApplyControl(cntrl, 0.0f);
         }
 

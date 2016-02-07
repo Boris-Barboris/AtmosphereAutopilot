@@ -6,6 +6,7 @@ classdef aircraft_model < handle
         % state definitions
         %
         position = [0.0 0.0 500.0];      % height will be 500 m for start
+        rotation = quaternion([1,0,0,0]);
         right_vector = [1.0 0.0 0.0];
         forward_vector = [0.0 1.0 0.0];
         up_vector = zeros(1, 3);
@@ -13,6 +14,7 @@ classdef aircraft_model < handle
         velocity_magn = 0.0;             % velocity magnitude
         
         angular_vel = [0.0 0.0 0.0];     % angular vel vector
+        angular_acc = [0.0 0.0 0.0];     % angular acc vector
         csurf_state = [0.0 0.0 0.0];     % control surfaces position
         gimbal_state = [0.0 0.0 0.0];    % gimbal directions
         aoa = [0.0 0.0 0.0];             % aoas
@@ -35,7 +37,7 @@ classdef aircraft_model < handle
         mass = 14.0;
         
         % aero models
-        pitch_rot_m = [0.0 1.0 1.15];    % pitch rotation model
+        pitch_rot_m = [0.0 -1.0 1.15];   % pitch rotation model
         roll_rot_m = [0.0 0.6 -0.35 0.6 -0.28];    % roll rotation model
         yaw_rot_m = [0.0 -2.0 0.8];      % yaw rotation model
         pitch_lift_m = [0.0 60.0 -0.25]; % pitch lift model
@@ -74,6 +76,8 @@ classdef aircraft_model < handle
         % analogue of PreAutopilotUpdate
         function preupdate(obj)
             % we need to prepare data here
+            obj.right_vector = RotateVector(obj.rotation, [1.0; 0.0; 0.0]);
+            obj.forward_vector = RotateVector(obj.rotation, [0.0; 1.0; 0.0]);
             obj.up_vector = cross(obj.right_vector, obj.forward_vector);
             obj.velocity_magn = norm(obj.velocity);
             obj.dyn_pressure = obj.density * obj.velocity_magn * obj.velocity_magn;
@@ -91,7 +95,7 @@ classdef aircraft_model < handle
         end
     end
     
-    methods(Static)
+    methods(Static, Access = public)
         function r = clamp(a, l, u)
             r = max(l, min(u, a));
         end
@@ -138,6 +142,20 @@ classdef aircraft_model < handle
             obj.velocity = obj.velocity + acc * dt;         
             
             % rotation
+            pitch_acc = obj.pitch_A * [obj.aoa(1), obj.angular_vel(1), obj.csurf_state(1), 0.0].' +...
+                obj.pitch_B * obj.csurf_state(1) + obj.pitch_C;
+            obj.angular_acc(1) = pitch_acc(2);
+            roll_acc = obj.roll_A * [obj.angular_vel(2), obj.csurf_state(2), 0.0].' +...
+                obj.roll_B * [obj.aoa(3), obj.csurf_state(2), obj.csurf_state(3)].' + obj.roll_C;
+            obj.angular_acc(2) = roll_acc(1);
+            yaw_acc = obj.yaw_A * [obj.aoa(3), obj.angular_vel(3), obj.csurf_state(3), 0.0].' +...
+                obj.yaw_B * obj.csurf_state(3) + obj.yaw_C;
+            obj.angular_acc(3) = yaw_acc(2);
+            
+            rot_deltas = obj.angular_vel * dt + 0.5 * dt * dt * obj.angular_acc;
+            rot_quat = quaternion.eulerangles('xyz', rot_deltas);
+            obj.angular_vel = obj.angular_vel + dt * obj.angular_acc;
+            obj.rotation = obj.rotation * rot_quat;
         end
         
         function update_aoa(obj)
