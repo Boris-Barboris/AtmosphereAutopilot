@@ -51,6 +51,7 @@
     <Compile Include="AppLauncher.cs" />
     <Compile Include="AtmosphereAutopilot.cs" />
     <Compile Include="BackgroundThread.cs" />
+    <None Include="ToolbarWrapper.cs" />
     <None Include="Controller\PDController.cs" />
     <Compile Include="GimbalRearranger.cs" />
     <Compile Include="ListSelector.cs" />

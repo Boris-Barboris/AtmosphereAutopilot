@@ -241,13 +241,13 @@ namespace AtmosphereAutopilot
             Vector3d res = Vector3d.zero;
 
             Vector3d proportional_acc = Vector3d.zero;
+            double cur_vert_speed = Vector3d.Dot(imodel.surface_v, planet2vesNorm);
             if (Math.Abs(height_error) < height_relax_frame)
             {
                 relax_transition_k = Common.Clamp(2.0 * (height_relax_frame - Math.Abs(height_error)), 0.0, 1.0);
                 // we're in relaxation frame
                 relax_vert_speed = height_relax_Kp * height_error;
-                // exponential descent
-                double cur_vert_speed = Vector3d.Dot(imodel.surface_v, planet2vesNorm);
+                // exponential descent                
                 if (cur_vert_speed * height_error > 0.0)
                     proportional_acc = -planet2vesNorm * height_relax_Kp * cur_vert_speed;
             }
@@ -257,13 +257,15 @@ namespace AtmosphereAutopilot
             if (height_error >= 0.0)
             {
                 des_vert_speed = Math.Sqrt(acc * height_error);
-                parabolic_acc = -planet2vesNorm * 0.5 * acc;
+                if (cur_vert_speed > 0.0)
+                    parabolic_acc = -planet2vesNorm * 0.5 * cur_vert_speed * cur_vert_speed / height_error;
             }
             else
             {
                 double vert_acc_descent = 2.0 * Math.Min(-5.0, acc - dir_c.strength * strength_mult * dir_c.max_lift_acc * 0.5);
                 des_vert_speed = -Math.Sqrt(vert_acc_descent * height_error);
-                parabolic_acc = -planet2vesNorm * 0.5 * vert_acc_descent;
+                if (cur_vert_speed < 0.0)
+                    parabolic_acc = -planet2vesNorm * 0.5 * cur_vert_speed * cur_vert_speed / height_error;
             }
             double max_vert_speed = vessel.horizontalSrfSpeed * Math.Tan(max_climb_angle * dgr2rad);
             bool apply_acc = Math.Abs(des_vert_speed) < max_vert_speed;
