@@ -1,5 +1,6 @@
 clear;
 model = aircraft_model();
+%model.force_spd_maintain = true;
 sim_length = 500;
 time = zeros(1, sim_length);
 positions = zeros(3, sim_length);
@@ -8,9 +9,9 @@ rights = zeros(3, sim_length);
 aoas = zeros(3, sim_length);
 speed = zeros(1, sim_length);
 for frame = 1:sim_length
-    time(frame) = 0.025 * (frame - 1);
+    time(frame) = 0.05 * (frame - 1);
     model.preupdate();
-    model.simulation_step(0.025, [0.07, 0, 0]);
+    model.simulation_step(0.025, [0.06, 0, 0]);
     positions(:, frame) = model.position.';
     forwards(:, frame) = model.forward_vector.';
     rights(:, frame) = model.right_vector.';

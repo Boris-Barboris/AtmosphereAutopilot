@@ -282,6 +282,7 @@ namespace AtmosphereAutopilot
                         cur_state[2, 0] += TimeWarp.fixedDeltaTime * SyncModuleControlSurface.CSURF_SPD;
                     else
                         cur_state[2, 0] -= TimeWarp.fixedDeltaTime * SyncModuleControlSurface.CSURF_SPD;
+                    cur_state[2, 0] = Common.Clampf(cur_state[2, 0], 1.0f);
                     cur_acc_prediction = lin_model.eval_row(1, cur_state, input_mat);
                     acc_error = target_value - cur_acc_prediction;
                     authority = lin_model.B[1, 0];

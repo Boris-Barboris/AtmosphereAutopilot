@@ -44,6 +44,7 @@ classdef aircraft_model < handle
         yaw_lift_m = [0.0 8.0 -2.5];     % sideslip lift model
         
         drag_model = [1.0 20.0 3.0];     % drag model
+        force_spd_maintain = false;      % forcefully maintain speed
         
         % engine power
         
@@ -56,7 +57,7 @@ classdef aircraft_model < handle
         pitch_A = zeros(4, 4);
         pitch_B = zeros(4, 1);
         pitch_C = zeros(4, 1);
-        pitch_A_undelayed = zeros(3, 1);
+        pitch_A_undelayed = zeros(3, 3);
         pitch_B_undelayed = zeros(3, 1);
         
         roll_A = zeros(3, 3);
@@ -68,7 +69,7 @@ classdef aircraft_model < handle
         yaw_A = zeros(4, 4);
         yaw_B = zeros(4, 1);
         yaw_C = zeros(4, 1);
-        yaw_A_undelayed = zeros(3, 1);
+        yaw_A_undelayed = zeros(3, 3);
         yaw_B_undelayed = zeros(3, 1);
     end
     
@@ -91,7 +92,7 @@ classdef aircraft_model < handle
         % physics simulation
         function simulation_step(obj, dt, input)
             update_control_states(obj, dt, input);
-            integrate_dynamics(obj, dt);
+            integrate_dynamics(obj, dt, input);
         end
     end
     
@@ -104,6 +105,10 @@ classdef aircraft_model < handle
             r = a + (b - a) * aircraft_model.clamp(t, 0.0, 1.0);
         end
         
+        function r = moveto(a, b, delta_limit)
+            r = a + aircraft_model.clamp(b - a, -delta_limit, delta_limit);
+        end
+        
         function r = project(v, norm)
             r = norm * dot(v, norm);
         end
@@ -112,13 +117,13 @@ classdef aircraft_model < handle
     methods (Access = private)
         function update_control_states(obj, dt, input)
             if (~obj.aero_model)
-                obj.csurf_state(1) = aircraft_model.lerp(obj.csurf_state(1), input(1), dt * obj.stock_csurf_spd);
-                obj.csurf_state(2) = aircraft_model.lerp(obj.csurf_state(2), input(2), dt * obj.stock_csurf_spd);
-                obj.csurf_state(3) = aircraft_model.lerp(obj.csurf_state(3), input(3), dt * obj.stock_csurf_spd);
+                obj.csurf_state(1) = aircraft_model.moveto(obj.csurf_state(1), input(1), dt * obj.stock_csurf_spd);
+                obj.csurf_state(2) = aircraft_model.moveto(obj.csurf_state(2), input(2), dt * obj.stock_csurf_spd);
+                obj.csurf_state(3) = aircraft_model.moveto(obj.csurf_state(3), input(3), dt * obj.stock_csurf_spd);
             end
         end
         
-        function integrate_dynamics(obj, dt)
+        function integrate_dynamics(obj, dt, input)
             % translation
             acc = [0.0 0.0 -9.8];       % gravity acceleration
             
@@ -139,17 +144,21 @@ classdef aircraft_model < handle
             
             acc = acc + drag_acc + pitch_lift_acc + yaw_lift_acc;
             obj.position = obj.position + obj.velocity * dt + 0.5 * acc * dt * dt;
-            obj.velocity = obj.velocity + acc * dt;         
+            obj.velocity = obj.velocity + acc * dt;
+            if (obj.force_spd_maintain)
+                % keep speed the same
+                obj.velocity = obj.velocity * (obj.velocity_magn / norm(obj.velocity));
+            end
             
             % rotation
             pitch_acc = obj.pitch_A * [obj.aoa(1), obj.angular_vel(1), obj.csurf_state(1), 0.0].' +...
-                obj.pitch_B * obj.csurf_state(1) + obj.pitch_C;
+                obj.pitch_B * input(1) + obj.pitch_C;
             obj.angular_acc(1) = pitch_acc(2);
             roll_acc = obj.roll_A * [obj.angular_vel(2), obj.csurf_state(2), 0.0].' +...
-                obj.roll_B * [obj.aoa(3), obj.csurf_state(2), obj.csurf_state(3)].' + obj.roll_C;
+                obj.roll_B * [input(2), obj.csurf_state(3), obj.aoa(3)].' + obj.roll_C;
             obj.angular_acc(2) = roll_acc(1);
             yaw_acc = obj.yaw_A * [obj.aoa(3), obj.angular_vel(3), obj.csurf_state(3), 0.0].' +...
-                obj.yaw_B * obj.csurf_state(3) + obj.yaw_C;
+                obj.yaw_B * input(3) + obj.yaw_C;
             obj.angular_acc(3) = yaw_acc(2);
             
             rot_deltas = obj.angular_vel * dt + 0.5 * dt * dt * obj.angular_acc;
@@ -171,7 +180,7 @@ classdef aircraft_model < handle
             obj.aoa(1) = aoa_p;
             
             projected_vel = up_surf_v + right_surf_v;
-            aoa_y = asin(aircraft_model.clamp(dot(-obj.right_vector, projected_vel / norm(projected_vel)), -1.0, 1.0));
+            aoa_y = asin(aircraft_model.clamp(dot(obj.right_vector, projected_vel / norm(projected_vel)), -1.0, 1.0));
             if (dot(projected_vel, obj.forward_vector) < 0.0)
                 aoa_y = pi - aoa_y;
             end
@@ -185,7 +194,7 @@ classdef aircraft_model < handle
             obj.pitch_tangent = obj.pitch_tangent / norm(obj.pitch_tangent);
             obj.pitch_gravity_acc = dot([0.0 0.0 -9.8], obj.pitch_tangent);
             % yaw
-            obj.yaw_tangent = cross(surf_v_norm, obj.up_vector);
+            obj.yaw_tangent = cross(obj.up_vector, surf_v_norm);
             obj.yaw_tangent = obj.yaw_tangent / norm(obj.yaw_tangent);
             obj.yaw_gravity_acc = dot([0.0 0.0 -9.8], obj.yaw_tangent);
         end
@@ -210,9 +219,9 @@ classdef aircraft_model < handle
             obj.pitch_C(1, 1) = -(obj.pitch_gravity_acc + Cl0) / obj.velocity_magn;
             obj.pitch_C(2, 1) = K0;
             
-            obj.pitch_A_undelayed = obj.pitch_A;
+            obj.pitch_A_undelayed = obj.pitch_A(1:3,1:3);
             obj.pitch_A_undelayed(2, 3) = 0.0;
-            obj.pitch_B_undelayed = obj.pitch_B;
+            obj.pitch_B_undelayed = obj.pitch_B(1:3);
             obj.pitch_B_undelayed(2, 1) = obj.pitch_B_undelayed(2, 1) + K2;            
         end
         
@@ -233,10 +242,10 @@ classdef aircraft_model < handle
             obj.roll_B(1, 3) = K1;
             obj.roll_C(1, 1) = K0;
             
-            obj.roll_A_undelayed = obj.roll_A;
+            obj.roll_A_undelayed = obj.roll_A(1:2,1:2);
             obj.roll_A_undelayed(1, 2) = 0.0;
-            obj.roll_B_undelayed = obj.roll_B;
-            obj.roll_B_undelayed(1, 2) = obj.roll_B_undelayed(2, 1) + K3;
+            obj.roll_B_undelayed = obj.roll_B(1:2,1:3);
+            obj.roll_B_undelayed(1, 1) = obj.roll_B_undelayed(1, 1) + K3;
         end
         
         function update_yaw_matrix(obj)
@@ -259,9 +268,9 @@ classdef aircraft_model < handle
             obj.yaw_C(1, 1) = -(obj.yaw_gravity_acc + Cl0) / obj.velocity_magn;
             obj.yaw_C(2, 1) = K0;
             
-            obj.yaw_A_undelayed = obj.yaw_A;
+            obj.yaw_A_undelayed = obj.yaw_A(1:3,1:3);
             obj.yaw_A_undelayed(2, 3) = 0.0;
-            obj.yaw_B_undelayed = obj.yaw_B;
+            obj.yaw_B_undelayed = obj.yaw_B(1:3);
             obj.yaw_B_undelayed(2, 1) = obj.yaw_B_undelayed(2, 1) + K2;           
         end
     end    
