@@ -282,17 +282,15 @@ namespace AtmosphereAutopilot
                         cur_state[2, 0] += TimeWarp.fixedDeltaTime * SyncModuleControlSurface.CSURF_SPD;
                     else
                         cur_state[2, 0] -= TimeWarp.fixedDeltaTime * SyncModuleControlSurface.CSURF_SPD;
-                    cur_state[2, 0] = Common.Clampf(cur_state[2, 0], 1.0f);
+                    cur_state[2, 0] = Common.Clamp(cur_state[2, 0], 1.0);
+                    input_mat[0, 0] = cur_state[2, 0];
                     cur_acc_prediction = lin_model.eval_row(1, cur_state, input_mat);
                     acc_error = target_value - cur_acc_prediction;
                     authority = lin_model.B[1, 0];
                     new_input = (float)(cur_state[2, 0] + acc_error / authority);
                     new_input = Common.Clampf(new_input, 1.0f);
-
-                    model_predicted_acc = cur_acc_prediction + authority * (new_input - cur_state[2, 0]);
                 }
-                else
-                    model_predicted_acc = cur_acc_prediction + authority * (new_input - input_mat[0, 0]);                
+                model_predicted_acc = cur_acc_prediction + authority * (new_input - input_mat[0, 0]);
             }            
 
             if (write_telemetry)
@@ -432,16 +430,15 @@ namespace AtmosphereAutopilot
                         cur_state[1, 0] += TimeWarp.fixedDeltaTime * SyncModuleControlSurface.CSURF_SPD;
                     else
                         cur_state[1, 0] -= TimeWarp.fixedDeltaTime * SyncModuleControlSurface.CSURF_SPD;
+                    cur_state[1, 0] = Common.Clamp(cur_state[1, 0], 1.0);
+                    input_mat[0, 0] = cur_state[1, 0];
                     cur_acc_prediction = imodel.roll_rot_model.eval_row(0, cur_state, input_mat);
                     acc_error = target_value - cur_acc_prediction;
                     authority = imodel.roll_rot_model.B[0, 0];
                     new_input = (float)(cur_state[1, 0] + acc_error / authority);
                     new_input = Common.Clampf(new_input, 1.0f);
-
-                    model_predicted_acc = cur_acc_prediction + authority * (new_input - cur_state[1, 0]);
                 }
-                else
-                    model_predicted_acc = cur_acc_prediction + authority * (new_input - input_mat[0, 0]);
+                model_predicted_acc = cur_acc_prediction + authority * (new_input - input_mat[0, 0]);
             }
 
             if (write_telemetry)
