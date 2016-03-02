@@ -1,6 +1,4 @@
 classdef ang_acc_controller < handle
-    %UNTITLED Base class for angular acceleration controllers
-    %   Detailed explanation goes here
     
     properties (SetAccess = public)
         model;                      % aircraft_model instance

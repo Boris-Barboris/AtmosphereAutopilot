@@ -23,6 +23,8 @@ namespace AtmosphereAutopilot
         public StockGimbal(PartModule g)
         {
             module = (ModuleGimbal)g;
+            original_spd = GimbalSpeed;
+            original_use_spd = UseGimbalSpeed;
         }
 
         public bool Active
@@ -100,6 +102,8 @@ namespace AtmosphereAutopilot
         public kmGimbal(PartModule g)
         {
             km_gimbal = g;
+            original_spd = GimbalSpeed;
+            original_smooth = (bool)f_enableSmoothGimbal.GetValue(km_gimbal);
         }
 
         public bool Active

@@ -1,6 +1,4 @@
 classdef ang_acc_pitch_yaw < ang_acc_controller
-    %UNTITLED2 Summary of this class goes here
-    %   Detailed explanation goes here
     
     methods (Access = public)
         function c = ang_acc_pitch_yaw(ax, mod)
