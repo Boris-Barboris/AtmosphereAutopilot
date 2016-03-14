@@ -88,7 +88,7 @@ namespace AtmosphereAutopilot
         }
 
         [GlobalSerializable("moderation_keycode")]
-        protected KeyCode moderation_keycode = KeyCode.O;
+        protected static KeyCode moderation_keycode = KeyCode.O;
 
         [AutoGuiAttr("Speed control", true)]
         public bool cruise_control = false;

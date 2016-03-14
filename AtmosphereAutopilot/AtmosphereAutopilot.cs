@@ -34,9 +34,6 @@ namespace AtmosphereAutopilot
         internal Dictionary<Vessel, Dictionary<Type, AutopilotModule>> autopilot_module_lists =
             new Dictionary<Vessel, Dictionary<Type, AutopilotModule>>();
 
-        // Hotkeys for module activation
-        Dictionary<Type, KeyCode> module_hotkeys = new Dictionary<Type, KeyCode>();
-
         // Application launcher window
         AppLauncherWindow applauncher = new AppLauncherWindow();
 
@@ -58,7 +55,6 @@ namespace AtmosphereAutopilot
             get_csurf_module();
             get_gimbal_modules();
             initialize_types();
-            initialize_hotkeys();
             initialize_thread();
             GameEvents.onVesselChange.Add(vesselSwitch);
             GameEvents.onGameSceneLoadRequested.Add(sceneSwitch);
@@ -144,11 +140,6 @@ namespace AtmosphereAutopilot
             }
         }
 
-        void initialize_hotkeys()
-        {
-            module_hotkeys[typeof(TopModuleManager)] = KeyCode.P;       // press P to activate master switch
-        }
-
         // Thread for computation-heavy tasks
         BackgroundThread thread;
 
@@ -209,7 +200,8 @@ namespace AtmosphereAutopilot
                 autopilot_module_lists[v] = new Dictionary<Type, AutopilotModule>();
             }
             if (!autopilot_module_lists[v].ContainsKey(typeof(TopModuleManager)))
-                autopilot_module_lists[v][typeof(TopModuleManager)] = new TopModuleManager(v);      
+                autopilot_module_lists[v][typeof(TopModuleManager)] = new TopModuleManager(v);
+			autopilot_module_lists[v][typeof(TopModuleManager)].Deserialize();
         }
 
         void vesselSwitch(Vessel v)
@@ -335,23 +327,10 @@ namespace AtmosphereAutopilot
 
         void Update()
         {
-            // Handle keyboard hotkeys here
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
             if (ActiveVessel == null)
                 return;
-            foreach (var pair in module_hotkeys)
-            {
-                if (Input.GetKeyDown(pair.Value) &&
-                    autopilot_module_lists.ContainsKey(ActiveVessel))
-                {
-                    AutopilotModule module = autopilot_module_lists[ActiveVessel][pair.Key];
-                    if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-                        module.ToggleGUI();
-                    else
-                        module.Active = !module.Active;
-                }
-            }
             if (autopilot_module_lists.ContainsKey(ActiveVessel))
             {
                 foreach (var module in autopilot_module_lists[ActiveVessel].Values)
