@@ -29,6 +29,7 @@ namespace AtmosphereAutopilot
         YawAngularVelocityController yvc;
         SideslipController yc;
         ProgradeThrustController tc;
+        FlightModel im;
         AutopilotModule[] gui_list = new AutopilotModule[5];
 
         internal StandardFlyByWire(Vessel v) :
@@ -41,6 +42,7 @@ namespace AtmosphereAutopilot
             gui_list[2] = yvc = modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
             gui_list[3] = yc = modules[typeof(SideslipController)] as SideslipController;
             gui_list[4] = tc = modules[typeof(ProgradeThrustController)] as ProgradeThrustController;
+            im = modules[typeof(FlightModel)] as FlightModel;
         }
 
         protected override void OnActivate() 
@@ -89,6 +91,10 @@ namespace AtmosphereAutopilot
 
         [GlobalSerializable("moderation_keycode")]
         protected static KeyCode moderation_keycode = KeyCode.O;
+
+        [AutoGuiAttr("Coordinated turn", true)]
+        [VesselSerializable("coord_turn")]
+        public bool coord_turn = false;
 
         [AutoGuiAttr("Speed control", true)]
         public bool cruise_control = false;
@@ -148,6 +154,19 @@ namespace AtmosphereAutopilot
                 tc.ApplyControl(cntrl, cruise_speed);
 
 			pc.user_controlled = true;
+            if (coord_turn)
+            {
+                // account for yaw velocity in pitch neutral offset to assist coordinated turn
+                Vector3 up_level_dir = Vector3.ProjectOnPlane(vessel.ReferenceTransform.position - vessel.mainBody.position, 
+                    vessel.ReferenceTransform.up).normalized;
+                float yaw_v_vert_project = Vector3.Dot(im.AngularVel(YAW) * vessel.ReferenceTransform.right, up_level_dir);
+                float pitch_vert_project = Vector3.Dot(up_level_dir, -vessel.ReferenceTransform.forward);
+                if (pitch_vert_project != 0.0f)
+                {
+                    float level_pitch_vel = -yaw_v_vert_project / pitch_vert_project;
+                    pc.neutral_offset = level_pitch_vel;
+                }
+            }
             pc.ApplyControl(cntrl, 0.0f);
 			if (rocket_mode)
 			{

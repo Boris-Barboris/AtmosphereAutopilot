@@ -75,7 +75,7 @@ namespace AtmosphereAutopilot
         protected float output_v;
 
         [AutoGuiAttr("des_aoa_equil_v", false, "G6")]
-        protected float desired_aoa_equilibr_v;
+        public float desired_aoa_equilibr_v;
 
         [AutoGuiAttr("v_filter_k", true, "G6")]
         protected float v_filter_k = 0.0f;

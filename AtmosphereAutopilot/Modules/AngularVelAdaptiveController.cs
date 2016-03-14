@@ -217,6 +217,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("transit_v_mult", true, "G6")]
         protected float transit_v_mult = 0.5f;
 
+        [AutoGuiAttr("neutral_offset", false, "G6")]
+        public float neutral_offset = 0.0f;
+
         protected Matrix state_mat = new Matrix(4, 1);
         protected Matrix input_mat = new Matrix(1, 1);
 
@@ -459,6 +462,7 @@ namespace AtmosphereAutopilot
                     v_offset = principal_still_ang_v[axis];
                 }
             }
+            v_offset += neutral_offset;
 
             // desired_v moderation section
             if (user_controlled)
