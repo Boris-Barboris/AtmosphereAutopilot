@@ -157,7 +157,7 @@ namespace AtmosphereAutopilot
             if (coord_turn)
             {
                 // account for yaw velocity in pitch neutral offset to assist coordinated turn
-                Vector3 up_level_dir = Vector3.ProjectOnPlane(vessel.ReferenceTransform.position - vessel.mainBody.position, 
+                Vector3 up_level_dir = Vector3.ProjectOnPlane(vessel.ReferenceTransform.position - vessel.mainBody.position,
                     vessel.ReferenceTransform.up).normalized;
                 float yaw_v_vert_project = Vector3.Dot(im.AngularVel(YAW) * vessel.ReferenceTransform.right, up_level_dir);
                 float pitch_vert_project = Vector3.Dot(up_level_dir, -vessel.ReferenceTransform.forward);
@@ -167,6 +167,8 @@ namespace AtmosphereAutopilot
                     pc.neutral_offset = level_pitch_vel;
                 }
             }
+            else
+                pc.neutral_offset = 0.0f;
             pc.ApplyControl(cntrl, 0.0f);
 			if (rocket_mode)
 			{
