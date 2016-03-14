@@ -210,6 +210,8 @@ namespace AtmosphereAutopilot
             Debug.Log("[AtmosphereAutopilot]: vessel switch to " + v.vesselName);
             load_manager_for_vessel(v);
             ActiveVessel = v;
+            
+            // custom behaviour for FlightModel
             foreach (Vessel c in autopilot_module_lists.Keys)
                 if (autopilot_module_lists[c].ContainsKey(typeof(FlightModel)))
                     (autopilot_module_lists[c][typeof(FlightModel)] as FlightModel).sequential_dt = false;
@@ -227,7 +229,7 @@ namespace AtmosphereAutopilot
         }
 
         /// <summary>
-        /// Get set of AutopilotModule instances, created for arbitrary vessel.
+        /// Get the map of AutopilotModule instances, created for arbitrary vessel.
         /// </summary>
         public Dictionary<Type, AutopilotModule> getVesselModules(Vessel v)
         {

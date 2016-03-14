@@ -45,48 +45,48 @@ namespace AtmosphereAutopilot
         // settings window
         CraftSettingsWindow settings_wnd;
 
-		protected void create_context()
-		{
-			// We need to create all those modules. Module type needs to define constructor of
-			// Constructor(Vessel v) prototype.
-			foreach (var module_type in AtmosphereAutopilot.Instance.autopilot_module_types)
-			{
-				if (module_type.Equals(typeof(TopModuleManager)))
-					continue;
-				var constructor = module_type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null,
-					new[] { typeof(Vessel) }, null);
-				if (constructor == null)
-					throw new NullReferenceException(module_type.Name + " module has no void(Vessel) constructor.");
-				cur_ves_modules[module_type] = (AutopilotModule)constructor.Invoke(new[] { vessel });
-			}
-			// Then we need to resolve relations and deserialize
-			foreach (var module_type in cur_ves_modules.Keys)
-				if (!module_type.Equals(typeof(TopModuleManager)))
-				{
-					cur_ves_modules[module_type].InitializeDependencies(cur_ves_modules);
-					cur_ves_modules[module_type].Deserialize();
-				}
+        protected void create_context()
+        {
+            // We need to create all those modules. Module type needs to define constructor of
+            // Constructor(Vessel v) prototype.
+            foreach (var module_type in AtmosphereAutopilot.Instance.autopilot_module_types)
+            {
+                if (module_type.Equals(typeof(TopModuleManager)))
+                    continue;
+                var constructor = module_type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null,
+                    new[] { typeof(Vessel) }, null);
+                if (constructor == null)
+                    throw new NullReferenceException(module_type.Name + " module has no void(Vessel) constructor.");
+                cur_ves_modules[module_type] = (AutopilotModule)constructor.Invoke(new[] { vessel });
+            }
+            // Then we need to resolve relations and deserialize
+            foreach (var module_type in cur_ves_modules.Keys)
+                if (!module_type.Equals(typeof(TopModuleManager)))
+                {
+                    cur_ves_modules[module_type].InitializeDependencies(cur_ves_modules);
+                    cur_ves_modules[module_type].Deserialize();
+                }
 
-			// Move all high-level controllers to list
-			foreach (var module_type in cur_ves_modules.Keys)
-				if (!module_type.Equals(typeof(TopModuleManager)))
-					if (module_type.IsSubclassOf(typeof(StateController)))
-						HighLevelControllers.Add(module_type, (StateController)cur_ves_modules[module_type]);
+            // Move all high-level controllers to list
+            foreach (var module_type in cur_ves_modules.Keys)
+                if (!module_type.Equals(typeof(TopModuleManager)))
+                    if (module_type.IsSubclassOf(typeof(StateController)))
+                        HighLevelControllers.Add(module_type, (StateController)cur_ves_modules[module_type]);
 
-			if (HighLevelControllers.Count <= 0)
-				throw new InvalidOperationException("No high-level autopilot modules were found");
-			else
-				active_controller = HighLevelControllers[typeof(StandardFlyByWire)];
-		}
+            if (HighLevelControllers.Count <= 0)
+                throw new InvalidOperationException("No high-level autopilot modules were found");
+            else
+                active_controller = HighLevelControllers[typeof(StandardFlyByWire)];
+
+            // map settings window to modules
+            settings_wnd.map_modues();
+        }
 
         protected override void OnActivate()
         {
             // If this top_manager is the only module loaded for this vessel
             if (cur_ves_modules.Count == 1)
-				create_context();
-            
-            // map settings window to modules
-            settings_wnd.map_modues();
+                create_context();
 
             if (active_controller != null)
                 active_controller.Activate();
@@ -125,17 +125,17 @@ namespace AtmosphereAutopilot
             foreach (var controller in HighLevelControllers.Values)
             {
                 GUILayout.BeginHorizontal();
-                bool pressed = GUILayout.Toggle(controller.Active, controller.ModuleName, GUIStyles.toggleButtonStyle,
-                    GUILayout.Width(155.0f), GUILayout.ExpandWidth(false));
+                bool pressed = GUILayout.Toggle(controller.Active || active_controller == controller, controller.ModuleName, 
+                    GUIStyles.toggleButtonStyle, GUILayout.Width(155.0f), GUILayout.ExpandWidth(false));
                 if (pressed && !controller.Active)
                 {
-					if (Active)
-					{
-						// we activate new module
-						if (active_controller != null)
-							active_controller.Deactivate();
-						controller.Activate();
-					}
+                    if (Active)
+                    {
+                        // we activate new module
+                        if (active_controller != null)
+                            active_controller.Deactivate();
+                        controller.Activate();
+                    }
                     active_controller = controller;
                 }
                 bool is_shown = GUILayout.Toggle(controller.IsShown(), "GUI", GUIStyles.toggleButtonStyle);
@@ -153,13 +153,12 @@ namespace AtmosphereAutopilot
         {
             if (settings_wnd.mapped)
                 settings_wnd.OnGUI();
-			else
-				if (settings_wnd.IsShown())
-				{
-					create_context();
-					settings_wnd.map_modues();
-					settings_wnd.OnGUI();
-				}
+            else
+                if (settings_wnd.IsShown())
+                {
+                    create_context();
+                    settings_wnd.OnGUI();
+                }
         }
 
         /// <summary>
@@ -169,8 +168,8 @@ namespace AtmosphereAutopilot
         /// <returns>Instance of activated controller or null if something failed.</returns>
         public StateController activateAutopilot(Type controllerType)
         {
-			if (!Active)
-				Active = true;
+            if (!Active)
+                Active = true;
             if (HighLevelControllers.Keys.Contains(controllerType))
             {
                 if (active_controller != null)
@@ -184,17 +183,17 @@ namespace AtmosphereAutopilot
                 return null;
         }
 
-		[GlobalSerializable("master_switch_key")]
-		static KeyCode master_switch_key = KeyCode.P;
+        [GlobalSerializable("master_switch_key")]
+        static KeyCode master_switch_key = KeyCode.P;
 
-		public override void OnUpdate()
-		{
-			if (Input.GetKeyDown(master_switch_key))
-				if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-					ToggleGUI();
-				else
-					Active = !Active;
-		}
+        public override void OnUpdate()
+        {
+            if (Input.GetKeyDown(master_switch_key))
+                if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                    ToggleGUI();
+                else
+                    Active = !Active;
+        }
 
         #region SettingsWindow
 
@@ -454,9 +453,9 @@ namespace AtmosphereAutopilot
             }
         }
 
-		#endregion SettingsWindow
+        #endregion SettingsWindow
 
-		public override void Serialize()
+        public override void Serialize()
         {
             base.Serialize();
             settings_wnd.Serialize();
