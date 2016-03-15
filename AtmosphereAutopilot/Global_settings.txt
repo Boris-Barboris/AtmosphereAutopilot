@@ -10,101 +10,122 @@ Gravity_turn_Fly-By-Wire
 	window_y = 453
 	window_width = 240
 }
-Autopilot_module_manager
+Velocity_director
 {
-	window_x = 50
-	window_y = 80
-	window_width = 200
-}
-settings_wnd
-{
-	window_x = 351
-	window_y = 82
-	window_width = 200
-}
-Flight_model
-{
-	window_x = 1601
-	window_y = 89
-	window_width = 240
+	window_x = 475
+	window_y = 76
 }
 Acceleration_controller
 {
 	window_x = 308
 	window_y = 78
-	window_width = 240
+}
+Autopilot_module_manager
+{
+	master_switch_key = P
+	window_x = 50
+	window_y = 80
+}
+settings_wnd
+{
+	window_x = 272
+	window_y = 79
+	window_width = 200
+	profiles
+	{
+		default
+		{
+			moderate_aoa = True
+			moderate_sideslip = True
+			moderate_g = True
+			moderate_g_hor = True
+			wing_leveler = True
+			max_aoa = 15
+			max_g = 15
+			max_sideslip = 15
+			max_g_hor = 15
+			ptich_v = 0.7
+			roll_v = 3
+			yaw_v = 0.5
+		}
+	}
+}
+Flight_model
+{
+	window_x = 1610
+	window_y = 156
+}
+Director_controller
+{
+	window_x = 275
+	window_y = 77
 }
 Pitch_ang_acc_controller
 {
 	window_x = 513
 	window_y = 89
-	window_width = 240
 }
 Yaw_ang_acc_controller
 {
 	window_x = 984
 	window_y = 93
-	window_width = 240
 }
 Roll_ang_acc_controller
 {
 	window_x = 723
 	window_y = 87
-	window_width = 240
 }
 Pitch_ang_vel_controller
 {
 	user_input_deriv_clamp = 5
 	AutoTrim = False
-	window_x = 310
-	window_y = 285
-	window_width = 240
+	window_x = 318
+	window_y = 281
 }
 Roll_ang_vel_controller
 {
 	wing_leveler = True
 	user_input_deriv_clamp = 10
 	AutoTrim = False
-	window_x = 813
-	window_y = 288
-	window_width = 240
+	window_x = 737
+	window_y = 283
 }
 Yaw_ang_vel_controller
 {
 	user_input_deriv_clamp = 5
 	AutoTrim = False
-	window_x = 565
-	window_y = 287
-	window_width = 240
+	window_x = 529
+	window_y = 282
 }
 Mouse_Director
 {
-	window_x = 52
+	window_x = 53
 	window_y = 219
-	window_width = 240
+}
+Cruise_Flight_controller
+{
+	cruise_speed = 600
+	window_x = 51
+	window_y = 227
 }
 Prograde_thrust_controller
 {
-	window_x = 563
-	window_y = 84
-	window_width = 240
+	window_x = 335
+	window_y = 114
 }
 Sideslip_controller
 {
-	window_x = 670
-	window_y = 748
-	window_width = 240
+	window_x = 1096
+	window_y = 739
 }
 AoA_controller
 {
-	window_x = 601
-	window_y = 753
-	window_width = 240
+	window_x = 1096
+	window_y = 524
 }
 Standard_Fly-By-Wire
 {
 	moderation_keycode = O
-	window_x = 53
-	window_y = 219
-	window_width = 240
+	window_x = 52
+	window_y = 221
 }
