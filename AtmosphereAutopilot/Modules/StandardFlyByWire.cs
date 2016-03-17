@@ -61,6 +61,7 @@ namespace AtmosphereAutopilot
 
         protected override void OnDeactivate()
         {
+            pc.neutral_offset = 0.0f;
             pc.Deactivate();
             rc.Deactivate();
             yvc.Deactivate();
@@ -170,6 +171,7 @@ namespace AtmosphereAutopilot
             else
                 pc.neutral_offset = 0.0f;
             pc.ApplyControl(cntrl, 0.0f);
+
 			if (rocket_mode)
 			{
 				yvc.user_controlled = true;

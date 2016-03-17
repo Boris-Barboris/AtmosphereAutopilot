@@ -220,6 +220,10 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("neutral_offset", false, "G6")]
         public float neutral_offset = 0.0f;
 
+        [GlobalSerializable("moder_cutoff_ias")]
+        [AutoGuiAttr("moder_cutoff_ias", true, "G4")]
+        public float moder_cutoff_ias = 10.0f;
+
         protected Matrix state_mat = new Matrix(4, 1);
         protected Matrix input_mat = new Matrix(1, 1);
 
@@ -238,7 +242,7 @@ namespace AtmosphereAutopilot
             
 
             // AoA moderation section
-            if (moderate_aoa && imodel.dyn_pressure > 100.0)
+            if (moderate_aoa && imodel.dyn_pressure > moder_cutoff_ias * moder_cutoff_ias)
             {
                 moderated = true;
 
@@ -349,7 +353,7 @@ namespace AtmosphereAutopilot
             }
 
             // Lift acceleration moderation section
-            if (moderate_g && imodel.dyn_pressure > 100.0)
+            if (moderate_g && imodel.dyn_pressure > moder_cutoff_ias * moder_cutoff_ias)
             {
                 moderated = true;
 
@@ -462,7 +466,8 @@ namespace AtmosphereAutopilot
                     v_offset = principal_still_ang_v[axis];
                 }
             }
-            v_offset += neutral_offset;
+            if (user_input)
+                v_offset += neutral_offset;
 
             // desired_v moderation section
             if (user_controlled)

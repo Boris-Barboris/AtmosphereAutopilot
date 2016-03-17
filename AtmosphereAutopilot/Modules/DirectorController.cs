@@ -204,7 +204,7 @@ namespace AtmosphereAutopilot
             // pitch AoA
 
             desired_pitch_lift = 0.0;
-            if (Math.Abs(roll_error) < 30.0 * dgr2rad)
+            if (Math.Abs(roll_error) < 30.0 * dgr2rad || Math.Abs(roll_error - 180.0) < 30.0 * dgr2rad)
                 desired_pitch_lift = Vector3.Dot(imodel.pitch_tangent, target_normal_lift_acc);
             else
                 desired_pitch_lift = Vector3.Dot(imodel.pitch_tangent, neutral_acc);
