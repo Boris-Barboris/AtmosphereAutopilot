@@ -72,7 +72,7 @@ Short GUI description:
 * _Hold specific altitude_ - activate if want altitude control.
 * _desired altitude_ - desired baromethric altitude in meters above sea level.
 * _Speed control_ - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller
-* _pseudo-FLC - toggle for pseudo-FLC (Flight Level Change) control law for ascend. Will force CF to respect speed setpoint and craft thrust parameters when choosing ascent angle.
+* _pseudo-FLC_ - toggle for pseudo-FLC (Flight Level Change) control law for ascend. Will force CF to respect speed setpoint and craft thrust parameters when choosing ascent angle.
 * _flc margin_ - default value 15 m/s. Span of pseudo-FLC algorithm relaxation region. Decrease if don't want to tolerate errors in speed. Algorithm will not converge below some minimal value, so be careful.
 * _strength mult_ - default value 0.75. Will be multiplied in the runtime on Director controller's strength to restrain maneuvers. Tune to achieve slover or faster behaviour.
 * _height relax time_ - default value 6.0 seconds. Time frame of proportional control law jurisdiction, related to relaxation behaviour. Tune to prevent overshooting, if really needed.
