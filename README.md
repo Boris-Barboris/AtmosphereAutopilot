@@ -43,6 +43,7 @@ FBW uses three controllers - pitch, roll and yaw. Pitch is handled by "Pitch ang
 Default hotkey for Moderation is letter O, mOderation. Can be changed in Global_settings.cfg file, Fly-By-Wire section.
 
 Coordinated turn - pseudo-pitch hold to assist in performing coordinated turns.
+
 Speed control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
 
 ## Mouse Director
