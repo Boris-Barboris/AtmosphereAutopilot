@@ -14,10 +14,14 @@ Atmosphere autopilot is a modular atmospheric flight control system library. It'
 
 Autopilots are modular entities. They can use basic, provided by main library components (like controllers and models), or they can define their own components and share them with other Autopilots. Those components will be called "Autopilot modules", or simply - "Modules". Every sealed child of AutopilotModule wich is not a StateController is treated by the library like a Module. Sealed StateController children are treated as Autopilots.
 
-Stock and FAR aerodynamics are supported. Plugin is dependent on ModuleManager by sarbian.
+Stock and FAR aerodynamics are supported. Plugin is dependent on ModuleManager by sarbian, and is shipped with Mini-AVC plugin by cybutek.
 
 # GUI concept
-AA icon is placed in Application Launcher toolbar during flight. It's contents will visualize a list of all Autopilots and Modules, created for active vessel. For every vessel "Autopilot Module Manager" will be created regardless. Turning on a "MASTER SWITCH" on it's window will create required context of Autopilots and Modules for this vessel. Under the master switch all Autopilots will be listed, for the user to choose one of them as an active one. Each Autopilot and Module has it's own GUI window. All of them (even inactive ones) are accessible from AA button in Application Launcher, some of them are accessible from Autopilot window hierarchy (that's up to Autopilot developer to decide, what particular Modules should be accessible from it's GUI). Window positions are serialized (preserved between flights and game sessions) in "Global_settings.cfg" file.
+AA icon is placed in Application Launcher toolbar during flight. It's contents will visualize a list of all Autopilots and Modules, created for active vessel. For every vessel "Autopilot Module Manager" will be created regardless. Turning on a "MASTER SWITCH" on it's window will create required context of Autopilots and Modules for this vessel. Under the master switch all Autopilots will be listed, for the user to choose one of them as an active one. Hotkey for Master switch is letter P, autoPilot. Can be changed in Global_settings.cfg file, Autopilot_module_manager section.
+
+Craft settings window contains shotrcuts to most used moderation and tuning parameters of the craft, as well as provides basic preset functionality. Presets are saved in "Global_settings.cfg"/settings_wnd/profiles section.
+
+Each Autopilot and Module has it's own GUI window. All of them (even inactive ones) are accessible from AA button in Application Launcher, some of them are accessible from Autopilot window hierarchy (that's up to Autopilot developer to decide, what particular Modules should be accessible from it's GUI). Window positions are serialized (preserved between flights and game sessions) in "Global_settings.cfg" file.
 
 # Craft implications and limitations
 "Control from here" part is facing prograde, with close-to-zero angle of attack bias. Planar symmetry is implied (left and right side of the plane are mirrored), as well as good degree of pitch-yaw and pitch-roll control isolation. Axial engine symmetry is strongly recommended. No wind mods are supported, as well as any mods, wich are changing control surface, rcs and engine gimbaling behaviour.
@@ -36,8 +40,7 @@ Main goals:
 
 FBW uses three controllers - pitch, roll and yaw. Pitch is handled by "Pitch ang vel controller", roll by "Roll ang vel controller" and yaw is handled by "Sideslip controller" in plane mode, or directly by "Yaw ang vel controller" in "Rocket mode". In Rocket mode pitch and yaw axes are treated the same - it's usefull in case player wants to use FBW for rocket launches. FBW is effective only on small (<25 degrees) AoA values, though control is possible on all regimes. It's just that it's quality will degrade from inadequacy of linearization assumptions. "Moderation" button is toggling all pitch and yaw moderations - usefull for low speed VTOL action or for fighting overmoderation bugs. Pitch moderation is turned off for 2 seconds after taking-off to prevent overmoderation-related crashes.
 
-Hotkey for FBW is letter P, autoPilot. Hardcoded.
-Default hotkey for Moderation is letter O, mOderation. Can be changed in Global_settings.cfg file.
+Default hotkey for Moderation is letter O, mOderation. Can be changed in Global_settings.cfg file, Fly-By-Wire section.
 
 Speed control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
 
@@ -47,7 +50,6 @@ Mouse Director (MD) is declarative autopilot, crafted with idea to let the user 
 MD uses "Director controller", wich uses two AoA controllers: pitch "AoA controller" and yaw "Sideslip controller", and "Roll ang vel controller" for roll. Currently, planar asymmetry of a plane is not taken into account (sideslip noise is still too noticeable in zero-lift convergence problem), sideslip is always at zero setpoint. If your craft requires nonzero sideslip to fly straight, MD is not a very good solution right now, use FbW in the _rocket mode_.
 
 Short GUI description:
-* _cruise speed_ - m/s airspeed setpoint for speed control.
 
 Speed control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
 
@@ -67,12 +69,13 @@ Short GUI description:
 * _desired course_ - azimuth in degrees to follow in _Course_ mode.
 * _Hold specific altitude_ - activate if want altitude control.
 * _desired altitude_ - desired baromethric altitude in meters above sea level.
-* _Speed control_ - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
-* _Cruise speed_ - m/s airspeed setpoint for speed control.
+* _Speed control_ - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller
+* _pseudo-FLC - toggle for pseudo-FLC (Flight Level Change) control law for ascend. Will force CF to respect speed setpoint and craft thrust parameters when choosing ascent angle.
+* _flc margin_ - default value 15 m/s. Span of pseudo-FLC algorithm relaxation region. Decrease if don't want to tolerate errors in speed. Algorithm will not converge below some minimal value, so be careful.
 * _strength mult_ - default value 0.75. Will be multiplied in the runtime on Director controller's strength to restrain maneuvers. Tune to achieve slover or faster behaviour.
 * _height relax time_ - default value 6.0 seconds. Time frame of proportional control law jurisdiction, related to relaxation behaviour. Tune to prevent overshooting, if really needed.
 * _height relax Kp_ - gain for proportional law, decrease to slow down relaxation.
-* _max climb angle_ - default value 20 degrees. Limit on climb and drop maneuver pitch. Will sometimes be exceeded, it's okay.
+* _max climb angle_ - default value 30 degrees. Global limit on climb and drop maneuver velocity pitch. Will sometimes be exceeded, it's okay.
 
 # Default Modules descriptions
 

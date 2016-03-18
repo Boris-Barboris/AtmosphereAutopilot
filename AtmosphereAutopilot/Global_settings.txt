@@ -77,6 +77,7 @@ Roll_ang_acc_controller
 }
 Pitch_ang_vel_controller
 {
+	moder_cutoff_ias = 10
 	user_input_deriv_clamp = 5
 	AutoTrim = False
 	window_x = 318
@@ -87,11 +88,12 @@ Roll_ang_vel_controller
 	wing_leveler = True
 	user_input_deriv_clamp = 10
 	AutoTrim = False
-	window_x = 737
-	window_y = 283
+	window_x = 621
+	window_y = 287
 }
 Yaw_ang_vel_controller
 {
+	moder_cutoff_ias = 10
 	user_input_deriv_clamp = 5
 	AutoTrim = False
 	window_x = 529
@@ -104,7 +106,7 @@ Mouse_Director
 }
 Cruise_Flight_controller
 {
-	cruise_speed = 600
+	preudo_flc = True
 	window_x = 51
 	window_y = 227
 }

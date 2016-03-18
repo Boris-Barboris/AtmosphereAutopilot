@@ -140,6 +140,7 @@ namespace AtmosphereAutopilot
         public double prograde_thrust;
 
         //[AutoGuiAttr("drag_estimate", false, "G5")]
+        // drag acceleration
         public double drag_estimate;
 
         [VesselSerializable("Kp_v_factor")]
@@ -233,6 +234,8 @@ namespace AtmosphereAutopilot
         int[] throttle_directions;
         double[] estimated_max_thrusts;
 
+        public double estimated_max_thrust = 0.0;
+
         float solve_thrust_req(double required_thrust, float prev_throttle)
         {
             if (imodel.engines.Count == 0)
@@ -242,6 +245,7 @@ namespace AtmosphereAutopilot
             Common.Realloc(ref estimated_max_thrusts, imodel.engines.Count);
 
             double predicted_thrust = 0.0;
+            estimated_max_thrust = 0.0;
             for (int i = 0; i < imodel.engines.Count; i++)
             {
                 ModuleEngines eng = imodel.engines[i].engine;
@@ -249,6 +253,7 @@ namespace AtmosphereAutopilot
                 double e_throttle = eng.currentThrottle / eng.thrustPercentage * 100.0;
                 estimated_max_thrusts[i] = 
                     e_prograde_thrust != 0.0 ? e_prograde_thrust / e_throttle : eng.maxThrust;
+                estimated_max_thrust += estimated_max_thrusts[i];
             }
 
             bool spool_dir_changed = false;
@@ -360,7 +365,7 @@ namespace AtmosphereAutopilot
 
         static readonly string[] spd_str_arr = new string[]{ "OFF", "ms", "kts", "M", "ias", "kias" };
 
-        int chosen_spd_mode = 0;
+        public int chosen_spd_mode = 0;
 
         [VesselSerializable("spd_type")]
         SpeedType type = SpeedType.MetersPerSecond;

@@ -56,6 +56,7 @@ namespace AtmosphereAutopilot
             yc.Activate();
             yc.user_controlled = true;
             tc.Activate();
+            spd_control = tc.chosen_spd_mode != 0;
             MessageManager.post_status_message("Standard Fly-By-Wire enabled");
         }
 

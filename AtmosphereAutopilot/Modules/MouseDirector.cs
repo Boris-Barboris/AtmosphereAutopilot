@@ -44,6 +44,7 @@ namespace AtmosphereAutopilot
         {
             dir_c.Activate();
             thrust_c.Activate();
+            spd_control = thrust_c.chosen_spd_mode != 0;
             MessageManager.post_status_message("Mouse Director enabled");
         }
 

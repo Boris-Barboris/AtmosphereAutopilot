@@ -60,7 +60,8 @@ namespace AtmosphereAutopilot
             thrust_c.Activate();
             imodel.Activate();
             MessageManager.post_status_message("Cruise Flight enabled");
-            
+
+            spd_control = thrust_c.chosen_spd_mode != 0;
             // let's set new circle axis
             circle_axis = Vector3d.Cross(vessel.srf_velocity, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
         }
@@ -205,6 +206,15 @@ namespace AtmosphereAutopilot
 
         public bool spd_control = false;
 
+        [GlobalSerializable("preudo_flc")]
+        [VesselSerializable("preudo_flc")]
+        [AutoGuiAttr("pseudo-FLC", true)]
+        public bool pseudo_flc = true;
+
+        [VesselSerializable("flc_margin")]
+        [AutoGuiAttr("flc_margin", true, "G4")]
+        public double flc_margin = 15.0;
+
         [VesselSerializable("strength_mult")]
         [AutoGuiAttr("strength_mult", true, "G5")]
         public double strength_mult = 0.75;
@@ -219,7 +229,9 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("max_climb_angle")]
         [AutoGuiAttr("max_climb_angle", true, "G5")]
-        public double max_climb_angle = 20.0;
+        public double max_climb_angle = 30.0;
+
+        double filtered_drag = 0.0;
 
         Vector3d account_for_height(Vector3d desired_direction)
         {
@@ -260,7 +272,34 @@ namespace AtmosphereAutopilot
                 if (cur_vert_speed < 0.0)
                     parabolic_acc = -planet2vesNorm * 0.5 * cur_vert_speed * cur_vert_speed / height_error;
             }
-            double max_vert_speed = vessel.horizontalSrfSpeed * Math.Tan(max_climb_angle * dgr2rad);
+
+            // speed control portion for ascend
+            double effective_max_climb_angle = max_climb_angle;
+            if (spd_control && (height_error >= 0.0))
+            {
+                if (pseudo_flc)
+                {
+                    filtered_drag = Common.simple_filter(thrust_c.drag_estimate, filtered_drag, 5.0);
+                    if (thrust_c.estimated_max_thrust > filtered_drag)
+                    {
+                        double sin = Vector3d.Dot(-planet2vesNorm, imodel.gravity_acc + imodel.noninert_acc) / (thrust_c.estimated_max_thrust - filtered_drag);
+                        if (sin < 0.0 || sin >= 1.0)
+                            effective_max_climb_angle = Math.Min(Math.Asin(sin), max_climb_angle);
+                    }
+                    else
+                        effective_max_climb_angle = 1.0;
+
+                    double spd_diff = (imodel.surface_v_magnitude - thrust_c.setpoint.mps());
+                    if (spd_diff < -flc_margin)
+                        effective_max_climb_angle *= 0.0;
+                    else if (spd_diff < 0.0)
+                        effective_max_climb_angle *= -(spd_diff + flc_margin) / flc_margin;
+                }
+                else
+                    effective_max_climb_angle *= Math.Max(0.0, Math.Min(1.0, vessel.srfSpeed / thrust_c.setpoint.mps()));
+            }
+
+            double max_vert_speed = vessel.horizontalSrfSpeed * Math.Tan(effective_max_climb_angle * dgr2rad);
             bool apply_acc = Math.Abs(des_vert_speed) < max_vert_speed;
             des_vert_speed = Common.Clamp(des_vert_speed, max_vert_speed);
             res = desired_direction.normalized * vessel.horizontalSrfSpeed + planet2vesNorm * Common.lerp(des_vert_speed, relax_vert_speed, relax_transition_k);
