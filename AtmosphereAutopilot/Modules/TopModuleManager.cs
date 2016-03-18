@@ -125,16 +125,22 @@ namespace AtmosphereAutopilot
             foreach (var controller in HighLevelControllers.Values)
             {
                 GUILayout.BeginHorizontal();
-                bool pressed = GUILayout.Toggle(controller.Active || active_controller == controller, controller.ModuleName, 
+                bool pressed = GUILayout.Toggle(active_controller == controller, controller.ModuleName, 
                     GUIStyles.toggleButtonStyle, GUILayout.Width(155.0f), GUILayout.ExpandWidth(false));
                 if (pressed && !controller.Active)
                 {
                     if (Active)
                     {
                         // we activate new module
+                        bool activation = true;
                         if (active_controller != null)
+                        {
+                            activation = false;
                             active_controller.Deactivate();
+                        }
                         controller.Activate();
+                        if (!activation)
+                            (cur_ves_modules[typeof(FlightModel)] as FlightModel).sequential_dt = true;
                     }
                     active_controller = controller;
                 }

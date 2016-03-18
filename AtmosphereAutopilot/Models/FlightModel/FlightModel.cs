@@ -76,6 +76,7 @@ namespace AtmosphereAutopilot
             AtmosphereAutopilot.Instance.BackgroundThread.remove_func(train_yaw_lift);
             return_gimbals();
             sequential_dt = false;
+            moments_cycle_counter = 0;
         }
 
         static readonly int BUFFER_SIZE = 8;

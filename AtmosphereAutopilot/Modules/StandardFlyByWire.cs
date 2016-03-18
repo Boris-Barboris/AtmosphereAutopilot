@@ -162,11 +162,13 @@ namespace AtmosphereAutopilot
                     vessel.ReferenceTransform.up).normalized;
                 float yaw_v_vert_project = Vector3.Dot(im.AngularVel(YAW) * vessel.ReferenceTransform.right, up_level_dir);
                 float pitch_vert_project = Vector3.Dot(up_level_dir, -vessel.ReferenceTransform.forward);
-                if (pitch_vert_project != 0.0f)
+                if (pitch_vert_project > 0.0f)
                 {
                     float level_pitch_vel = -yaw_v_vert_project / pitch_vert_project;
                     pc.neutral_offset = level_pitch_vel;
                 }
+                else
+                    pc.neutral_offset = 0.0f;
             }
             else
                 pc.neutral_offset = 0.0f;
