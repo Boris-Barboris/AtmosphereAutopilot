@@ -66,8 +66,8 @@ namespace AtmosphereAutopilot
             //
             dir_c.ApplyControl(cntrl, camera_direction, Vector3d.zero);
 
-            if (cruise_control)
-                thrust_c.ApplyControl(cntrl, desired_spd);
+            if (spd_control)
+                thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
         }
 
         bool camera_correct = false;
@@ -107,12 +107,16 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Thrust controller GUI", true)]
         protected bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
 
-        [AutoGuiAttr("Speed control", true)]
-        public bool cruise_control = false;
+        bool spd_control = false;
 
-        [VesselSerializable("cruise_speed")]
-        [AutoGuiAttr("Cruise speed", true, "G5")]
-        public float desired_spd = 100.0f;
+        protected override void _drawGUI(int id)
+        {
+            GUILayout.BeginVertical();
+            AutoGUI.AutoDrawObject(this);
+            spd_control = thrust_c.SpeedCtrlGUIBlock();
+            GUILayout.EndVertical();
+            GUI.DragWindow();
+        }
 
         public class CenterIndicator: MonoBehaviour
         {

@@ -86,8 +86,8 @@ namespace AtmosphereAutopilot
             if (vessel.LandedOrSplashed)
                 return;
 
-            if (speed_control)
-                thrust_c.ApplyControl(cntrl, desired_spd);
+            if (spd_control)
+                thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
 
             desired_velocity = Vector3d.zero;
             planet2ves = vessel.ReferenceTransform.position - vessel.mainBody.position;
@@ -203,14 +203,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("desired_altitude", true)]
         public float desired_altitude = 1000.0f;
 
-        [VesselSerializable("speed_control")]
-        [AutoGuiAttr("Speed control", true)]
-        public bool speed_control = false;
-
-        [VesselSerializable("cruise_speed")]
-        [GlobalSerializable("cruise_speed")]
-        [AutoGuiAttr("Cruise speed", true, "G5")]
-        public float desired_spd = 200.0f;
+        public bool spd_control = false;
 
         [VesselSerializable("strength_mult")]
         [AutoGuiAttr("strength_mult", true, "G5")]
@@ -359,6 +352,8 @@ namespace AtmosphereAutopilot
                 GUILayout.Label(current_waypt.longtitude.ToString("G5"), GUIStyles.labelStyleCenter);
                 GUILayout.EndHorizontal();
             }
+            // speed
+            spd_control = thrust_c.SpeedCtrlGUIBlock();
             AutoGUI.AutoDrawObject(this);
             GUILayout.EndVertical();
             GUI.DragWindow();

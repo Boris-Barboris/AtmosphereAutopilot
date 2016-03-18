@@ -97,12 +97,7 @@ namespace AtmosphereAutopilot
         [VesselSerializable("coord_turn")]
         public bool coord_turn = false;
 
-        [AutoGuiAttr("Speed control", true)]
-        public bool cruise_control = false;
-
-        [VesselSerializable("cruise_speed")]
-        [AutoGuiAttr("Cruise speed", true, "G4")]
-        public float cruise_speed = 100.0f;
+        bool spd_control = false;
 
         public override void OnUpdate()
         {
@@ -151,8 +146,8 @@ namespace AtmosphereAutopilot
                     time_after_takeoff += TimeWarp.fixedDeltaTime;
             }
 
-            if (cruise_control)
-                tc.ApplyControl(cntrl, cruise_speed);
+            if (spd_control)
+                tc.ApplyControl(cntrl, tc.setpoint.mps());
 
 			pc.user_controlled = true;
             if (coord_turn)
@@ -201,6 +196,7 @@ namespace AtmosphereAutopilot
             }
             GUILayout.Space(5.0f);
             AutoGUI.AutoDrawObject(this);
+            spd_control = tc.SpeedCtrlGUIBlock();
             GUILayout.EndVertical();
             GUI.DragWindow();
         }

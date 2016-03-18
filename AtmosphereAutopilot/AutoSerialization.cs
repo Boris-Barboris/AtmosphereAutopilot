@@ -151,6 +151,11 @@ namespace AtmosphereAutopilot
                 string str = node.GetValue(att.data_name);
                 if (str == null)
                     continue;
+                if (field.FieldType == typeof(string))
+                {
+                    field.SetValue(obj, str);
+                    continue;
+                }
                 if (field.FieldType.IsEnum)
                     field.SetValue(obj, Enum.Parse(field.FieldType, str));
                 else
@@ -172,6 +177,11 @@ namespace AtmosphereAutopilot
                 string str = node.GetValue(att.data_name);
                 if (str == null)
                     continue;
+                if (property.PropertyType == typeof(string))
+                {
+                    property.SetValue(obj, str, null);
+                    continue;
+                }
                 if (property.PropertyType.IsEnum)
                     property.SetValue(obj, Enum.Parse(property.PropertyType, str), null);
                 else

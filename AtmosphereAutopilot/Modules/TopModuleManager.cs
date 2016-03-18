@@ -178,11 +178,18 @@ namespace AtmosphereAutopilot
                 Active = true;
             if (HighLevelControllers.Keys.Contains(controllerType))
             {
-                if (active_controller != null)
-                    active_controller.Deactivate();
+                bool activation = true;
                 StateController cres = HighLevelControllers[controllerType];
+                if (cres != active_controller)
+                    if (active_controller != null)
+                    {
+                        active_controller.Deactivate();
+                        activation = false;
+                    }
                 cres.Activate();
                 active_controller = cres;
+                if (!activation)
+                    (cur_ves_modules[typeof(FlightModel)] as FlightModel).sequential_dt = true;
                 return cres;
             }
             else
