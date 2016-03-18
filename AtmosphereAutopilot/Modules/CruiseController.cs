@@ -293,7 +293,7 @@ namespace AtmosphereAutopilot
                     if (spd_diff < -flc_margin)
                         effective_max_climb_angle *= 0.0;
                     else if (spd_diff < 0.0)
-                        effective_max_climb_angle *= -(spd_diff + flc_margin) / flc_margin;
+                        effective_max_climb_angle *= (spd_diff + flc_margin) / flc_margin;
                 }
                 else
                     effective_max_climb_angle *= Math.Max(0.0, Math.Min(1.0, vessel.srfSpeed / thrust_c.setpoint.mps()));
