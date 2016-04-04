@@ -20,7 +20,7 @@ using System.Threading;
 
 namespace System.Collections.Generic
 {
-    public class CircularBuffer<T> : IList<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable
+    public class CircularBufferAA<T> : IList<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable
     {
         private int capacity;       // underlying array size
         private int size;           // current count of elements
@@ -31,9 +31,9 @@ namespace System.Collections.Generic
         [NonSerialized]
         private object syncRoot;
 
-        public CircularBuffer(int capacity) : this(capacity, false) { }
+        public CircularBufferAA(int capacity) : this(capacity, false) { }
 
-        public CircularBuffer(int capacity, bool allowOverflow)
+        public CircularBufferAA(int capacity, bool allowOverflow)
         {
             if (capacity <= 0)
                 throw new ArgumentException("capacity must be greater than zero.",
@@ -47,7 +47,7 @@ namespace System.Collections.Generic
             AllowOverflow = allowOverflow;
         }
 
-        public CircularBuffer(int capacity, bool allowOverflow, T first_value) : this(capacity, allowOverflow)
+        public CircularBufferAA(int capacity, bool allowOverflow, T first_value) : this(capacity, allowOverflow)
         {
             Put(first_value);   
         }
@@ -289,7 +289,7 @@ namespace System.Collections.Generic
         public void Insert(int index, T item)
         {
             if (index > size || index < 0)
-                throw new ArgumentOutOfRangeException("index", "CircularBuffer Insert at index > size");
+                throw new ArgumentOutOfRangeException("index", "CircularBufferAA Insert at index > size");
             if (index == size)
                 Put(item);
             else
@@ -303,7 +303,7 @@ namespace System.Collections.Generic
         public void RemoveAt(int index)
         {
             if (index >= size || index < 0)
-                throw new ArgumentOutOfRangeException("index", "CircularBuffer RemoveAt index >= size");
+                throw new ArgumentOutOfRangeException("index", "CircularBufferAA RemoveAt index >= size");
             if (index != size -1)
             {
                 for (int i = index; i < size; i++)

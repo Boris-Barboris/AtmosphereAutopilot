@@ -122,7 +122,7 @@ namespace AtmosphereAutopilot
         void get_moments()
         {
             cntrl_part_to_world = vessel.ReferenceTransform.rotation;
-            world_to_cntrl_part = cntrl_part_to_world.Inverse();            // from world to control part rotation
+            world_to_cntrl_part = Quaternion.Inverse(cntrl_part_to_world);            // from world to control part rotation
             CoM = vessel.findWorldCenterOfMass();
             MOI = Vector3d.zero;
             AM = Vector3d.zero;

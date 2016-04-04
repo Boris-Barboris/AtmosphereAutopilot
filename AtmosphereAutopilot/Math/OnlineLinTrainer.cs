@@ -30,21 +30,21 @@ namespace AtmosphereAutopilot
         // Buffers, that will be updated by calls from Unity event cycle
 
         // Immediate buffer
-        CircularBuffer<Vector> imm_buf_inputs;
+        CircularBufferAA<Vector> imm_buf_inputs;
         VectorArray imm_buf_vectors;
-        CircularBuffer<double> imm_buf_outputs;   
+        CircularBufferAA<double> imm_buf_outputs;   
 
         // Buffers for linear regression
 
         // Immediate buffer
-        CircularBuffer<Vector> imm_training_inputs;
+        CircularBufferAA<Vector> imm_training_inputs;
         VectorArray imm_training_vectors;
-        CircularBuffer<double> imm_training_outputs;
+        CircularBufferAA<double> imm_training_outputs;
         // Gradient buffer
         VectorArray grad_training_vectors;
-        CircularBuffer<GenStruct> grad_training;
+        CircularBufferAA<GenStruct> grad_training;
         // Generalization buffer is being used as generality augmentor
-        CircularBuffer<GenStruct>[] gen_buffers;
+        CircularBufferAA<GenStruct>[] gen_buffers;
         // Error weight buffers
         //List<double> imm_error_weights = new List<double>();
         //List<double> grad_error_weights = new List<double>();
@@ -87,14 +87,14 @@ namespace AtmosphereAutopilot
             input_count = tasks[0].linmodel.input_count;
             linearity_check_task = tasks[0];
             // Immediate and gradient buffer initialization
-            imm_buf_inputs = new CircularBuffer<Vector>(imm_buf_size, true);
+            imm_buf_inputs = new CircularBufferAA<Vector>(imm_buf_size, true);
             imm_buf_vectors = new VectorArray(input_count, imm_buf_size);
-            imm_training_inputs = new CircularBuffer<Vector>(imm_buf_size, true);
+            imm_training_inputs = new CircularBufferAA<Vector>(imm_buf_size, true);
             imm_training_vectors = new VectorArray(input_count, imm_buf_size);
-            grad_training = new CircularBuffer<GenStruct>(imm_buf_size / 2, true);
+            grad_training = new CircularBufferAA<GenStruct>(imm_buf_size / 2, true);
             grad_training_vectors = new VectorArray(input_count, imm_buf_size / 2);
-            imm_buf_outputs = new CircularBuffer<double>(imm_buf_size, true);
-            imm_training_outputs = new CircularBuffer<double>(imm_buf_size, true);
+            imm_buf_outputs = new CircularBufferAA<double>(imm_buf_size, true);
+            imm_training_outputs = new CircularBufferAA<double>(imm_buf_size, true);
             // bind vectors in circular buffers to vector arrays
             for (int i = 0; i < imm_buf_size; i++)
             {
@@ -106,10 +106,10 @@ namespace AtmosphereAutopilot
             // Generalization space initialization
             this.gen_triggers = gen_triggers;
             gen_space_size = 0;
-            gen_buffers = new CircularBuffer<GenStruct>[input_count];
+            gen_buffers = new CircularBufferAA<GenStruct>[input_count];
             for (int i = 0; i < input_count; i++)
             {
-                gen_buffers[i] = new CircularBuffer<GenStruct>(gen_buf_sizes[i], true);
+                gen_buffers[i] = new CircularBufferAA<GenStruct>(gen_buf_sizes[i], true);
                 gen_space_size += gen_buf_sizes[i];
                 VectorArray gen_array = new VectorArray(input_count, gen_buf_sizes[i]);
                 for (int j = 0; j < gen_buf_sizes[i]; j++)

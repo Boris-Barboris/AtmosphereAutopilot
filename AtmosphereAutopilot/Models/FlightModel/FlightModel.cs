@@ -38,12 +38,12 @@ namespace AtmosphereAutopilot
         {
             for (int i = 0; i < 3; i++)
             {
-                input_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
-                csurf_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
-                gimbal_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
-                angular_v_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
-                angular_acc_buf[i] = new CircularBuffer<double>(BUFFER_SIZE, true);
-                aoa_buf[i] = new CircularBuffer<float>(BUFFER_SIZE, true);
+                input_buf[i] = new CircularBufferAA<float>(BUFFER_SIZE, true);
+                csurf_buf[i] = new CircularBufferAA<float>(BUFFER_SIZE, true);
+                gimbal_buf[i] = new CircularBufferAA<float>(BUFFER_SIZE, true);
+                angular_v_buf[i] = new CircularBufferAA<float>(BUFFER_SIZE, true);
+                angular_acc_buf[i] = new CircularBufferAA<double>(BUFFER_SIZE, true);
+                aoa_buf[i] = new CircularBufferAA<float>(BUFFER_SIZE, true);
             }
             initialize_lin_tainers();
             integrator = vessel.GetComponent<FlightIntegrator>();
@@ -85,17 +85,17 @@ namespace AtmosphereAutopilot
 
         #region Buffers
 
-        CircularBuffer<float>[] input_buf = new CircularBuffer<float>[3];
+        CircularBufferAA<float>[] input_buf = new CircularBufferAA<float>[3];
 
-        CircularBuffer<float>[] csurf_buf = new CircularBuffer<float>[3];   // True control surface action values
+        CircularBufferAA<float>[] csurf_buf = new CircularBufferAA<float>[3];   // True control surface action values
 
-        CircularBuffer<float>[] gimbal_buf = new CircularBuffer<float>[3];   // True gimbal action values
+        CircularBufferAA<float>[] gimbal_buf = new CircularBufferAA<float>[3];   // True gimbal action values
 
-        CircularBuffer<float>[] angular_v_buf = new CircularBuffer<float>[3];
+        CircularBufferAA<float>[] angular_v_buf = new CircularBufferAA<float>[3];
 
-        CircularBuffer<double>[] angular_acc_buf = new CircularBuffer<double>[3];
+        CircularBufferAA<double>[] angular_acc_buf = new CircularBufferAA<double>[3];
 
-        CircularBuffer<float>[] aoa_buf = new CircularBuffer<float>[3];
+        CircularBufferAA<float>[] aoa_buf = new CircularBufferAA<float>[3];
 
         #endregion
 
@@ -106,7 +106,7 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// Control signal history for pitch, roll or yaw. [-1.0, 1.0].
         /// </summary>
-        public CircularBuffer<float> ControlInputHistory(int axis) { return input_buf[axis]; }
+        public CircularBufferAA<float> ControlInputHistory(int axis) { return input_buf[axis]; }
         /// <summary>
         /// Control signal for pitch, roll or yaw. [-1.0, 1.0].
         /// </summary>
@@ -115,7 +115,7 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// Lagged control surface position history for pitch, roll or yaw. [-1.0, 1.0].
         /// </summary>
-        public CircularBuffer<float> ControlSurfPosHistory(int axis) { return csurf_buf[axis]; }
+        public CircularBufferAA<float> ControlSurfPosHistory(int axis) { return csurf_buf[axis]; }
         /// <summary>
         /// Lagged control surface position for pitch, roll or yaw. [-1.0, 1.0].
         /// </summary>
@@ -124,7 +124,7 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// Lagged gimbal position history for pitch, roll or yaw. [-1.0, 1.0].
         /// </summary>
-        public CircularBuffer<float> GimbalPosHistory(int axis) { return gimbal_buf[axis]; }
+        public CircularBufferAA<float> GimbalPosHistory(int axis) { return gimbal_buf[axis]; }
         /// <summary>
         /// Lagged gimbal position for pitch, roll or yaw. [-1.0, 1.0].
         /// </summary>
@@ -133,7 +133,7 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// Angular velocity history for pitch, roll or yaw. Radians per second.
         /// </summary>
-        public CircularBuffer<float> AngularVelHistory(int axis) { return angular_v_buf[axis]; }
+        public CircularBufferAA<float> AngularVelHistory(int axis) { return angular_v_buf[axis]; }
         /// <summary>
         /// Angular velocity for pitch, roll or yaw. Radians per second.
         /// </summary>
@@ -142,7 +142,7 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// Angular acceleration hitory for pitch, roll or yaw. Radians per second per second.
         /// </summary>
-        public CircularBuffer<double> AngularAccHistory(int axis) { return angular_acc_buf[axis]; }
+        public CircularBufferAA<double> AngularAccHistory(int axis) { return angular_acc_buf[axis]; }
         /// <summary>
         /// Angular acceleration for pitch, roll or yaw. Radians per second per second.
         /// </summary>
@@ -151,7 +151,7 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// Angle of attack hitory for pitch, roll or yaw. Radians.
         /// </summary>
-        public CircularBuffer<float> AoAHistory(int axis) { return aoa_buf[axis]; }
+        public CircularBufferAA<float> AoAHistory(int axis) { return aoa_buf[axis]; }
         /// <summary>
         /// Angle of attack for pitch, roll or yaw. Radians.
         /// </summary>

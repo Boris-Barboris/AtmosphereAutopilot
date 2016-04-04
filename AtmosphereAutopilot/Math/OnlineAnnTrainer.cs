@@ -30,16 +30,16 @@ namespace AtmosphereAutopilot
         // Buffers, that will be updated by calls from Unity event cycle
 
         // Immediate buffer
-        CircularBuffer<Vector> imm_buf_inputs;
+        CircularBufferAA<Vector> imm_buf_inputs;
         VectorArray imm_buf_vectors;
-        CircularBuffer<double> imm_buf_outputs;   
+        CircularBufferAA<double> imm_buf_outputs;   
 
         // Buffers for ANN training
 
         // Immediate buffer
-        CircularBuffer<Vector> imm_training_inputs;
+        CircularBufferAA<Vector> imm_training_inputs;
         VectorArray imm_training_vectors;
-        CircularBuffer<double> imm_training_outputs;
+        CircularBufferAA<double> imm_training_outputs;
         // Generalization buffer is being used as ANN generality augmentor
         GridSpace<GenStruct> gen_space;
         List<GridSpace<GenStruct>.CellValue> linear_gen_buff;
@@ -82,12 +82,12 @@ namespace AtmosphereAutopilot
         {
             this.ann = ann;
             // Immediate buffer initialization
-            imm_buf_inputs = new CircularBuffer<Vector>(imm_buf_size, true);
+            imm_buf_inputs = new CircularBufferAA<Vector>(imm_buf_size, true);
             imm_buf_vectors = new VectorArray(ann.input_count, imm_buf_size);
-            imm_training_inputs = new CircularBuffer<Vector>(imm_buf_size, true);
+            imm_training_inputs = new CircularBufferAA<Vector>(imm_buf_size, true);
             imm_training_vectors = new VectorArray(ann.input_count, imm_buf_size);
-            imm_buf_outputs = new CircularBuffer<double>(imm_buf_size, true);
-            imm_training_outputs = new CircularBuffer<double>(imm_buf_size, true);
+            imm_buf_outputs = new CircularBufferAA<double>(imm_buf_size, true);
+            imm_training_outputs = new CircularBufferAA<double>(imm_buf_size, true);
             // bind vectors in circular buffers to vector arrays
             for (int i = 0; i < imm_buf_size; i++)
             {

@@ -25,7 +25,7 @@ namespace AtmosphereAutopilot
     class AppLauncherWindow : GUIWindow
     {
         public AppLauncherWindow() :
-            base("", 3920049, new Rect(Screen.width - 230, 38, 230, 30))
+            base("", 3920049, new Rect(Screen.width - 280, 38, 230, 30))
         { }
 
         public void set_left(int left)
@@ -67,7 +67,13 @@ namespace AtmosphereAutopilot
 
         internal void set_x_position(float x)
         {
-            window.x = Math.Min(x - 115, Screen.width - 230);
+            window.x = Math.Min(x, Screen.width - window.width);
+        }
+
+        internal void set_y_position(float y)
+        {
+            window.y = Mathf.Min(Mathf.Max(y - window.height / 2.0f, 0.0f), Screen.height - window.height);
+            window.x = Screen.width - window.width - 46.0f;
         }
     }
 }

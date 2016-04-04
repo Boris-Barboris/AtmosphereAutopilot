@@ -1,25 +1,30 @@
 ﻿{
-  "NAME": "AtmosphereAutopilot",
+  "NAME":"AtmosphereAutopilot",
   "URL":"https://raw.githubusercontent.com/Boris-Barboris/AtmosphereAutopilot/master/AtmosphereAutopilot/AtmosphereAutopilot.version",
   "DOWNLOAD":"https://github.com/Boris-Barboris/AtmosphereAutopilot/releases",
-  "GITHUB": {
-	"USERNAME":"Boris-Barboris",
-    "REPOSITORY":"AtmosphereAutopilot",
-    "ALLOW_PRE_RELEASE":false
+  "GITHUB": 
+  {
+    "USERNAME": "Boris-Barboris",
+    "REPOSITORY": "AtmosphereAutopilot",
+    "ALLOW_PRE_RELEASE": false
   },
-  "VERSION": {
+  "VERSION": 
+  {
     "MAJOR": 1,
     "MINOR": 5,
+    "PATCH": 1,
+    "BUILD": 0
+  },
+  "KSP_VERSION": 
+  {
+    "MAJOR": 1,
+    "MINOR": 1,
     "PATCH": 0
   },
-  "KSP_VERSION": {
+  "KSP_VERSION_MIN": 
+  {
     "MAJOR": 1,
-    "MINOR": 0,
-    "PATCH": 5
-  },
-  "KSP_VERSION_MIN": {
-    "MAJOR": 1,
-    "MINOR": 0,
-    "PATCH": 5
+    "MINOR": 1,
+    "PATCH": 0
   }
 }

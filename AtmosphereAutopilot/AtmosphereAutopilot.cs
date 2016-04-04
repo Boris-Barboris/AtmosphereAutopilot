@@ -20,6 +20,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using System.Reflection;
+using KSP.UI.Screens;
 //using ToolbarWrapper;
 
 namespace AtmosphereAutopilot
@@ -269,7 +270,7 @@ namespace AtmosphereAutopilot
         {
             applauncher.ShowGUI();
             applauncher.show_while_hover = false;
-            applauncher.set_x_position(Mouse.screenPos.x);
+            applauncher.set_y_position(Mouse.screenPos.y);
         }
 
         void OnALFalse()

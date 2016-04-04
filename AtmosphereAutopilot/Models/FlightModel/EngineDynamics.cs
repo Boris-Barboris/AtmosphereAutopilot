@@ -157,16 +157,18 @@ namespace AtmosphereAutopilot
                 Vector3 tdir = Vector3.zero;
                 Vector3 e_thrust = Vector3.zero;
                 int tcount = engines[i].engine.thrustTransforms.Count;
-                foreach (var trans in engines[i].engine.thrustTransforms)
+                for (int j = 0; j < tcount; j++)
                 {
+                    Transform trans = engines[i].engine.thrustTransforms[j];
                     tpos = trans.position - CoM;
                     tdir = -trans.forward;
                     tpos = world_to_cntrl_part * tpos;
                     tdir = world_to_cntrl_part * tdir;
                     Vector3 torque_moment = -Vector3.Cross(tpos, tdir);       // minus because Unity's left-handed
-                    engines_torque_principal += torque_moment * engines[i].engine.finalThrust / (float)tcount;
-                    engines_thrust_principal += engines[i].engine.finalThrust * tdir / (float)tcount;
-                    e_thrust += engines[i].engine.finalThrust / (float)tcount * (-trans.forward);
+                    float mult = engines[i].engine.thrustTransformMultipliers[j];
+                    engines_torque_principal += torque_moment * engines[i].engine.finalThrust * mult;
+                    engines_thrust_principal += engines[i].engine.finalThrust * tdir * mult;
+                    e_thrust += engines[i].engine.finalThrust * mult * (-trans.forward);
                 }
                 abs_thrust += engines[i].engine.finalThrust;
                 engines[i].thrust = e_thrust;
