@@ -74,6 +74,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("output_v", false, "G6")]
         protected float output_v;
 
+        [AutoGuiAttr("output_acc", false, "G6")]
+        protected float output_acc;
+
         [AutoGuiAttr("des_aoa_equil_v", false, "G6")]
         public float desired_aoa_equilibr_v;
 
@@ -167,6 +170,7 @@ namespace AtmosphereAutopilot
                 if (t >= -relaxation_frame * TimeWarp.fixedDeltaTime)
                     relaxation = relaxation_factor;
                 descend_v = relaxation * k * (t * t - t_step * t_step) * Math.Sign(error) / TimeWarp.fixedDeltaTime;
+                output_acc = 0.0f;
             }
             else
             {
@@ -177,9 +181,13 @@ namespace AtmosphereAutopilot
                 double t_cubic = -Math.Pow(Math.Abs(error / k_cubic), 0.33);
                 double t_step = Math.Min(0.0, t_cubic + TimeWarp.fixedDeltaTime);
                 if (t >= -relaxation_frame * TimeWarp.fixedDeltaTime)
+                {
                     descend_v = relaxation_factor * error / Math.Max((relaxation_frame * TimeWarp.fixedDeltaTime), TimeWarp.fixedDeltaTime);
+                }
                 else
+                {
                     descend_v = k_cubic * (t_step * t_step * t_step - t_cubic * t_cubic * t_cubic) * Math.Sign(error) / TimeWarp.fixedDeltaTime;
+                }
             }
 
             output_v = (float)(descend_v + desired_aoa_equilibr_v);

@@ -26,12 +26,13 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Controls angular velocity
     /// </summary>
-    public abstract class AngularVelAdaptiveController : SISOController
+    public abstract class AngularVelAdaptiveController : AutopilotModule
     {
         protected int axis;
 
         protected FlightModel imodel;
         protected AngularAccAdaptiveController acc_controller;
+        public bool user_controlled = false;
 
         /// <summary>
         /// Create controller instance
@@ -43,7 +44,7 @@ namespace AtmosphereAutopilot
         /// <param name="model">Flight model instance for adaptive control</param>
         protected AngularVelAdaptiveController(Vessel vessel, string module_name,
             int wnd_id, int axis)
-            : base(vessel, module_name, wnd_id)
+            : base(vessel, wnd_id, module_name)
         {
             this.axis = axis;
             AutoTrim = false;
@@ -88,7 +89,7 @@ namespace AtmosphereAutopilot
         /// Main control function
         /// </summary>
         /// <param name="cntrl">Control state to change</param>
-        public override float ApplyControl(FlightCtrlState cntrl, float target_value)
+        public float ApplyControl(FlightCtrlState cntrl, float target_value, float target_acc = 0.0f)
         {
             vel = imodel.AngularVel(axis);                  // get angular velocity
 
@@ -116,7 +117,7 @@ namespace AtmosphereAutopilot
             
             desired_v = process_desired_v(desired_v, user_controlled);      // moderation stage
 
-            output_acc = get_desired_acc(desired_v);            // produce output acceleration
+            output_acc = get_desired_acc(desired_v) + target_acc;           // produce output acceleration
 
             // check if we're stable on given input value
             if (AutoTrim && vessel == AtmosphereAutopilot.Instance.ActiveVessel)
