@@ -249,8 +249,11 @@ namespace AtmosphereAutopilot
             var vesselsToRemove = autopilot_module_lists.Keys.Where(v => v.state == Vessel.State.DEAD).ToArray();
             foreach (var v in vesselsToRemove)
             {
-                var manager = autopilot_module_lists[v][typeof(TopModuleManager)];
-                manager.Deactivate();
+                if (autopilot_module_lists.ContainsKey(v))
+                {
+                    var manager = autopilot_module_lists[v][typeof(TopModuleManager)];
+                    manager.Deactivate();
+                }
                 autopilot_module_lists.Remove(v);
                 Debug.Log("[AtmosphereAutopilot]: removed vessel " + v.vesselName);
                 if (autopilot_module_lists.ContainsKey(v))
