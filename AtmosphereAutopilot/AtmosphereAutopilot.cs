@@ -33,7 +33,7 @@ namespace AtmosphereAutopilot
 
         // Map of vessel - module list relation
         internal Dictionary<Vessel, Dictionary<Type, AutopilotModule>> autopilot_module_lists =
-            new Dictionary<Vessel, Dictionary<Type, AutopilotModule>>();
+            new Dictionary<Vessel, Dictionary<Type, AutopilotModule>>(new VesselOldComparator());
 
         // Application launcher window
         AppLauncherWindow applauncher = new AppLauncherWindow();
@@ -213,33 +213,20 @@ namespace AtmosphereAutopilot
             ActiveVessel = v;
             //Debug.Log("[AtmosphereAutopilot]: test mark1");
             // custom behaviour for FlightModel
-            var keys = autopilot_module_lists.Keys.ToList();
-            Vessel ves = null;
-            try
-            {
                 //for (int i = 0; i < keys.Count; i++)
                 //{
+                //    Debug.Log("[AtmosphereAutopilot]: hash key of vessel " + keys[i].vesselName + " = " + keys[i].GetHashCode().ToString());
                 //    Debug.Log("[AtmosphereAutopilot]: contains check - " + (autopilot_module_lists.ContainsKey(keys[i]).ToString()) + " " + keys[i].vesselName);
                 //}
-                foreach (Vessel c in keys)
+                foreach (Vessel c in autopilot_module_lists.Keys)
                 {
-                    ves = c;
                     //Debug.Log("[AtmosphereAutopilot]: iter on " + ves.vesselName);
-                    if (!autopilot_module_lists.ContainsKey(ves))
-                        continue;
-                    var dil = autopilot_module_lists[ves];
-                    if (dil == null)
-                        Debug.Log("[AtmosphereAutopilot]: dil = null");
+                    //if (dil == null)
+                    //    Debug.Log("[AtmosphereAutopilot]: dil = null");
                     //Debug.Log("[AtmosphereAutopilot]: dil.Keys.Count = " + dil.Keys.Count.ToString());
                     if (autopilot_module_lists[c].ContainsKey(typeof(FlightModel)))
                         (autopilot_module_lists[c][typeof(FlightModel)] as FlightModel).sequential_dt = false;
                 }
-            }
-            catch (Exception e)
-            {
-                Debug.Log("[AtmosphereAutopilot]: crash on vessel " + ves.vesselName);
-                Debug.Log("[AtmosphereAutopilot]: vessels in keys: " + string.Join(",", keys.Select(vess => vess.vesselName).ToArray()));
-            }
             //Debug.Log("[AtmosphereAutopilot]: test mark2");
         }
 
@@ -249,11 +236,11 @@ namespace AtmosphereAutopilot
             var vesselsToRemove = autopilot_module_lists.Keys.Where(v => v.state == Vessel.State.DEAD).ToArray();
             foreach (var v in vesselsToRemove)
             {
-                if (autopilot_module_lists.ContainsKey(v))
-                {
+                //if (autopilot_module_lists.ContainsKey(v))
+                //{
                     var manager = autopilot_module_lists[v][typeof(TopModuleManager)];
                     manager.Deactivate();
-                }
+                //}
                 autopilot_module_lists.Remove(v);
                 Debug.Log("[AtmosphereAutopilot]: removed vessel " + v.vesselName);
                 if (autopilot_module_lists.ContainsKey(v))

@@ -19,9 +19,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using System.Runtime.CompilerServices;
 
 namespace AtmosphereAutopilot
 {
+    class VesselOldComparator : IEqualityComparer<Vessel>
+    {
+        public int GetHashCode(Vessel foo) { return RuntimeHelpers.GetHashCode(foo); }
+        public bool Equals(Vessel foo1, Vessel foo2) { return RuntimeHelpers.ReferenceEquals(foo1, foo2); }
+    }
+
     class VesselIDComparator : IEqualityComparer<Vessel>
     {
         public int GetHashCode(Vessel foo) { return foo.id.GetHashCode(); }
