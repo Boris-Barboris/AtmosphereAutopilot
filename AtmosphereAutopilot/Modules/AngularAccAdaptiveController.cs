@@ -103,8 +103,8 @@ namespace AtmosphereAutopilot
                 output = 0.0f;
 
             // fighting numerical precision issues
-            if (axis == ROLL && imodel.dyn_pressure > 1000.0 && Mathf.Abs(output) < 0.006f)
-                output = 0.0f;
+            //if (axis == ROLL && imodel.dyn_pressure > 1000.0 && Mathf.Abs(output) < 0.006f)
+            //    output = 0.0f;
 
             ControlUtils.set_raw_output(cntrl, axis, output);
 
