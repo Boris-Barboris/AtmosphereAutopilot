@@ -1,22 +1,26 @@
 clear;
 model = aircraft_model();
+model.aero_model = true;
 %model.force_spd_maintain = true;
-sim_length = 500;
+sim_length = 100;
+dt = 0.05;
 time = zeros(1, sim_length);
 positions = zeros(3, sim_length);
 forwards = zeros(3, sim_length);
 rights = zeros(3, sim_length);
 aoas = zeros(3, sim_length);
 speed = zeros(1, sim_length);
+csurf = zeros(3, sim_length);
 for frame = 1:sim_length
-    time(frame) = 0.05 * (frame - 1);
-    model.preupdate();
-    model.simulation_step(0.025, [0.06, 0, 0]);
+    time(frame) = dt * (frame - 1);
+    model.preupdate(dt);
+    model.simulation_step(dt, [0.05, 0, 0]);
     positions(:, frame) = model.position.';
     forwards(:, frame) = model.forward_vector.';
     rights(:, frame) = model.right_vector.';
     aoas(:, frame) = model.aoa.';
     speed(frame) = model.velocity_magn;
+    csurf(:, frame) = model.csurf_state.';
 end
 %% Drawing
 plot3(positions(1, :), positions(2, :), positions(3, :), 'b');
@@ -39,3 +43,13 @@ h = figure(1338);
 plot(time, speed(1, :));
 xlabel('time');
 ylabel('airspeed');
+%%
+h = figure(1339);
+plot(time, csurf(1, :), 'r');
+hold on;
+plot(time, csurf(2, :), 'g');
+plot(time, csurf(3, :), 'b');
+hold off;
+xlabel('time');
+ylabel('csurf');
+legend('pitch','roll','yaw');

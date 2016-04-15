@@ -31,8 +31,9 @@ classdef aircraft_model < handle
         %
         % model definitions
         %
-        aero_model = false;             % false for stock, true for FAR
+        aero_model = false;              % false for stock, true for FAR
         stock_csurf_spd = 2.0;           % stock csurf speed
+        far_timeConstant = 0.25;         % default FAR csurf timeConstant
         MOI = [165.0 25.0 180.0];
         mass = 14.0;
         
@@ -75,7 +76,7 @@ classdef aircraft_model < handle
     
     methods (Access = public)
         % analogue of PreAutopilotUpdate
-        function preupdate(obj)
+        function preupdate(obj, dt)
             % we need to prepare data here
             obj.right_vector = RotateVector(obj.rotation, [1.0; 0.0; 0.0]);
             obj.forward_vector = RotateVector(obj.rotation, [0.0; 1.0; 0.0]);
@@ -83,9 +84,9 @@ classdef aircraft_model < handle
             obj.velocity_magn = norm(obj.velocity);
             obj.dyn_pressure = obj.density * obj.velocity_magn * obj.velocity_magn;
             update_dynamics(obj);
-            update_pitch_matrix(obj);
-            update_roll_matrix(obj);
-            update_yaw_matrix(obj);
+            update_pitch_matrix(obj, dt);
+            update_roll_matrix(obj, dt);
+            update_yaw_matrix(obj, dt);
             update_aoa(obj);
         end
         
@@ -109,6 +110,15 @@ classdef aircraft_model < handle
             r = a + aircraft_model.clamp(b - a, -delta_limit, delta_limit);
         end
         
+        function r = moveto_far(a, b, time_div)
+            error = b - a;
+            if (abs(error) * 10 >= 0.1)
+                r = a + aircraft_model.clamp(error * time_div, -abs(0.6 * error), abs(0.6 * error));
+            else
+                r = b;
+            end
+        end
+        
         function r = project(v, norm)
             r = norm * dot(v, norm);
         end
@@ -120,6 +130,10 @@ classdef aircraft_model < handle
                 obj.csurf_state(1) = aircraft_model.moveto(obj.csurf_state(1), input(1), dt * obj.stock_csurf_spd);
                 obj.csurf_state(2) = aircraft_model.moveto(obj.csurf_state(2), input(2), dt * obj.stock_csurf_spd);
                 obj.csurf_state(3) = aircraft_model.moveto(obj.csurf_state(3), input(3), dt * obj.stock_csurf_spd);
+            else
+                obj.csurf_state(1) = aircraft_model.moveto_far(obj.csurf_state(1), input(1), dt / obj.far_timeConstant);
+                obj.csurf_state(2) = aircraft_model.moveto_far(obj.csurf_state(2), input(2), dt / obj.far_timeConstant);
+                obj.csurf_state(3) = aircraft_model.moveto_far(obj.csurf_state(3), input(3), dt / obj.far_timeConstant);
             end
         end
         
@@ -199,7 +213,7 @@ classdef aircraft_model < handle
             obj.yaw_gravity_acc = dot([0.0 0.0 -9.8], obj.yaw_tangent);
         end
         
-        function update_pitch_matrix(obj)
+        function update_pitch_matrix(obj, dt)
             Cl0 = obj.pitch_lift_m(1) * 1e-3 * obj.dyn_pressure / obj.mass;
             Cl1 = obj.pitch_lift_m(2) * 1e-3 * obj.dyn_pressure / obj.mass;
             Cl2 = obj.pitch_lift_m(3) * 1e-3 * obj.dyn_pressure / obj.mass;
@@ -215,6 +229,11 @@ classdef aircraft_model < handle
                 obj.pitch_A(2, 3) = K2;
                 obj.pitch_B(2, 1) = obj.sas_torque(1) / obj.MOI(1);
                 obj.pitch_C(3, 1) = obj.stock_csurf_spd;
+            else
+                obj.pitch_A(2, 3) = K2 * (1.0 - dt / obj.far_timeConstant);
+                obj.pitch_B(2, 1) = obj.sas_torque(1) / obj.MOI(1) + K2 * dt / obj.far_timeConstant;
+                obj.pitch_A(3, 3) = -1.0 / obj.far_timeConstant;
+                obj.pitch_B(3, 1) = 1.0 / obj.far_timeConstant;
             end
             obj.pitch_C(1, 1) = -(obj.pitch_gravity_acc + Cl0) / obj.velocity_magn;
             obj.pitch_C(2, 1) = K0;
@@ -222,10 +241,10 @@ classdef aircraft_model < handle
             obj.pitch_A_undelayed = obj.pitch_A(1:3,1:3);
             obj.pitch_A_undelayed(2, 3) = 0.0;
             obj.pitch_B_undelayed = obj.pitch_B(1:3);
-            obj.pitch_B_undelayed(2, 1) = obj.pitch_B_undelayed(2, 1) + K2;            
+            obj.pitch_B_undelayed(2, 1) = obj.sas_torque(1) / obj.MOI(1) + K2;          
         end
         
-        function update_roll_matrix(obj)
+        function update_roll_matrix(obj, dt)
             K0 = obj.roll_rot_m(1) * 1e-2 * obj.dyn_pressure / obj.MOI(2);
             K1 = obj.roll_rot_m(2) * 1e-2 * obj.dyn_pressure / obj.MOI(2);
             K2 = obj.roll_rot_m(3) * obj.dyn_pressure / obj.MOI(2) / obj.velocity_magn;
@@ -237,6 +256,11 @@ classdef aircraft_model < handle
                 obj.roll_A(1, 2) = K3;
                 obj.roll_B(1, 1) = obj.sas_torque(2) / obj.MOI(2);
                 obj.roll_C(2, 1) = obj.stock_csurf_spd;
+            else
+                obj.roll_A(1, 2) = K3 * (1.0 - dt / obj.far_timeConstant);
+                obj.roll_B(1, 1) = obj.sas_torque(2) / obj.MOI(2) + K3 * dt / obj.far_timeConstant;
+                obj.roll_A(2, 2) = -1.0 / obj.far_timeConstant;
+                obj.roll_B(2, 1) = 1.0 / obj.far_timeConstant;
             end
             obj.roll_B(1, 2) = K4;
             obj.roll_B(1, 3) = K1;
@@ -245,10 +269,10 @@ classdef aircraft_model < handle
             obj.roll_A_undelayed = obj.roll_A(1:2,1:2);
             obj.roll_A_undelayed(1, 2) = 0.0;
             obj.roll_B_undelayed = obj.roll_B(1:2,1:3);
-            obj.roll_B_undelayed(1, 1) = obj.roll_B_undelayed(1, 1) + K3;
+            obj.roll_B_undelayed(1, 1) = obj.sas_torque(2) / obj.MOI(2) + K3;
         end
         
-        function update_yaw_matrix(obj)
+        function update_yaw_matrix(obj, dt)
             Cl0 = obj.yaw_lift_m(1) * 1e-3 * obj.dyn_pressure / obj.mass;
             Cl1 = obj.yaw_lift_m(2) * 1e-3 * obj.dyn_pressure / obj.mass;
             Cl2 = obj.yaw_lift_m(3) * 1e-3 * obj.dyn_pressure / obj.mass;
@@ -264,6 +288,11 @@ classdef aircraft_model < handle
                 obj.yaw_A(2, 3) = K2;
                 obj.yaw_B(2, 1) = obj.sas_torque(1) / obj.MOI(3);
                 obj.yaw_C(3, 1) = obj.stock_csurf_spd;
+            else
+                obj.yaw_A(2, 3) = K2 * (1.0 - dt / obj.far_timeConstant);
+                obj.yaw_B(2, 1) = obj.sas_torque(3) / obj.MOI(3) + K2 * dt / obj.far_timeConstant;
+                obj.yaw_A(3, 3) = -1.0 / obj.far_timeConstant;
+                obj.yaw_B(3, 1) = 1.0 / obj.far_timeConstant;
             end
             obj.yaw_C(1, 1) = -(obj.yaw_gravity_acc + Cl0) / obj.velocity_magn;
             obj.yaw_C(2, 1) = K0;
@@ -271,7 +300,7 @@ classdef aircraft_model < handle
             obj.yaw_A_undelayed = obj.yaw_A(1:3,1:3);
             obj.yaw_A_undelayed(2, 3) = 0.0;
             obj.yaw_B_undelayed = obj.yaw_B(1:3);
-            obj.yaw_B_undelayed(2, 1) = obj.yaw_B_undelayed(2, 1) + K2;           
+            obj.yaw_B_undelayed(2, 1) = obj.sas_torque(3) / obj.MOI(3) + K2;           
         end
     end    
 end

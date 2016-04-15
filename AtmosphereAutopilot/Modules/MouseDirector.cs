@@ -83,7 +83,7 @@ namespace AtmosphereAutopilot
             {
                 camera_correct = true;
                 Camera maincamera = FlightCamera.fetch.mainCamera;
-                camera_direction = maincamera.cameraToWorldMatrix.MultiplyPoint(new Vector3(0.0f, 0.0f, -1.0f)) -
+                camera_direction = maincamera.cameraToWorldMatrix.MultiplyPoint(Vector3.back) -
                     FlightCamera.fetch.mainCamera.transform.position;
                 // let's draw a couple of lines to show direction
                 if (indicator == null || camera_attached != maincamera)
