@@ -6,20 +6,20 @@
     "USERNAME"   : "Boris-Barboris",
     "REPOSITORY" : "AtmosphereAutopilot"
   },
-  "VERSION": {
-    "MAJOR": 1,
-    "MINOR": 5,
-    "PATCH": 2,
-    "BUILD": 0
+  "VERSION" : {
+    "MAJOR" : 1,
+    "MINOR" : 5,
+    "PATCH" : 2,
+    "BUILD" : 0
   },
   "KSP_VERSION": {
-    "MAJOR": 1,
-    "MINOR": 1,
-    "PATCH": 0
+    "MAJOR" : 1,
+    "MINOR" : 1,
+    "PATCH" : 0
   },
   "KSP_VERSION_MIN" : {
-    "MAJOR": 1,
-    "MINOR": 1,
-    "PATCH": 0
+    "MAJOR" : 1,
+    "MINOR" : 1,
+    "PATCH" : 0
   }
 }

@@ -95,6 +95,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("angle_relaxation_k", true, "G5")]
         protected float angle_relaxation_k = 0.1f;
 
+        [VesselSerializable("max_neg_g")]
         [AutoGuiAttr("max_neg_g", true, "G5")]
         public double max_neg_g = 8.0;
 
