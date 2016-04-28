@@ -100,6 +100,7 @@ Short GUI description (consult source code for more deatils and insight):
 * _yaw gravity acc_ - gravitational acceleration, projected on craft right wing vector.
 * _yaw engine acc_ - engines-induced acceleration, projected on craft right wing vector.
 * _yaw noninert acc_ - coriolis + centrifugal acceleration, projected on craft right wing vector.
+* _aoa virtual gain_ - default value 0.95. Gain of virtual rotation filter. Used to provide virtual craft rotation in case of interpart oscillations.
 * _MOI_ - moment of inertia of the craft.
 * _CoM_ - center of mass of the craft in PhysX reference frame.
 * _Vessel mass_ - self explanatory.
@@ -121,7 +122,7 @@ Short GUI description:
 * _stop time roll_ - estimate on 90-degrees bank maneuver stop time.
 * _relaxation margin_ - default value 0.01 radians. Margin of relaxed acceleration output. Magic number. Increase to fight overshooting (rarely needed).
 * _angle relaxation k_ - default value 0.1. Relaxation gain, magic number. Decrease to fight oscillations.
-* _max neg g_ - default value 8.0. Maximum negative g-force tolerate. May be useful for players, who are using G-force effects mods.
+* _max neg g_ - default value 8.0. Maximum negative g-force tolerate. May be useful for players, who are using G-force effects mods. Serialized per vessel design.
 * _min rollover alt_ - default value 150.0 meters. Under this terrain altitude setpoint rolling over to prevent large negative g-force will be forbiden to decrease probability of deadly maneovers.
 * _desired pitch lift_ - desired lift-induced acceleration, projected on spinal vector.
 * _desired pitch acc_ - desired total acceleration, projected on spinal vector.
