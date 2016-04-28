@@ -73,7 +73,7 @@ namespace AtmosphereAutopilot
         internal void set_y_position(float y)
         {
             window.y = Mathf.Min(Mathf.Max(y - window.height / 2.0f, 0.0f), Screen.height - window.height);
-            window.x = Screen.width - window.width - 46.0f;
+            window.x = Screen.width - window.width - 42.0f;
         }
     }
 }

@@ -722,8 +722,9 @@ namespace AtmosphereAutopilot
                 if (zenith_angle > 20.0f && zenith_angle < 160.0f && imodel.surface_v_magnitude > 10.0)
                 {
                     Vector3 right_horizont_vector = Vector3.Cross(planet2ves, vessel.srf_velocity);
-                    Vector3 right_project = Vector3.ProjectOnPlane(vessel.ReferenceTransform.right, Vector3.Cross(vessel.srf_velocity, right_horizont_vector));
-                    Vector3 roll_vector = Vector3.Cross(vessel.ReferenceTransform.right, right_project.normalized);
+                    Vector3 right_vector = imodel.virtualRotation * Vector3.right;
+                    Vector3 right_project = Vector3.ProjectOnPlane(right_vector, Vector3.Cross(vessel.srf_velocity, right_horizont_vector));
+                    Vector3 roll_vector = Vector3.Cross(right_vector, right_project.normalized);
                     angle_btw_hor_sin = -Vector3.Dot(roll_vector, vessel.ReferenceTransform.up);
                     if (Math.Abs(angle_btw_hor_sin) <= Math.Sin(leveler_snap_angle * dgr2rad))
                     {

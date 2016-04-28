@@ -31,6 +31,7 @@ namespace AtmosphereAutopilot
     {
         //[AutoGuiAttr("angular_vel", false, "G8")]
         Vector3 angular_vel = Vector3.zero;
+        Vector3 angular_vel_prev = Vector3.zero;
 
         [AutoGuiAttr("MOI", false, "G5")]
         public Vector3 MOI;
@@ -249,17 +250,43 @@ namespace AtmosphereAutopilot
         public Vector3 fwd_srf_v;       // velocity, projected to vessel forward direction
         public Vector3 right_srf_v;     // velocity, projected to vessel right direction
 
+        [AutoGuiAttr("aoa_virtual_gain", true, "G5")]
+        [GlobalSerializable("aoa_virtual_gain")]
+        public float aoa_virtual_gain = 0.95f;
+
+        /// <summary>
+        /// Virtual rotation of the vessel, filtered from interpart oscillations
+        /// </summary>
+        public Quaternion virtualRotation = Quaternion.identity;
+
         void update_aoa()
         {
-            up_srf_v = Vector3.Project(surface_v, vessel.ReferenceTransform.up);
-            fwd_srf_v = Vector3.Project(surface_v, vessel.ReferenceTransform.forward);
-            right_srf_v = Vector3.Project(surface_v, vessel.ReferenceTransform.right);
+            if (!sequential_dt)
+                virtualRotation = vessel.ReferenceTransform.rotation;
+            else
+            {
+                Vector3 avg_angvel = -0.5f * (angular_vel_prev + angular_vel) + world_to_cntrl_part * vessel.mainBody.angularVelocity;
+                float ang_delta = rad2degree * (TimeWarp.fixedDeltaTime * avg_angvel.magnitude);
+                Quaternion delta = Quaternion.AngleAxis(ang_delta, cntrl_part_to_world * avg_angvel);
+                virtualRotation = Quaternion.Lerp(vessel.ReferenceTransform.rotation,
+                    delta * virtualRotation, aoa_virtual_gain);
+            }
+
+            angular_vel_prev = angular_vel;
+
+            Vector3 upv = virtualRotation * Vector3.up;
+            Vector3 fwd = virtualRotation * Vector3.forward;
+            Vector3 right = virtualRotation * Vector3.right;
+
+            up_srf_v = Vector3.Project(surface_v, upv);
+            fwd_srf_v = Vector3.Project(surface_v, fwd);
+            right_srf_v = Vector3.Project(surface_v, right);
 
             Vector3 projected_vel = up_srf_v + fwd_srf_v;
             if (projected_vel.sqrMagnitude > 1.0f)
             {
-                float aoa_p = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward, projected_vel.normalized), 1.0f));
-                if (Vector3.Dot(projected_vel, vessel.ReferenceTransform.up) < 0.0)
+                float aoa_p = (float)Math.Asin(Common.Clampf(Vector3.Dot(fwd, projected_vel.normalized), 1.0f));
+                if (Vector3.Dot(projected_vel, upv) < 0.0)
                     aoa_p = (float)Math.PI - aoa_p;
                 aoa_buf[PITCH].Put(aoa_p);
             }
@@ -269,8 +296,8 @@ namespace AtmosphereAutopilot
             projected_vel = up_srf_v + right_srf_v;
             if (projected_vel.sqrMagnitude > 1.0f)
             {
-                float aoa_y = (float)Math.Asin(Common.Clampf(Vector3.Dot(-vessel.ReferenceTransform.right, projected_vel.normalized), 1.0f));
-                if (Vector3.Dot(projected_vel, vessel.ReferenceTransform.up) < 0.0)
+                float aoa_y = (float)Math.Asin(Common.Clampf(Vector3.Dot(-right, projected_vel.normalized), 1.0f));
+                if (Vector3.Dot(projected_vel, upv) < 0.0)
                     aoa_y = (float)Math.PI - aoa_y;
                 aoa_buf[YAW].Put(aoa_y);
             }
@@ -280,8 +307,8 @@ namespace AtmosphereAutopilot
             projected_vel = right_srf_v + fwd_srf_v;
             if (projected_vel.sqrMagnitude > 1.0f)
             {
-                float aoa_r = (float)Math.Asin(Common.Clampf(Vector3.Dot(vessel.ReferenceTransform.forward, projected_vel.normalized), 1.0f));
-                if (Vector3.Dot(projected_vel, vessel.ReferenceTransform.right) < 0.0)
+                float aoa_r = (float)Math.Asin(Common.Clampf(Vector3.Dot(fwd, projected_vel.normalized), 1.0f));
+                if (Vector3.Dot(projected_vel, right) < 0.0)
                     aoa_r = (float)Math.PI - aoa_r;
                 aoa_buf[ROLL].Put(aoa_r);
             }

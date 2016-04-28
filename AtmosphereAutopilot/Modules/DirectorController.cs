@@ -184,8 +184,9 @@ namespace AtmosphereAutopilot
             Vector3d desired_right_direction = Vector3d.Cross(target_normal_lift_acc, vessel.ReferenceTransform.up).normalized;
 
             // let's apply roll to maintain desired_right_direction
-            double new_roll_error = Math.Sign(Vector3d.Dot(vessel.ReferenceTransform.right, target_normal_lift_acc)) *
-                Math.Acos(Math.Min(Math.Max(Vector3d.Dot(desired_right_direction, vessel.ReferenceTransform.right), -1.0), 1.0));
+            Vector3 right_vector = imodel.virtualRotation * Vector3.right;
+            double new_roll_error = Math.Sign(Vector3d.Dot(right_vector, target_normal_lift_acc)) *
+                Math.Acos(Math.Min(Math.Max(Vector3d.Dot(desired_right_direction, right_vector), -1.0), 1.0));
             // rolling to pitch up is not always as efficient as pitching down
             double spine_to_zenith = Vector3d.Dot(desired_right_direction, Vector3d.Cross(imodel.surface_v, imodel.gravity_acc));
             if (target_normal_lift_acc.magnitude < max_neg_g * 9.81 || !allow_spine_down || vessel.heightFromTerrain < min_rollover_alt)
