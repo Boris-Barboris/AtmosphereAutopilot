@@ -100,7 +100,7 @@ Short GUI description (consult source code for more deatils and insight):
 * _yaw gravity acc_ - gravitational acceleration, projected on craft right wing vector.
 * _yaw engine acc_ - engines-induced acceleration, projected on craft right wing vector.
 * _yaw noninert acc_ - coriolis + centrifugal acceleration, projected on craft right wing vector.
-* _aoa virtual gain_ - default value 0.95. Gain of virtual rotation filter. Used to provide virtual craft rotation in case of interpart oscillations.
+* _aoa virtual gain_ - default value 0.95. Gain of virtual rotation filter. Used to provide virtual craft rotation in case of interpart oscillations. 0.0 - pure control from part rotation. 1.0 - pure virtual.
 * _MOI_ - moment of inertia of the craft.
 * _CoM_ - center of mass of the craft in PhysX reference frame.
 * _Vessel mass_ - self explanatory.
