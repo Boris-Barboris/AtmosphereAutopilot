@@ -48,57 +48,59 @@ namespace AtmosphereAutopilot
             if (base.vessel.atmDensity == 0.0)
                 pitch_input = roll_input = yaw_input = 0.0f;
 
-            if (this.deploy)
-            {
-                if (this.deployInvert)
-                {
-                    pitch_input = ignorePitch ? 0.0f : -1.0f;
-                    roll_input = ignoreRoll ? 0.0f : -1.0f;
-                    yaw_input = ignoreYaw ? 0.0f : -1.0f;
-                }
-                else
-                {
-                    pitch_input = ignorePitch ? 0.0f : 1.0f;
-                    roll_input = ignoreRoll ? 0.0f : 1.0f;
-                    yaw_input = ignoreYaw ? 0.0f : 1.0f;
-                }
-            }
-
             float spd_factor = TimeWarp.fixedDeltaTime * CSURF_SPD;
             float fwd_airstream_factor = Mathf.Sign(Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity) + 0.1f);
             float exp_spd_factor = actuatorSpeed / actuatorSpeedNormScale * TimeWarp.fixedDeltaTime;
 
-            if (!ignorePitch)
+            if (this.deploy)
             {
-                float axis_factor = Vector3.Dot(vessel.ReferenceTransform.right, baseTransform.right) * fwd_airstream_factor;
-                float new_pitch_action = pitch_input * axis_factor * Math.Sign(Vector3.Dot(world_com - baseTransform.position, vessel.ReferenceTransform.up));
-                if (useExponentialSpeed)
-                    prev_pitch_action = Mathf.Lerp(prev_pitch_action, new_pitch_action, exp_spd_factor);
-                else
-                    prev_pitch_action = prev_pitch_action + Common.Clampf(new_pitch_action - prev_pitch_action, spd_factor * Math.Abs(axis_factor));
+                float target = this.deployInvert ? -1.0f : 1.0f;
+                if (this.usesMirrorDeploy)
+                    if (this.mirrorDeploy)
+                        target *= -1.0f;
+                if (!ignorePitch)
+                    prev_pitch_action = target;
+                if (!ignoreRoll)
+                    prev_roll_action = target;
+                if (!ignoreYaw)
+                    prev_yaw_action = target;
+                deflection = action = action + Common.Clampf(target - action, spd_factor);
+                ctrlSurface.localRotation = Quaternion.AngleAxis(deflection * ctrlSurfaceRange * 0.01f * authorityLimiter, Vector3.right) * neutral;
             }
-            if (!ignoreRoll)
+            else
             {
-                float axis_factor = Vector3.Dot(vessel.ReferenceTransform.up, baseTransform.up) * fwd_airstream_factor;
-                float new_roll_action = roll_input * axis_factor * Math.Sign(Vector3.Dot(vessel.ReferenceTransform.up,
-                    Vector3.Cross(world_com - baseTransform.position, baseTransform.forward)));
-                if (useExponentialSpeed)
-                    prev_roll_action = Mathf.Lerp(prev_roll_action, new_roll_action, exp_spd_factor);
-                else
-                    prev_roll_action = prev_roll_action + Common.Clampf(new_roll_action - prev_roll_action, spd_factor * axis_factor);
-            }
-            if (!ignoreYaw)
-            {
-                float axis_factor = Vector3.Dot(vessel.ReferenceTransform.forward, baseTransform.right) * fwd_airstream_factor;
-                float new_yaw_action = yaw_input * axis_factor * Math.Sign(Vector3.Dot(world_com - baseTransform.position, vessel.ReferenceTransform.up));
-                if (useExponentialSpeed)
-                    prev_yaw_action = Mathf.Lerp(prev_yaw_action, new_yaw_action, exp_spd_factor);
-                else
-                    prev_yaw_action = prev_yaw_action + Common.Clampf(new_yaw_action - prev_yaw_action, spd_factor * Math.Abs(axis_factor));
-            }
+                if (!ignorePitch)
+                {
+                    float axis_factor = Vector3.Dot(vessel.ReferenceTransform.right, baseTransform.right) * fwd_airstream_factor;
+                    float new_pitch_action = pitch_input * axis_factor * Math.Sign(Vector3.Dot(world_com - baseTransform.position, vessel.ReferenceTransform.up));
+                    if (useExponentialSpeed)
+                        prev_pitch_action = Mathf.Lerp(prev_pitch_action, new_pitch_action, exp_spd_factor);
+                    else
+                        prev_pitch_action = prev_pitch_action + Common.Clampf(new_pitch_action - prev_pitch_action, spd_factor * Math.Abs(axis_factor));
+                }
+                if (!ignoreRoll)
+                {
+                    float axis_factor = Vector3.Dot(vessel.ReferenceTransform.up, baseTransform.up) * fwd_airstream_factor;
+                    float new_roll_action = roll_input * axis_factor * Math.Sign(Vector3.Dot(vessel.ReferenceTransform.up,
+                        Vector3.Cross(world_com - baseTransform.position, baseTransform.forward)));
+                    if (useExponentialSpeed)
+                        prev_roll_action = Mathf.Lerp(prev_roll_action, new_roll_action, exp_spd_factor);
+                    else
+                        prev_roll_action = prev_roll_action + Common.Clampf(new_roll_action - prev_roll_action, spd_factor * axis_factor);
+                }
+                if (!ignoreYaw)
+                {
+                    float axis_factor = Vector3.Dot(vessel.ReferenceTransform.forward, baseTransform.right) * fwd_airstream_factor;
+                    float new_yaw_action = yaw_input * axis_factor * Math.Sign(Vector3.Dot(world_com - baseTransform.position, vessel.ReferenceTransform.up));
+                    if (useExponentialSpeed)
+                        prev_yaw_action = Mathf.Lerp(prev_yaw_action, new_yaw_action, exp_spd_factor);
+                    else
+                        prev_yaw_action = prev_yaw_action + Common.Clampf(new_yaw_action - prev_yaw_action, spd_factor * Math.Abs(axis_factor));
+                }
 
-            deflection = action = Common.Clampf(prev_pitch_action + prev_roll_action + prev_yaw_action, 1.0f);
-            ctrlSurface.localRotation = Quaternion.AngleAxis(deflection * ctrlSurfaceRange * 0.01f * authorityLimiter, Vector3.right) * neutral;
+                deflection = action = Common.Clampf(prev_pitch_action + prev_roll_action + prev_yaw_action, 1.0f);
+                ctrlSurface.localRotation = Quaternion.AngleAxis(deflection * ctrlSurfaceRange * 0.01f * authorityLimiter, Vector3.right) * neutral;
+            }
         }
     }
 }
