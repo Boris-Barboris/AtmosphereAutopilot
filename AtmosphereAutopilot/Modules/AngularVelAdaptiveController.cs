@@ -454,12 +454,12 @@ namespace AtmosphereAutopilot
             }
             else
                 transit_max_v = max_v_construction;
-            
+
             // if the user is in charge, let's hold surface-relative angular elocity
             float v_offset = 0.0f;
             if (user_input && vessel.obt_speed > 1.0)
             {
-                if (FlightUIController.speedDisplayMode == FlightUIController.SpeedDisplayModes.Surface)
+                if (FlightGlobals.speedDisplayMode == FlightGlobals.SpeedDisplayModes.Surface)
                 {
                     Vector3 planet2vessel = vessel.GetWorldPos3D() - vessel.mainBody.position;
                     Vector3 still_ang_v = Vector3.Cross(vessel.obt_velocity, planet2vessel) / planet2vessel.sqrMagnitude;
