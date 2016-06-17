@@ -25,6 +25,9 @@ Each Autopilot and Module has it's own GUI window. All of them (even inactive on
 
 # Hotkeys
 "Hotkey manager" window is placed into Application Launcher window list. It's contents are registered hotkeys, wich can be changed during runtime.
+There are two main hotkeys: 
+* "Master switch" - toggles Master Switch.
+* Shift + "Master switch" - toggles GUI of "Autopilot Module Manager".
 
 # Craft implications and limitations
 "Control from here" part is facing prograde, with close-to-zero angle of attack bias. Planar symmetry is implied (left and right side of the plane are mirrored), as well as good degree of pitch-yaw and pitch-roll control isolation. Axial engine symmetry is strongly recommended. No wind mods are supported, as well as any mods, wich are changing control surface, rcs and engine gimbaling behaviour.

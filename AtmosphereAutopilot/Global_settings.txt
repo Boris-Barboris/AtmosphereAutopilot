@@ -20,6 +20,36 @@ Acceleration_controller
 	window_x = 308
 	window_y = 78
 }
+Autopilot_module_manager
+{
+	master_switch_key = P
+	window_x = 52
+	window_y = 80
+}
+settings_wnd
+{
+	window_x = 272
+	window_y = 79
+	window_width = 200
+	profiles
+	{
+		default
+		{
+			moderate_aoa = True
+			moderate_sideslip = True
+			moderate_g = True
+			moderate_g_hor = True
+			wing_leveler = True
+			max_aoa = 15
+			max_g = 15
+			max_sideslip = 15
+			max_g_hor = 15
+			ptich_v = 0.7
+			roll_v = 3
+			yaw_v = 0.5
+		}
+	}
+}
 Flight_model
 {
 	aoa_virtual_gain = 0.95
@@ -107,38 +137,10 @@ AoA_controller
 Standard_Fly-By-Wire
 {
 	moderation_keycode = O
+	rocket_mode_keycode = None
+	coord_turn_keycode = None
 	window_x = 53
 	window_y = 221
-}
-Autopilot_module_manager
-{
-	master_switch_key = P
-	window_x = 52
-	window_y = 80
-}
-settings_wnd
-{
-	window_x = 272
-	window_y = 79
-	window_width = 200
-	profiles
-	{
-		default
-		{
-			moderate_aoa = True
-			moderate_sideslip = True
-			moderate_g = True
-			moderate_g_hor = True
-			wing_leveler = True
-			max_aoa = 15
-			max_g = 15
-			max_sideslip = 15
-			max_g_hor = 15
-			ptich_v = 0.7
-			roll_v = 3
-			yaw_v = 0.5
-		}
-	}
 }
 hotkey_manager
 {
