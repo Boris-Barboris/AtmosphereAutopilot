@@ -34,8 +34,8 @@ namespace AtmosphereAutopilot
 
     public struct SpeedSetpoint
     {
-        SpeedType type;
-        float value;
+        public SpeedType type;
+        public float value;
         Vessel v;
 
         public const float kts2mps = 0.514444f;
@@ -375,7 +375,88 @@ namespace AtmosphereAutopilot
         [VesselSerializable("spd_setpoint")]
         string spd_setpoint_str = "100";
 
+        /// <summary>
+        /// Current speed setpoint, wich is maintained by controller
+        /// </summary>
         public SpeedSetpoint setpoint;
+
+        bool need_to_show_change = false;
+        float setpoint_change_counter = 0.0f;
+
+        [AutoGuiAttr("hotkey_speed_factor", true, "G4")]
+        [GlobalSerializable("hotkey_speed_factor")]
+        public static float hotkey_speed_factor = 0.7f;
+
+        [AutoGuiAttr("use_throttle_hotkeys", true)]
+        [GlobalSerializable("use_throttle_hotkeys")]
+        public static bool use_throttle_hotkeys = true;
+
+        public override void OnUpdate()
+        {
+            if (use_throttle_hotkeys && chosen_spd_mode != 0 && 
+                !FlightDriver.Pause && InputLockManager.IsUnlocked(ControlTypes.THROTTLE))
+            {
+                // let's handle hotkey speed changing
+                if (GameSettings.THROTTLE_UP.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
+                {
+                    float ms = setpoint.value;
+                    float new_ms = ms + Time.deltaTime * hotkey_speed_factor * ms;
+                    setpoint.value = new_ms;
+                    need_to_show_change = true;
+                    setpoint_change_counter = 0;
+                    spd_setpoint_str = new_ms.ToString("G4");
+                }
+                else if (GameSettings.THROTTLE_DOWN.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
+                {
+                    float ms = setpoint.value;
+                    float new_ms = ms - Time.deltaTime * hotkey_speed_factor * ms;
+                    setpoint.value = new_ms;
+                    need_to_show_change = true;
+                    setpoint_change_counter = 0;
+                    spd_setpoint_str = new_ms.ToString("G4");
+                }
+                if (need_to_show_change)
+                    setpoint_change_counter += Time.deltaTime;
+                if (setpoint_change_counter > 1.0f)
+                {
+                    setpoint_change_counter = 0;
+                    need_to_show_change = false;
+                }
+            }
+            else
+            {
+                need_to_show_change = false;
+                setpoint_change_counter = 0;
+            }
+        }
+
+        protected override void OnGUICustomAlways()
+        {
+            if (need_to_show_change)
+            {
+                Rect rect = new Rect(Screen.width / 2.0f - 80.0f, 120.0f, 160.0f, 20.0f);
+                string str = "SPD = " + setpoint.value.ToString("G4");
+                switch (setpoint.type)
+                {
+                    case SpeedType.IAS:
+                        str = str + " IAS";
+                        break;
+                    case SpeedType.KIAS:
+                        str = str + " kIAS";
+                        break;
+                    case SpeedType.Knots:
+                        str = str + " kts";
+                        break;
+                    case SpeedType.Mach:
+                        str = str + " M";
+                        break;
+                    case SpeedType.MetersPerSecond:
+                        str = str + " m/s";
+                        break;
+                }
+                GUI.Label(rect, str, GUIStyles.hoverLabel);
+            }
+        }
 
         /// <summary>
         /// Standard speed control GUI block to integrate in other controllers
@@ -429,7 +510,7 @@ namespace AtmosphereAutopilot
             {
                 // need to convert old setpoint to new format
                 spd_setpoint = setpoint.convert(newtype);
-                spd_setpoint_str = spd_setpoint.ToString();
+                spd_setpoint_str = spd_setpoint.ToString("G4");
             }
             type = newtype;
 

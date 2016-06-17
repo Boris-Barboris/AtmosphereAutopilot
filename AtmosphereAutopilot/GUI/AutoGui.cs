@@ -122,6 +122,7 @@ namespace AtmosphereAutopilot
         /// <inheritdoc />
         public void OnGUI()
         {
+            OnGUICustomAlways();
             if (!gui_shown || AtmosphereAutopilot.UIHidden)
                 return;
             
@@ -137,6 +138,11 @@ namespace AtmosphereAutopilot
         /// Called after each _drawGUI call
         /// </summary>
         protected virtual void OnGUICustom() { }
+
+        /// <summary>
+        // Executed on every OnGUI regardless of gui_shown or UIHidden
+        /// </summary>
+        protected virtual void OnGUICustomAlways() { }
 
         /// <inheritdoc />
         public bool ToggleGUI()

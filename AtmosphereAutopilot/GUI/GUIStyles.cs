@@ -34,6 +34,7 @@ namespace AtmosphereAutopilot
         public static GUIStyle textBoxStyle { get; private set; }
         public static GUIStyle toggleButtonStyle { get; private set; }
         public static GUIStyle toggleButtonStyleRight { get; private set; }
+        public static GUIStyle hoverLabel { get; private set; }
 
         internal static void Init()
         {
@@ -56,6 +57,16 @@ namespace AtmosphereAutopilot
             labelStyleCenter.fontSize = 11;
             labelStyleCenter.margin = new RectOffset(2, 2, 1, 1);
             labelStyleCenter.padding = new RectOffset(1, 1, 1, 1);
+
+            hoverLabel = new GUIStyle(skin.label);
+            hoverLabel.alignment = TextAnchor.MiddleCenter;
+            hoverLabel.fontSize = 14;
+            hoverLabel.fontStyle = FontStyle.Bold;
+            hoverLabel.normal.textColor = Color.red;
+            hoverLabel.margin = new RectOffset(2, 2, 1, 1);
+            hoverLabel.padding = new RectOffset(1, 1, 1, 1);
+            hoverLabel.stretchHeight = true;
+            hoverLabel.stretchWidth = true;
 
             textBoxStyle = new GUIStyle(skin.textField);
             textBoxStyle.alignment = TextAnchor.MiddleCenter;
