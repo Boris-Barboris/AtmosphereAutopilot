@@ -20,38 +20,9 @@ Acceleration_controller
 	window_x = 308
 	window_y = 78
 }
-Autopilot_module_manager
-{
-	master_switch_key = P
-	window_x = 50
-	window_y = 80
-}
-settings_wnd
-{
-	window_x = 272
-	window_y = 79
-	window_width = 200
-	profiles
-	{
-		default
-		{
-			moderate_aoa = True
-			moderate_sideslip = True
-			moderate_g = True
-			moderate_g_hor = True
-			wing_leveler = True
-			max_aoa = 15
-			max_g = 15
-			max_sideslip = 15
-			max_g_hor = 15
-			ptich_v = 0.7
-			roll_v = 3
-			yaw_v = 0.5
-		}
-	}
-}
 Flight_model
 {
+	aoa_virtual_gain = 0.95
 	window_x = 1610
 	window_y = 156
 }
@@ -80,16 +51,16 @@ Pitch_ang_vel_controller
 	moder_cutoff_ias = 10
 	user_input_deriv_clamp = 5
 	AutoTrim = False
-	window_x = 318
-	window_y = 281
+	window_x = 315
+	window_y = 254
 }
 Roll_ang_vel_controller
 {
 	wing_leveler = True
 	user_input_deriv_clamp = 10
 	AutoTrim = False
-	window_x = 621
-	window_y = 287
+	window_x = 369
+	window_y = 283
 }
 Yaw_ang_vel_controller
 {
@@ -107,11 +78,19 @@ Mouse_Director
 Cruise_Flight_controller
 {
 	preudo_flc = True
+	use_keys = True
+	switch_key_mode = RightAlt
+	hotkey_course_speed = 60
+	hotkey_altitude_speed = 0.7
+	hotkey_vertspeed_speed = 30
+	hotkey_vertspeed_snap = 0.5
 	window_x = 51
 	window_y = 227
 }
 Prograde_thrust_controller
 {
+	hotkey_speed_factor = 0.7
+	use_throttle_hotkeys = True
 	window_x = 335
 	window_y = 114
 }
@@ -128,6 +107,41 @@ AoA_controller
 Standard_Fly-By-Wire
 {
 	moderation_keycode = O
-	window_x = 52
+	window_x = 53
 	window_y = 221
+}
+Autopilot_module_manager
+{
+	master_switch_key = P
+	window_x = 52
+	window_y = 80
+}
+settings_wnd
+{
+	window_x = 272
+	window_y = 79
+	window_width = 200
+	profiles
+	{
+		default
+		{
+			moderate_aoa = True
+			moderate_sideslip = True
+			moderate_g = True
+			moderate_g_hor = True
+			wing_leveler = True
+			max_aoa = 15
+			max_g = 15
+			max_sideslip = 15
+			max_g_hor = 15
+			ptich_v = 0.7
+			roll_v = 3
+			yaw_v = 0.5
+		}
+	}
+}
+hotkey_manager
+{
+	window_x = 160
+	window_y = 521
 }

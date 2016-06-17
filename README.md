@@ -23,6 +23,9 @@ Craft settings window contains shotrcuts to most used moderation and tuning para
 
 Each Autopilot and Module has it's own GUI window. All of them (even inactive ones) are accessible from AA button in Application Launcher, some of them are accessible from Autopilot window hierarchy (that's up to Autopilot developer to decide, what particular Modules should be accessible from it's GUI). Window positions are serialized (preserved between flights and game sessions) in "Global_settings.cfg" file.
 
+# Hotkeys
+"Hotkey manager" window is placed into Application Launcher window list. It's contents are registered hotkeys, wich can be changed during runtime.
+
 # Craft implications and limitations
 "Control from here" part is facing prograde, with close-to-zero angle of attack bias. Planar symmetry is implied (left and right side of the plane are mirrored), as well as good degree of pitch-yaw and pitch-roll control isolation. Axial engine symmetry is strongly recommended. No wind mods are supported, as well as any mods, wich are changing control surface, rcs and engine gimbaling behaviour.
 
@@ -40,9 +43,12 @@ Main goals:
 
 FBW uses three controllers - pitch, roll and yaw. Pitch is handled by "Pitch ang vel controller", roll by "Roll ang vel controller" and yaw is handled by "Sideslip controller" in plane mode, or directly by "Yaw ang vel controller" in "Rocket mode". In Rocket mode pitch and yaw axes are treated the same - it's usefull in case player wants to use FBW for rocket launches. FBW is effective only on small (<25 degrees) AoA values, though control is possible on all regimes. It's just that it's quality will degrade from inadequacy of linearization assumptions. "Moderation" button is toggling all pitch and yaw moderations - usefull for low speed VTOL action or for fighting overmoderation bugs. Pitch moderation is turned off for 2 seconds after taking-off to prevent overmoderation-related crashes.
 
-Default hotkey for Moderation is letter O, mOderation. Can be changed in Global_settings.cfg file, Fly-By-Wire section.
+"Coordinated turn" - pseudo-pitch hold to assist in performing coordinated turns.
 
-Coordinated turn - pseudo-pitch hold to assist in performing coordinated turns.
+Hotkeys: 
+* "FBW moderation" - default hotkey for Moderation is letter O, mOderation.
+* "FBW rocket mode" - default hotkey unassigned.
+* "FBW coord turn" - default hotkey unassigned.
 
 Speed control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
 
@@ -67,17 +73,30 @@ Functions:
 Short GUI description:
 * _Level_ - simple leveling regime. Upon activation, CF will save surface-relative inclination of velocity and will follow it. If altitude is not set, will keep vertical speed at zero.
 * _Course_ - follows azimuth setpoint, set in field _desired course_. If altitude is not set, will keep vertical speed at zero. On high latitudes (>80 degrees) will switch to _Level_ mode.
-* _Waypoint_ - primitive waypoint following. Designed for pick-and-fly functionality. When activated, _pick waypoint_ button appears under mode tabs, as well as waypoint latitude-longtitude representation. Waypoint control is turned off when destination is closer than 200 meters to be followed by _Level_ mode activation.
+* _Waypoint_ - primitive waypoint following. Designed for pick-and-fly functionality. When activated, _pick waypoint_ button appears under mode tabs, as well as waypoint latitude-longtitude representation and distance to it in straight line (through planet core). Waypoint control is turned off when destination is closer than 200 meters to be followed by _Level_ mode activation.
 * _desired course_ - azimuth in degrees to follow in _Course_ mode.
-* _Hold specific altitude_ - activate if want altitude control.
-* _desired altitude_ - desired baromethric altitude in meters above sea level.
 * _Speed control_ - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller
+* _Vertical motion control_ - activate altitude or vertical speed control. Otherwise vertical speed is kept at zero.
+* _Altitude_ - hold altitude, meters above sea level.
+* _Vertical speed_ - hold vertical speed, meters per second.
+
+"Advanced options" description:
 * _pseudo-FLC_ - toggle for pseudo-FLC (Flight Level Change) control law for ascend. Will force CF to respect speed setpoint and craft thrust parameters when choosing ascent angle.
 * _flc margin_ - default value 15 m/s. Span of pseudo-FLC algorithm relaxation region. Decrease if don't want to tolerate errors in speed. Algorithm will not converge below some minimal value, so be careful.
 * _strength mult_ - default value 0.75. Will be multiplied in the runtime on Director controller's strength to restrain maneuvers. Tune to achieve slover or faster behaviour.
 * _height relax time_ - default value 6.0 seconds. Time frame of proportional control law jurisdiction, related to relaxation behaviour. Tune to prevent overshooting, if really needed.
 * _height relax Kp_ - gain for proportional law, decrease to slow down relaxation.
 * _max climb angle_ - default value 30 degrees. Global limit on climb and drop maneuver velocity pitch. Will sometimes be exceeded, it's okay.
+* _use keys_ - use pitch and yaw keys to control course and altitude\vertical speed setpoints. This flag is toggled by "CF keys input mode" hotkey.
+* _hotkey course speed_ - tweak to manage course setpoint change speed.
+* _hotkey altitude speed_ - tweak to manage altitude setpoint change speed.
+* _hotkey vertspeed speed_ - tweak to manage vertical speed setpoint change speed.
+* _hotkey vertspeed snap_ - tweak to manage vertical speed snap to zero margin.
+
+Hotkeys:
+* "Pitch keys" - alter vertical motion setpoint, altitude or vertical speed (whatever is active at the moment).
+* "Yaw keys" - alter course setpoint.
+* "CF keys input mode" - default hotkey is _Right Alt_, toggles whether Pitch and yaw is used to control setpoints.
 
 # Default Modules descriptions
 
@@ -233,3 +252,5 @@ Short GUI description:
 * _acc filter k_ - default value 1. Filter gain for acceleration moving average. Magic number.
 * _relaxation acc error_ - default value 0.1 m/s^2. Error margin for filter activation. Magic number.
 * _use PID_ - toggle if you want to manually tune controller, or using strange engines.
+* _hotkey_speed_factor_ - tweak to change throttle hotkey sensitivity.
+* _use_throttle_hotkeys_ - toggle speed setpoint handling by hotkeys.

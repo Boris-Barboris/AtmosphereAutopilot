@@ -74,6 +74,22 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Rocket mode", true)]
         public bool rocket_mode = false;
 
+        public bool RocketMode
+        {
+            get
+            {
+                return rocket_mode;
+            }
+            set
+            {
+                if (value != rocket_mode)
+                {
+                    MessageManager.post_status_message(value ? "Rocket mode enabled" : "Rocket mode disabled");
+                    rocket_mode = value;
+                }
+            }
+        }
+
         [AutoGuiAttr("Moderation", true)]
         public bool moderation_switch
         {
@@ -95,9 +111,33 @@ namespace AtmosphereAutopilot
         [AutoHotkeyAttr("FBW moderation")]
         static KeyCode moderation_keycode = KeyCode.O;
 
+        [GlobalSerializable("rocket_mode_keycode")]
+        [AutoHotkeyAttr("FBW rocket mode")]
+        static KeyCode rocket_mode_keycode = KeyCode.None;
+
+        [GlobalSerializable("coord_turn_keycode")]
+        [AutoHotkeyAttr("FBW coord turn")]
+        static KeyCode coord_turn_keycode = KeyCode.None;
+
         [AutoGuiAttr("Coordinated turn", true)]
         [VesselSerializable("coord_turn")]
         public bool coord_turn = false;
+
+        public bool Coord_turn
+        {
+            get
+            {
+                return coord_turn;
+            }
+            set
+            {
+                if (value != coord_turn)
+                {
+                    MessageManager.post_status_message(value ? "Coord turn enabled" : "Coord turn disabled");
+                    coord_turn = value;
+                }
+            }
+        }
 
         bool spd_control = false;
 
@@ -105,6 +145,10 @@ namespace AtmosphereAutopilot
         {
             if (Input.GetKeyDown(moderation_keycode))
                 moderation_switch = !moderation_switch;
+            if (Input.GetKeyDown(rocket_mode_keycode))
+                RocketMode = !rocket_mode;
+            if (Input.GetKeyDown(coord_turn_keycode))
+                Coord_turn = !coord_turn;
         }
 
         bool landed = false;
