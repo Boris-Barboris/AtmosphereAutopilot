@@ -327,22 +327,16 @@ namespace AtmosphereAutopilot
             GUIStyles.reset_colors();
         }
 
+        public static bool UIHidden = false;
+
         void OnHideUI()
         {
-            applauncher.HideGUI();
-            if (ActiveVessel == null)
-                return;
-            foreach (var pair in autopilot_module_lists[ActiveVessel])
-                pair.Value.HideGUI();
+            UIHidden = true;
         }
 
         void OnShowUI()
         {
-            applauncher.UnHideGUI();
-            if (ActiveVessel == null)
-                return;
-            foreach (var pair in autopilot_module_lists[ActiveVessel])
-                pair.Value.UnHideGUI();
+            UIHidden = false;
         }
 
         #endregion

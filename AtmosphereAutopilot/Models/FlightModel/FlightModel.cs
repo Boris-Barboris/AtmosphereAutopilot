@@ -283,20 +283,6 @@ namespace AtmosphereAutopilot
             set { if (value) { unshow_all_trainer_windows(); slide_lin_wnd.ShowGUI(); } else slide_lin_wnd.UnShowGUI(); }
         }
 
-        public override void HideGUI()
-        {
-            base.HideGUI();
-            foreach (var tw in trainer_windows)
-                tw.HideGUI();
-        }
-
-        public override void UnHideGUI()
-        {
-            base.UnHideGUI();
-            foreach (var tw in trainer_windows)
-                tw.UnHideGUI();
-        }
-
         protected override void OnGUICustom()
         {
             foreach (var trainer in trainer_windows)

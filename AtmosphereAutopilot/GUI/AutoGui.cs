@@ -74,16 +74,6 @@ namespace AtmosphereAutopilot
         bool ToggleGUI();
 
         /// <summary>
-        /// Hide window. Use for F2 event.
-        /// </summary>
-        void HideGUI();
-
-        /// <summary>
-        /// Unhide window. Use for F2 event.
-        /// </summary>
-        void UnHideGUI();
-
-        /// <summary>
         /// Show window.
         /// </summary>
         void ShowGUI();
@@ -103,7 +93,6 @@ namespace AtmosphereAutopilot
         string wndname;
         int wnd_id;
         bool gui_shown = false;
-        bool gui_hidden = false;
         protected Rect window;
 
         /// <summary>
@@ -133,7 +122,7 @@ namespace AtmosphereAutopilot
         /// <inheritdoc />
         public void OnGUI()
         {
-            if (!gui_shown || gui_hidden)
+            if (!gui_shown || AtmosphereAutopilot.UIHidden)
                 return;
             
             // forbid windows not on screen
@@ -160,18 +149,6 @@ namespace AtmosphereAutopilot
         /// </summary>
         /// <param name="id">Unique window id. Just ignore it in function realization.</param>
         protected abstract void _drawGUI(int id);
-
-        /// <inheritdoc />
-        public virtual void HideGUI()
-        {
-            gui_hidden = true;
-        }
-
-        /// <inheritdoc />
-        public virtual void UnHideGUI()
-        {
-            gui_hidden = false;
-        }
 
         /// <inheritdoc />
         public virtual void ShowGUI()
