@@ -54,7 +54,7 @@ namespace AtmosphereAutopilot
 
             if (this.deploy)
             {
-                float target = this.deployInvert ? -1.0f : 1.0f;
+                float target = this.deployInvert ? 1.0f : -1.0f;
                 if (this.usesMirrorDeploy)
                     if (this.mirrorDeploy)
                         target *= -1.0f;
