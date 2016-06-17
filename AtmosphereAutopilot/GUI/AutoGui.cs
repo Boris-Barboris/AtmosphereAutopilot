@@ -135,6 +135,17 @@ namespace AtmosphereAutopilot
         }
 
         /// <summary>
+        /// Procedure for close "x" button in upper right corner
+        /// </summary>
+        protected void close_button()
+        {
+            Rect close_btn_rect = new Rect(window.width - 16.0f, 1.0f, 15.0f, 16.0f);
+            bool close = GUI.Button(close_btn_rect, "x", GUIStyles.toggleButtonStyle);
+            if (close)
+                this.UnShowGUI();
+        }
+
+        /// <summary>
         /// Called after each _drawGUI call
         /// </summary>
         protected virtual void OnGUICustom() { }

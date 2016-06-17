@@ -475,13 +475,6 @@ namespace AtmosphereAutopilot
                     chosen_spd_mode = i;
             }
             GUILayout.EndHorizontal();
-            //GUILayout.BeginHorizontal();
-            //for (int i = 3; i < 6; i++)
-            //{
-            //    if (GUILayout.Toggle(chosen_spd_mode == i, spd_str_arr[i], GUIStyles.toggleButtonStyle))
-            //        chosen_spd_mode = i;
-            //}
-            //GUILayout.EndHorizontal();
 
             SpeedType newtype = SpeedType.MetersPerSecond;
             switch (chosen_spd_mode)

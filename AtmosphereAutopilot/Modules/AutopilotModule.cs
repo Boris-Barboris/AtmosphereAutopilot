@@ -181,6 +181,7 @@ namespace AtmosphereAutopilot
         /// <inheritdoc />
         protected override void _drawGUI(int id)
         {
+            close_button();
             GUILayout.BeginVertical();
             AutoGUI.AutoDrawObject(this);
             GUILayout.EndVertical();

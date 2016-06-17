@@ -112,6 +112,7 @@ namespace AtmosphereAutopilot
 
         protected override void _drawGUI(int id)
         {
+            close_button();
             GUILayout.BeginVertical();
             AutoGUI.AutoDrawObject(this);
             spd_control = thrust_c.SpeedCtrlGUIBlock();

@@ -63,6 +63,7 @@ namespace AtmosphereAutopilot
 
         protected override void _drawGUI(int id)
         {
+            close_button();
             GUILayout.BeginVertical();
 
             int new_editing_index = editing_index;
@@ -74,7 +75,7 @@ namespace AtmosphereAutopilot
                 AutoHotkeyAttr attr = hotkey_map[i].attr;
                 GUILayout.Label(attr.hotkey_name, GUIStyles.labelStyleLeft);
                 string text = (editing_index == i) ? "??" : field.GetValue(null).ToString();
-                bool pressed = GUILayout.Button(text, GUIStyles.toggleButtonStyle, GUILayout.MinWidth(25.0f), GUILayout.Width(40.0f));
+                bool pressed = GUILayout.Button(text, GUIStyles.toggleButtonStyle, GUILayout.MinWidth(75.0f), GUILayout.Width(75.0f));
                 if (pressed)
                     new_editing_index = i;
 

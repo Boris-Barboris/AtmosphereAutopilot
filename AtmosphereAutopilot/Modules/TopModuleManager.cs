@@ -114,6 +114,7 @@ namespace AtmosphereAutopilot
 
         protected override void _drawGUI(int id)
         {
+            close_button();
             GUILayout.BeginVertical();
             Active = GUILayout.Toggle(Active, "MASTER SWITCH", GUIStyles.toggleButtonStyle);
             bool show_settings = GUILayout.Toggle(settings_wnd.IsShown(), "Craft settings", GUIStyles.toggleButtonStyle);

@@ -93,7 +93,7 @@ namespace AtmosphereAutopilot
 
         [GlobalSerializable("moderation_keycode")]
         [AutoHotkeyAttr("FBW moderation")]
-        protected static KeyCode moderation_keycode = KeyCode.O;
+        static KeyCode moderation_keycode = KeyCode.O;
 
         [AutoGuiAttr("Coordinated turn", true)]
         [VesselSerializable("coord_turn")]
@@ -187,6 +187,7 @@ namespace AtmosphereAutopilot
 
         protected override void _drawGUI(int id)
         {
+            close_button();
             GUILayout.BeginVertical();
             foreach (var module in gui_list)
             {

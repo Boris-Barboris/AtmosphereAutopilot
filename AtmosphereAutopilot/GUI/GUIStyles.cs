@@ -79,6 +79,7 @@ namespace AtmosphereAutopilot
             toggleButtonStyle.padding = new RectOffset(4, 4, 2, 2);
             var button_pressed_style = toggleButtonStyle.onActive;
             button_pressed_style.textColor = Color.green;
+            toggleButtonStyle.normal.textColor = Color.white;
             toggleButtonStyle.fontSize = 12;
             toggleButtonStyle.onNormal = button_pressed_style;
             toggleButtonStyle.stretchWidth = true;

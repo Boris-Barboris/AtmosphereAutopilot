@@ -212,6 +212,7 @@ namespace AtmosphereAutopilot
 
         protected override void _drawGUI(int id)
         {
+            close_button();
             GUILayout.BeginVertical();
             for (int i = 0; i < 3; i++)
             {
