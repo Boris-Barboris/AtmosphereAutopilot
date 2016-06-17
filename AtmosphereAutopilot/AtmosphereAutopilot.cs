@@ -38,6 +38,9 @@ namespace AtmosphereAutopilot
         // Application launcher window
         AppLauncherWindow applauncher = new AppLauncherWindow();
 
+        // Hotkey manager
+        internal AutoHotkey hotkeyManager;
+
         /// <summary>
         /// Get AtmosphereAutopilot addon class instance
         /// </summary>
@@ -56,6 +59,7 @@ namespace AtmosphereAutopilot
             get_csurf_module();
             get_gimbal_modules();
             initialize_types();
+            hotkeyManager = new AutoHotkey(autopilot_module_types);
             initialize_thread();
             GameEvents.onVesselChange.Add(vesselSwitch);
             GameEvents.onGameSceneLoadRequested.Add(sceneSwitch);
@@ -170,6 +174,7 @@ namespace AtmosphereAutopilot
                 return;
             foreach (var module in autopilot_module_lists[ActiveVessel].Values)
                 module.Serialize();
+            hotkeyManager.Serialize();
         }
 
         void OnDestroy()
@@ -203,6 +208,7 @@ namespace AtmosphereAutopilot
             if (!autopilot_module_lists[v].ContainsKey(typeof(TopModuleManager)))
                 autopilot_module_lists[v][typeof(TopModuleManager)] = new TopModuleManager(v);
 			autopilot_module_lists[v][typeof(TopModuleManager)].Deserialize();
+            hotkeyManager.Deserialize();
         }
 
         void vesselSwitch(Vessel v)
@@ -211,23 +217,11 @@ namespace AtmosphereAutopilot
             Debug.Log("[AtmosphereAutopilot]: vessel switch to " + v.vesselName);
             load_manager_for_vessel(v);
             ActiveVessel = v;
-            //Debug.Log("[AtmosphereAutopilot]: test mark1");
-            // custom behaviour for FlightModel
-                //for (int i = 0; i < keys.Count; i++)
-                //{
-                //    Debug.Log("[AtmosphereAutopilot]: hash key of vessel " + keys[i].vesselName + " = " + keys[i].GetHashCode().ToString());
-                //    Debug.Log("[AtmosphereAutopilot]: contains check - " + (autopilot_module_lists.ContainsKey(keys[i]).ToString()) + " " + keys[i].vesselName);
-                //}
-                foreach (Vessel c in autopilot_module_lists.Keys)
-                {
-                    //Debug.Log("[AtmosphereAutopilot]: iter on " + ves.vesselName);
-                    //if (dil == null)
-                    //    Debug.Log("[AtmosphereAutopilot]: dil = null");
-                    //Debug.Log("[AtmosphereAutopilot]: dil.Keys.Count = " + dil.Keys.Count.ToString());
-                    if (autopilot_module_lists[c].ContainsKey(typeof(FlightModel)))
-                        (autopilot_module_lists[c][typeof(FlightModel)] as FlightModel).sequential_dt = false;
-                }
-            //Debug.Log("[AtmosphereAutopilot]: test mark2");
+            foreach (Vessel c in autopilot_module_lists.Keys)
+            {
+                if (autopilot_module_lists[c].ContainsKey(typeof(FlightModel)))
+                    (autopilot_module_lists[c][typeof(FlightModel)] as FlightModel).sequential_dt = false;
+            }
         }
 
         void clean_modules()
@@ -236,11 +230,8 @@ namespace AtmosphereAutopilot
             var vesselsToRemove = autopilot_module_lists.Keys.Where(v => v.state == Vessel.State.DEAD).ToArray();
             foreach (var v in vesselsToRemove)
             {
-                //if (autopilot_module_lists.ContainsKey(v))
-                //{
-                    var manager = autopilot_module_lists[v][typeof(TopModuleManager)];
-                    manager.Deactivate();
-                //}
+                var manager = autopilot_module_lists[v][typeof(TopModuleManager)];
+                manager.Deactivate();
                 autopilot_module_lists.Remove(v);
                 Debug.Log("[AtmosphereAutopilot]: removed vessel " + v.vesselName);
                 if (autopilot_module_lists.ContainsKey(v))
@@ -324,6 +315,7 @@ namespace AtmosphereAutopilot
             applauncher.OnGUI();
             foreach (var pair in autopilot_module_lists[ActiveVessel])
                 pair.Value.OnGUI();
+            hotkeyManager.OnGUI();
             GUIStyles.reset_colors();
         }
 

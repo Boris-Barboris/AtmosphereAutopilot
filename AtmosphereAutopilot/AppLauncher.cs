@@ -38,19 +38,31 @@ namespace AtmosphereAutopilot
         protected override void _drawGUI(int id)
         {
             GUILayout.BeginVertical();
+
             AtmosphereAutopilot aa = AtmosphereAutopilot.Instance;
             foreach (var pair in aa.getVesselModules(aa.ActiveVessel))
             {
-                IWindow gui = pair.Value;
-                bool shown = gui.IsShown();
-                string label = (pair.Value as GUIWindow) != null ?
-                    (pair.Value as GUIWindow).WindowName :
-                    pair.Key.Name;
-                bool nshown = GUILayout.Toggle(shown, label, GUIStyles.toggleButtonStyle);
-                if (shown ^ nshown)
-                    gui.ToggleGUI();
+                draw_row(pair.Value, pair.Key.Name);
             }
+            // custom behaviour for hotkey manager
+            AutoHotkey hm = aa.hotkeyManager;
+            if (hm != null)
+            {
+                draw_row(hm, "Hotkeys manager");
+            }
+
             GUILayout.EndVertical();
+        }
+
+        void draw_row(IWindow gui, string type_name)
+        {
+            bool shown = gui.IsShown();
+            string label = (gui as GUIWindow) != null ?
+                (gui as GUIWindow).WindowName :
+                type_name;
+            bool nshown = GUILayout.Toggle(shown, label, GUIStyles.toggleButtonStyle);
+            if (shown ^ nshown)
+                gui.ToggleGUI();
         }
 
         protected override void OnGUICustom()

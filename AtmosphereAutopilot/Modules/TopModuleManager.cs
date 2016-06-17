@@ -197,6 +197,7 @@ namespace AtmosphereAutopilot
         }
 
         [GlobalSerializable("master_switch_key")]
+        [AutoHotkeyAttr("Master switch")]
         static KeyCode master_switch_key = KeyCode.P;
 
         public override void OnUpdate()

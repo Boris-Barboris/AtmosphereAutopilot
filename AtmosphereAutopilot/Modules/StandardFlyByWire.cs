@@ -92,6 +92,7 @@ namespace AtmosphereAutopilot
         }
 
         [GlobalSerializable("moderation_keycode")]
+        [AutoHotkeyAttr("FBW moderation")]
         protected static KeyCode moderation_keycode = KeyCode.O;
 
         [AutoGuiAttr("Coordinated turn", true)]
