@@ -200,4 +200,24 @@ namespace AtmosphereAutopilot
             return '(' + v.x.ToString(format) + ", " + v.y.ToString(format) + ", " + v.z.ToString(format) + ')';
         }
     }
+
+
+    public static class QuaternionExtensions
+    {
+        public static Quaternion Normalize(this Quaternion q)
+        {
+            Quaternion result;
+            float sq = q.x * q.x;
+            sq += q.y * q.y;
+            sq += q.z * q.z;
+            sq += q.w * q.w;
+            float inv = (float)(1.0 / Math.Sqrt(sq));
+            result.x = q.x * inv;
+            result.y = q.y * inv;
+            result.z = q.z * inv;
+            result.w = q.w * inv;
+            return result;
+        }
+    }
+
 }

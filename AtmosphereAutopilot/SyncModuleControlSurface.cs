@@ -78,6 +78,9 @@ namespace AtmosphereAutopilot
                     else
                         prev_pitch_action = prev_pitch_action + Common.Clampf(new_pitch_action - prev_pitch_action, spd_factor * Math.Abs(axis_factor));
                 }
+                else
+                    prev_pitch_action = 0.0f;
+
                 if (!ignoreRoll)
                 {
                     float axis_factor = Vector3.Dot(vessel.ReferenceTransform.up, baseTransform.up) * fwd_airstream_factor;
@@ -88,6 +91,9 @@ namespace AtmosphereAutopilot
                     else
                         prev_roll_action = prev_roll_action + Common.Clampf(new_roll_action - prev_roll_action, spd_factor * axis_factor);
                 }
+                else
+                    prev_roll_action = 0.0f;
+
                 if (!ignoreYaw)
                 {
                     float axis_factor = Vector3.Dot(vessel.ReferenceTransform.forward, baseTransform.right) * fwd_airstream_factor;
@@ -97,10 +103,62 @@ namespace AtmosphereAutopilot
                     else
                         prev_yaw_action = prev_yaw_action + Common.Clampf(new_yaw_action - prev_yaw_action, spd_factor * Math.Abs(axis_factor));
                 }
+                else
+                    prev_yaw_action = 0.0f;
 
                 deflection = action = Common.Clampf(prev_pitch_action + prev_roll_action + prev_yaw_action, 1.0f);
                 ctrlSurface.localRotation = Quaternion.AngleAxis(deflection * ctrlSurfaceRange * 0.01f * authorityLimiter, Vector3.right) * neutral;
             }
         }
+
+
+        public new void FixedUpdate()
+        {
+            if (HighLogic.LoadedSceneIsFlight)
+            {
+                if (base.part.Rigidbody != null && !base.part.ShieldedFromAirstream)
+                {
+                    Vector3 vel = base.part.Rigidbody.GetPointVelocity(this.baseTransform.position) + Krakensbane.GetFrameVelocityV3f();
+                    double submergedPortion = base.part.submergedPortion;
+                    double airPortion = 1.0 - submergedPortion;
+
+                    this.Qlift = (base.part.dynamicPressurekPa * airPortion + base.part.submergedDynamicPressurekPa * submergedPortion * base.part.submergedLiftScalar) * 1000.0;
+                    this.Qdrag = (base.part.dynamicPressurekPa * airPortion + base.part.submergedDynamicPressurekPa * submergedPortion * base.part.submergedDragScalar) * 1000.0;
+                    base.SetupCoefficients(vel, out this.nVel, out this.liftVector, out this.liftDot, out this.absDot);
+                    this.liftForce = base.GetLiftVector(this.liftVector, this.liftDot, this.absDot, this.Qlift, (float)base.part.machNumber) * (1f - this.ctrlSurfaceArea);
+                    if (this.useInternalDragModel)
+                    {
+                        this.dragForce = base.GetDragVector(this.nVel, this.absDot, this.Qdrag) * (1f - this.ctrlSurfaceArea);
+                    }
+                    float num2 = this.liftDot;
+                    float absDot = this.absDot;
+                    if (this.ctrlSurface != null)
+                    {
+                        this.CtrlSurfaceUpdate(vel);
+                        this.airflowIncidence = Quaternion.AngleAxis(this.ctrlSurfaceRange * this.deflection, this.baseTransform.rotation * Vector3.right);
+                        this.liftVector = this.airflowIncidence * this.liftVector;
+                        num2 = Vector3.Dot(this.nVel, this.liftVector);
+                        absDot = Mathf.Abs(num2);
+                    }
+                    this.liftForce += base.GetLiftVector(this.liftVector, num2, absDot, this.Qlift, (float)base.part.machNumber) * this.ctrlSurfaceArea;
+                    base.part.Rigidbody.AddForceAtPosition(this.liftForce, base.part.rb.worldCenterOfMass + base.part.partTransform.rotation * base.part.CoLOffset, ForceMode.Force);
+                    if (this.useInternalDragModel)
+                    {
+                        this.dragForce += base.GetDragVector(this.nVel, absDot, this.Qdrag) * this.ctrlSurfaceArea;
+                        base.part.Rigidbody.AddForceAtPosition(this.dragForce, base.part.rb.worldCenterOfMass + base.part.partTransform.rotation * base.part.CoPOffset, ForceMode.Force);
+                    }
+                    base.part.DragCubes.SetCubeWeight("neutral", 150.0f * 0.01f - Mathf.Abs(this.deflection * this.authorityLimiter * 0.01f));
+                    base.part.DragCubes.SetCubeWeight("fullDeflectionPos", Mathf.Clamp01(this.deflection * this.authorityLimiter * 0.01f));
+                    base.part.DragCubes.SetCubeWeight("fullDeflectionNeg", Mathf.Clamp01(-(this.deflection * this.authorityLimiter * 0.01f)));
+                    base.UpdateAeroDisplay(Color.yellow);
+                }
+                else
+                {
+                    this.Qlift = (this.Qdrag = 0.0);
+                    this.nVel = Vector3.zero;
+                }
+            }
+        }
+
     }
 }

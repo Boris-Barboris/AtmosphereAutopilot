@@ -37,19 +37,19 @@ namespace TestingConsole
             Console.ReadKey(true);
         }
 
-        static void simple_ann_test()
-        {
-            double[] ann_inputs = { -0.3, 0.5, 1.6 };
-            SimpleAnn ann = new SimpleAnn(3);
-            foreach (var i in ann_inputs)
-            {
-                double output = 0.0;
-                for (int j = 0; j < 1000; j++)
-                    output += ann.eval(i);
-                output /= 1000.0;
-                Console.Write(output.ToString("G8") + " ");
-            }
-        }
+        //static void simple_ann_test()
+        //{
+        //    double[] ann_inputs = { -0.3, 0.5, 1.6 };
+        //    SimpleAnn ann = new SimpleAnn(3);
+        //    foreach (var i in ann_inputs)
+        //    {
+        //        double output = 0.0;
+        //        for (int j = 0; j < 1000; j++)
+        //            output += ann.eval(i);
+        //        output /= 1000.0;
+        //        Console.Write(output.ToString("G8") + " ");
+        //    }
+        //}
 
         static void ListViewTest()
         {
@@ -63,88 +63,88 @@ namespace TestingConsole
             Console.WriteLine(view.ToString());
         }
 
-        static void LMTest()
-        {
-			List<Vector> inputs = new List<Vector>();
-            inputs.Add((Vector)new double[2] { -1, -1 });
-			inputs.Add((Vector)new double[2] { 0, 0 });
-			inputs.Add((Vector)new double[2] { 1, 1 });
-            double[] outputs = { -0.25, 0, 0.5 };
-            SimpleAnn ann = new SimpleAnn(3, 2);
-            SimpleAnn.GaussKoeff koeff = new SimpleAnn.GaussKoeff(1e-3, 1e-7, 1e7, 2, 100);
-            double err;
-            bool succ = ann.lm_iterate_batched(inputs, outputs, new double[3] { 1, 1, 1 }, 3, 0.25, koeff, 3, out err);
-            Console.Write(succ.ToString());
-        }
+   //     static void LMTest()
+   //     {
+			//List<Vector> inputs = new List<Vector>();
+   //         inputs.Add((Vector)new double[2] { -1, -1 });
+			//inputs.Add((Vector)new double[2] { 0, 0 });
+			//inputs.Add((Vector)new double[2] { 1, 1 });
+   //         double[] outputs = { -0.25, 0, 0.5 };
+   //         SimpleAnn ann = new SimpleAnn(3, 2);
+   //         SimpleAnn.GaussKoeff koeff = new SimpleAnn.GaussKoeff(1e-3, 1e-7, 1e7, 2, 100);
+   //         double err;
+   //         bool succ = ann.lm_iterate_batched(inputs, outputs, new double[3] { 1, 1, 1 }, 3, 0.25, koeff, 3, out err);
+   //         Console.Write(succ.ToString());
+   //     }
 
-        static void GridSpaceTest()
-        {
-            GridSpace<double> space = new GridSpace<double>(2, new int[2] { 4, 9 }, new double[2] { -10, -10 }, new double[2] { 10, 10 });
-			space.Put(42.0, (Vector)new double[] {-11.3, 1.1});
-			var read = space.Get(new double[] { -11.5, 1.21});
-			if (read != null)
-				Console.Write(read.data.ToString("G8"));
-			else
-				Console.Write("Can't read");
-			var linear = space.Linearized;
-        }
+   //     static void GridSpaceTest()
+   //     {
+   //         GridSpace<double> space = new GridSpace<double>(2, new int[2] { 4, 9 }, new double[2] { -10, -10 }, new double[2] { 10, 10 });
+			//space.Put(42.0, (Vector)new double[] {-11.3, 1.1});
+			//var read = space.Get(new double[] { -11.5, 1.21});
+			//if (read != null)
+			//	Console.Write(read.data.ToString("G8"));
+			//else
+			//	Console.Write("Can't read");
+			//var linear = space.Linearized;
+   //     }
 
-        static void trainingTest()
-        {
-            List<double[]> inputs = new List<double[]>();
-            List<double> outputs = new List<double>();
-            int set_size = 10;
-            for (int j = 0; j < set_size; j++)
-            {
-                inputs.Add(new double[] { j * 1.0 / (double)set_size });
-                outputs.Add( j * 0.5 / (double)set_size);
-            }
-            int i = 0;
-            SimpleAnn ann = new SimpleAnn(4, 1);
-            OnlineAnnTrainer trainer = new OnlineAnnTrainer(ann, 10, new int[] { 5 },
-                new double[] { -10.0 }, new double[] { 10.0 },
-                (arr) => { arr[0] = inputs[i][0]; },
-                () => { return outputs[i]; });
-            BackgroundThread thread = new BackgroundThread("");
-            thread.add_func(() => { trainer.Train(); Console.WriteLine(trainer.ann_performance.ToString("G8")); return false; });
-            thread.Start();
-            while (i < set_size)
-            {
-                Thread.Sleep(20);
-                trainer.UpdateState(0);
-                Console.WriteLine("updated");
-                i++;
-            }
-            thread.Stop();
-        }
+        //static void trainingTest()
+        //{
+        //    List<double[]> inputs = new List<double[]>();
+        //    List<double> outputs = new List<double>();
+        //    int set_size = 10;
+        //    for (int j = 0; j < set_size; j++)
+        //    {
+        //        inputs.Add(new double[] { j * 1.0 / (double)set_size });
+        //        outputs.Add( j * 0.5 / (double)set_size);
+        //    }
+        //    int i = 0;
+        //    SimpleAnn ann = new SimpleAnn(4, 1);
+        //    OnlineAnnTrainer trainer = new OnlineAnnTrainer(ann, 10, new int[] { 5 },
+        //        new double[] { -10.0 }, new double[] { 10.0 },
+        //        (arr) => { arr[0] = inputs[i][0]; },
+        //        () => { return outputs[i]; });
+        //    BackgroundThread thread = new BackgroundThread("");
+        //    thread.add_func(() => { trainer.Train(); Console.WriteLine(trainer.ann_performance.ToString("G8")); return false; });
+        //    thread.Start();
+        //    while (i < set_size)
+        //    {
+        //        Thread.Sleep(20);
+        //        trainer.UpdateState(0);
+        //        Console.WriteLine("updated");
+        //        i++;
+        //    }
+        //    thread.Stop();
+        //}
 
-        static void trainingPerformanceTest()
-        {
-            List<double[]> inputs = new List<double[]>();
-            List<double> outputs = new List<double>();
-            int set_size = 100;
-            for (int j = 0; j < set_size; j++)
-            {
-                inputs.Add(new double[2] {j * 1.0 / (double)set_size, -j * 0.7 / (double)set_size});
-                outputs.Add(j * 0.5 / (double)set_size);
-            }
-            SimpleAnn ann = new SimpleAnn(6, 2);
-            int i = 0;
-            OnlineAnnTrainer trainer = new OnlineAnnTrainer(ann, 20, new int[2] {9, 9},
-                new double[] {-1.0, -1.0}, new double[] {1.0, 1.0},
-                (arr) => { arr[0] = inputs[i][0]; arr[1] = inputs[i][1]; },
-                () => { return outputs[i]; });            
-            while (i < set_size)
-            {
-                for (int j = 0; j < 5 && i < set_size; j++)
-                {
-                    trainer.UpdateState(0);
-                    i++;
-                }
-                trainer.Train();
-            }
-            Console.WriteLine("finished");
-        }
+        //static void trainingPerformanceTest()
+        //{
+        //    List<double[]> inputs = new List<double[]>();
+        //    List<double> outputs = new List<double>();
+        //    int set_size = 100;
+        //    for (int j = 0; j < set_size; j++)
+        //    {
+        //        inputs.Add(new double[2] {j * 1.0 / (double)set_size, -j * 0.7 / (double)set_size});
+        //        outputs.Add(j * 0.5 / (double)set_size);
+        //    }
+        //    SimpleAnn ann = new SimpleAnn(6, 2);
+        //    int i = 0;
+        //    OnlineAnnTrainer trainer = new OnlineAnnTrainer(ann, 20, new int[2] {9, 9},
+        //        new double[] {-1.0, -1.0}, new double[] {1.0, 1.0},
+        //        (arr) => { arr[0] = inputs[i][0]; arr[1] = inputs[i][1]; },
+        //        () => { return outputs[i]; });            
+        //    while (i < set_size)
+        //    {
+        //        for (int j = 0; j < 5 && i < set_size; j++)
+        //        {
+        //            trainer.UpdateState(0);
+        //            i++;
+        //        }
+        //        trainer.Train();
+        //    }
+        //    Console.WriteLine("finished");
+        //}
 
         //static void trainingPerformanceTest_lin()
         //{
@@ -179,60 +179,60 @@ namespace TestingConsole
         //    Console.WriteLine("finished");
         //}
 
-        static void linear_real_data_training()
-        {
-            string game_path = @"D:\Games\Kerbal Space Program 0.90\Resources\";
+        //static void linear_real_data_training()
+        //{
+        //    string game_path = @"D:\Games\Kerbal Space Program 0.90\Resources\";
 
-            StreamReader aoa_reader = new StreamReader(game_path + "aoa.csv");
-            StreamReader control_reader = new StreamReader(game_path + "control.csv");
-            StreamReader acc_reader = new StreamReader(game_path + "acc.csv");
-            StreamReader density_reader = new StreamReader(game_path + "density.csv");
-            StreamReader airspd_reader = new StreamReader(game_path + "airspd.csv");
+        //    StreamReader aoa_reader = new StreamReader(game_path + "aoa.csv");
+        //    StreamReader control_reader = new StreamReader(game_path + "control.csv");
+        //    StreamReader acc_reader = new StreamReader(game_path + "acc.csv");
+        //    StreamReader density_reader = new StreamReader(game_path + "density.csv");
+        //    StreamReader airspd_reader = new StreamReader(game_path + "airspd.csv");
 
-            var acc = read_and_split(acc_reader);
-            var aoa = read_and_split(aoa_reader);
-            var control = read_and_split(control_reader);
-            var density = read_and_split(density_reader);
-            var airspd = read_and_split(airspd_reader);
+        //    var acc = read_and_split(acc_reader);
+        //    var aoa = read_and_split(aoa_reader);
+        //    var control = read_and_split(control_reader);
+        //    var density = read_and_split(density_reader);
+        //    var airspd = read_and_split(airspd_reader);
 
-            cut(acc, 2, 1);
-            cut(aoa, 1, 2);
-            cut(control, 2, 1);
-            cut(density, 1, 2);
-            cut(airspd, 1, 2);
+        //    cut(acc, 2, 1);
+        //    cut(aoa, 1, 2);
+        //    cut(control, 2, 1);
+        //    cut(density, 1, 2);
+        //    cut(airspd, 1, 2);
 
-            StreamWriter model_output = new StreamWriter(game_path + "debug_predict.csv");
+        //    StreamWriter model_output = new StreamWriter(game_path + "debug_predict.csv");
 
-            int frame = 0;
-            int frames_count = acc.Count;
-            double cpu_time = 0.0;
-            double cpu_add = 0.5;
+        //    int frame = 0;
+        //    int frames_count = acc.Count;
+        //    double cpu_time = 0.0;
+        //    double cpu_add = 0.5;
 
-            LinApprox model = new LinApprox(2);
-            OnlineLinTrainer trainer = new OnlineLinTrainer(model, null, 10, new double[] { 0.05, 0.05 }, new int[2] { 20, 20 },
-                (arr) => { arr[0] = aoa[frame]; arr[1] = control[frame]; },
-                () => { return acc[frame] / density[frame] / airspd[frame] / airspd[frame] * 2e4; });
+        //    LinApprox model = new LinApprox(2);
+        //    OnlineLinTrainer trainer = new OnlineLinTrainer(model, null, 10, new double[] { 0.05, 0.05 }, new int[2] { 20, 20 },
+        //        (arr) => { arr[0] = aoa[frame]; arr[1] = control[frame]; },
+        //        () => { return acc[frame] / density[frame] / airspd[frame] / airspd[frame] * 2e4; });
 
-            Vector input_vector = new Vector(2);
+        //    Vector input_vector = new Vector(2);
 
-            for (frame = 0; frame < frames_count; frame++)
-            {
-                trainer.UpdateState(3);
-                if (cpu_time >= 1.0)
-                {
-                    trainer.Train();
-                    cpu_time -= 1.0;
-                }
-                cpu_time += cpu_add;
-                input_vector[0] = aoa[frame];
-                input_vector[1] = control[frame];
-                double model_value = model.eval_training(input_vector);
-                model_output.Write(model_value.ToString("G8") + ',');
-            }
+        //    for (frame = 0; frame < frames_count; frame++)
+        //    {
+        //        trainer.UpdateState(3);
+        //        if (cpu_time >= 1.0)
+        //        {
+        //            trainer.Train();
+        //            cpu_time -= 1.0;
+        //        }
+        //        cpu_time += cpu_add;
+        //        input_vector[0] = aoa[frame];
+        //        input_vector[1] = control[frame];
+        //        double model_value = model.eval_training(input_vector);
+        //        model_output.Write(model_value.ToString("G8") + ',');
+        //    }
 
-            model_output.Close();
-            Console.WriteLine("finished");
-        }
+        //    model_output.Close();
+        //    Console.WriteLine("finished");
+        //}
 
         static List<double> read_and_split(StreamReader reader)
         {
