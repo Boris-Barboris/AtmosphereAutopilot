@@ -213,9 +213,9 @@ namespace AtmosphereAutopilot
         {
             bool ret = false;
             changed.CopyTo(reassigned, 0);
-            if (linmodel.tpars[2] > -1e-6)      // friction must kill rotation
+            if (linmodel.tpars[2] > 0.0)      // friction must kill rotation
             {
-                linmodel.tpars[2] = -1.0;
+                linmodel.tpars[2] = 0.0;
                 reassigned[1] = false;
                 ret = true;
             }
