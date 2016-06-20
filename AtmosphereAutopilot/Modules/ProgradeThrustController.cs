@@ -25,69 +25,11 @@ namespace AtmosphereAutopilot
 
     public enum SpeedType
     {
-        MetersPerSecond,
-        Mach,
-        Knots,
-        IAS,
-        KIAS
-    }
-
-    public struct SpeedSetpoint
-    {
-        public SpeedType type;
-        public float value;
-        Vessel v;
-
-        public const float kts2mps = 0.514444f;
-        public const float mps2kts = 1.0f / kts2mps;
-
-        public SpeedSetpoint(SpeedType type, float value, Vessel v)
-        {
-            this.type = type;
-            this.value = value;
-            this.v = v;
-        }
-
-        public float convert(SpeedType t)
-        {
-            if (t == type)
-                return value;
-            float mpersec = mps();
-            switch (t)
-            {
-                case SpeedType.MetersPerSecond:
-                    return mpersec;
-                case SpeedType.Mach:
-                    return (float)(mpersec / v.speedOfSound);
-                case SpeedType.Knots:
-                    return mpersec * mps2kts;
-                case SpeedType.IAS:
-                    return Mathf.Sqrt(mpersec * mpersec * (float)v.atmDensity);
-                case SpeedType.KIAS:
-                    return Mathf.Sqrt(mpersec * mpersec * mps2kts * mps2kts * (float)v.atmDensity);
-                default:
-                    return 0.0f;
-            }
-        }
-
-        public float mps()
-        {
-            if (type == SpeedType.MetersPerSecond)
-                return value;
-            switch (type)
-            {
-                case SpeedType.Mach:
-                    return (float)(value * v.speedOfSound);
-                case SpeedType.Knots:
-                    return value * kts2mps;
-                case SpeedType.IAS:
-                    return Mathf.Sqrt(value * value / (float)v.atmDensity);
-                case SpeedType.KIAS:
-                    return Mathf.Sqrt(value * value * kts2mps * kts2mps / (float)v.atmDensity);
-                default:
-                    return 0.0f;
-            }
-        }
+        MetersPerSecond = 1,
+        Knots = 2,
+        Mach = 3,
+        IAS = 4,
+        KIAS = 5
     }
 
     /// <summary>
@@ -105,7 +47,6 @@ namespace AtmosphereAutopilot
             pid.KP = 0.4;
             pid.KI = 0.1;
             pid.KD = 0.5;
-            setpoint = new SpeedSetpoint(SpeedType.MetersPerSecond, 100.0f, v);
         }
 
         public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
@@ -365,110 +306,64 @@ namespace AtmosphereAutopilot
 
         static readonly string[] spd_str_arr = new string[]{ "OFF", "ms", "kts", "M", "ias", "kias" };
 
-        public int chosen_spd_mode = 0;
+        public bool spd_control_enaled {
+            get {
+                return spd_control;
+            }
+            set {
+                spd_control = value;
+          }
+        }
 
         [VesselSerializable("spd_type")]
         SpeedType type = SpeedType.MetersPerSecond;
 
-        float spd_setpoint = 100.0f;
+        [VesselSerializable("spd_control")]
+        bool spd_control = false;
 
         [VesselSerializable("spd_setpoint")]
-        string spd_setpoint_str = "100";
+        public float spd_setpoint = 100.0f;
 
-        /// <summary>
-        /// Current speed setpoint, wich is maintained by controller
-        /// </summary>
-        public SpeedSetpoint setpoint;
+        private float spd_setpoint_cache = -1f;
 
-        bool need_to_show_change = false;
-        float setpoint_change_counter = 0.0f;
+        string spd_setpoint_str;
 
-        [AutoGuiAttr("hotkey_speed_factor", true, "G4")]
-        [GlobalSerializable("hotkey_speed_factor")]
-        public static float hotkey_speed_factor = 0.7f;
-
-        [AutoGuiAttr("use_throttle_hotkeys", true)]
-        [GlobalSerializable("use_throttle_hotkeys")]
-        public static bool use_throttle_hotkeys = true;
-
-        public override void OnUpdate()
+        public float convertCoeph(SpeedType t)
         {
-            if (use_throttle_hotkeys && chosen_spd_mode != 0 && 
-                !FlightDriver.Pause && InputLockManager.IsUnlocked(ControlTypes.THROTTLE))
+            switch (t)
             {
-                // let's handle hotkey speed changing
-                if (GameSettings.THROTTLE_UP.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
-                {
-                    float ms = setpoint.value;
-                    float new_ms = ms + Time.deltaTime * hotkey_speed_factor * ms;
-                    setpoint.value = new_ms;
-                    need_to_show_change = true;
-                    setpoint_change_counter = 0;
-                    spd_setpoint_str = new_ms.ToString("G4");
-                }
-                else if (GameSettings.THROTTLE_DOWN.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
-                {
-                    float ms = setpoint.value;
-                    float new_ms = ms - Time.deltaTime * hotkey_speed_factor * ms;
-                    setpoint.value = new_ms;
-                    need_to_show_change = true;
-                    setpoint_change_counter = 0;
-                    spd_setpoint_str = new_ms.ToString("G4");
-                }
-                if (need_to_show_change)
-                    setpoint_change_counter += Time.deltaTime;
-                if (setpoint_change_counter > 1.0f)
-                {
-                    setpoint_change_counter = 0;
-                    need_to_show_change = false;
-                }
-            }
-            else
-            {
-                need_to_show_change = false;
-                setpoint_change_counter = 0;
+                case SpeedType.MetersPerSecond:
+                    return 1f;
+                case SpeedType.Knots:
+                    return 1.0f / 0.514444f;
+                case SpeedType.Mach:
+                    return (float)(1.0 / vessel.speedOfSound);
+                case SpeedType.IAS:
+                    return Mathf.Sqrt((float)vessel.atmDensity);
+                case SpeedType.KIAS:
+                    return Mathf.Sqrt((float)vessel.atmDensity) / 0.514444f;
+                default:
+                    return 1.0f;
             }
         }
-
-        protected override void OnGUICustomAlways()
-        {
-            if (need_to_show_change)
-            {
-                Rect rect = new Rect(Screen.width / 2.0f - 80.0f, 120.0f, 160.0f, 20.0f);
-                string str = "SPD = " + setpoint.value.ToString("G4");
-                switch (setpoint.type)
-                {
-                    case SpeedType.IAS:
-                        str = str + " IAS";
-                        break;
-                    case SpeedType.KIAS:
-                        str = str + " kIAS";
-                        break;
-                    case SpeedType.Knots:
-                        str = str + " kts";
-                        break;
-                    case SpeedType.Mach:
-                        str = str + " M";
-                        break;
-                    case SpeedType.MetersPerSecond:
-                        str = str + " m/s";
-                        break;
-                }
-                GUI.Label(rect, str, GUIStyles.hoverLabel);
-            }
-        }
-
         /// <summary>
         /// Standard speed control GUI block to integrate in other controllers
         /// </summary>
         /// <returns>true if speed control is enabled</returns>
-        public bool SpeedCtrlGUIBlock()
+        public void SpeedCtrlGUIBlock()
         {
-            float.TryParse(spd_setpoint_str, out spd_setpoint);
-            setpoint = new SpeedSetpoint(type, spd_setpoint, vessel);
+            // setpoint was changed from outside, update textline
+            if (spd_setpoint != spd_setpoint_cache) {
+                spd_setpoint_cache = spd_setpoint;
+                spd_setpoint_str = (spd_setpoint * convertCoeph (type)).ToString ("0.##");
+            }
 
             GUILayout.Label("Speed control", GUIStyles.labelStyleCenter);
             GUILayout.BeginHorizontal();
+            int chosen_spd_mode = (int)type;
+            if (!spd_control)
+                chosen_spd_mode = 0;
+
             for (int i = 0; i < 6; i++)
             {
                 if (GUILayout.Toggle(chosen_spd_mode == i, spd_str_arr[i], GUIStyles.toggleButtonStyle))
@@ -481,37 +376,28 @@ namespace AtmosphereAutopilot
             {
                 case 0:
                     newtype = type;
+                    spd_control = false;
                     break;
-                case 1:
-                    newtype = SpeedType.MetersPerSecond;
-                    break;
-                case 2:
-                    newtype = SpeedType.Knots;
-                    break;
-                case 3:
-                    newtype = SpeedType.Mach;
-                    break;
-                case 4:
-                    newtype = SpeedType.IAS;
-                    break;
-                case 5:
-                    newtype = SpeedType.KIAS;
+                default:
+                    newtype = (SpeedType)chosen_spd_mode;
+                    spd_control = true;
                     break;
             }
 
             if (newtype != type)
             {
-                // need to convert old setpoint to new format
-                spd_setpoint = setpoint.convert(newtype);
-                spd_setpoint_str = spd_setpoint.ToString("G4");
+                // need to convert old textline to the new format
+                spd_setpoint_str = (spd_setpoint * convertCoeph (newtype)).ToString("0.##");
+                type = newtype;
+
             }
-            type = newtype;
 
             spd_setpoint_str = GUILayout.TextField(spd_setpoint_str, GUIStyles.textBoxStyle);
-            float.TryParse(spd_setpoint_str, out spd_setpoint);
-            setpoint = new SpeedSetpoint(newtype, spd_setpoint, vessel);
-
-            return (chosen_spd_mode != 0);
+            float parsed;
+            if (float.TryParse(spd_setpoint_str, out parsed)) {
+                spd_setpoint = parsed / convertCoeph (type);
+                spd_setpoint_cache = spd_setpoint;
+            }
         }
 
         #endregion

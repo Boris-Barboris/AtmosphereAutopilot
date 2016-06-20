@@ -61,7 +61,6 @@ namespace AtmosphereAutopilot
             imodel.Activate();
             MessageManager.post_status_message("Cruise Flight enabled");
 
-            spd_control = thrust_c.chosen_spd_mode != 0;
             // let's set new circle axis
             if (vessel.srfSpeed > 5.0)
                 circle_axis = Vector3d.Cross(vessel.srf_velocity, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
@@ -94,9 +93,6 @@ namespace AtmosphereAutopilot
         {
             if (vessel.LandedOrSplashed)
                 return;
-
-            if (spd_control)
-                thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
 
             desired_velocity = Vector3d.zero;
             planet2ves = vessel.ReferenceTransform.position - vessel.mainBody.position;
@@ -214,7 +210,7 @@ namespace AtmosphereAutopilot
         public HeightMode height_mode = HeightMode.Altitude;
 
         public Waypoint current_waypt = new Waypoint();
-        bool waypoint_entered = false;
+        internal bool waypoint_entered = false;
 
         // axis to rotate around in level flight mode
         protected Vector3d circle_axis = Vector3d.zero;
@@ -237,13 +233,13 @@ namespace AtmosphereAutopilot
         [VesselSerializable("desired_altitude")]
         //[AutoGuiAttr("desired_altitude", true)]
         public float desired_altitude = 1000.0f;
+        float desired_altitude_cache = -1f;
         string desired_altitude_str = "1000";
 
         [VesselSerializable("desired_vertspeed")]
         public float desired_vertspeed = 0.0f;
+        float desired_vertspeed_cache = -1f;
         string desired_vertspeed_str = "0.0";
-
-        public bool spd_control = false;
 
         [GlobalSerializable("preudo_flc")]
         [VesselSerializable("preudo_flc")]
@@ -322,7 +318,7 @@ namespace AtmosphereAutopilot
 
             // speed control portion for ascend
             double effective_max_climb_angle = max_climb_angle;
-            if (spd_control && (height_error >= 0.0))
+            if (thrust_c.spd_control_enaled && (height_error >= 0.0))
             {
                 if (pseudo_flc)
                 {
@@ -336,14 +332,14 @@ namespace AtmosphereAutopilot
                     else
                         effective_max_climb_angle = 1.0;
 
-                    double spd_diff = (imodel.surface_v_magnitude - thrust_c.setpoint.mps());
+                    double spd_diff = (imodel.surface_v_magnitude - thrust_c.spd_setpoint);
                     if (spd_diff < -flc_margin)
                         effective_max_climb_angle *= 0.0;
                     else if (spd_diff < 0.0)
                         effective_max_climb_angle *= (spd_diff + flc_margin) / flc_margin;
                 }
                 else
-                    effective_max_climb_angle *= Math.Max(0.0, Math.Min(1.0, vessel.srfSpeed / thrust_c.setpoint.mps()));
+                    effective_max_climb_angle *= Math.Max(0.0, Math.Min(1.0, vessel.srfSpeed / thrust_c.spd_setpoint));
             }
 
             double max_vert_speed = vessel.horizontalSrfSpeed * Math.Tan(effective_max_climb_angle * dgr2rad);
@@ -357,7 +353,7 @@ namespace AtmosphereAutopilot
 
 
 
-        bool LevelFlightMode
+        internal bool LevelFlightMode
         {
             get { return current_mode == CruiseMode.LevelFlight; }
             set
@@ -392,7 +388,7 @@ namespace AtmosphereAutopilot
             }
         }
 
-        bool WaypointMode
+        internal bool WaypointMode
         {
             get { return current_mode == CruiseMode.Waypoint; }
             set
@@ -441,12 +437,22 @@ namespace AtmosphereAutopilot
             picking_waypoint = true;            
         }
 
-        bool picking_waypoint = false;
+        internal bool picking_waypoint = false;
 
         static bool advanced_options = false;
 
         protected override void _drawGUI(int id)
         {
+            // value was changed from outside, update the line
+            if (desired_altitude != desired_altitude_cache) {
+                desired_altitude_cache = desired_altitude;
+                desired_altitude_str = desired_altitude.ToString("0.##");
+            }
+            if (desired_vertspeed != desired_vertspeed_cache) {
+                desired_vertspeed_cache = desired_vertspeed;
+                desired_vertspeed_str = desired_vertspeed.ToString("0.##");
+            }
+
             close_button();
             GUILayout.BeginVertical();
 
@@ -478,7 +484,7 @@ namespace AtmosphereAutopilot
 
             // speed
             GUILayout.Space(3.0f);
-            spd_control = thrust_c.SpeedCtrlGUIBlock();
+            thrust_c.SpeedCtrlGUIBlock();
 
             // vertical control
             GUILayout.Space(5.0f);
@@ -517,6 +523,7 @@ namespace AtmosphereAutopilot
                     // we leaved map without picking
                     MessageManager.post_quick_message("Cancelled");
                     picking_waypoint = false;
+                    AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
                     return;
                 }
                 // Thanks MechJeb!
@@ -534,6 +541,9 @@ namespace AtmosphereAutopilot
                         current_waypt.latitude = vessel.mainBody.GetLatitude(surfacePoint);
                         picking_waypoint = false;
                         waypoint_entered = true;
+
+                        dist_to_dest = Vector3d.Distance(surfacePoint, vessel.ReferenceTransform.position);
+                        AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
                         MessageManager.post_quick_message("Picked");
                     }
                     else
@@ -565,7 +575,6 @@ namespace AtmosphereAutopilot
                             float setpoint = desired_altitude;
                             float new_setpoint = setpoint + hotkey_altitude_speed * Time.deltaTime * setpoint;
                             desired_altitude = new_setpoint;
-                            desired_altitude_str = desired_altitude.ToString("G5");
                         }
                         else
                         {
@@ -573,7 +582,6 @@ namespace AtmosphereAutopilot
                             float magnetic_mult = Mathf.Abs(desired_vertspeed) < 10.0f ? 0.3f : 1.0f;
                             float new_setpoint = setpoint + hotkey_vertspeed_speed * Time.deltaTime * magnetic_mult;
                             desired_vertspeed = new_setpoint;
-                            desired_vertspeed_str = desired_vertspeed.ToString("G4");
                         }
                         need_to_show_altitude = true;
                         altitude_change_counter = 0.0f;
