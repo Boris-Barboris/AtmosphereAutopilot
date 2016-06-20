@@ -326,7 +326,7 @@ namespace AtmosphereAutopilot
             {
                 if (pseudo_flc)
                 {
-                    filtered_drag = Common.simple_filter(thrust_c.drag_estimate, filtered_drag, 15.0);
+                    filtered_drag = Common.simple_filter(thrust_c.drag_estimate, filtered_drag, 5.0);
                     if (thrust_c.estimated_max_thrust > filtered_drag)
                     {
                         double sin = Vector3d.Dot(-planet2vesNorm, imodel.gravity_acc + imodel.noninert_acc) / (thrust_c.estimated_max_thrust - filtered_drag);

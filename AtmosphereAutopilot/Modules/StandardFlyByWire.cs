@@ -173,7 +173,7 @@ namespace AtmosphereAutopilot
             // disable pitch moderation for two seconds after take-off
             if (landed || need_restore)
             {
-                if (landed)
+                if (landed && !need_restore)
                 {
                     aoa_moder = pc.moderate_aoa;
                     g_moder = pc.moderate_g;
@@ -182,7 +182,7 @@ namespace AtmosphereAutopilot
                     landed = false;
                     need_restore = true;
                 }
-                if (time_after_takeoff > 2.0f)
+                if (time_after_takeoff > 1.5f)
                 {
                     pc.moderate_aoa = aoa_moder;
                     pc.moderate_g = g_moder;
