@@ -44,7 +44,6 @@ namespace AtmosphereAutopilot
         {
             dir_c.Activate();
             thrust_c.Activate();
-            spd_control = thrust_c.chosen_spd_mode != 0;
             MessageManager.post_status_message("Mouse Director enabled");
         }
 
@@ -67,8 +66,8 @@ namespace AtmosphereAutopilot
             //
             dir_c.ApplyControl(cntrl, camera_direction, Vector3d.zero);
 
-            if (spd_control)
-                thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
+            if (thrust_c.spd_control_enaled)
+                thrust_c.ApplyControl(cntrl, thrust_c.spd_setpoint);
         }
 
         bool camera_correct = false;
@@ -108,14 +107,12 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Thrust controller GUI", true)]
         protected bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
 
-        bool spd_control = false;
-
         protected override void _drawGUI(int id)
         {
             close_button();
             GUILayout.BeginVertical();
             AutoGUI.AutoDrawObject(this);
-            spd_control = thrust_c.SpeedCtrlGUIBlock();
+            thrust_c.SpeedCtrlGUIBlock();
             GUILayout.EndVertical();
             GUI.DragWindow();
         }

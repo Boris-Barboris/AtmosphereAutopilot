@@ -1,6 +1,7 @@
 ﻿/*
 Atmosphere Autopilot, plugin for Kerbal Space Program.
 Copyright (C) 2015-2016, Baranin Alexander aka Boris-Barboris.
+Copyright (C) 2016, George Sedov.
  
 Atmosphere Autopilot is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -14,11 +15,8 @@ You should have received a copy of the GNU General Public License
 along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>. 
 */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace AtmosphereAutopilot
 {
@@ -35,6 +33,8 @@ namespace AtmosphereAutopilot
         public static GUIStyle toggleButtonStyle { get; private set; }
         public static GUIStyle toggleButtonStyleRight { get; private set; }
         public static GUIStyle hoverLabel { get; private set; }
+
+        private static UISkinDef KSPSkin = UISkinManager.defaultSkin;
 
         internal static void Init()
         {
@@ -114,6 +114,42 @@ namespace AtmosphereAutopilot
             GUI.backgroundColor = old_background;
             GUI.color = old_color;
             GUI.contentColor = old_content;
+        }
+
+
+        internal static void Process (GameObject gameObject) {
+            if (gameObject == null)
+                return;
+
+            foreach (var applicator in gameObject.GetComponentsInChildren<UI.StyleApplicator> (true))
+                Process (applicator);
+        }
+
+        private static void Process (UI.StyleApplicator applicator) {
+            switch (applicator.ElementType) {
+                case UI.StyleApplicator.ElementTypes.Window:
+                  applicator.SetImage (KSPSkin.window.normal.background, Image.Type.Sliced);
+                  break;
+                case UI.StyleApplicator.ElementTypes.Button:
+                  applicator.SetSelectable (KSPSkin.button.normal.background,
+                                            KSPSkin.button.highlight.background,
+                                            KSPSkin.button.active.background,
+                                            KSPSkin.button.disabled.background);
+                  break;
+                case UI.StyleApplicator.ElementTypes.ButtonToggle:
+                  applicator.SetToggle (KSPSkin.button.normal.background,
+                                        KSPSkin.button.highlight.background,
+                                        KSPSkin.button.active.background,
+                                        KSPSkin.button.disabled.background);
+                  break;
+                case UI.StyleApplicator.ElementTypes.Slider:
+                  applicator.SetSlider (KSPSkin.horizontalSliderThumb.normal.background,
+                                        KSPSkin.horizontalSliderThumb.highlight.background,
+                                        KSPSkin.horizontalSliderThumb.active.background,
+                                        KSPSkin.horizontalSliderThumb.disabled.background,
+                                        KSPSkin.horizontalSlider.normal.background);
+                  break;
+            }
         }
     }
 }
