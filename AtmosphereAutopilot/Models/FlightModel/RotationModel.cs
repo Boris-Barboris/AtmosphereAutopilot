@@ -164,41 +164,27 @@ namespace AtmosphereAutopilot
             {
                 Part part = vessel.parts[pi];
                 if (part.physicalSignificance == Part.PhysicalSignificance.NONE ||
-                    part.vessel != vessel || part.State == PartStates.DEAD)
+                    part.vessel != vessel || part.State == PartStates.DEAD || part.rb == null)
                     continue;
                 Quaternion part_to_cntrl = world_to_cntrl_part * part.transform.rotation;   // from part to root part rotation
                 Vector3 moi = Vector3d.zero;
                 Vector3 am = Vector3d.zero;
-                float mass = 0.0f;
-                if (part.rb != null)
-                {
-                    mass = part.rb.mass;
-                    Vector3 world_pv = part.rb.worldCenterOfMass - CoM;
-                    Vector3 pv = world_to_cntrl_part * world_pv;
-                    Vector3 impulse = mass * (world_to_cntrl_part * (part.rb.velocity - surface_v));
-                    // from part.rb principal frame to root part rotation
-                    Quaternion principal_to_cntrl = part_to_cntrl * part.rb.inertiaTensorRotation;
-                    // MOI of part as offsetted material point
-                    moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
-                    // MOI of part as rigid body
-                    Vector3 rotated_moi = get_rotated_moi(part.rb.inertiaTensor, principal_to_cntrl);
-                    moi += rotated_moi;
-                    // angular moment of part as offsetted material point
-                    am += Vector3.Cross(pv, impulse);
-                    // angular moment of part as rotating rigid body
-                    am += Vector3.Scale(rotated_moi, world_to_cntrl_part * part.rb.angularVelocity);
-                }
-                else
-                {
-                    mass = part.mass + part.GetResourceMass();
-                    Vector3 world_pv = part.partTransform.position + part.partTransform.rotation * part.CoMOffset - CoM;
-                    Vector3 pv = world_to_cntrl_part * world_pv;
-                    Vector3 impulse = mass * (world_to_cntrl_part * (part.vel - surface_v));
-                    // MOI of part as offsetted material point
-                    moi = mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
-                    // angular moment of part as offsetted material point
-                    am = Vector3.Cross(pv, impulse);
-                }
+                float mass = part.rb.mass;
+                Vector3 world_pv = part.rb.worldCenterOfMass - CoM;
+                Vector3 pv = world_to_cntrl_part * world_pv;
+                Vector3 impulse = mass * (world_to_cntrl_part * (part.rb.velocity - surface_v));
+                // from part.rb principal frame to root part rotation
+                Quaternion principal_to_cntrl = part_to_cntrl * part.rb.inertiaTensorRotation;
+                // MOI of part as offsetted material point
+                moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
+                // MOI of part as rigid body
+                Vector3 rotated_moi = get_rotated_moi(part.rb.inertiaTensor, principal_to_cntrl);
+                moi += rotated_moi;
+                // angular moment of part as offsetted material point
+                am += Vector3.Cross(pv, impulse);
+                // angular moment of part as rotating rigid body
+                am += Vector3.Scale(rotated_moi, world_to_cntrl_part * part.rb.angularVelocity);
+
                 MOI += moi;
                 AM -= am;                   // minus because left-handed Unity                
             }
