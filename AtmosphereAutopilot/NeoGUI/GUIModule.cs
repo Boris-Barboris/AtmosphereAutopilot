@@ -19,7 +19,7 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot.UI {
   [RequireComponent (typeof (CanvasGroupFader))]
-  public abstract class ModuleController : MonoBehaviour {
+  public abstract class GUIModule : MonoBehaviour {
 
     private CanvasGroupFader fader = null;
 

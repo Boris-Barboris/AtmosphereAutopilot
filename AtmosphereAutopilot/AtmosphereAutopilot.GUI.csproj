@@ -45,15 +45,15 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Utils\CanvasGroupFader.cs" />
-    <Compile Include="Utils\ShrinkPanel.cs" />
-    <Compile Include="GuiControllers\FlyByWireController.cs" />
-    <Compile Include="GuiControllers\CruiseControlController.cs" />
-    <Compile Include="GuiControllers\ModuleController.cs" />
-    <Compile Include="GuiInterfaces\IGUIController.cs" />
-    <Compile Include="GuiControllers\MainMenu.cs" />
+    <Compile Include="NeoGUI\Utils\CanvasGroupFader.cs" />
+    <Compile Include="NeoGUI\Utils\ShrinkPanel.cs" />
+    <Compile Include="NeoGUI\FlyByWireGUI.cs" />
+    <Compile Include="NeoGUI\CruiseControlGUI.cs" />
+    <Compile Include="NeoGUI\GUIModule.cs" />
+    <Compile Include="NeoGUI\IGUIController.cs" />
+    <Compile Include="NeoGUI\MainMenuGUI.cs" />
     <Compile Include="Properties\AssemblyInfo.GUI.cs" />
-    <Compile Include="Utils\StyleApplicator.cs" />
+    <Compile Include="NeoGUI\Utils\StyleApplicator.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

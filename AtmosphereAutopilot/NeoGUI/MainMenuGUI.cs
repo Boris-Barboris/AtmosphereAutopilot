@@ -21,7 +21,7 @@ using UnityEngine.EventSystems;
 
 namespace AtmosphereAutopilot.UI {
   [RequireComponent (typeof (CanvasGroupFader))]
-  public class MainMenu : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler {
+  public class MainMenuGUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler {
     [SerializeField]
     private Toggle m_FlyByWireToggle = null;
     [SerializeField]
@@ -35,12 +35,12 @@ namespace AtmosphereAutopilot.UI {
     [SerializeField]
     private Slider m_SpeedControlSlider = null;
     [SerializeField]
-    private Text m_SpeedControlLabel = null;
+    private Text m_SpeedControlValue = null;
 
     [SerializeField]
-    private CruiseControlController m_CruiseControl = null;
+    private CruiseControlGUI m_CruiseControl = null;
     [SerializeField]
-    private FlyByWireController m_FBWControl = null;
+    private FlyByWireGUI m_FBWControl = null;
 
     private CanvasGroupFader _fader = null;
     private RectTransform _rectTransform = null;
@@ -141,11 +141,11 @@ namespace AtmosphereAutopilot.UI {
         m_SpeedControlToggle.onValueChanged.SetPersistentListenerState (0, UnityEngine.Events.UnityEventCallState.RuntimeOnly);
         m_SpeedControlSlider.onValueChanged.SetPersistentListenerState (0, UnityEngine.Events.UnityEventCallState.RuntimeOnly);
         if (controller.speedControl) {
-          m_SpeedControlLabel.text = controller.speed.ToString ("0.#") + " m/s";
-          m_SpeedControlLabel.alignment = TextAnchor.MiddleRight;
+          m_SpeedControlValue.text = controller.speed.ToString ("0.#") + " m/s";
+          m_SpeedControlValue.alignment = TextAnchor.MiddleRight;
         } else {
-          m_SpeedControlLabel.text = "OFF";
-          m_SpeedControlLabel.alignment = TextAnchor.MiddleCenter;
+          m_SpeedControlValue.text = "OFF";
+          m_SpeedControlValue.alignment = TextAnchor.MiddleCenter;
         }
         if (controller.currentAutopilot == Autopilots.FLYBYWIRE) {
           m_CruiseControl.fadeOut ();
@@ -199,11 +199,11 @@ namespace AtmosphereAutopilot.UI {
     public void setSpeed (float value) {
       controller.speed = value;
       if (controller.speedControl) {
-        m_SpeedControlLabel.text = controller.speed.ToString ("0.#") + " m/s";
-        m_SpeedControlLabel.alignment = TextAnchor.MiddleRight;
+        m_SpeedControlValue.text = controller.speed.ToString ("0.#") + " m/s";
+        m_SpeedControlValue.alignment = TextAnchor.MiddleRight;
       } else {
-        m_SpeedControlLabel.text = "OFF";
-        m_SpeedControlLabel.alignment = TextAnchor.MiddleCenter;
+        m_SpeedControlValue.text = "OFF";
+        m_SpeedControlValue.alignment = TextAnchor.MiddleCenter;
       }
     }
   }

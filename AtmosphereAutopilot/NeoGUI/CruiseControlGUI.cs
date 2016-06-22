@@ -19,7 +19,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 namespace AtmosphereAutopilot.UI {
-  public class CruiseControlController : ModuleController {
+  public class CruiseControlGUI : GUIModule {
     [SerializeField]
     private Text m_StatusLine = null;
     [SerializeField]
@@ -29,7 +29,7 @@ namespace AtmosphereAutopilot.UI {
     [SerializeField]
     private Slider m_AltitudeControlSlider = null;
     [SerializeField]
-    private Text m_AltitudeControlLabel = null;
+    private Text m_AltitudeControlValue = null;
 
     private IGUIController controller;
 
@@ -50,11 +50,11 @@ namespace AtmosphereAutopilot.UI {
       m_AltitudeControlSlider.onValueChanged.SetPersistentListenerState (0, UnityEngine.Events.UnityEventCallState.RuntimeOnly);
       m_SetWaypointToggle.onValueChanged.SetPersistentListenerState (0, UnityEngine.Events.UnityEventCallState.RuntimeOnly);
       if (controller.altitudeControl) {
-        m_AltitudeControlLabel.text = (controller.altitude / 1000f).ToString ("0.0") + " km";
-        m_AltitudeControlLabel.alignment = TextAnchor.MiddleRight;
+        m_AltitudeControlValue.text = (controller.altitude / 1000f).ToString ("0.0") + " km";
+        m_AltitudeControlValue.alignment = TextAnchor.MiddleRight;
       } else {
-        m_AltitudeControlLabel.text = "OFF";
-        m_AltitudeControlLabel.alignment = TextAnchor.MiddleCenter;
+        m_AltitudeControlValue.text = "OFF";
+        m_AltitudeControlValue.alignment = TextAnchor.MiddleCenter;
       }
     }
 
@@ -112,18 +112,18 @@ namespace AtmosphereAutopilot.UI {
     public void setAltitudeControl (bool value) {
       controller.altitudeControl = value;
       if (value) {
-        m_AltitudeControlLabel.text = (controller.altitude / 1000f).ToString ("0.0") + " km";
-        m_AltitudeControlLabel.alignment = TextAnchor.MiddleRight;
+        m_AltitudeControlValue.text = (controller.altitude / 1000f).ToString ("0.0") + " km";
+        m_AltitudeControlValue.alignment = TextAnchor.MiddleRight;
       } else {
-        m_AltitudeControlLabel.text = "OFF";
-        m_AltitudeControlLabel.alignment = TextAnchor.MiddleCenter;
+        m_AltitudeControlValue.text = "OFF";
+        m_AltitudeControlValue.alignment = TextAnchor.MiddleCenter;
       }
      }
 
     public void setAltitude (float value) {
       controller.altitude = value * 500f;
       if (controller.altitudeControl)
-        m_AltitudeControlLabel.text = (value / 2f).ToString ("0.0") + " km";
+        m_AltitudeControlValue.text = (value / 2f).ToString ("0.0") + " km";
     }
   }
 }

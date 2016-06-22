@@ -19,7 +19,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 namespace AtmosphereAutopilot.UI {
-  class FlyByWireController : ModuleController {
+  class FlyByWireGUI : GUIModule {
     [SerializeField]
     private Toggle m_RocketModeToggle = null;
     [SerializeField]
