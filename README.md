@@ -32,6 +32,7 @@ Alternative, more condensed but less powerfull way of representing AppLauncher w
 There are two main hotkeys: 
 * "Master switch" - toggles Master Switch.
 * Shift + "Master switch" - toggles GUI of "Autopilot Module Manager".
+
 Others are very module-specific and will not be described here.
 
 # Craft implications and limitations
