@@ -132,12 +132,12 @@ namespace AtmosphereAutopilot {
       get {
         if (speedAP == null)
           return 0f;
-        return speedAP.spd_setpoint;
+        return speedAP.setpoint.mps();
       }
 
       set {
         if (parent.ActiveVessel != null)
-          speedAP.spd_setpoint = value;
+          speedAP.setpoint = new SpeedSetpoint(SpeedType.MetersPerSecond, value, parent.ActiveVessel);
       }
     }
 
@@ -156,7 +156,7 @@ namespace AtmosphereAutopilot {
     }
 
     // the "normal" value for all the limits, hardcoded
-    private const float moderationNorm = 15f;
+    private const float moderationNorm = 20f;
 
     private void setModerationLimits (float limit) {
       if (pvc != null) {

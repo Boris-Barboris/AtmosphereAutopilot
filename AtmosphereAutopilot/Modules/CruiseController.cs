@@ -335,14 +335,14 @@ namespace AtmosphereAutopilot
                     else
                         effective_max_climb_angle = 1.0;
 
-                    double spd_diff = (imodel.surface_v_magnitude - thrust_c.spd_setpoint);
+                    double spd_diff = (imodel.surface_v_magnitude - thrust_c.setpoint.mps());
                     if (spd_diff < -flc_margin)
                         effective_max_climb_angle *= 0.0;
                     else if (spd_diff < 0.0)
                         effective_max_climb_angle *= (spd_diff + flc_margin) / flc_margin;
                 }
                 else
-                    effective_max_climb_angle *= Math.Max(0.0, Math.Min(1.0, vessel.srfSpeed / thrust_c.spd_setpoint));
+                    effective_max_climb_angle *= Math.Max(0.0, Math.Min(1.0, vessel.srfSpeed / thrust_c.setpoint.mps()));
             }
 
             double max_vert_speed = vessel.horizontalSrfSpeed * Math.Tan(effective_max_climb_angle * dgr2rad);
