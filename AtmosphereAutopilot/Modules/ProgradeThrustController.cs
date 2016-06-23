@@ -423,8 +423,18 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("use_throttle_hotkeys")]
         public static bool use_throttle_hotkeys = true;
 
+        [GlobalSerializable("spd_control_toggle_key")]
+        [AutoHotkeyAttr("Speed control toggle")]
+        static KeyCode spd_control_toggle_key = KeyCode.None;
+
         public override void OnUpdate()
         {
+            if (Input.GetKey(spd_control_toggle_key))
+            {
+                spd_control_enaled = !spd_control_enaled;
+                MessageManager.post_status_message(spd_control_enaled ? "Speed control enabled" : "Speed control disabled");
+            }
+
             if (use_throttle_hotkeys && spd_control_enaled &&
                 !FlightDriver.Pause && InputLockManager.IsUnlocked(ControlTypes.THROTTLE))
             {
