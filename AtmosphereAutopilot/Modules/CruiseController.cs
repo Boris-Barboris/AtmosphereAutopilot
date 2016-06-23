@@ -560,10 +560,19 @@ namespace AtmosphereAutopilot
                 if (Input.GetKeyDown(switch_key_mode))
                 {
                     use_keys = !use_keys;
-                    if (use_keys)
-                        MessageManager.post_status_message("CF key input mode enabled");
-                    else
-                        MessageManager.post_status_message("CF key input mode disabled");
+                    MessageManager.post_status_message(use_keys ? "CF key input mode enabled" : "CF key input mode disabled");
+                }
+
+                if (Input.GetKeyDown(vertical_control_key))
+                {
+                    vertical_control = !vertical_control;
+                    MessageManager.post_status_message(use_keys ? "Vertical motion control enabled" : "Vertical motion control disabled");
+                }
+
+                if (Input.GetKeyDown(toggle_vertical_setpoint_type_key))
+                {
+                    AltitudeMode = !AltitudeMode;
+                    MessageManager.post_status_message(AltitudeMode ? "Altitude control" : "Vertical speed control");
                 }
 
                 // input shenanigans
@@ -681,6 +690,14 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("switch_key_mode")]
         [AutoHotkeyAttr("CF keys input mode")]
         static KeyCode switch_key_mode = KeyCode.RightAlt;
+
+        [GlobalSerializable("vertical_control_key")]
+        [AutoHotkeyAttr("CF vertical control")]
+        static KeyCode vertical_control_key = KeyCode.None;
+
+        [GlobalSerializable("toggle_vertical_setpoint_type_key")]
+        [AutoHotkeyAttr("CF altitude\vertical speed")]
+        static KeyCode toggle_vertical_setpoint_type_key = KeyCode.None;
 
         bool need_to_show_course = false;
         float course_change_counter = 0.0f;

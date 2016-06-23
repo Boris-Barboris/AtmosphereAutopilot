@@ -156,7 +156,7 @@ namespace AtmosphereAutopilot {
     }
 
     // the "normal" value for all the limits, hardcoded
-    private const float moderationNorm = 20f;
+    private const float moderationNorm = 15f;
 
     private void setModerationLimits (float limit) {
       if (pvc != null) {
