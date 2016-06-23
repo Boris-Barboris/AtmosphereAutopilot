@@ -579,6 +579,7 @@ namespace AtmosphereAutopilot
                 if (use_keys && !FlightDriver.Pause && InputLockManager.IsUnlocked(ControlTypes.PITCH)
                     && InputLockManager.IsUnlocked(ControlTypes.YAW))
                 {
+                    bool changed = false;
                     // Pitch
                     if (GameSettings.PITCH_UP.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                     {
@@ -587,6 +588,7 @@ namespace AtmosphereAutopilot
                             float setpoint = desired_altitude;
                             float new_setpoint = setpoint + hotkey_altitude_sens * Time.deltaTime * setpoint;
                             desired_altitude = new_setpoint;
+                            changed = true;
                         }
                         else
                         {
@@ -606,6 +608,7 @@ namespace AtmosphereAutopilot
                             float new_setpoint = setpoint - hotkey_altitude_sens * Time.deltaTime * setpoint;
                             desired_altitude = new_setpoint;
                             desired_altitude_str = desired_altitude.ToString("G5");
+                            changed = true;
                         }
                         else
                         {
@@ -618,6 +621,9 @@ namespace AtmosphereAutopilot
                         need_to_show_altitude = true;
                         altitude_change_counter = 0.0f;
                     }
+
+                    if (changed)
+                        AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
 
                     // Yaw (Course)
                     if (GameSettings.YAW_RIGHT.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())

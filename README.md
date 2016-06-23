@@ -25,7 +25,7 @@ Craft settings window contains shotrcuts to most used moderation and tuning para
 Each Autopilot and Module has it's own GUI window. All of them (even inactive ones) are accessible from AA button in Application Launcher, some of them are accessible from Autopilot window hierarchy (that's up to Autopilot developer to decide, what particular Modules should be accessible from it's GUI). Window positions are serialized (preserved between flights and game sessions) in "Global_settings.cfg" file.
 
 # Neo-GUI
-Alternative, more condensed but less powerfull way of representing AppLauncher window can be turned on by setting AtmosphereAutopilot/use_neo_gui to _true_ in Global_settings.txt config file. It is read every scene change, so the shift can be made without shutting KSP down.
+Alternative, more condensed but less powerfull way of representing AppLauncher window can be turned on by setting AtmosphereAutopilot/use_neo_gui to _true_ in Global_settings.txt config file. It is read every scene change, so the shift can be made without shutting KSP down. While it's active, "Autopilot Module Manager" is still accessible using hotkeys. Standard GUI has logical priority over Neo-GUI.
 
 # Hotkeys
 "Hotkey manager" window is placed into Application Launcher window list. It's contents are registered hotkeys, wich can be changed during runtime.

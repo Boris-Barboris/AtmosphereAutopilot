@@ -440,6 +440,7 @@ namespace AtmosphereAutopilot
             if (use_throttle_hotkeys && spd_control_enabled &&
                 !FlightDriver.Pause && InputLockManager.IsUnlocked(ControlTypes.THROTTLE))
             {
+                bool changed = false;
                 // let's handle hotkey speed changing
                 if (GameSettings.THROTTLE_UP.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                 {
@@ -449,6 +450,7 @@ namespace AtmosphereAutopilot
                     need_to_show_change = true;
                     setpoint_change_counter = 0;
                     spd_setpoint_str = new_ms.ToString("G4");
+                    changed = true;
                 }
                 else if (GameSettings.THROTTLE_DOWN.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                 {
@@ -458,6 +460,7 @@ namespace AtmosphereAutopilot
                     need_to_show_change = true;
                     setpoint_change_counter = 0;
                     spd_setpoint_str = new_ms.ToString("G4");
+                    changed = true;
                 }
                 if (need_to_show_change)
                     setpoint_change_counter += Time.deltaTime;
@@ -466,6 +469,7 @@ namespace AtmosphereAutopilot
                     setpoint_change_counter = 0;
                     need_to_show_change = false;
                 }
+                AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
             }
             else
             {
