@@ -403,24 +403,24 @@ namespace AtmosphereAutopilot
         {
             // fade menu in if already open
             if (toolbar_menu != null) {
-            toolbar_menu.fadeIn();
-            return;
+                toolbar_menu.fadeIn();
+                return;
             }
 
             if (toolbar_menu_prefab == null)
                 toolbar_menu_prefab = prefabs.LoadAsset<GameObject> ("AtmosphereAutopilotMainMenu");
 
             if (toolbar_menu_prefab == null || toolbar_menu_object != null)
-            return;
+                return;
 
             toolbar_menu_object = Instantiate(toolbar_menu_prefab, GetAnchor(), Quaternion.identity) as GameObject;
             if (toolbar_menu_object == null)
-            return;
+                return;
 
             toolbar_menu_object.transform.SetParent(MainCanvasUtil.MainCanvas.transform);
             toolbar_menu = toolbar_menu_object.GetComponent<UI.MainMenuGUI> ();
             if (toolbar_menu != null)
-            toolbar_menu.setController(new NeoGUIController (this));
+                toolbar_menu.setController(new NeoGUIController (this));
             GUIStyles.Process(toolbar_menu_object);
         }
 
@@ -438,9 +438,9 @@ namespace AtmosphereAutopilot
             if (launcher_btn == null)
                 return;
             if (state)
-                launcher_btn.SetTexture (launcher_btn_textore_on);
+                launcher_btn.SetTexture(launcher_btn_textore_on);
             else 
-                launcher_btn.SetTexture (launcher_btn_textore_off);
+                launcher_btn.SetTexture(launcher_btn_textore_off);
         }
 
         public bool launcherButtonState
@@ -451,13 +451,18 @@ namespace AtmosphereAutopilot
             }
         }
 
-        public void mainMenuGUIUpdate ()
+        public void mainMenuGUIUpdate()
         {
-            if (toolbar_menu != null)
-                toolbar_menu.updateGUI();
-            if (autopilot_module_lists.ContainsKey(ActiveVessel) &&
-                autopilot_module_lists[ActiveVessel].ContainsKey(typeof(TopModuleManager)))
-                setLauncherOnOffIcon(autopilot_module_lists[ActiveVessel][typeof(TopModuleManager)].Active);
+            if (use_neo_gui)
+            {
+                if (toolbar_menu != null)
+                    toolbar_menu.updateGUI();
+                if (autopilot_module_lists.ContainsKey(ActiveVessel) &&
+                    autopilot_module_lists[ActiveVessel].ContainsKey(typeof(TopModuleManager)))
+                {
+                    setLauncherOnOffIcon(autopilot_module_lists[ActiveVessel][typeof(TopModuleManager)].Active);
+                }
+            }
         }
 
         #endregion

@@ -1,6 +1,6 @@
 AtmosphereAutopilot
 {
-	use_neo_gui = true
+	use_neo_gui = false
 }
 Cruise_Flight
 {

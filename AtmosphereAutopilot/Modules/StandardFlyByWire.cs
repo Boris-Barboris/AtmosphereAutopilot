@@ -140,16 +140,24 @@ namespace AtmosphereAutopilot
 
         public override void OnUpdate()
         {
-            if (Input.GetKeyDown(moderation_keycode)) {
+            bool changed = false;
+            if (Input.GetKeyDown(moderation_keycode))
+            {
                 moderation_switch = !moderation_switch;
-                AtmosphereAutopilot.Instance.mainMenuGUIUpdate ();
+                changed = true;
             }
-            if (Input.GetKeyDown(rocket_mode_keycode)) {
+            if (Input.GetKeyDown(rocket_mode_keycode))
+            {
                 RocketMode = !rocket_mode;
-                AtmosphereAutopilot.Instance.mainMenuGUIUpdate ();
+                changed = true;
             }
             if (Input.GetKeyDown(coord_turn_keycode))
+            {
                 Coord_turn = !coord_turn;
+                changed = true;
+            }
+            if (changed)
+                AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
         }
 
         bool landed = false;
