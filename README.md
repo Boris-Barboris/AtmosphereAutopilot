@@ -6,7 +6,7 @@ Plugin for Kerbal Space Program.
 Original author: Boris-Barboris.
 
 Contributors:
-* radistmorse (aka Morse on KSP forums) - NeoGUI design and implementation.
+* radistmorse (aka Morse on KSP forums) - Neo-GUI design and implementation.
 
 License: GNU GPL version 3
 
@@ -23,6 +23,9 @@ AA icon is placed in Application Launcher toolbar during flight. It's contents w
 Craft settings window contains shotrcuts to most used moderation and tuning parameters of the craft, as well as provides basic preset functionality. Presets are saved in "Global_settings.cfg"/settings_wnd/profiles section.
 
 Each Autopilot and Module has it's own GUI window. All of them (even inactive ones) are accessible from AA button in Application Launcher, some of them are accessible from Autopilot window hierarchy (that's up to Autopilot developer to decide, what particular Modules should be accessible from it's GUI). Window positions are serialized (preserved between flights and game sessions) in "Global_settings.cfg" file.
+
+# Neo-GUI
+Alternative, more condensed but less powerfull way of representing AppLauncher window can be turned on by setting AtmosphereAutopilot/use_neo_gui to _true_ in Global_settings.txt config file. It is read every scene change, so the shift can be made without shutting KSP down.
 
 # Hotkeys
 "Hotkey manager" window is placed into Application Launcher window list. It's contents are registered hotkeys, wich can be changed during runtime.
