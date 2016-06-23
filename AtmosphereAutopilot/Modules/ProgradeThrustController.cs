@@ -275,6 +275,9 @@ namespace AtmosphereAutopilot
                 estimated_max_thrust += estimated_max_thrusts[i];
             }
 
+            if (estimated_max_thrust <= 0.0)
+                return 0.5f;
+
             bool spool_dir_changed = false;
             double desired_throttle = 0.0;
             iter_count = 0;
@@ -343,6 +346,9 @@ namespace AtmosphereAutopilot
 
                 iter_count++;
             } while (spool_dir_changed && iter_count <= imodel.engines.Count + 2);
+
+            if (double.IsNaN(desired_throttle) || double.IsInfinity(desired_throttle))
+                desired_throttle = 0.5;
 
             return (float)Common.Clamp(desired_throttle, 0.0, 1.0);
         }
