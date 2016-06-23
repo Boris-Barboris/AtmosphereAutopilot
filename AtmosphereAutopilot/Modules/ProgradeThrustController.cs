@@ -276,7 +276,7 @@ namespace AtmosphereAutopilot
             }
 
             if (estimated_max_thrust <= 0.0)
-                return 0.5f;
+                return 0.1f;
 
             bool spool_dir_changed = false;
             double desired_throttle = 0.0;
