@@ -702,7 +702,7 @@ namespace AtmosphereAutopilot
         static KeyCode vertical_control_key = KeyCode.None;
 
         [GlobalSerializable("toggle_vertical_setpoint_type_key")]
-        [AutoHotkeyAttr("CF altitude\vertical speed")]
+        [AutoHotkeyAttr("CF altitude\\vertical speed")]
         static KeyCode toggle_vertical_setpoint_type_key = KeyCode.None;
 
         bool need_to_show_course = false;
