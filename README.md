@@ -6,6 +6,7 @@ Plugin for Kerbal Space Program.
 Original author: Boris-Barboris.
 
 Contributors:
+* radistmorse (aka Morse on KSP forums) - NeoGUI design and implementation.
 
 License: GNU GPL version 3
 
@@ -28,6 +29,7 @@ Each Autopilot and Module has it's own GUI window. All of them (even inactive on
 There are two main hotkeys: 
 * "Master switch" - toggles Master Switch.
 * Shift + "Master switch" - toggles GUI of "Autopilot Module Manager".
+Others are very module-specific and will not be described here.
 
 # Craft implications and limitations
 "Control from here" part is facing prograde, with close-to-zero angle of attack bias. Planar symmetry is implied (left and right side of the plane are mirrored), as well as good degree of pitch-yaw and pitch-roll control isolation. Axial engine symmetry is strongly recommended. No wind mods are supported, as well as any mods, wich are changing control surface, rcs and engine gimbaling behaviour.
@@ -91,15 +93,17 @@ Short GUI description:
 * _height relax Kp_ - gain for proportional law, decrease to slow down relaxation.
 * _max climb angle_ - default value 30 degrees. Global limit on climb and drop maneuver velocity pitch. Will sometimes be exceeded, it's okay.
 * _use keys_ - use pitch and yaw keys to control course and altitude\vertical speed setpoints. This flag is toggled by "CF keys input mode" hotkey.
-* _hotkey course speed_ - tweak to manage course setpoint change speed.
-* _hotkey altitude speed_ - tweak to manage altitude setpoint change speed.
-* _hotkey vertspeed speed_ - tweak to manage vertical speed setpoint change speed.
+* _hotkey course sens_ - tweak to manage course setpoint change speed.
+* _hotkey altitude sens_ - tweak to manage altitude setpoint change speed.
+* _hotkey vertspeed sens_ - tweak to manage vertical speed setpoint change speed.
 * _hotkey vertspeed snap_ - tweak to manage vertical speed snap to zero margin.
 
 Hotkeys:
 * "Pitch keys" - alter vertical motion setpoint, altitude or vertical speed (whatever is active at the moment).
 * "Yaw keys" - alter course setpoint.
 * "CF keys input mode" - default hotkey is _Right Alt_, toggles whether Pitch and yaw is used to control setpoints.
+* "CF vertical control" - toggles _Vertical motion control_.
+* "CF altitude\vertical speed" - toggles between _Altitude_ and _Vertical speed_ modes.
 
 # Default Modules descriptions
 
@@ -257,3 +261,7 @@ Short GUI description:
 * _use PID_ - toggle if you want to manually tune controller, or using strange engines.
 * _hotkey_speed_factor_ - tweak to change throttle hotkey sensitivity.
 * _use_throttle_hotkeys_ - toggle speed setpoint handling by hotkeys.
+
+Hotkeys:
+* "Throttle keys" - alter velocity setpoint by using stock throttle hotkeys (Shift and LCntrl by default).
+* "Speed control toggle" - toggles speed control ON and OFF.
