@@ -94,7 +94,7 @@ namespace AtmosphereAutopilot
             if (vessel.LandedOrSplashed)
                 return;
 
-            if (thrust_c.spd_control_enaled)  
+            if (thrust_c.spd_control_enabled)  
                 thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
 
             desired_velocity = Vector3d.zero;
@@ -321,7 +321,7 @@ namespace AtmosphereAutopilot
 
             // speed control portion for ascend
             double effective_max_climb_angle = max_climb_angle;
-            if (thrust_c.spd_control_enaled && (height_error >= 0.0))
+            if (thrust_c.spd_control_enabled && (height_error >= 0.0))
             {
                 if (pseudo_flc)
                 {
@@ -585,14 +585,14 @@ namespace AtmosphereAutopilot
                         if (height_mode == HeightMode.Altitude)
                         {
                             float setpoint = desired_altitude;
-                            float new_setpoint = setpoint + hotkey_altitude_speed * Time.deltaTime * setpoint;
+                            float new_setpoint = setpoint + hotkey_altitude_sens * Time.deltaTime * setpoint;
                             desired_altitude = new_setpoint;
                         }
                         else
                         {
                             float setpoint = desired_vertspeed;
                             float magnetic_mult = Mathf.Abs(desired_vertspeed) < 10.0f ? 0.3f : 1.0f;
-                            float new_setpoint = setpoint + hotkey_vertspeed_speed * Time.deltaTime * magnetic_mult;
+                            float new_setpoint = setpoint + hotkey_vertspeed_sens * Time.deltaTime * magnetic_mult;
                             desired_vertspeed = new_setpoint;
                         }
                         need_to_show_altitude = true;
@@ -603,7 +603,7 @@ namespace AtmosphereAutopilot
                         if (height_mode == HeightMode.Altitude)
                         {
                             float setpoint = desired_altitude;
-                            float new_setpoint = setpoint - hotkey_altitude_speed * Time.deltaTime * setpoint;
+                            float new_setpoint = setpoint - hotkey_altitude_sens * Time.deltaTime * setpoint;
                             desired_altitude = new_setpoint;
                             desired_altitude_str = desired_altitude.ToString("G5");
                         }
@@ -611,7 +611,7 @@ namespace AtmosphereAutopilot
                         {
                             float setpoint = desired_vertspeed;
                             float magnetic_mult = Mathf.Abs(desired_vertspeed) < 10.0f ? 0.3f : 1.0f;
-                            float new_setpoint = setpoint - hotkey_vertspeed_speed * Time.deltaTime * magnetic_mult;
+                            float new_setpoint = setpoint - hotkey_vertspeed_sens * Time.deltaTime * magnetic_mult;
                             desired_vertspeed = new_setpoint;
                             desired_vertspeed_str = desired_vertspeed.ToString("G4");
                         }
@@ -623,7 +623,7 @@ namespace AtmosphereAutopilot
                     if (GameSettings.YAW_RIGHT.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                     {
                         float setpoint = desired_course;
-                        float new_setpoint = setpoint + hotkey_course_speed * Time.deltaTime;
+                        float new_setpoint = setpoint + hotkey_course_sens * Time.deltaTime;
                         if (new_setpoint > 360.0f)
                             new_setpoint -= 360.0f;
                         if (new_setpoint < 0.0f)
@@ -636,7 +636,7 @@ namespace AtmosphereAutopilot
                     else if (GameSettings.YAW_LEFT.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                     {
                         float setpoint = desired_course;
-                        float new_setpoint = setpoint - hotkey_course_speed * Time.deltaTime;
+                        float new_setpoint = setpoint - hotkey_course_sens * Time.deltaTime;
                         if (new_setpoint > 360.0f)
                             new_setpoint -= 360.0f;
                         if (new_setpoint < 0.0f)
@@ -706,16 +706,16 @@ namespace AtmosphereAutopilot
         float altitude_change_counter = 0.0f;
 
         [AutoGuiAttr("hotkey_course_speed", true, "G4")]
-        [GlobalSerializable("hotkey_course_speed")]
-        public static float hotkey_course_speed = 60.0f;
+        [GlobalSerializable("hotkey_course_sens")]
+        public static float hotkey_course_sens = 60.0f;
 
         [AutoGuiAttr("hotkey_altitude_speed", true, "G4")]
-        [GlobalSerializable("hotkey_altitude_speed")]
-        public static float hotkey_altitude_speed = 0.8f;
+        [GlobalSerializable("hotkey_altitude_sens")]
+        public static float hotkey_altitude_sens = 0.8f;
 
         [AutoGuiAttr("hotkey_vertspeed_speed", true, "G4")]
-        [GlobalSerializable("hotkey_vertspeed_speed")]
-        public static float hotkey_vertspeed_speed = 30.0f;
+        [GlobalSerializable("hotkey_vertspeed_sens")]
+        public static float hotkey_vertspeed_sens = 30.0f;
 
         [AutoGuiAttr("hotkey_vertspeed_snap", true, "G4")]
         [GlobalSerializable("hotkey_vertspeed_snap")]

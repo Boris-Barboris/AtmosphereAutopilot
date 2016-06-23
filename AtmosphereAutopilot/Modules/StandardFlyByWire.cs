@@ -201,7 +201,7 @@ namespace AtmosphereAutopilot
                     time_after_takeoff += TimeWarp.fixedDeltaTime;
             }
 
-            if (tc.spd_control_enaled)
+            if (tc.spd_control_enabled)
                 tc.ApplyControl(cntrl, tc.setpoint.mps());
 
 			pc.user_controlled = true;

@@ -119,12 +119,12 @@ namespace AtmosphereAutopilot {
 
     public bool speedControl {
       get {
-        return speedAP != null && speedAP.spd_control_enaled;
+        return speedAP != null && speedAP.spd_control_enabled;
       }
 
       set {
         if (speedAP != null)
-          speedAP.spd_control_enaled = value;
+          speedAP.spd_control_enabled = value;
       }
     }
 
@@ -156,7 +156,7 @@ namespace AtmosphereAutopilot {
     }
 
     // the "normal" value for all the limits, hardcoded
-    private const float moderationNorm = 15f;
+    private const float moderationNorm = 10f;
 
     private void setModerationLimits (float limit) {
       if (pvc != null) {

@@ -389,13 +389,15 @@ namespace AtmosphereAutopilot
 
         public int chosen_spd_mode = 0;
 
-        public bool spd_control_enaled
+        public bool spd_control_enabled
         {
             get { return chosen_spd_mode != 0; }
             set
             {
                 if (chosen_spd_mode == 0)
                     chosen_spd_mode = (int)type + 1;
+                else
+                    chosen_spd_mode = 0;
             }
         }
 
@@ -431,11 +433,11 @@ namespace AtmosphereAutopilot
         {
             if (Input.GetKeyDown(spd_control_toggle_key))
             {
-                spd_control_enaled = !spd_control_enaled;
-                MessageManager.post_status_message(spd_control_enaled ? "Speed control enabled" : "Speed control disabled");
+                spd_control_enabled = !spd_control_enabled;
+                MessageManager.post_status_message(spd_control_enabled ? "Speed control enabled" : "Speed control disabled");
             }
 
-            if (use_throttle_hotkeys && spd_control_enaled &&
+            if (use_throttle_hotkeys && spd_control_enabled &&
                 !FlightDriver.Pause && InputLockManager.IsUnlocked(ControlTypes.THROTTLE))
             {
                 // let's handle hotkey speed changing
