@@ -95,7 +95,7 @@ namespace AtmosphereAutopilot
                 return;
 
             if (thrust_c.spd_control_enaled)  
-                thrust_c.ApplyControl(cntrl, thrust_c.spd_setpoint);  
+                thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
 
             desired_velocity = Vector3d.zero;
             planet2ves = vessel.ReferenceTransform.position - vessel.mainBody.position;

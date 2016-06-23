@@ -67,7 +67,7 @@ namespace AtmosphereAutopilot
             dir_c.ApplyControl(cntrl, camera_direction, Vector3d.zero);
 
             if (thrust_c.spd_control_enaled)
-                thrust_c.ApplyControl(cntrl, thrust_c.spd_setpoint);
+                thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
         }
 
         bool camera_correct = false;

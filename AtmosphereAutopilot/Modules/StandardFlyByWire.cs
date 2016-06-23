@@ -194,7 +194,7 @@ namespace AtmosphereAutopilot
             }
 
             if (tc.spd_control_enaled)
-                tc.ApplyControl(cntrl, tc.spd_setpoint);
+                tc.ApplyControl(cntrl, tc.setpoint.mps());
 
 			pc.user_controlled = true;
             if (coord_turn)
