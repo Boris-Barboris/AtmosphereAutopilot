@@ -52,19 +52,6 @@ namespace AtmosphereAutopilot
         /// </summary>
         public Vessel ActiveVessel { get; private set; }
 
-        private AssetBundle _prefabs;
-        internal AssetBundle prefabs {
-            get {
-                if (_prefabs == null) {
-                    var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                    path = path.Replace (System.IO.Path.GetFileName (path), "atmosphereautopilotprefabs");
-                    var www = new WWW("file://"+path);
-                    _prefabs = www.assetBundle;
-                }
-                return _prefabs;
-            }
-        }
-
         void Start()
         {
             Debug.Log("[AtmosphereAutopilot]: starting up!"); 
@@ -270,6 +257,9 @@ namespace AtmosphereAutopilot
 
         #region AppLauncherSection
 
+        [GlobalSerializable("use_neo_gui")]
+        public bool use_neo_gui = false;
+
         ApplicationLauncherButton launcher_btn;
 
         private Texture launcher_btn_textore_off = null;
@@ -279,101 +269,172 @@ namespace AtmosphereAutopilot
         private GameObject toolbar_menu_object = null;
         private GameObject toolbar_menu_prefab = null;
 
-        // Called when applauncher is ready for population
-        void onAppLauncherLoad()
+        private AssetBundle _prefabs;
+        internal AssetBundle prefabs
         {
-            if (prefabs == null) {
-                Debug.Log("[AtmosphereAutopilot]: No prefabs found, GUI unavailable");
-                return;
-            }
-            if (launcher_btn_textore_off == null || launcher_btn_textore_on == null) {
-                launcher_btn_textore_off = prefabs.LoadAsset<Texture> ("AA_off");
-                launcher_btn_textore_on = prefabs.LoadAsset<Texture> ("AA_on");
-            }
-            if (ApplicationLauncher.Ready)
+            get
             {
-                bool hidden;
-                bool contains = ApplicationLauncher.Instance.Contains(launcher_btn, out hidden);
-                if (!contains)
-                    launcher_btn = ApplicationLauncher.Instance.AddModApplication(
-                        OnTrue, OnFalse, OnHover, OnUnHover, null, null, 
-                        ApplicationLauncher.AppScenes.FLIGHT | ApplicationLauncher.AppScenes.MAPVIEW,
-                        launcher_btn_textore_off);
-                if (ActiveVessel != null &&
-                    autopilot_module_lists.ContainsKey (ActiveVessel) &&
-                    autopilot_module_lists[ActiveVessel][typeof(TopModuleManager)] != null)
-                      setLauncherOnOffIcon(autopilot_module_lists[ActiveVessel][typeof (TopModuleManager)].Active);
+                if (_prefabs == null)
+                {
+                    var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                    path = path.Replace(System.IO.Path.GetFileName(path), "atmosphereautopilotprefabs");
+                    var www = new WWW("file://" + path);
+                    _prefabs = www.assetBundle;
+                }
+                return _prefabs;
             }
         }
 
-        private void onAppLauncherUnload (GameScenes scene) {
+        // Called when applauncher is ready for population
+        void onAppLauncherLoad()
+        {
+            // deserialize use_neo_gui flag
+            AutoSerialization.Deserialize(this, "AtmosphereAutopilot",
+                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.txt",
+                typeof(GlobalSerializable), null);
+
+            if (prefabs == null)
+            {
+                Debug.Log("[AtmosphereAutopilot]: No prefabs found, Neo-GUI unavailable");
+                use_neo_gui = false;
+            }
+
+            if (use_neo_gui)
+            {
+                if (launcher_btn_textore_off == null || launcher_btn_textore_on == null)
+                {
+                    launcher_btn_textore_off = prefabs.LoadAsset<Texture>("AA_off");
+                    launcher_btn_textore_on = prefabs.LoadAsset<Texture>("AA_on");
+                }
+                if (ApplicationLauncher.Ready)
+                {
+                    bool hidden;
+                    bool contains = ApplicationLauncher.Instance.Contains(launcher_btn, out hidden);
+                    if (!contains)
+                        launcher_btn = ApplicationLauncher.Instance.AddModApplication(
+                            OnALTrueNeo, OnALFalseNeo, OnALHover, OnALUnHoverNeo, null, null,
+                            ApplicationLauncher.AppScenes.FLIGHT | ApplicationLauncher.AppScenes.MAPVIEW,
+                            launcher_btn_textore_off);
+                    if (ActiveVessel != null &&
+                        autopilot_module_lists.ContainsKey(ActiveVessel) &&
+                        autopilot_module_lists[ActiveVessel][typeof(TopModuleManager)] != null)
+                        setLauncherOnOffIcon(autopilot_module_lists[ActiveVessel][typeof(TopModuleManager)].Active);
+                }
+            }
+            else
+            {
+                if (ApplicationLauncher.Ready)
+                {
+                    bool hidden;
+                    bool contains = ApplicationLauncher.Instance.Contains(launcher_btn, out hidden);
+                    if (!contains)
+                        launcher_btn = ApplicationLauncher.Instance.AddModApplication(
+                            OnALTrue, OnALFalse, OnHover, OnALUnHover, null, null,
+                            ApplicationLauncher.AppScenes.FLIGHT | ApplicationLauncher.AppScenes.MAPVIEW,
+                            GameDatabase.Instance.GetTexture("AtmosphereAutopilot/icon", false));
+                }
+            }
+        }
+
+        private void onAppLauncherUnload(GameScenes scene)
+        {
             // remove button
-            if (ApplicationLauncher.Instance != null && launcher_btn != null) {
+            if (ApplicationLauncher.Instance != null && launcher_btn != null)
+            {
                 ApplicationLauncher.Instance.RemoveModApplication(launcher_btn);
                 launcher_btn = null;
             }
         }
 
-        private void OnTrue() {
+        private void OnALTrueNeo()
+        {
             mainMenuOpen();
         }
 
-        private void OnFalse() {
+        private void OnALFalseNeo()
+        {
             mainMenuClose();
         }
 
-        private void OnHover() {
+        private void OnALHover()
+        {
             mainMenuOpen();
         }
 
-        private void OnUnHover() {
+        private void OnALUnHoverNeo()
+        {
             if (launcher_btn != null && launcher_btn.toggleButton.CurrentState == KSP.UI.UIRadioButton.State.False)
                 mainMenuClose();
         }
 
-        private void mainMenuClose() {
+        void OnALTrue()
+        {
+            applauncher.ShowGUI();
+            applauncher.show_while_hover = false;
+        }
+
+        void OnHover()
+        {
+            applauncher.ShowGUI();
+            applauncher.show_while_hover = false;
+            applauncher.set_y_position(Mouse.screenPos.y);
+        }
+
+        void OnALFalse()
+        {
+            applauncher.UnShowGUI();
+        }
+
+        void OnALUnHover()
+        {
+            if (!launcher_btn.toggleButton.Value)
+                applauncher.show_while_hover = true;
+        }
+
+        private void mainMenuClose()
+        {
             if (toolbar_menu != null)
                 toolbar_menu.fadeOut();
             else if (toolbar_menu_object != null)
                 Destroy(toolbar_menu_object);
         }
 
-        private void mainMenuOpen() {
-          // fade menu in if already open
-          if (toolbar_menu != null) {
+        private void mainMenuOpen()
+        {
+            // fade menu in if already open
+            if (toolbar_menu != null) {
             toolbar_menu.fadeIn();
             return;
-          }
+            }
 
-          if (toolbar_menu_prefab == null)
-              toolbar_menu_prefab = prefabs.LoadAsset<GameObject> ("AtmosphereAutopilotMainMenu");
+            if (toolbar_menu_prefab == null)
+                toolbar_menu_prefab = prefabs.LoadAsset<GameObject> ("AtmosphereAutopilotMainMenu");
 
-          if (toolbar_menu_prefab == null || toolbar_menu_object != null)
+            if (toolbar_menu_prefab == null || toolbar_menu_object != null)
             return;
 
-          toolbar_menu_object = Instantiate(toolbar_menu_prefab, GetAnchor(), Quaternion.identity) as GameObject;
-          if (toolbar_menu_object == null)
+            toolbar_menu_object = Instantiate(toolbar_menu_prefab, GetAnchor(), Quaternion.identity) as GameObject;
+            if (toolbar_menu_object == null)
             return;
 
-          toolbar_menu_object.transform.SetParent(MainCanvasUtil.MainCanvas.transform);
-          toolbar_menu = toolbar_menu_object.GetComponent<UI.MainMenuGUI> ();
-          if (toolbar_menu != null)
+            toolbar_menu_object.transform.SetParent(MainCanvasUtil.MainCanvas.transform);
+            toolbar_menu = toolbar_menu_object.GetComponent<UI.MainMenuGUI> ();
+            if (toolbar_menu != null)
             toolbar_menu.setController(new NeoGUIController (this));
-          GUIStyles.Process(toolbar_menu_object);
+            GUIStyles.Process(toolbar_menu_object);
         }
 
-        public Vector3 GetAnchor() {
+        public Vector3 GetAnchor()
+        {
             if (launcher_btn == null)
                 return Vector3.zero;
-
             Vector3 anchor = launcher_btn.GetAnchor();
-
             anchor.x -= 3.0f;
-
             return anchor;
         }
 
-        public void setLauncherOnOffIcon (bool state) {
+        public void setLauncherOnOffIcon(bool state)
+        {
             if (launcher_btn == null)
                 return;
             if (state)
@@ -382,18 +443,21 @@ namespace AtmosphereAutopilot
                 launcher_btn.SetTexture (launcher_btn_textore_off);
         }
 
-        public bool launcherButtonState {
-            get {
+        public bool launcherButtonState
+        {
+            get
+            {
                 return launcher_btn != null && launcher_btn.toggleButton.CurrentState == KSP.UI.UIRadioButton.State.True;
             }
         }
 
-        public void mainMenuGUIUpdate () {
+        public void mainMenuGUIUpdate ()
+        {
             if (toolbar_menu != null)
-              toolbar_menu.updateGUI ();
+                toolbar_menu.updateGUI();
             if (autopilot_module_lists.ContainsKey(ActiveVessel) &&
                 autopilot_module_lists[ActiveVessel].ContainsKey(typeof(TopModuleManager)))
-              setLauncherOnOffIcon (autopilot_module_lists[ActiveVessel][typeof(TopModuleManager)].Active);
+                setLauncherOnOffIcon(autopilot_module_lists[ActiveVessel][typeof(TopModuleManager)].Active);
         }
 
         #endregion

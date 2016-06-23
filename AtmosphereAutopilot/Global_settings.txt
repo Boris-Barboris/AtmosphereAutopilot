@@ -1,3 +1,7 @@
+AtmosphereAutopilot
+{
+	use_neo_gui = true
+}
 Cruise_Flight
 {
 	window_x = 52

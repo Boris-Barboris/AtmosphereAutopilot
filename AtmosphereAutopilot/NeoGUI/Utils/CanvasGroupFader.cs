@@ -45,7 +45,7 @@ namespace AtmosphereAutopilot.UI {
     private IEnumerator m_FadeCoroutine;
 
     private float m_FastFadeDuration = 0.2f;
-    private float m_SlowFadeDuration = 1.0f;
+    private float m_SlowFadeDuration = 0.5f;
 
     private bool m_IsFadingIn;
 
