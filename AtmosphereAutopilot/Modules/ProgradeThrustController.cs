@@ -437,16 +437,17 @@ namespace AtmosphereAutopilot
 
         public override void OnUpdate()
         {
+            bool changed = false;
             if (Input.GetKeyDown(spd_control_toggle_key))
             {
                 spd_control_enabled = !spd_control_enabled;
                 MessageManager.post_status_message(spd_control_enabled ? "Speed control enabled" : "Speed control disabled");
+                changed = true;
             }
 
             if (use_throttle_hotkeys && spd_control_enabled &&
                 !FlightDriver.Pause && InputLockManager.IsUnlocked(ControlTypes.THROTTLE))
             {
-                bool changed = false;
                 // let's handle hotkey speed changing
                 if (GameSettings.THROTTLE_UP.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                 {
@@ -482,7 +483,8 @@ namespace AtmosphereAutopilot
                 setpoint_change_counter = 0;
             }
 
-            AtmosphereAutopilot.Instance.mainMenuGUISpeedUpdate();
+            if (changed)
+                AtmosphereAutopilot.Instance.mainMenuGUISpeedUpdate();
         }
 
         protected override void OnGUICustomAlways()

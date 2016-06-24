@@ -162,21 +162,25 @@ namespace AtmosphereAutopilot.UI {
       }
     }
 
-    public void updateSpeed()
-    {
-        m_SpeedControlToggle.isOn = controller.speedControl;
-        m_SpeedControlSlider.value = controller.speed;
-        if (controller.speedControl)
+        public void updateSpeed()
         {
-            m_SpeedControlValue.text = controller.speed.ToString("0.#") + " m/s";
-            m_SpeedControlValue.alignment = TextAnchor.MiddleRight;
+            m_SpeedControlToggle.onValueChanged.SetPersistentListenerState(0, UnityEngine.Events.UnityEventCallState.Off);
+            m_SpeedControlSlider.onValueChanged.SetPersistentListenerState(0, UnityEngine.Events.UnityEventCallState.Off);
+            m_SpeedControlToggle.isOn = controller.speedControl;
+            m_SpeedControlSlider.value = controller.speed;
+            m_SpeedControlToggle.onValueChanged.SetPersistentListenerState(0, UnityEngine.Events.UnityEventCallState.RuntimeOnly);
+            m_SpeedControlSlider.onValueChanged.SetPersistentListenerState(0, UnityEngine.Events.UnityEventCallState.RuntimeOnly);
+            if (controller.speedControl)
+            {
+                m_SpeedControlValue.text = controller.speed.ToString("0.#") + " m/s";
+                m_SpeedControlValue.alignment = TextAnchor.MiddleRight;
+            }
+            else
+            {
+                m_SpeedControlValue.text = "OFF";
+                m_SpeedControlValue.alignment = TextAnchor.MiddleCenter;
+            }
         }
-        else
-        {
-            m_SpeedControlValue.text = "OFF";
-            m_SpeedControlValue.alignment = TextAnchor.MiddleCenter;
-        }
-    }
 
     public void toggleFlyByWire (bool value) {
       if (value)
