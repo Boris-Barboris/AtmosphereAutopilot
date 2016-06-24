@@ -162,6 +162,22 @@ namespace AtmosphereAutopilot.UI {
       }
     }
 
+    public void updateSpeed()
+    {
+        m_SpeedControlToggle.isOn = controller.speedControl;
+        m_SpeedControlSlider.value = controller.speed;
+        if (controller.speedControl)
+        {
+            m_SpeedControlValue.text = controller.speed.ToString("0.#") + " m/s";
+            m_SpeedControlValue.alignment = TextAnchor.MiddleRight;
+        }
+        else
+        {
+            m_SpeedControlValue.text = "OFF";
+            m_SpeedControlValue.alignment = TextAnchor.MiddleCenter;
+        }
+    }
+
     public void toggleFlyByWire (bool value) {
       if (value)
         controller.currentAutopilot = Autopilots.FLYBYWIRE;

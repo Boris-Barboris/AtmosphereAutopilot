@@ -475,13 +475,14 @@ namespace AtmosphereAutopilot
                     setpoint_change_counter = 0;
                     need_to_show_change = false;
                 }
-                AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
             }
             else
             {
                 need_to_show_change = false;
                 setpoint_change_counter = 0;
             }
+
+            AtmosphereAutopilot.Instance.mainMenuGUISpeedUpdate();
         }
 
         protected override void OnGUICustomAlways()

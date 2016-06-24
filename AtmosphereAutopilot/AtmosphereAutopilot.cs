@@ -465,6 +465,15 @@ namespace AtmosphereAutopilot
             }
         }
 
+        public void mainMenuGUISpeedUpdate()
+        {
+            if (use_neo_gui)
+            {
+                if (toolbar_menu != null)
+                    toolbar_menu.updateSpeed();
+            }
+        }
+
         #endregion
 
         #region UI
