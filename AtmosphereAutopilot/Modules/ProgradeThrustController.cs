@@ -26,8 +26,8 @@ namespace AtmosphereAutopilot
     public enum SpeedType
     {
         MetersPerSecond,
+		Knots,
         Mach,
-        Knots,
         IAS,
         KIAS
     }
