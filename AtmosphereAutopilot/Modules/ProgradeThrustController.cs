@@ -521,10 +521,6 @@ namespace AtmosphereAutopilot
         /// <returns>true if speed control is enabled</returns>
         public bool SpeedCtrlGUIBlock()
         {
-            spd_setpoint_str = GUILayout.TextField(spd_setpoint_str, GUIStyles.textBoxStyle);
-            float.TryParse(spd_setpoint_str, out spd_setpoint);
-            setpoint = new SpeedSetpoint(type, spd_setpoint, vessel);
-
             GUILayout.Label("Speed control", GUIStyles.labelStyleCenter);
             GUILayout.BeginHorizontal();
             for (int i = 0; i < 6; i++)
@@ -545,6 +541,12 @@ namespace AtmosphereAutopilot
                 spd_setpoint_str = spd_setpoint.ToString("G4");
                 setpoint = new SpeedSetpoint(newtype, spd_setpoint, vessel);
                 type = newtype;
+            }
+            else
+            {
+                spd_setpoint_str = GUILayout.TextField(spd_setpoint_str, GUIStyles.textBoxStyle);
+                float.TryParse(spd_setpoint_str, out spd_setpoint);
+                setpoint = new SpeedSetpoint(type, spd_setpoint, vessel);
             }
 
             return (chosen_spd_mode != 0);
