@@ -215,7 +215,7 @@ namespace AtmosphereAutopilot {
       }
       set {
         if (ccAP != null)
-          ccAP.desired_altitude = value;
+          ccAP.desired_altitude.Value = value;
       }
     }
 
@@ -224,13 +224,7 @@ namespace AtmosphereAutopilot {
         if (ccAP == null || ccAP.current_mode != CruiseController.CruiseMode.Waypoint)
           return -1f;
 
-        double straightDist = ccAP.dist_to_dest;
-        // no corrections if the target is near
-        if (straightDist <= 10000.0)
-          return (float)straightDist;
-        // calculate the surface distance
-        double radius = parent.ActiveVessel.mainBody.Radius;
-        return (float)(System.Math.Acos (1 - (straightDist * straightDist) / (2 * radius * radius)) * radius);
+        return (float)ccAP.dist_to_dest;
       }
     }
 

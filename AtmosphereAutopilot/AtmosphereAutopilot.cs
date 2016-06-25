@@ -219,7 +219,7 @@ namespace AtmosphereAutopilot
             serialize_active_modules();
             Debug.Log("[AtmosphereAutopilot]: vessel switch to " + v.vesselName);
             load_manager_for_vessel(v);
-            mainMenuClose ();
+            mainMenuClose();
             ActiveVessel = v;
             foreach (Vessel c in autopilot_module_lists.Keys)
             {

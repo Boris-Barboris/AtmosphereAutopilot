@@ -410,10 +410,8 @@ namespace AtmosphereAutopilot
         [VesselSerializable("spd_type")]
         SpeedType type = SpeedType.MetersPerSecond;
 
-        float spd_setpoint = 100.0f;
-
-        [VesselSerializable("spd_setpoint")]
-        string spd_setpoint_str = "100";
+        [VesselSerializable("setpoint_field")]
+        DelayedFieldFloat setpoint_field = new DelayedFieldFloat(100.0f, "G4");
 
         /// <summary>
         /// Current speed setpoint, wich is maintained by controller
@@ -449,26 +447,30 @@ namespace AtmosphereAutopilot
                 !FlightDriver.Pause && InputLockManager.IsUnlocked(ControlTypes.THROTTLE))
             {
                 // let's handle hotkey speed changing
+                bool changed_by_hotkey = false;
+                float new_vs = 0.0f;
                 if (GameSettings.THROTTLE_UP.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                 {
                     float ms = setpoint.value;
-                    float new_ms = ms + Time.deltaTime * hotkey_speed_factor * ms;
-                    setpoint.value = new_ms;
-                    need_to_show_change = true;
-                    setpoint_change_counter = 0;
-                    spd_setpoint_str = new_ms.ToString("G4");
-                    changed = true;
+                    new_vs = ms + Time.deltaTime * hotkey_speed_factor * ms;
+                    changed_by_hotkey = true;
                 }
                 else if (GameSettings.THROTTLE_DOWN.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                 {
                     float ms = setpoint.value;
-                    float new_ms = ms - Time.deltaTime * hotkey_speed_factor * ms;
-                    setpoint.value = new_ms;
+                    new_vs = ms - Time.deltaTime * hotkey_speed_factor * ms;
+                    changed_by_hotkey = true;                
+                }
+
+                if (changed_by_hotkey)
+                {
+                    setpoint.value = new_vs;
                     need_to_show_change = true;
                     setpoint_change_counter = 0;
-                    spd_setpoint_str = new_ms.ToString("G4");
+                    setpoint_field.Value = new_vs;
                     changed = true;
                 }
+
                 if (need_to_show_change)
                     setpoint_change_counter += Time.deltaTime;
                 if (setpoint_change_counter > 1.0f)
@@ -483,8 +485,7 @@ namespace AtmosphereAutopilot
                 setpoint_change_counter = 0;
             }
 
-            if (changed)
-                AtmosphereAutopilot.Instance.mainMenuGUISpeedUpdate();
+            AtmosphereAutopilot.Instance.mainMenuGUISpeedUpdate();
         }
 
         protected override void OnGUICustomAlways()
@@ -513,6 +514,8 @@ namespace AtmosphereAutopilot
                 }
                 GUI.Label(rect, str, GUIStyles.hoverLabel);
             }
+
+            setpoint_field.OnUpdate();      // handle delay
         }
 
         /// <summary>
@@ -534,21 +537,17 @@ namespace AtmosphereAutopilot
             if (chosen_spd_mode != 0)
                 newtype = (SpeedType)(chosen_spd_mode - 1);
 
-            spd_setpoint_str = GUILayout.TextField(spd_setpoint_str, GUIStyles.textBoxStyle);
+            setpoint_field.DisplayLayout(GUIStyles.textBoxStyle);
 
             if (newtype != type)
             {
                 // need to convert old setpoint to new format
-                spd_setpoint = setpoint.convert(newtype);
-                spd_setpoint_str = spd_setpoint.ToString("G4");
-                setpoint = new SpeedSetpoint(newtype, spd_setpoint, vessel);
+                setpoint_field.Value = setpoint.convert(newtype);
+                setpoint = new SpeedSetpoint(newtype, setpoint_field, vessel);
                 type = newtype;
             }
             else
-            {
-                float.TryParse(spd_setpoint_str, out spd_setpoint);
-                setpoint = new SpeedSetpoint(type, spd_setpoint, vessel);
-            }
+                setpoint = new SpeedSetpoint(type, setpoint_field, vessel);
 
             return (chosen_spd_mode != 0);
         }

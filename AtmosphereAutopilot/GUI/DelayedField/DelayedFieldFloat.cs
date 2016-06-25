@@ -1,0 +1,129 @@
+﻿//
+// THIS FILE IS AUTO-GENERATED
+//
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using UnityEngine;
+
+namespace AtmosphereAutopilot
+{
+
+    /// <summary>
+    /// Struct for organizing delayed textfield input. Use DisplayLayout() to integrate into OnGUI code,
+	/// use OnUpdate() to account for time.
+    /// </summary>
+    public struct DelayedFieldFloat
+    {
+        /// <summary>
+        /// Underlying float value to represent
+        /// </summary>
+        float val;
+
+        /// <summary>
+        /// Time in seconds after input string was changed by user input
+        /// </summary>
+        float time;
+
+        /// <summary>
+        /// true when we're counting time
+        /// </summary>
+        bool changed;
+
+        /// <summary>
+        /// String that holds input value
+        /// </summary>
+        public string input_str;
+
+        /// <summary>
+        /// String that holds conversion formatting
+        /// </summary>
+        public string format_str;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="init_value">Initial value</param>
+        /// <param name="format"></param>
+        public DelayedFieldFloat(float init_value, string format)
+        {
+            val = init_value;
+            time = 0.0f;
+            changed = false;
+            input_str = val.ToString(format);
+            format_str = format;
+        }
+
+        public static implicit operator float(DelayedFieldFloat f)
+        {
+            return f.val;
+        }
+
+        public float Value
+        {
+            get { return val; }
+            set
+            {
+                if (value != val)
+                {
+                    changed = false;
+                    time = 0.0f;
+                    input_str = value.ToString(format_str);
+                    val = value;
+                }
+            }
+        }
+
+		public void DisplayLayout(GUIStyle style, params GUILayoutOption[] options)
+        {
+            string new_str = GUILayout.TextField(input_str, style, options);
+            if (!input_str.Equals(new_str))
+            {
+                changed = true;
+                time = 0.0f;
+            }
+            input_str = new_str;
+        }
+
+		public void OnUpdate()
+        {
+            if (changed)
+                time += Time.deltaTime;
+            if (time >= 2.0f)
+            {
+                time = 0.0f;
+                changed = false;
+                float.TryParse(input_str, out val);
+			}
+        }
+
+		public override string ToString()
+        {
+            return val.ToString() + "_" + format_str;
+        }
+
+        public string ToString(string format)
+        {
+            return val.ToString(format) + "_" + format_str;
+        }
+
+        public static DelayedFieldFloat Parse(string str)
+        {
+            int delim_index = str.IndexOf('_');
+            if (delim_index < 0)
+			{
+                return new DelayedFieldFloat(0.0f, "G4");
+			}
+            else
+            {
+                string val_str = str.Substring(0, delim_index);
+                string format_str = str.Substring(delim_index + 1);
+                float new_val = 0.0f;
+                float.TryParse(val_str, out new_val);
+                return new DelayedFieldFloat(new_val, format_str);
+            }
+        }
+    }
+}

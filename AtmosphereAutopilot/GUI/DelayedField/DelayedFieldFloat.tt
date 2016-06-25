@@ -1,0 +1,10 @@
+﻿<#@ template debug="false" compilerOptions="optimize+" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<#
+	string Postfix = "Float";
+	string typename = "float";
+#>
+<#@ include file="DelayedField.ttinclude" #>

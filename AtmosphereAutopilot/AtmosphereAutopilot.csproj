@@ -71,6 +71,11 @@
     <None Include="ToolbarWrapper.cs" />
     <None Include="Controller\PDController.cs" />
     <Compile Include="GimbalRearranger.cs" />
+    <Compile Include="GUI\DelayedField\DelayedFieldFloat.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>DelayedFieldFloat.tt</DependentUpon>
+    </Compile>
     <Compile Include="GUI\NeoGUIController.cs" />
     <Compile Include="ListSelector.cs" />
     <Compile Include="ListView.cs" />
@@ -115,6 +120,11 @@
     <Compile Include="SyncModuleControlSurface.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="GUI\DelayedField\DelayedField.ttinclude" />
+    <Content Include="GUI\DelayedField\DelayedFieldFloat.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>DelayedFieldFloat.cs</LastGenOutput>
+    </Content>
     <Content Include="icon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -131,6 +141,9 @@
       <Name>AtmosphereAutopilot.GUI</Name>
       <Private>True</Private>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
