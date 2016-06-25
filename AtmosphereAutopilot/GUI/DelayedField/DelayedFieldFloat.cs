@@ -1,4 +1,20 @@
-﻿//
+﻿/*
+Atmosphere Autopilot, plugin for Kerbal Space Program.
+Copyright (C) 2015-2016, Baranin Alexander aka Boris-Barboris.
+ 
+Atmosphere Autopilot is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+Atmosphere Autopilot is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>. 
+*/
+
+//
 // THIS FILE IS AUTO-GENERATED
 //
 
@@ -118,8 +134,8 @@ namespace AtmosphereAutopilot
 			}
             else
             {
-                string val_str = str.Substring(0, delim_index);
-                string format_str = str.Substring(delim_index + 1);
+                string val_str = str.Take(delim_index).ToString();
+                string format_str = str.Skip(delim_index + 1).ToString();
                 float new_val = 0.0f;
                 float.TryParse(val_str, out new_val);
                 return new DelayedFieldFloat(new_val, format_str);
