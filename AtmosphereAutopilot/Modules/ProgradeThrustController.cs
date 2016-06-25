@@ -26,8 +26,8 @@ namespace AtmosphereAutopilot
     public enum SpeedType
     {
         MetersPerSecond,
+		Knots,
         Mach,
-        Knots,
         IAS,
         KIAS
     }
@@ -65,6 +65,25 @@ namespace AtmosphereAutopilot
                     return Mathf.Sqrt(mpersec * mpersec * (float)v.atmDensity);
                 case SpeedType.KIAS:
                     return Mathf.Sqrt(mpersec * mpersec * mps2kts * mps2kts * (float)v.atmDensity);
+                default:
+                    return 0.0f;
+            }
+        }
+
+        public static float convert_from_mps(SpeedType t, float mps, Vessel v)
+        {
+            switch (t)
+            {
+                case SpeedType.MetersPerSecond:
+                    return mps;
+                case SpeedType.Mach:
+                    return (float)(mps / v.speedOfSound);
+                case SpeedType.Knots:
+                    return mps * mps2kts;
+                case SpeedType.IAS:
+                    return Mathf.Sqrt(mps * mps * (float)v.atmDensity);
+                case SpeedType.KIAS:
+                    return Mathf.Sqrt(mps * mps * mps2kts * mps2kts * (float)v.atmDensity);
                 default:
                     return 0.0f;
             }
@@ -223,7 +242,7 @@ namespace AtmosphereAutopilot
 
                 prev_thrust = prograde_thrust;
             }
-            
+
             prev_input = cntrl.mainThrottle;
             return cntrl.mainThrottle;
         }
@@ -251,10 +270,13 @@ namespace AtmosphereAutopilot
                 ModuleEngines eng = imodel.engines[i].engine;
                 double e_prograde_thrust = Vector3.Dot(imodel.engines[i].thrust, surfspd_dir);
                 double e_throttle = eng.currentThrottle / eng.thrustPercentage * 100.0;
-                estimated_max_thrusts[i] = 
+                estimated_max_thrusts[i] =
                     e_prograde_thrust != 0.0 ? e_prograde_thrust / e_throttle : eng.maxThrust;
                 estimated_max_thrust += estimated_max_thrusts[i];
             }
+
+            if (estimated_max_thrust <= 0.0)
+                return 0.1f;
 
             bool spool_dir_changed = false;
             double desired_throttle = 0.0;
@@ -325,6 +347,9 @@ namespace AtmosphereAutopilot
                 iter_count++;
             } while (spool_dir_changed && iter_count <= imodel.engines.Count + 2);
 
+            if (double.IsNaN(desired_throttle) || double.IsInfinity(desired_throttle))
+                desired_throttle = 0.5;
+
             return (float)Common.Clamp(desired_throttle, 0.0, 1.0);
         }
 
@@ -361,19 +386,32 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("pid_Kd", true, "G4")]
         public double pid_Kd { get { return pid.KD; } set { pid.KD = value; } }
 
+
+
+
         #region GUI
 
-        static readonly string[] spd_str_arr = new string[]{ "OFF", "ms", "kts", "M", "ias", "kias" };
+        static readonly string[] spd_str_arr = new string[] { "OFF", "ms", "kts", "M", "ias", "kias" };
 
         public int chosen_spd_mode = 0;
+
+        public bool spd_control_enabled
+        {
+            get { return chosen_spd_mode != 0; }
+            set
+            {
+                if (chosen_spd_mode == 0)
+                    chosen_spd_mode = (int)type + 1;
+                else
+                    chosen_spd_mode = 0;
+            }
+        }
 
         [VesselSerializable("spd_type")]
         SpeedType type = SpeedType.MetersPerSecond;
 
-        float spd_setpoint = 100.0f;
-
-        [VesselSerializable("spd_setpoint")]
-        string spd_setpoint_str = "100";
+        [VesselSerializable("setpoint_field")]
+        DelayedFieldFloat setpoint_field = new DelayedFieldFloat(100.0f, "G4");
 
         /// <summary>
         /// Current speed setpoint, wich is maintained by controller
@@ -391,30 +429,48 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("use_throttle_hotkeys")]
         public static bool use_throttle_hotkeys = true;
 
+        [GlobalSerializable("spd_control_toggle_key")]
+        [AutoHotkeyAttr("Speed control toggle")]
+        static KeyCode spd_control_toggle_key = KeyCode.None;
+
         public override void OnUpdate()
         {
-            if (use_throttle_hotkeys && chosen_spd_mode != 0 && 
+            bool changed = false;
+            if (Input.GetKeyDown(spd_control_toggle_key))
+            {
+                spd_control_enabled = !spd_control_enabled;
+                MessageManager.post_status_message(spd_control_enabled ? "Speed control enabled" : "Speed control disabled");
+                changed = true;
+            }
+
+            if (use_throttle_hotkeys && spd_control_enabled &&
                 !FlightDriver.Pause && InputLockManager.IsUnlocked(ControlTypes.THROTTLE))
             {
                 // let's handle hotkey speed changing
+                bool changed_by_hotkey = false;
+                float new_vs = 0.0f;
                 if (GameSettings.THROTTLE_UP.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                 {
                     float ms = setpoint.value;
-                    float new_ms = ms + Time.deltaTime * hotkey_speed_factor * ms;
-                    setpoint.value = new_ms;
-                    need_to_show_change = true;
-                    setpoint_change_counter = 0;
-                    spd_setpoint_str = new_ms.ToString("G4");
+                    new_vs = ms + Time.deltaTime * hotkey_speed_factor * ms;
+                    changed_by_hotkey = true;
                 }
                 else if (GameSettings.THROTTLE_DOWN.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                 {
                     float ms = setpoint.value;
-                    float new_ms = ms - Time.deltaTime * hotkey_speed_factor * ms;
-                    setpoint.value = new_ms;
+                    new_vs = ms - Time.deltaTime * hotkey_speed_factor * ms;
+                    changed_by_hotkey = true;                
+                }
+
+                if (changed_by_hotkey)
+                {
+                    setpoint.value = new_vs;
                     need_to_show_change = true;
                     setpoint_change_counter = 0;
-                    spd_setpoint_str = new_ms.ToString("G4");
+                    setpoint_field.Value = new_vs;
+                    changed = true;
                 }
+
                 if (need_to_show_change)
                     setpoint_change_counter += Time.deltaTime;
                 if (setpoint_change_counter > 1.0f)
@@ -428,6 +484,8 @@ namespace AtmosphereAutopilot
                 need_to_show_change = false;
                 setpoint_change_counter = 0;
             }
+
+            AtmosphereAutopilot.Instance.mainMenuGUISpeedUpdate();
         }
 
         protected override void OnGUICustomAlways()
@@ -456,6 +514,8 @@ namespace AtmosphereAutopilot
                 }
                 GUI.Label(rect, str, GUIStyles.hoverLabel);
             }
+
+            setpoint_field.OnUpdate();      // handle delay
         }
 
         /// <summary>
@@ -464,9 +524,6 @@ namespace AtmosphereAutopilot
         /// <returns>true if speed control is enabled</returns>
         public bool SpeedCtrlGUIBlock()
         {
-            float.TryParse(spd_setpoint_str, out spd_setpoint);
-            setpoint = new SpeedSetpoint(type, spd_setpoint, vessel);
-
             GUILayout.Label("Speed control", GUIStyles.labelStyleCenter);
             GUILayout.BeginHorizontal();
             for (int i = 0; i < 6; i++)
@@ -476,40 +533,21 @@ namespace AtmosphereAutopilot
             }
             GUILayout.EndHorizontal();
 
-            SpeedType newtype = SpeedType.MetersPerSecond;
-            switch (chosen_spd_mode)
-            {
-                case 0:
-                    newtype = type;
-                    break;
-                case 1:
-                    newtype = SpeedType.MetersPerSecond;
-                    break;
-                case 2:
-                    newtype = SpeedType.Knots;
-                    break;
-                case 3:
-                    newtype = SpeedType.Mach;
-                    break;
-                case 4:
-                    newtype = SpeedType.IAS;
-                    break;
-                case 5:
-                    newtype = SpeedType.KIAS;
-                    break;
-            }
+            SpeedType newtype = type;
+            if (chosen_spd_mode != 0)
+                newtype = (SpeedType)(chosen_spd_mode - 1);
+
+            setpoint_field.DisplayLayout(GUIStyles.textBoxStyle);
 
             if (newtype != type)
             {
                 // need to convert old setpoint to new format
-                spd_setpoint = setpoint.convert(newtype);
-                spd_setpoint_str = spd_setpoint.ToString("G4");
+                setpoint_field.Value = setpoint.convert(newtype);
+                setpoint = new SpeedSetpoint(newtype, setpoint_field, vessel);
+                type = newtype;
             }
-            type = newtype;
-
-            spd_setpoint_str = GUILayout.TextField(spd_setpoint_str, GUIStyles.textBoxStyle);
-            float.TryParse(spd_setpoint_str, out spd_setpoint);
-            setpoint = new SpeedSetpoint(newtype, spd_setpoint, vessel);
+            else
+                setpoint = new SpeedSetpoint(type, setpoint_field, vessel);
 
             return (chosen_spd_mode != 0);
         }

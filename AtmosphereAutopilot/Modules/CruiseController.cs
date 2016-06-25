@@ -61,17 +61,11 @@ namespace AtmosphereAutopilot
             imodel.Activate();
             MessageManager.post_status_message("Cruise Flight enabled");
 
-            spd_control = thrust_c.chosen_spd_mode != 0;
             // let's set new circle axis
             if (vessel.srfSpeed > 5.0)
                 circle_axis = Vector3d.Cross(vessel.srf_velocity, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
             else
                 circle_axis = Vector3d.Cross(vessel.ReferenceTransform.up, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
-
-            // initialize strings
-            desired_course_str = desired_course.ToString("G4");
-            desired_altitude_str = desired_altitude.ToString("G5");
-            desired_vertspeed_str = desired_vertspeed.ToString("G4");
         }
 
         protected override void OnDeactivate()
@@ -95,7 +89,7 @@ namespace AtmosphereAutopilot
             if (vessel.LandedOrSplashed)
                 return;
 
-            if (spd_control)
+            if (thrust_c.spd_control_enabled)  
                 thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
 
             desired_velocity = Vector3d.zero;
@@ -156,6 +150,11 @@ namespace AtmosphereAutopilot
                         Vector3d world_target_pos = vessel.mainBody.GetWorldSurfacePosition(current_waypt.latitude,
                             current_waypt.longtitude, vessel.altitude);
                         dist_to_dest = Vector3d.Distance(world_target_pos, vessel.ReferenceTransform.position);
+                        if (dist_to_dest > 10000.0)
+                        {
+                            double radius = vessel.mainBody.Radius;
+                            dist_to_dest = Math.Acos(1 - (dist_to_dest * dist_to_dest) / (2 * radius * radius)) * radius;
+                        }
                         if (dist_to_dest < 200.0)
                         {
                             // we're too close to target, let's switch to level flight
@@ -214,7 +213,7 @@ namespace AtmosphereAutopilot
         public HeightMode height_mode = HeightMode.Altitude;
 
         public Waypoint current_waypt = new Waypoint();
-        bool waypoint_entered = false;
+        internal bool waypoint_entered = false;
 
         // axis to rotate around in level flight mode
         protected Vector3d circle_axis = Vector3d.zero;
@@ -225,25 +224,15 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Thrust controller GUI", true)]
         protected bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
 
-        [VesselSerializable("desired_course")]
-        //[AutoGuiAttr("desired_course", true)]
-        public float desired_course = 90.0f;
-        string desired_course_str = "90";
+        [VesselSerializable("desired_course_field")]
+        public DelayedFieldFloat desired_course = new DelayedFieldFloat(90.0f, "G4");
 
         [VesselSerializable("vertical_control")]
-        //[AutoGuiAttr("Vertical speed control", true)]
         public bool vertical_control = false;
 
-        [VesselSerializable("desired_altitude")]
-        //[AutoGuiAttr("desired_altitude", true)]
-        public float desired_altitude = 1000.0f;
-        string desired_altitude_str = "1000";
+        public DelayedFieldFloat desired_altitude = new DelayedFieldFloat(1000.0f, "G5");
 
-        [VesselSerializable("desired_vertspeed")]
-        public float desired_vertspeed = 0.0f;
-        string desired_vertspeed_str = "0.0";
-
-        public bool spd_control = false;
+        public DelayedFieldFloat desired_vertspeed = new DelayedFieldFloat(0.0f, "G4");
 
         [GlobalSerializable("preudo_flc")]
         [VesselSerializable("preudo_flc")]
@@ -252,7 +241,7 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("flc_margin")]
         [AutoGuiAttr("flc_margin", true, "G4")]
-        public double flc_margin = 15.0;
+        public double flc_margin = 20.0;
 
         [VesselSerializable("strength_mult")]
         [AutoGuiAttr("strength_mult", true, "G5")]
@@ -322,7 +311,7 @@ namespace AtmosphereAutopilot
 
             // speed control portion for ascend
             double effective_max_climb_angle = max_climb_angle;
-            if (spd_control && (height_error >= 0.0))
+            if (thrust_c.spd_control_enabled && (height_error >= 0.0))
             {
                 if (pseudo_flc)
                 {
@@ -357,7 +346,7 @@ namespace AtmosphereAutopilot
 
 
 
-        bool LevelFlightMode
+        internal bool LevelFlightMode
         {
             get { return current_mode == CruiseMode.LevelFlight; }
             set
@@ -392,7 +381,7 @@ namespace AtmosphereAutopilot
             }
         }
 
-        bool WaypointMode
+        internal bool WaypointMode
         {
             get { return current_mode == CruiseMode.Waypoint; }
             set
@@ -441,7 +430,7 @@ namespace AtmosphereAutopilot
             picking_waypoint = true;            
         }
 
-        bool picking_waypoint = false;
+        internal bool picking_waypoint = false;
 
         static bool advanced_options = false;
 
@@ -465,7 +454,7 @@ namespace AtmosphereAutopilot
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(current_waypt.latitude.ToString("G5"), GUIStyles.labelStyleCenter);
                 GUILayout.Label(current_waypt.longtitude.ToString("G5"), GUIStyles.labelStyleCenter);
-                GUILayout.Label((dist_to_dest / 1000.0).ToString("G3") + " km", GUIStyles.labelStyleCenter);
+                GUILayout.Label((dist_to_dest / 1000.0).ToString("#0.0") + " km", GUIStyles.labelStyleCenter);
                 GUILayout.EndHorizontal();
             }
 
@@ -473,12 +462,12 @@ namespace AtmosphereAutopilot
             GUILayout.Space(7.0f);
             GUILayout.BeginHorizontal();
             GUILayout.Label("desired course", GUIStyles.labelStyleLeft);
-            float.TryParse(desired_course_str = GUILayout.TextField(desired_course_str, GUIStyles.textBoxStyle), out desired_course);
+            desired_course.DisplayLayout(GUIStyles.textBoxStyle);
             GUILayout.EndHorizontal();
 
             // speed
             GUILayout.Space(3.0f);
-            spd_control = thrust_c.SpeedCtrlGUIBlock();
+            thrust_c.SpeedCtrlGUIBlock();
 
             // vertical control
             GUILayout.Space(5.0f);
@@ -488,9 +477,8 @@ namespace AtmosphereAutopilot
             VerticalSpeedMode = GUILayout.Toggle(VerticalSpeedMode, "Vertical speed", GUIStyles.toggleButtonStyle);
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            float.TryParse(desired_altitude_str = GUILayout.TextField(desired_altitude_str, GUIStyles.textBoxStyle, GUILayout.Width(90.0f)), 
-                out desired_altitude);
-            float.TryParse(desired_vertspeed_str = GUILayout.TextField(desired_vertspeed_str, GUIStyles.textBoxStyle), out desired_vertspeed);
+            desired_altitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(90.0f));
+            desired_vertspeed.DisplayLayout(GUIStyles.textBoxStyle);
             GUILayout.EndHorizontal();
 
             GUILayout.Space(5.0f);
@@ -517,6 +505,7 @@ namespace AtmosphereAutopilot
                     // we leaved map without picking
                     MessageManager.post_quick_message("Cancelled");
                     picking_waypoint = false;
+                    AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
                     return;
                 }
                 // Thanks MechJeb!
@@ -534,6 +523,9 @@ namespace AtmosphereAutopilot
                         current_waypt.latitude = vessel.mainBody.GetLatitude(surfacePoint);
                         picking_waypoint = false;
                         waypoint_entered = true;
+
+                        dist_to_dest = Vector3d.Distance(surfacePoint, vessel.ReferenceTransform.position);
+                        AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
                         MessageManager.post_quick_message("Picked");
                     }
                     else
@@ -547,86 +539,85 @@ namespace AtmosphereAutopilot
                 if (Input.GetKeyDown(switch_key_mode))
                 {
                     use_keys = !use_keys;
-                    if (use_keys)
-                        MessageManager.post_status_message("CF key input mode enabled");
-                    else
-                        MessageManager.post_status_message("CF key input mode disabled");
+                    MessageManager.post_status_message(use_keys ? "CF key input mode enabled" : "CF key input mode disabled");
+                }
+
+                if (Input.GetKeyDown(vertical_control_key))
+                {
+                    vertical_control = !vertical_control;
+                    MessageManager.post_status_message(use_keys ? "Vertical motion control enabled" : "Vertical motion control disabled");
+                }
+
+                if (Input.GetKeyDown(toggle_vertical_setpoint_type_key))
+                {
+                    AltitudeMode = !AltitudeMode;
+                    MessageManager.post_status_message(AltitudeMode ? "Altitude control" : "Vertical speed control");
                 }
 
                 // input shenanigans
                 if (use_keys && !FlightDriver.Pause && InputLockManager.IsUnlocked(ControlTypes.PITCH)
                     && InputLockManager.IsUnlocked(ControlTypes.YAW))
                 {
+                    bool pitch_key_pressed = false;
+                    float pitch_change_sign = 0.0f;
                     // Pitch
                     if (GameSettings.PITCH_UP.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
-                    {
-                        if (height_mode == HeightMode.Altitude)
-                        {
-                            float setpoint = desired_altitude;
-                            float new_setpoint = setpoint + hotkey_altitude_speed * Time.deltaTime * setpoint;
-                            desired_altitude = new_setpoint;
-                            desired_altitude_str = desired_altitude.ToString("G5");
-                        }
-                        else
-                        {
-                            float setpoint = desired_vertspeed;
-                            float magnetic_mult = Mathf.Abs(desired_vertspeed) < 10.0f ? 0.3f : 1.0f;
-                            float new_setpoint = setpoint + hotkey_vertspeed_speed * Time.deltaTime * magnetic_mult;
-                            desired_vertspeed = new_setpoint;
-                            desired_vertspeed_str = desired_vertspeed.ToString("G4");
-                        }
-                        need_to_show_altitude = true;
-                        altitude_change_counter = 0.0f;
+                    {                        
+                        pitch_change_sign = 1.0f;
+                        pitch_key_pressed = true;
                     }
                     else if (GameSettings.PITCH_DOWN.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                     {
+                        pitch_change_sign = -1.0f;
+                        pitch_key_pressed = true;
+                    }
+
+                    if (pitch_key_pressed)
+                    {
                         if (height_mode == HeightMode.Altitude)
                         {
                             float setpoint = desired_altitude;
-                            float new_setpoint = setpoint - hotkey_altitude_speed * Time.deltaTime * setpoint;
-                            desired_altitude = new_setpoint;
-                            desired_altitude_str = desired_altitude.ToString("G5");
+                            float new_setpoint = setpoint + pitch_change_sign * hotkey_altitude_sens * Time.deltaTime * setpoint;
+                            desired_altitude.Value = new_setpoint;
                         }
                         else
                         {
                             float setpoint = desired_vertspeed;
                             float magnetic_mult = Mathf.Abs(desired_vertspeed) < 10.0f ? 0.3f : 1.0f;
-                            float new_setpoint = setpoint - hotkey_vertspeed_speed * Time.deltaTime * magnetic_mult;
-                            desired_vertspeed = new_setpoint;
-                            desired_vertspeed_str = desired_vertspeed.ToString("G4");
+                            float new_setpoint = setpoint + pitch_change_sign * hotkey_vertspeed_sens * Time.deltaTime * magnetic_mult;
+                            desired_vertspeed.Value = new_setpoint;
                         }
                         need_to_show_altitude = true;
                         altitude_change_counter = 0.0f;
+                        AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
                     }
 
                     // Yaw (Course)
+                    bool yaw_key_pressed = false;
+                    float yaw_change_sign = 0.0f;
                     if (GameSettings.YAW_RIGHT.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                     {
-                        float setpoint = desired_course;
-                        float new_setpoint = setpoint + hotkey_course_speed * Time.deltaTime;
-                        if (new_setpoint > 360.0f)
-                            new_setpoint -= 360.0f;
-                        if (new_setpoint < 0.0f)
-                            new_setpoint = 360.0f + new_setpoint;
-                        desired_course = new_setpoint;
-                        desired_course_str = desired_course.ToString("G4");
-                        need_to_show_course = true;
-                        course_change_counter = 0.0f;
+                        yaw_key_pressed = true;
+                        yaw_change_sign = 1.0f;
                     }
                     else if (GameSettings.YAW_LEFT.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
                     {
+                        yaw_key_pressed = true;
+                        yaw_change_sign = -1.0f;
+                    }
+
+                    if (yaw_key_pressed)
+                    {
                         float setpoint = desired_course;
-                        float new_setpoint = setpoint - hotkey_course_speed * Time.deltaTime;
+                        float new_setpoint = setpoint + yaw_change_sign * hotkey_course_sens * Time.deltaTime;
                         if (new_setpoint > 360.0f)
                             new_setpoint -= 360.0f;
                         if (new_setpoint < 0.0f)
                             new_setpoint = 360.0f + new_setpoint;
-                        desired_course = new_setpoint;
-                        desired_course_str = desired_course.ToString("G4");
+                        desired_course.Value = new_setpoint;
                         need_to_show_course = true;
                         course_change_counter = 0.0f;
                     }
-
 
                     if (need_to_show_course)
                         course_change_counter += Time.deltaTime;
@@ -641,10 +632,7 @@ namespace AtmosphereAutopilot
                         altitude_change_counter += Time.deltaTime;
                         if (height_mode == HeightMode.VerticalSpeed && altitude_change_counter > 0.2f)
                             if (Mathf.Abs(desired_vertspeed) < hotkey_vertspeed_snap)
-                            {
-                                desired_vertspeed = 0.0f;
-                                desired_vertspeed_str = "0.0";
-                            }
+                                desired_vertspeed.Value = 0.0f;
                     }
                     if (altitude_change_counter > 1.0f)
                     {
@@ -671,6 +659,14 @@ namespace AtmosphereAutopilot
         [AutoHotkeyAttr("CF keys input mode")]
         static KeyCode switch_key_mode = KeyCode.RightAlt;
 
+        [GlobalSerializable("vertical_control_key")]
+        [AutoHotkeyAttr("CF vertical control")]
+        static KeyCode vertical_control_key = KeyCode.None;
+
+        [GlobalSerializable("toggle_vertical_setpoint_type_key")]
+        [AutoHotkeyAttr("CF altitude\\vertical speed")]
+        static KeyCode toggle_vertical_setpoint_type_key = KeyCode.None;
+
         bool need_to_show_course = false;
         float course_change_counter = 0.0f;
 
@@ -678,16 +674,16 @@ namespace AtmosphereAutopilot
         float altitude_change_counter = 0.0f;
 
         [AutoGuiAttr("hotkey_course_speed", true, "G4")]
-        [GlobalSerializable("hotkey_course_speed")]
-        public static float hotkey_course_speed = 60.0f;
+        [GlobalSerializable("hotkey_course_sens")]
+        public static float hotkey_course_sens = 60.0f;
 
         [AutoGuiAttr("hotkey_altitude_speed", true, "G4")]
-        [GlobalSerializable("hotkey_altitude_speed")]
-        public static float hotkey_altitude_speed = 0.8f;
+        [GlobalSerializable("hotkey_altitude_sens")]
+        public static float hotkey_altitude_sens = 0.8f;
 
         [AutoGuiAttr("hotkey_vertspeed_speed", true, "G4")]
-        [GlobalSerializable("hotkey_vertspeed_speed")]
-        public static float hotkey_vertspeed_speed = 30.0f;
+        [GlobalSerializable("hotkey_vertspeed_sens")]
+        public static float hotkey_vertspeed_sens = 30.0f;
 
         [AutoGuiAttr("hotkey_vertspeed_snap", true, "G4")]
         [GlobalSerializable("hotkey_vertspeed_snap")]
@@ -699,7 +695,7 @@ namespace AtmosphereAutopilot
             if (need_to_show_course)
             {
                 Rect rect = new Rect(Screen.width / 2.0f - 80.0f, 140.0f, 160.0f, 20.0f);
-                string str = "course = " + desired_course.ToString("G4");
+                string str = "course = " + desired_course.Value.ToString("G4");
                 GUI.Label(rect, str, GUIStyles.hoverLabel);
             }
             if (need_to_show_altitude)
@@ -707,11 +703,15 @@ namespace AtmosphereAutopilot
                 Rect rect = new Rect(Screen.width / 2.0f - 80.0f, 160.0f, 160.0f, 20.0f);
                 string str = null;
                 if (height_mode == HeightMode.Altitude)
-                    str = "Altitude = " + desired_altitude.ToString("G5");
+                    str = "Altitude = " + desired_altitude.Value.ToString("G5");
                 else
-                    str = "Vert speed = " + desired_vertspeed.ToString("G4");
+                    str = "Vert speed = " + desired_vertspeed.Value.ToString("G4");
                 GUI.Label(rect, str, GUIStyles.hoverLabel);
             }
+
+            desired_course.OnUpdate();
+            desired_altitude.OnUpdate();
+            desired_vertspeed.OnUpdate();
         }
     }
 }

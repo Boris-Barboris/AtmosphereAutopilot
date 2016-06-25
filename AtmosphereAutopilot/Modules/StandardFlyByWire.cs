@@ -56,7 +56,6 @@ namespace AtmosphereAutopilot
             yc.Activate();
             yc.user_controlled = true;
             tc.Activate();
-            spd_control = tc.chosen_spd_mode != 0;
             MessageManager.post_status_message("Standard Fly-By-Wire enabled");
         }
 
@@ -139,16 +138,26 @@ namespace AtmosphereAutopilot
             }
         }
 
-        bool spd_control = false;
-
         public override void OnUpdate()
         {
+            bool changed = false;
             if (Input.GetKeyDown(moderation_keycode))
+            {
                 moderation_switch = !moderation_switch;
+                changed = true;
+            }
             if (Input.GetKeyDown(rocket_mode_keycode))
+            {
                 RocketMode = !rocket_mode;
+                changed = true;
+            }
             if (Input.GetKeyDown(coord_turn_keycode))
+            {
                 Coord_turn = !coord_turn;
+                changed = true;
+            }
+            if (changed)
+                AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
         }
 
         bool landed = false;
@@ -192,7 +201,7 @@ namespace AtmosphereAutopilot
                     time_after_takeoff += TimeWarp.fixedDeltaTime;
             }
 
-            if (spd_control)
+            if (tc.spd_control_enabled)
                 tc.ApplyControl(cntrl, tc.setpoint.mps());
 
 			pc.user_controlled = true;
@@ -243,7 +252,7 @@ namespace AtmosphereAutopilot
             }
             GUILayout.Space(5.0f);
             AutoGUI.AutoDrawObject(this);
-            spd_control = tc.SpeedCtrlGUIBlock();
+            tc.SpeedCtrlGUIBlock();
             GUILayout.EndVertical();
             GUI.DragWindow();
         }

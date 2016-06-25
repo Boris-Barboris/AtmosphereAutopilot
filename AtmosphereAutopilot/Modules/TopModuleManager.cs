@@ -205,9 +205,14 @@ namespace AtmosphereAutopilot
         {
             if (Input.GetKeyDown(master_switch_key))
                 if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                {
                     ToggleGUI();
+                }
                 else
+                {
                     Active = !Active;
+                    AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
+                }
         }
 
         #region SettingsWindow

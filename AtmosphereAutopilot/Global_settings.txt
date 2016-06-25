@@ -1,3 +1,7 @@
+AtmosphereAutopilot
+{
+	use_neo_gui = false
+}
 Cruise_Flight
 {
 	window_x = 52
@@ -110,9 +114,9 @@ Cruise_Flight_controller
 	preudo_flc = True
 	use_keys = True
 	switch_key_mode = RightAlt
-	hotkey_course_speed = 60
-	hotkey_altitude_speed = 0.7
-	hotkey_vertspeed_speed = 30
+	hotkey_course_sens = 60
+	hotkey_altitude_sens = 0.7
+	hotkey_vertspeed_sens = 30
 	hotkey_vertspeed_snap = 0.5
 	window_x = 51
 	window_y = 227

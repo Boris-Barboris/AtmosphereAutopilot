@@ -31,7 +31,7 @@
     </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>D:\Steam\SteamApps\common\Kerbal Space Program\GameData\AtmosphereAutopilot\AtmosphereAutopilot.XML</DocumentationFile>
+    <DocumentationFile>..\..\..\..\..\Steam\SteamApps\common\Kerbal Space Program\GameData\AtmosphereAutopilot\AtmosphereAutopilot.XML</DocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
@@ -54,6 +54,10 @@
       <HintPath>Dependencies\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>Dependencies\UnityEngine.UI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AutoHotkey.cs" />
@@ -67,6 +71,12 @@
     <None Include="ToolbarWrapper.cs" />
     <None Include="Controller\PDController.cs" />
     <Compile Include="GimbalRearranger.cs" />
+    <Compile Include="GUI\DelayedField\DelayedFieldFloat.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>DelayedFieldFloat.tt</DependentUpon>
+    </Compile>
+    <Compile Include="GUI\NeoGUIController.cs" />
     <Compile Include="ListSelector.cs" />
     <Compile Include="ListView.cs" />
     <None Include="Math\GradientDescend.cs" />
@@ -110,6 +120,14 @@
     <Compile Include="SyncModuleControlSurface.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="GUI\DelayedField\DelayedField.ttinclude" />
+    <Content Include="GUI\DelayedField\DelayedFieldFloat.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>DelayedFieldFloat.cs</LastGenOutput>
+    </Content>
+    <Content Include="icon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="csurf_sync.cfg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -118,9 +136,14 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <None Include="icon.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <ProjectReference Include="AtmosphereAutopilot.GUI.csproj">
+      <Project>{3dbf4445-889c-4342-bdd6-35beed699a14}</Project>
+      <Name>AtmosphereAutopilot.GUI</Name>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
