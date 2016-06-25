@@ -534,6 +534,8 @@ namespace AtmosphereAutopilot
             if (chosen_spd_mode != 0)
                 newtype = (SpeedType)(chosen_spd_mode - 1);
 
+            spd_setpoint_str = GUILayout.TextField(spd_setpoint_str, GUIStyles.textBoxStyle);
+
             if (newtype != type)
             {
                 // need to convert old setpoint to new format
@@ -544,7 +546,6 @@ namespace AtmosphereAutopilot
             }
             else
             {
-                spd_setpoint_str = GUILayout.TextField(spd_setpoint_str, GUIStyles.textBoxStyle);
                 float.TryParse(spd_setpoint_str, out spd_setpoint);
                 setpoint = new SpeedSetpoint(type, spd_setpoint, vessel);
             }
