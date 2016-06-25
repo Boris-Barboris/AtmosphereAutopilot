@@ -130,12 +130,12 @@ namespace AtmosphereAutopilot
             int delim_index = str.IndexOf('_');
             if (delim_index < 0)
 			{
-                return new DelayedFieldFloat(0.0f, "G4");
+				return new DelayedFieldFloat(0.0f, "G4");
 			}
             else
             {
-                string val_str = str.Take(delim_index).ToString();
-                string format_str = str.Skip(delim_index + 1).ToString();
+                string val_str = str.Substring(0, delim_index);
+                string format_str = str.Substring(delim_index + 1);
                 float new_val = 0.0f;
                 float.TryParse(val_str, out new_val);
                 return new DelayedFieldFloat(new_val, format_str);
