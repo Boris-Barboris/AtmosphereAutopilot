@@ -29,7 +29,7 @@ namespace AtmosphereAutopilot
 
     /// <summary>
     /// Struct for organizing delayed textfield input. Use DisplayLayout() to integrate into OnGUI code,
-	/// use OnUpdate() to account for time.
+    /// use OnUpdate() to account for time.
     /// </summary>
     public struct DelayedField<#= Postfix #>
     {
@@ -92,7 +92,7 @@ namespace AtmosphereAutopilot
             }
         }
 
-		public void DisplayLayout(GUIStyle style, params GUILayoutOption[] options)
+        public void DisplayLayout(GUIStyle style, params GUILayoutOption[] options)
         {
             string new_str = GUILayout.TextField(input_str, style, options);
             if (!input_str.Equals(new_str))
@@ -103,7 +103,7 @@ namespace AtmosphereAutopilot
             input_str = new_str;
         }
 
-		public void OnUpdate()
+        public void OnUpdate()
         {
             if (changed)
                 time += Time.deltaTime;
@@ -112,10 +112,10 @@ namespace AtmosphereAutopilot
                 time = 0.0f;
                 changed = false;
                 <#= typename #>.TryParse(input_str, out val);
-			}
+            }
         }
 
-		public override string ToString()
+        public override string ToString()
         {
             return val.ToString() + "_" + format_str;
         }
@@ -129,9 +129,9 @@ namespace AtmosphereAutopilot
         {
             int delim_index = str.IndexOf('_');
             if (delim_index < 0)
-			{
-				return new DelayedFieldFloat(0.0f, "G4");
-			}
+            {
+                return new DelayedFieldFloat(0.0f, "G4");
+            }
             else
             {
                 string val_str = str.Substring(0, delim_index);

@@ -4,7 +4,7 @@
 <#@ import namespace="System.Collections.Generic" #>
 <#@ output extension=".cs" #>
 <#
-	string Postfix = "Float";
-	string typename = "float";
+    string Postfix = "Float";
+    string typename = "float";
 #>
 <#@ include file="DelayedField.ttinclude" #>
