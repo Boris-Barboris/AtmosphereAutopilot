@@ -97,9 +97,11 @@ namespace AtmosphereAutopilot
         }
 
         [AutoGuiAttr("balance_thrust_w", true, "G5")]
+        [GlobalSerializable("balance_thrust_w")]
         protected double balance_thrust_w = 1e-3;
 
         [AutoGuiAttr("balance_descend_k", true, "G5")]
+        [GlobalSerializable("balance_descend_k")]
         protected double balance_descend_k = 1e-2;
 
         [AutoGuiAttr("balance_descend_k_mult", false, "G5")]
@@ -152,7 +154,7 @@ namespace AtmosphereAutopilot
                 return;
 
             int descend_iter = 0;
-            
+
             do
             {
 
@@ -193,11 +195,11 @@ namespace AtmosphereAutopilot
 
                 //if (dot > 0.0)
                 //{
-                    // we're all right, we can add thrust gradient to torque one
-                    for (int i = 0; i < engines.Count; i++)
-                    {
-                        limiters_torque_grads[i] += limiters_thrust_grads[i];
-                    }
+                // we're all right, we can add thrust gradient to torque one
+                for (int i = 0; i < engines.Count; i++)
+                {
+                    limiters_torque_grads[i] += limiters_thrust_grads[i];
+                }
                 //}
 
                 // descend while constrained
@@ -281,6 +283,19 @@ namespace AtmosphereAutopilot
                 double new_limit = limiters[i] + balancer_steering_k * steering_k;
                 new_limit = Common.Clamp(new_limit, BALANCE_MIN_LIMITER, 1.0);
                 engines[i].engine.thrustPercentage = (float)(new_limit * 100.0);
+            }
+        }
+
+        [GlobalSerializable("balancing_toggle_key")]
+        [AutoHotkeyAttr("Thrust balancing")]
+        static KeyCode balancing_toggle_key = KeyCode.None;
+
+        public override void OnUpdate()
+        {
+            if (Input.GetKeyDown(balancing_toggle_key))
+            {
+                balance_engines = !balance_engines;
+                MessageManager.post_status_message(balance_engines ? "Thrust balancing enabled" : "Thrust balancing disabled");
             }
         }
 
