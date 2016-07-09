@@ -167,6 +167,7 @@ namespace AtmosphereAutopilot
             if (!vessel.LandedOrSplashed)
                 sequential_dt = true;
             postupdate_dynamics();
+            postupdate_engine_balancing(state);
         }
 
         internal bool sequential_dt = false;
@@ -178,6 +179,9 @@ namespace AtmosphereAutopilot
             update_aoa();
             update_engine_moments();
             get_gimbal_authority();
+            if (moments_cycle_counter == 1)
+                init_engine_balancing();
+            update_engine_balancing();
             update_dynamics();
 
             if (sequential_dt)

@@ -251,7 +251,6 @@ namespace AtmosphereAutopilot
         float prev_input;
 
         int[] throttle_directions;
-        double[] estimated_max_thrusts;
 
         public double estimated_max_thrust = 0.0;
 
@@ -261,7 +260,6 @@ namespace AtmosphereAutopilot
                 return 0.0f;
 
             Common.Realloc(ref throttle_directions, imodel.engines.Count);
-            Common.Realloc(ref estimated_max_thrusts, imodel.engines.Count);
 
             double predicted_thrust = 0.0;
             estimated_max_thrust = 0.0;
@@ -269,10 +267,7 @@ namespace AtmosphereAutopilot
             {
                 ModuleEngines eng = imodel.engines[i].engine;
                 double e_prograde_thrust = Vector3.Dot(imodel.engines[i].thrust, surfspd_dir);
-                double e_throttle = eng.currentThrottle / eng.thrustPercentage * 100.0;
-                estimated_max_thrusts[i] =
-                    e_prograde_thrust != 0.0 ? e_prograde_thrust / e_throttle : eng.maxThrust;
-                estimated_max_thrust += estimated_max_thrusts[i];
+                estimated_max_thrust += imodel.engines[i].estimated_max_thrust;
             }
 
             if (estimated_max_thrust <= 0.0)
@@ -287,6 +282,7 @@ namespace AtmosphereAutopilot
                 for (int i = 0; i < imodel.engines.Count; i++)
                 {
                     ModuleEngines eng = imodel.engines[i].engine;
+                    FlightModel.EngineMoment em = imodel.engines[i];
                     double e_throttle = eng.currentThrottle / eng.thrustPercentage * 100.0;
                     if (eng.useEngineResponseTime)
                     {
@@ -294,17 +290,17 @@ namespace AtmosphereAutopilot
                         if (Mathf.Abs(eng.currentThrottle - prev_throttle * eng.thrustPercentage * 0.01f) <= 1e-4f)
                         {
                             throttle_directions[i] = 0;
-                            predicted_thrust += estimated_max_thrusts[i] * prev_throttle;
+                            predicted_thrust += em.estimated_max_thrust * prev_throttle;
                         }
                         else
                         {
                             float spd = throttle_directions[i] > 0 ? eng.engineAccelerationSpeed : eng.engineDecelerationSpeed;
                             double predict_throttle = Common.lerp(e_throttle, prev_throttle, TimeWarp.fixedDeltaTime * spd);
-                            predicted_thrust += estimated_max_thrusts[i] * predict_throttle;
+                            predicted_thrust += em.estimated_max_thrust * predict_throttle;
                         }
                     }
                     else
-                        predicted_thrust += estimated_max_thrusts[i] * prev_throttle;
+                        predicted_thrust += em.estimated_max_thrust * prev_throttle;
                 }
 
                 double t_error = required_thrust - predicted_thrust;
@@ -312,13 +308,14 @@ namespace AtmosphereAutopilot
                 for (int i = 0; i < imodel.engines.Count; i++)
                 {
                     ModuleEngines eng = imodel.engines[i].engine;
+                    FlightModel.EngineMoment em = imodel.engines[i];
                     if (eng.useEngineResponseTime && throttle_directions[i] != 0)
                     {
                         float spd = throttle_directions[i] > 0 ? eng.engineAccelerationSpeed : eng.engineDecelerationSpeed;
-                        thrust_authority += TimeWarp.fixedDeltaTime * spd * estimated_max_thrusts[i];
+                        thrust_authority += TimeWarp.fixedDeltaTime * spd * em.estimated_max_thrust;
                     }
                     else
-                        thrust_authority += estimated_max_thrusts[i];
+                        thrust_authority += em.estimated_max_thrust;
                 }
                 if (thrust_authority == 0.0)
                     return 0.0f;

@@ -92,6 +92,7 @@
     <None Include="Math\SimpleAnn.cs" />
     <Compile Include="Math\VectorArray.cs" />
     <None Include="Math\OnlineAnnTrainer.cs" />
+    <Compile Include="Models\FlightModel\EngineBalancing.cs" />
     <Compile Include="Models\FlightModel\LinearModel.cs" />
     <Compile Include="Models\FlightModel\ModelRegression.cs" />
     <Compile Include="Models\FlightModel\GeneralDynamics.cs" />

@@ -40,6 +40,8 @@ namespace AtmosphereAutopilot
             public ModuleEngines engine;
             public IGimbal gimbal;
             public Vector3 thrust = Vector3.zero;
+            public Vector3 potential_torque = Vector3.zero;
+            public double estimated_max_thrust = 0.0;
         }
 
         public List<EngineMoment> engines = new List<EngineMoment>();
@@ -148,7 +150,8 @@ namespace AtmosphereAutopilot
             abs_thrust = 0.0f;
             for (int i = 0; i < engines.Count; i++)
             {
-                if (engines[i].engine.part.State == PartStates.DEAD || !engines[i].engine.part.isAttached)
+                ModuleEngines eng = engines[i].engine;
+                if (eng.part.State == PartStates.DEAD || !eng.part.isAttached)
                 {
                     moments_cycle_counter = 0;      // need to reform parts lists
                     continue;
@@ -156,22 +159,33 @@ namespace AtmosphereAutopilot
                 Vector3 tpos = Vector3.zero;
                 Vector3 tdir = Vector3.zero;
                 Vector3 e_thrust = Vector3.zero;
-                int tcount = engines[i].engine.thrustTransforms.Count;
+                Vector3 e_potent = Vector3.zero;
+                double e_max_thrust = 0.0;
+                int tcount = eng.thrustTransforms.Count;
                 for (int j = 0; j < tcount; j++)
                 {
-                    Transform trans = engines[i].engine.thrustTransforms[j];
+                    Transform trans = eng.thrustTransforms[j];
                     tpos = trans.position - CoM;
                     tdir = -trans.forward;
                     tpos = world_to_cntrl_part * tpos;
                     tdir = world_to_cntrl_part * tdir;
                     Vector3 torque_moment = -Vector3.Cross(tpos, tdir);       // minus because Unity's left-handed
-                    float mult = engines[i].engine.thrustTransformMultipliers[j];
-                    engines_torque_principal += torque_moment * engines[i].engine.finalThrust * mult;
-                    engines_thrust_principal += engines[i].engine.finalThrust * tdir * mult;
-                    e_thrust += engines[i].engine.finalThrust * mult * (-trans.forward);
+                    float mult = eng.thrustTransformMultipliers[j];
+                    if (eng.currentThrottle > 0.0f)
+                    {
+                        e_max_thrust += eng.finalThrust * mult / eng.currentThrottle;
+                        e_potent += torque_moment * (float)e_max_thrust;
+                    }
+                    else
+                        e_max_thrust += eng.maxThrust;
+                    engines_torque_principal += torque_moment * eng.finalThrust * mult;
+                    engines_thrust_principal += eng.finalThrust * tdir * mult;
+                    e_thrust += eng.finalThrust * mult * (-trans.forward);
                 }
-                abs_thrust += engines[i].engine.finalThrust;
+                abs_thrust += eng.finalThrust;
                 engines[i].thrust = e_thrust;
+                engines[i].potential_torque = e_potent;
+                engines[i].estimated_max_thrust = e_max_thrust * eng.thrustPercentage * 0.01f;
             }
         }
 
