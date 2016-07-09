@@ -81,26 +81,33 @@ namespace AtmosphereAutopilot
         /// <returns>true if node_name node was found and used to deserialize the object</returns>
         public static bool Deserialize(object obj, string node_name, string filename, Type attribute_type, Action<ConfigNode, Type> OnDeserialize = null)
         {
-            if (System.IO.File.Exists(filename))
+            try
             {
-                ConfigNode node = null;
-                ConfigNode fileNode = ConfigNode.Load(filename);
-                if (fileNode != null)
+                if (System.IO.File.Exists(filename))
                 {
-                    var nodes = fileNode.GetNodes(node_name);
-                    try
+                    ConfigNode node = null;
+                    ConfigNode fileNode = ConfigNode.Load(filename);
+                    if (fileNode != null)
                     {
-                        node = nodes != null ? nodes.First() : null;
-                    }
-                    catch { node = null; }
-                    if (node != null)
-                    {
-                        DeserializeFromNode(node, obj, attribute_type);
-                        if (OnDeserialize != null)
-                            OnDeserialize(node, attribute_type);
-                        return true;
+                        var nodes = fileNode.GetNodes(node_name);
+                        try
+                        {
+                            node = nodes != null ? nodes.First() : null;
+                        }
+                        catch { node = null; }
+                        if (node != null)
+                        {
+                            DeserializeFromNode(node, obj, attribute_type);
+                            if (OnDeserialize != null)
+                                OnDeserialize(node, attribute_type);
+                            return true;
+                        }
                     }
                 }
+            }
+            catch (Exception err)
+            {
+                Debug.Log("[AtmosphereAutopilot]: Deserialization exception - " + err.Message);
             }
             return false;
         }
@@ -118,22 +125,29 @@ namespace AtmosphereAutopilot
         public static void Serialize(object obj, string node_name, string filename, Type attribute_type,
             Action<ConfigNode, Type> OnSerialize = null)
         {
-            string dir = System.IO.Path.GetDirectoryName(filename);
-            if (!System.IO.Directory.Exists(dir))
-                System.IO.Directory.CreateDirectory(dir);
-            ConfigNode fileNode = ConfigNode.Load(filename);
-            if (fileNode == null)
-                fileNode = new ConfigNode();
-            else
-                fileNode.RemoveNode(node_name);
-            ConfigNode node = new ConfigNode(node_name);
-            SerializeToNode(node, obj, attribute_type);
-            if (OnSerialize != null)
-                OnSerialize(node, attribute_type);
-            if (node.HasData)
+            try
             {
-                fileNode.AddNode(node);
-                fileNode.Save(filename);
+                string dir = System.IO.Path.GetDirectoryName(filename);
+                if (!System.IO.Directory.Exists(dir))
+                    System.IO.Directory.CreateDirectory(dir);
+                ConfigNode fileNode = ConfigNode.Load(filename);
+                if (fileNode == null)
+                    fileNode = new ConfigNode();
+                else
+                    fileNode.RemoveNode(node_name);
+                ConfigNode node = new ConfigNode(node_name);
+                SerializeToNode(node, obj, attribute_type);
+                if (OnSerialize != null)
+                    OnSerialize(node, attribute_type);
+                if (node.HasData)
+                {
+                    fileNode.AddNode(node);
+                    fileNode.Save(filename);
+                }
+            }
+            catch (Exception err)
+            {
+                Debug.Log("[AtmosphereAutopilot]: Serialization exception - " + err.Message);
             }
         }
 
