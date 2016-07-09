@@ -107,7 +107,7 @@ namespace AtmosphereAutopilot
             }
             catch (Exception err)
             {
-                Debug.Log("[AtmosphereAutopilot]: Deserialization exception - " + err.Message);
+                Debug.Log("[AtmosphereAutopilot]: Deserialization exception in path " + filename + " message " + err.Message);
             }
             return false;
         }
@@ -147,7 +147,7 @@ namespace AtmosphereAutopilot
             }
             catch (Exception err)
             {
-                Debug.Log("[AtmosphereAutopilot]: Serialization exception - " + err.Message);
+                Debug.Log("[AtmosphereAutopilot]: Serialization exception in path " + filename + " message " + err.Message);
             }
         }
 
