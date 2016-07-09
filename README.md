@@ -112,7 +112,7 @@ Hotkeys:
 # Default Modules descriptions
 
 ## Flight Model
-It is a fundamental craft analysis module. It performs motion and dynamics evaluation, as well as analysis of craft aerodynamics. This Module will probably be used by every single other Autopilot and module.
+It is a fundamental craft analysis module. It performs motion and dynamics evaluation, as well as analysis of craft aerodynamics. VTOL engine balancing is also handled by Flight Model (though it will probably change in the future). This Module will probably be used by every single other Autopilot and module.
 
 Short GUI description (consult source code for more deatils and insight):
 * Three sections for three craft principal axes, each contains:
@@ -121,6 +121,12 @@ Short GUI description (consult source code for more deatils and insight):
   * AoA - angle of attack, degrees. Positive for pitch up, yaw right. For roll it's the angle between wing chord and airspeed vector, projected on frontal plane.
 * _has csurf_ - is true if Flight Model has found control surfaces on the craft. It is important for aerodynamics regressor to know it.
 * Five "trainers", linear regressors. They are analyzing craft performance history and try (and fail horribly) to produce linear models of aerodynamic torques and forces. Their GUIs are filled with magic numbers you should never need to change.
+* _balance engines_ - toggles engine-balancing algorithm for VTOLs.
+* _balance thrust w_ - weight of thrust maximization objective for engine balancing.
+* _balance descend k_ - learning rate of balancing algorithm.
+* _balance descend k mult_ - current adaptive learning rate.
+* _balance err_ - torque balancing error.
+* _balancer steering k_ - gain for attitude control using engines. Use zero to keep them static. Default value 1.
 * _Lift acc_ - acceleration, provided by aerodynamic lift in the direction of plane spine.
 * _Slide acc_ - acceleration, provided by aerodynamic lift in the direction of plane right wing.
 * _sum acc_ - vector of total craft acceleration in PhysX reference frame.
@@ -140,6 +146,9 @@ Short GUI description (consult source code for more deatils and insight):
 * _e torque_ - engines-induced torque in craft principal reference frame.
 * _e thrust_ - engines thrust in craft principal reference frame.
 * two vectors on engine torque linear estimations. They are used to adress gimbaling capabilities of a craft.
+
+Hotkeys:
+* "Thrust balancing" - toggles _balance engines_ button.
 
 ## Director controller
 Middle-level model-reference controller, follows a setpoint of surface velocity and acceleration vectors. Input: velocity vector and acceleration vector. Output: AoA, sideslip and roll angular velocity.
