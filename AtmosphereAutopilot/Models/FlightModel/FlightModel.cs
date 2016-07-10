@@ -171,9 +171,14 @@ namespace AtmosphereAutopilot
         }
 
         internal bool sequential_dt = false;
+        uint reference_transform_id = uint.MaxValue;
 
         void OnPreAutopilot(FlightCtrlState state)      // workhorse function
         {
+            if (reference_transform_id != vessel.referenceTransformId)
+                sequential_dt = false;
+            reference_transform_id = vessel.referenceTransformId;
+
             update_moments();
             update_velocity_acc();
             update_aoa();
