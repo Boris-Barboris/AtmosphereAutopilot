@@ -47,31 +47,54 @@ namespace AtmosphereAutopilot
                     ConfigNode gimbal_node;
                     if ((gimbal_node = part.nodes.GetNode("MODULE", "name", "ModuleGimbal")) != null)
                     {
-                        move_node_first(gimbal_node, part);
+                        if (move_node_first(gimbal_node, part))
+                            handle_ModuleSurfaceFX(part);
                         Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains ModuleGimbal, moving it");
                     }
                     else
                         if ((gimbal_node = part.nodes.GetNode("MODULE", "name", "KM_Gimbal_3")) != null)
                         {
-                            move_node_first(gimbal_node, part);
+                            if (move_node_first(gimbal_node, part))
+                                handle_ModuleSurfaceFX(part);
                             Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains KM_Gimbal_3, moving it");
                         }
                 }
                 ready = true;
             }
 
-            void move_node_first(ConfigNode node, ConfigNode partNode)
+            bool move_node_first(ConfigNode gimbalNode, ConfigNode partNode)
             {
-                partNode.RemoveNode(node);
+                int gimbal_index = -1;
+                for (int i = 0; i < partNode.nodes.Count; i++)
+                    if (gimbalNode == partNode.nodes[i])
+                        gimbal_index = i;
+                partNode.RemoveNode(gimbalNode);
                 List<ConfigNode> backup_nodes = new List<ConfigNode>();
 
                 for (int i = 0; i < partNode.nodes.Count; i++)
                     backup_nodes.Add(partNode.nodes[i]);
                 partNode.nodes.Clear();
 
-                partNode.nodes.Add(node);
+                partNode.nodes.Add(gimbalNode);
                 for (int i = 0; i < backup_nodes.Count; i++)
                     partNode.nodes.Add(backup_nodes[i]);
+
+                if (gimbal_index > 0)
+                    return true;
+                return false;
+            }
+
+            void handle_ModuleSurfaceFX(ConfigNode partNode)
+            {
+                ConfigNode fx_node = partNode.nodes.GetNode("MODULE", "name", "ModuleSurfaceFX");
+                if (fx_node != null)
+                {
+                    int old_index = -1;
+                    if (int.TryParse(fx_node.GetValue("thrustProviderModuleIndex"), out old_index))
+                    {
+                        fx_node.SetValue("thrustProviderModuleIndex", (old_index + 1).ToString());
+                    }
+                }
             }
         }
     }
