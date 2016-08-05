@@ -25,7 +25,7 @@ namespace AtmosphereAutopilot.UI {
     [SerializeField]
     private Toggle m_SetWaypointToggle = null;
     [SerializeField]
-    private Toggle m_AltitudeControlToggle = null;
+    internal Toggle m_AltitudeControlToggle = null;
     [SerializeField]
     private Slider m_AltitudeControlSlider = null;
     [SerializeField]

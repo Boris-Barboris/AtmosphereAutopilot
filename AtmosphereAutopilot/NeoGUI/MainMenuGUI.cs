@@ -193,14 +193,17 @@ namespace AtmosphereAutopilot.UI {
       updateGUI ();
     }
     public void toggleCruiseControl (bool value) {
-      if (value)
-        controller.currentAutopilot = Autopilots.CRUISECTRL;
-      else
-        if (!toggleGroup.AnyTogglesOn ())
-          controller.currentAutopilot = Autopilots.DISABLED;
+        if (value)
+        {
+            controller.currentAutopilot = Autopilots.CRUISECTRL;
+            m_CruiseControl.m_AltitudeControlToggle.isOn = false;
+        }
         else
-          return;
-      updateGUI ();
+            if (!toggleGroup.AnyTogglesOn())
+                controller.currentAutopilot = Autopilots.DISABLED;
+        else
+            return;
+        updateGUI ();
     }
     public void toggleMouseDirector (bool value) {
       if (value)
