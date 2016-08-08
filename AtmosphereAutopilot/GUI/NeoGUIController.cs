@@ -219,7 +219,18 @@ namespace AtmosphereAutopilot {
       }
     }
 
-    public float distToWaypoint {
+    public float vesselAltitude
+    {
+        get
+        {
+            if (ccAP == null)
+                return 0f;
+            return (float)FlightGlobals.ActiveVessel.altitude;
+        }
+        set { }
+    }
+
+        public float distToWaypoint {
       get {
         if (ccAP == null || ccAP.current_mode != CruiseController.CruiseMode.Waypoint)
           return -1f;

@@ -42,6 +42,7 @@ namespace AtmosphereAutopilot.UI {
     // cruise control
     bool altitudeControl { get; set; }
     float altitude { get; set; }
+    float vesselAltitude { get; set; }
     bool pickingWaypoint { get; }
     bool waypointIsSet { get; }
     float distToWaypoint { get; }
