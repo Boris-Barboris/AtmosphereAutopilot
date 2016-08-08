@@ -197,7 +197,7 @@ namespace AtmosphereAutopilot.UI {
         {
             controller.currentAutopilot = Autopilots.CRUISECTRL;
             m_CruiseControl.m_AltitudeControlToggle.isOn = false;
-            m_CruiseControl.m_AltitudeControlSlider.value = Mathf.Round(controller.vesselAltitude / 500f);
+            m_CruiseControl.m_AltitudeControlSlider.value = Mathf.Clamp(Mathf.Round(controller.vesselAltitude / 500f), 0.0f, 50.0f);
         }
         else
             if (!toggleGroup.AnyTogglesOn())
