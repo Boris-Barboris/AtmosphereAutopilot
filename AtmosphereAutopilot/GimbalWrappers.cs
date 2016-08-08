@@ -14,6 +14,7 @@ namespace AtmosphereAutopilot
         float GimbalSpeed { get; set; }
         void Modify(float gimbal_spd);
         void Restore();
+        Quaternion neutralLocalRotation(int thrustTransformIndex);
     }
 
     public class StockGimbal : IGimbal
@@ -61,6 +62,11 @@ namespace AtmosphereAutopilot
         {
             UseGimbalSpeed = original_use_spd;
             GimbalSpeed = original_spd;
+        }
+
+        public Quaternion neutralLocalRotation(int thrustTransformIndex)
+        {
+            return module.initRots[thrustTransformIndex];
         }
     }
 
@@ -142,6 +148,12 @@ namespace AtmosphereAutopilot
             f_enableSmoothGimbal.SetValue(km_gimbal, original_smooth);
             f_useExponentGimbal.SetValue(km_gimbal, false);
             GimbalSpeed = original_spd;
+        }
+
+        public Quaternion neutralLocalRotation(int thrustTransformIndex)
+        {
+            // dummy method, deprecated plugin anyways
+            return Quaternion.identity;
         }
     }
 }

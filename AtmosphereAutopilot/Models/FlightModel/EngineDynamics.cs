@@ -174,7 +174,17 @@ namespace AtmosphereAutopilot
                     if (eng.currentThrottle > 0.0f)
                     {
                         e_max_thrust += eng.finalThrust * mult / eng.currentThrottle;
-                        e_potent += torque_moment * (float)e_max_thrust;
+                        if (engines[i].gimbal == null)
+                            e_potent += torque_moment * (float)e_max_thrust;
+                        else
+                        {
+                            Quaternion temp_rot = trans.localRotation;
+                            trans.localRotation = engines[i].gimbal.neutralLocalRotation(j);
+                            Vector3 tdir_neutral = -trans.forward;
+                            trans.localRotation = temp_rot;
+                            Vector3 torque_neutral = -Vector3.Cross(tpos, tdir_neutral);
+                            e_potent += torque_neutral * (float)e_max_thrust;
+                        }
                     }
                     else
                         e_max_thrust += eng.maxThrust;
