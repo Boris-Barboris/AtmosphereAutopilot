@@ -87,6 +87,7 @@
     <None Include="Controller\PIController.cs" />
     <None Include="Math\GridSpace.cs" />
     <Compile Include="Math\AffineScaling.cs" />
+    <Compile Include="Math\GradientLP.cs" />
     <Compile Include="Math\LinApprox.cs" />
     <Compile Include="Math\OnlineLinTrainer.cs" />
     <Compile Include="Math\OnlineLinTrainerWindow.cs" />

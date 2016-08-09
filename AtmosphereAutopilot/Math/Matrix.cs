@@ -453,7 +453,7 @@ namespace AtmosphereAutopilot
             for (int i = 0; i < rows; i++)
             {
                 for (int j = 0; j < cols; j++)
-                    s.Append(String.Format("{0,5:E2}", this[i, j]) + " ");
+                    s.Append(String.Format("{0,7:E3}", this[i, j]) + " ");
                 s.AppendLine();
             }
             return s.ToString();

@@ -365,7 +365,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("thrust_error", false, "G5")]
         double thrust_error;
 
-        [VesselSerializable("use_pid")]
+        [GlobalSerializable("use_pid")]
         [AutoGuiAttr("Use PID", true)]
         public bool use_pid = false;
 

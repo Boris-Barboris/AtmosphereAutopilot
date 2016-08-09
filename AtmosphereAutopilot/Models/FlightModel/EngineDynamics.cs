@@ -41,7 +41,9 @@ namespace AtmosphereAutopilot
             public IGimbal gimbal;
             public Vector3 thrust = Vector3.zero;
             public Vector3 potential_torque = Vector3.zero;
+            public Vector3 torque_components = Vector3.zero;
             public double estimated_max_thrust = 0.0;
+            public double estimated_max_thrust_unlimited = 0.0;
         }
 
         public List<EngineMoment> engines = new List<EngineMoment>();
@@ -169,33 +171,36 @@ namespace AtmosphereAutopilot
                     tdir = -trans.forward;
                     tpos = world_to_cntrl_part * tpos;
                     tdir = world_to_cntrl_part * tdir;
-                    Vector3 torque_moment = -Vector3.Cross(tpos, tdir);       // minus because Unity's left-handed
+                    Vector3 torque_arm = -Vector3.Cross(tpos, tdir);       // minus because Unity's left-handed
                     float mult = eng.thrustTransformMultipliers[j];
                     if (eng.currentThrottle > 0.0f)
                     {
-                        e_max_thrust += eng.finalThrust * mult / eng.currentThrottle;
+                        double nozzle_max_thrust = eng.finalThrust * mult / eng.currentThrottle;
+                        e_max_thrust += nozzle_max_thrust;
                         if (engines[i].gimbal == null)
-                            e_potent += torque_moment * (float)e_max_thrust;
+                            e_potent += torque_arm * (float)nozzle_max_thrust;
                         else
                         {
                             Quaternion temp_rot = trans.localRotation;
                             trans.localRotation = engines[i].gimbal.neutralLocalRotation(j);
-                            Vector3 tdir_neutral = -trans.forward;
+                            Vector3 tdir_neutral = world_to_cntrl_part  * (-trans.forward);
                             trans.localRotation = temp_rot;
-                            Vector3 torque_neutral = -Vector3.Cross(tpos, tdir_neutral);
-                            e_potent += torque_neutral * (float)e_max_thrust;
+                            Vector3 torque_arm_neutral = -Vector3.Cross(tpos, tdir_neutral);
+                            e_potent += torque_arm_neutral * (float)nozzle_max_thrust;
                         }
                     }
                     else
-                        e_max_thrust += eng.maxThrust;
-                    engines_torque_principal += torque_moment * eng.finalThrust * mult;
+                        e_max_thrust += eng.maxThrust * mult;
+                    engines_torque_principal += torque_arm * eng.finalThrust * mult;
                     engines_thrust_principal += eng.finalThrust * tdir * mult;
                     e_thrust += eng.finalThrust * mult * (-trans.forward);
                 }
                 abs_thrust += eng.finalThrust;
                 engines[i].thrust = e_thrust;
                 engines[i].potential_torque = e_potent;
+                engines[i].torque_components = e_potent.normalized;
                 engines[i].estimated_max_thrust = e_max_thrust * eng.thrustPercentage * 0.01f;
+                engines[i].estimated_max_thrust_unlimited = e_max_thrust;
             }
         }
 

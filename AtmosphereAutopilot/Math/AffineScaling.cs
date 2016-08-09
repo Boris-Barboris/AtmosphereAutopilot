@@ -13,26 +13,27 @@ namespace AtmosphereAutopilot
     {
         public Matrix A, b, c, x;
 
-        public void solve(double tolerance, double step_size = 0.35, int iter_limit = 1000)
+        const double MIN_PARAM_VALUE = 1e-4;
+
+        public void solve(double tolerance, double step_size = 0.35, int iter_limit = 100)
         {
-            if (!checkInitPoint())
+            if (!checkInitPoint(tolerance, x))
             {
+                prepareInitData();
                 while (iter_limit > 0)
                 {
                     IterationResult res = iterate_internal(Ainit, cinit, xinit, tolerance, step_size);
                     iter_limit--;
                     if (res == IterationResult.Unbounded)
                         return;
-                    if (res == IterationResult.Optimal)
-                    {
-                        update_x();
+                    if (res == IterationResult.Optimal/* || checkInitPoint(tolerance, xinit)*/)
                         break;
-                    }
                 }
+                update_x();
             }
             while (iter_limit > 0)
             {
-                IterationResult res = iterate_internal(A, c, x, tolerance, step_size);
+                IterationResult res = iterate_internal(A, c, x, tolerance, 0.9);
                 iter_limit--;
                 if (res != IterationResult.Descended)
                     return;
@@ -48,15 +49,15 @@ namespace AtmosphereAutopilot
 
         public void init(int var_count, int constraint_count)
         {
-            A = new Matrix(constraint_count, var_count);
-            b = new Matrix(constraint_count, 1);
-            c = new Matrix(var_count, 1);
-            x = new Matrix(var_count, 1);
+            Matrix.Realloc(constraint_count, var_count, ref A);
+            Matrix.Realloc(constraint_count, 1, ref b);
+            Matrix.Realloc(var_count, 1, ref c);
+            Matrix.Realloc(var_count, 1, ref x);
 
-            Ainit = new Matrix(constraint_count, var_count + 1);
-            vinit = new Matrix(constraint_count, 1);
-            xinit = new Matrix(var_count + 1, 1);
-            cinit = new Matrix(var_count + 1, 1);
+            Matrix.Realloc(constraint_count, var_count + 1, ref Ainit);
+            Matrix.Realloc(constraint_count, 1, ref vinit);
+            Matrix.Realloc(var_count + 1, 1, ref xinit);
+            Matrix.Realloc(var_count + 1, 1, ref cinit);
         }
 
         enum IterationResult
@@ -110,15 +111,18 @@ namespace AtmosphereAutopilot
             }
 
             double length = 0.0;
+            double opt_sum = 0.0;
             bool unbounded = true;
             bool optimal = true;
             for (int i = 0; i < c.rows; i++)
             {
                 double m = r[i, 0] * x[i, 0];
+                opt_sum += m;
                 length += m * m;
                 unbounded &= m * x[i, 0] < 0;
-                optimal &= m < eps;          
+                optimal &= r[i, 0] >= 0.0;
             }
+            optimal &= (opt_sum <= eps);
             if (unbounded)
                 return IterationResult.Unbounded;
             if (optimal)
@@ -126,25 +130,31 @@ namespace AtmosphereAutopilot
 
             // update
             length = Math.Sqrt(length);
-
-            for (int i = 0; i < c.rows; i++)
-                x[i, 0] = x[i, 0] - beta * (x[i, 0] * x[i, 0]) * r[i, 0] / length;
+            if (length > 0.0)
+            {
+                for (int i = 0; i < c.rows; i++)
+                    x[i, 0] = x[i, 0] - beta * (x[i, 0] * x[i, 0]) * r[i, 0] / length;
+            }
             return IterationResult.Descended;
         }
 
-        bool checkInitPoint()
+        bool checkInitPoint(double tolerance, Matrix x)
         {
             bool feasible = true;
             Matrix.MultiplyUnsafe(A, x, vinit);
             for (int i = 0; i < A.rows; i++)
             {
                 vinit[i, 0] = b[i, 0] - vinit[i, 0];
-                if (vinit[i, 0] != 0.0)
+                if (Math.Abs(vinit[i, 0]) >= tolerance)
                     feasible = false;
             }
             if (feasible)
                 return true;
+            return false;
+        }
 
+        void prepareInitData()
+        {
             // fill Ainit, xinit and cinit
             for (int i = 0; i < A.rows; i++)
             {
@@ -160,11 +170,9 @@ namespace AtmosphereAutopilot
             }
             xinit[c.rows, 0] = 1.0;
             cinit[c.rows, 0] = 1.0;
-
-            return false;
         }
 
-        void update_x()
+        public void update_x()
         {
             for (int i = 0; i < x.rows; i++)
                 x[i, 0] = xinit[i, 0];

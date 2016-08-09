@@ -36,11 +36,12 @@ namespace AtmosphereAutopilot
 
         bool[] balancing_possible = new bool[3];
 
+        GradientLP optimizer;
+
         double[][] torque_coeffs = new double[3][];
         double[] limiters;
-        double[] new_limiters;
-        double[] limiters_torque_grads;
-        double[] limiters_thrust_grads;
+
+        int bal_count = 0;
 
         void init_engine_balancing()
         {
@@ -53,11 +54,7 @@ namespace AtmosphereAutopilot
             Common.Realloc<double>(ref torque_coeffs[YAW], engines.Count);
 
             Common.Realloc<double>(ref limiters, engines.Count);
-            Common.Realloc<double>(ref new_limiters, engines.Count);
-            Common.Realloc<double>(ref limiters_torque_grads, engines.Count);
-            Common.Realloc<double>(ref limiters_thrust_grads, engines.Count);
 
-            // for pitch only for start
             balancing_possible[PITCH] = false;
             balancing_possible[ROLL] = false;
             balancing_possible[YAW] = false;
@@ -80,7 +77,7 @@ namespace AtmosphereAutopilot
                     {
                         if (!balancing_possible[axis])
                         {
-                            if (mss_next[axis] * mss[axis] < 0.0f)
+                            if (mss_next[axis] * mss[axis] < -1.0f)
                             {
                                 balancing_possible[axis] = true;
                                 any_gimbals = true;
@@ -92,39 +89,58 @@ namespace AtmosphereAutopilot
 
                 // initialize if needed
                 if (limiters[i] == 0.0)
-                    limiters[i] = eng.thrustPercentage * 0.01f;
+                    limiters[i] = 1.0;
             }
+
+            // initialize optimizer
+            bal_count = 0;
+            for (int i = 0; i < 3; i++)
+                if (balancing_possible[i])
+                    bal_count++;
+
+            if (bal_count == 0)
+                return;
+
+            if (optimizer == null)
+                optimizer = new GradientLP(engines.Count, bal_count);
+            else
+                optimizer.init(engines.Count, bal_count);
+
+            for (int i = 0; i < engines.Count; i++)
+            {
+                // fill x values
+                optimizer.x[i, 0] = limiters[i];
+            }            
         }
 
-        [AutoGuiAttr("balance_thrust_w", true, "G5")]
-        [GlobalSerializable("balance_thrust_w")]
-        protected double balance_thrust_w = 1e-3;
+        [AutoGuiAttr("balance_tolerance", true, "G5")]
+        [GlobalSerializable("balance_tolerance")]
+        protected double balance_tolerance = 1e-4;
 
-        [AutoGuiAttr("balance_descend_k", true, "G5")]
-        [GlobalSerializable("balance_descend_k")]
-        protected double balance_descend_k = 1e-2;
+        [AutoGuiAttr("bal_speed", true, "G5")]
+        [GlobalSerializable("bal_speed")]
+        protected double balance_speed = 5e-3;
 
-        [AutoGuiAttr("balance_descend_k_mult", false, "G5")]
-        protected double balance_descend_k_mult = 1.0;
+        [AutoGuiAttr("opt_speed", true, "G5")]
+        [GlobalSerializable("opt_speed")]
+        protected double optimize_speed = 1e-3;
 
-        [AutoGuiAttr("balance_err", false, "G5")]
-        protected double balance_err = 0.0;
-
-        int unbalancing_counter = 0;
-
-        const double BALANCE_MIN_LIMITER = 1e-4;
-        const int BALANCE_MAX_ITER = 10;
-        const double BALANCE_ERROR_MARGIN = 1e-4;
+        const double BALANCE_MIN_LIMITER = 1e-3;
 
         double[] max_potentials = new double[3];
-
-        double[] torque_errors = new double[3];
-        double[] new_torque_errors = new double[3];
+        double max_thrust = 0.0;
 
         void update_engine_balancing()
         {
-            if (!balance_engines || limiters == null || limiters.Length < 2)
+            if (!balance_engines || limiters == null || limiters.Length < 2 || bal_count == 0)
                 return;
+
+            max_thrust = 1e-6;
+            for (int i = 0; i < engines.Count; i++)
+            {
+                if (engines[i].estimated_max_thrust_unlimited > max_thrust)
+                    max_thrust = engines[i].estimated_max_thrust_unlimited;
+            }
 
             // update params
             for (int axis = 0; axis < 3; axis++)
@@ -140,131 +156,46 @@ namespace AtmosphereAutopilot
                 }
             }
 
-            balance_err = 0.0;
+            // fill the optimizer
+            int shift = 0;
             for (int axis = 0; axis < 3; axis++)
             {
                 if (balancing_possible[axis])
                 {
-                    torque_errors[axis] = get_torque_error(limiters, axis);
-                    balance_err += torque_errors[axis] * torque_errors[axis];
-                }
-            }
-
-            if (balance_err <= BALANCE_ERROR_MARGIN)
-                return;
-
-            int descend_iter = 0;
-
-            do
-            {
-
-                // now gradient
-                double dot = 0.0;
-                for (int i = 0; i < engines.Count; i++)
-                {
-                    limiters_torque_grads[i] = 0.0;
-                    limiters_thrust_grads[i] = 0.0;
-                    for (int axis = 0; axis < 3; axis++)
-                    {
-                        if (balancing_possible[axis])
-                        {
-                            // torque gradient
-                            limiters_torque_grads[i] += torque_errors[axis] * torque_coeffs[axis][i];
-                        }
-                    }
-
-                    // handle saturation to form bounded optimization
-                    if (limiters[i] == 1.0)
-                    {
-                        if (limiters_torque_grads[i] < 0.0)
-                            limiters_torque_grads[i] = 0.0;
-                    }
-
-                    if (limiters[i] == BALANCE_MIN_LIMITER)
-                    {
-                        if (limiters_torque_grads[i] > 0.0)
-                            limiters_torque_grads[i] = 0.0;
-                    }
-
-                    // gradient for thrust maximization
-                    limiters_thrust_grads[i] = -1.0 * Math.Min(1.0, balance_thrust_w / balance_err);
-
-                    // find dot product of those two gradients
-                    dot += limiters_torque_grads[i] * limiters_thrust_grads[i];
-                }
-
-                //if (dot > 0.0)
-                //{
-                // we're all right, we can add thrust gradient to torque one
-                for (int i = 0; i < engines.Count; i++)
-                {
-                    limiters_torque_grads[i] += limiters_thrust_grads[i];
-                }
-                //}
-
-                // descend while constrained
-                for (int i = 0; i < engines.Count; i++)
-                {
-                    new_limiters[i] = limiters[i] - limiters_torque_grads[i] * balance_descend_k * balance_descend_k_mult;
-                    new_limiters[i] = Common.Clamp(new_limiters[i], BALANCE_MIN_LIMITER, 1.0);
-                }
-
-                double new_torque_error = 0.0;
-                for (int axis = 0; axis < 3; axis++)
-                {
-                    if (balancing_possible[axis])
-                    {
-                        new_torque_errors[axis] = get_torque_error(new_limiters, axis);
-                        new_torque_error += new_torque_errors[axis] * new_torque_errors[axis];
-                    }
-                }
-
-                if (new_torque_error < balance_err || unbalancing_counter > 50)
-                {
-                    if (unbalancing_counter > 50)
-                        balance_descend_k_mult = 1.0;
-                    else
-                        balance_descend_k_mult = Math.Min(1e3, balance_descend_k_mult * 2.0);
-                    unbalancing_counter = 0;
-                    // descend while constrained
+                    // A matrix
                     for (int i = 0; i < engines.Count; i++)
-                    {
-                        limiters[i] = new_limiters[i];
-                        // push limiter to engine
-                        engines[i].engine.thrustPercentage = (float)(limiters[i] * 100.0);
-                    }
-
-                    // push changes to other parts of FlightModel
-                    for (int axis = 0; axis < 3; axis++)
-                    {
-                        //engines_torque_k0[axis] = (float)new_torque_errors[axis];
-                    }
-
-                    // update error value
-                    balance_err = new_torque_error;
+                        optimizer.A[shift, i] = torque_coeffs[axis][i];
+                    // b matrix
+                    optimizer.b[shift, 0] = 0.0;
+                    shift++;
                 }
-                else
-                {
-                    balance_descend_k_mult = Math.Max(1e-20, balance_descend_k_mult / 10.0);
-                    unbalancing_counter++;
-                }
-                descend_iter++;
-
-            } while (descend_iter < BALANCE_MAX_ITER && balance_err > BALANCE_ERROR_MARGIN);
-        }
-
-        double get_torque_error(double[] limiters, int axis)
-        {
-            double res = 0.0;
-            for (int i = 0; i < engines.Count; i++)
-            {
-                res += torque_coeffs[axis][i] * limiters[i];
             }
-            return res;
+
+            // thrust maximization goal
+            for (int i = 0; i < engines.Count; i++)
+                optimizer.c[i, 0] = engines[i].estimated_max_thrust_unlimited / max_thrust;
+
+            // do optimize
+            optimizer.solve(balance_tolerance, balance_speed, optimize_speed, 10);
+            for (int i = 0; i < engines.Count; i++)
+                limiters[i] = optimizer.x[i, 0];
+            //{
+            //    // drop all limiters to default value
+            //    for (int i = 0; i < engines.Count; i++)
+            //    {
+            //        limiters[i] = 0.9;
+            //        optimizer.x[i, 0] = limiters[i];
+            //        optimizer.x[i + engines.Count, 0] = 1.0 - optimizer.x[i, 0];
+            //    }
+            //}
+            //Debug.Log("A = \r\n" + optimizer.A.ToString());
+            //Debug.Log("b = \r\n" + optimizer.b.ToString());
+            //Debug.Log("c = \r\n" + optimizer.c.ToString());
+            //Debug.Log("x = \r\n" + optimizer.x.ToString());
         }
 
         [AutoGuiAttr("balancer_steering_k", true, "G4")]
-        [VesselSerializable("balancer_steering_k")]
+        [GlobalSerializable("balancer_steering_k")]
         public double balancer_steering_k = 1.0;
 
         void postupdate_engine_balancing(FlightCtrlState state)
@@ -278,7 +209,7 @@ namespace AtmosphereAutopilot
                 for (int axis = 0; axis < 3; axis++)
                 {
                     if (balancing_possible[axis] && max_potentials[axis] > 0.01)
-                        steering_k += torque_coeffs[axis][i] * gimbal_buf[axis].getLast() / max_potentials[axis];
+                        steering_k += torque_coeffs[axis][i] * gimbal_buf[axis].getLast() * Math.Abs(engines[i].torque_components[axis]) / max_potentials[axis];
                 }
                 double new_limit = limiters[i] + balancer_steering_k * steering_k;
                 new_limit = Common.Clamp(new_limit, BALANCE_MIN_LIMITER, 1.0);
