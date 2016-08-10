@@ -115,6 +115,8 @@ namespace AtmosphereAutopilot.UI {
       } else if (controller.currentAutopilot == Autopilots.CRUISECTRL) {
         m_FBWControl.hide ();
       }
+      m_CruiseControl.m_AltitudeControlToggle.isOn = false;
+      m_CruiseControl.m_AltitudeControlSlider.value = Mathf.Clamp(Mathf.Round(controller.vesselAltitude / 500f), 0.0f, 50.0f);
       updateGUI ();
     }
 
