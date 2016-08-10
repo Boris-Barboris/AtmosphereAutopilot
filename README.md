@@ -121,11 +121,7 @@ Short GUI description (consult source code for more deatils and insight):
   * AoA - angle of attack, degrees. Positive for pitch up, yaw right. For roll it's the angle between wing chord and airspeed vector, projected on frontal plane.
 * _has csurf_ - is true if Flight Model has found control surfaces on the craft. It is important for aerodynamics regressor to know it.
 * Five "trainers", linear regressors. They are analyzing craft performance history and try (and fail horribly) to produce linear models of aerodynamic torques and forces. Their GUIs are filled with magic numbers you should never need to change.
-* _balance engines_ - toggles engine-balancing algorithm for VTOLs.
-* _balance thrust w_ - weight of thrust maximization objective for engine balancing.
-* _balance descend k_ - learning rate of balancing algorithm.
-* _balance descend k mult_ - current adaptive learning rate.
-* _balance err_ - torque balancing error.
+* _balance engines_ - toggles engine-balancing algorithm for VTOLs. Has a hotkey.
 * _balancer steering k_ - gain for attitude control using engines. Use zero to keep them static. Default value 1.
 * _Lift acc_ - acceleration, provided by aerodynamic lift in the direction of plane spine.
 * _Slide acc_ - acceleration, provided by aerodynamic lift in the direction of plane right wing.

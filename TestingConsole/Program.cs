@@ -33,7 +33,7 @@ namespace TestingConsole
         static void Main(string[] args)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
-            linprog_testing();     
+            linprog_testing_grad();     
             Console.ReadKey(true);
         }
 
@@ -270,27 +270,52 @@ namespace TestingConsole
         static void linprog_testing()
         {
             AffineScaling linsolver = new AffineScaling(4, 3);
-            linsolver.A[0, 0] = -1.0;
-            linsolver.A[0, 1] = 2.0;
-            linsolver.b[0, 0] = 0.0;
+            //GradientLP linsolver = new GradientLP(2, 1);
+            linsolver.A[2, 0] = 6.66;
+            linsolver.A[2, 1] = -5.97;
+            linsolver.b[2, 0] = 0.0;
 
-            linsolver.A[1, 0] = 1.0;
-            linsolver.A[1, 2] = 1.0;
+            linsolver.A[0, 0] = 1.0;
+            linsolver.A[0, 2] = 1.0;
+            linsolver.b[0, 0] = 1.0;
+
+            linsolver.A[1, 1] = 1.0;
+            linsolver.A[1, 3] = 1.0;
             linsolver.b[1, 0] = 1.0;
 
-            linsolver.A[2, 1] = 1.0;
-            linsolver.A[2, 3] = 1.0;
-            linsolver.b[2, 0] = 1.0;
-
-            linsolver.x[0, 0] = 0.1;
-            linsolver.x[1, 0] = 0.1;
+            linsolver.x[0, 0] = 0.5;
+            linsolver.x[1, 0] = 0.5;
             linsolver.x[2, 0] = 0.5;
             linsolver.x[3, 0] = 0.5;
 
-            linsolver.c[0, 0] = -1.0;
-            linsolver.c[1, 0] = -1.0;
+            linsolver.c[0, 0] = -154.0;
+            linsolver.c[1, 0] = -154.0;
 
-            linsolver.solve(1e-3, 0.5);
+            linsolver.solve(1e-3, 0.66, 10);
+            linsolver.solve(1e-3, 0.66, 10);
+            linsolver.solve(1e-3, 0.66, 10);
+            linsolver.solve(1e-3, 0.66, 10);
+            //linsolver.solve(1e-4, 0.5, 1000);
+        }
+
+        static void linprog_testing_grad()
+        {
+            GradientLP linsolver = new GradientLP(2, 1);
+            linsolver.A[0, 0] = 6.66;
+            linsolver.A[0, 1] = -5.97;
+            linsolver.b[0, 0] = 0.0;
+
+            linsolver.x[0, 0] = 1.0;
+            linsolver.x[1, 0] = 1.0;
+
+            linsolver.c[0, 0] = 1.0;
+            linsolver.c[1, 0] = 1.0;
+
+            linsolver.solve(0.01, 10);
+            linsolver.solve(100.0, 10);
+            linsolver.solve(100.0, 10);
+            linsolver.solve(100.0, 10);
+            //linsolver.solve(1e-4, 0.5, 1000);
         }
     }
 }
