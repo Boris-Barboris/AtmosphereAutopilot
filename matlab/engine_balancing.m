@@ -1,6 +1,6 @@
-A = [-60, -60, 5, 8; -25, 35, -3, 3];
-x = [1.0; 0.0; 1.0; 0.3];
-c = [1.0; 1.0; 1.0; 1.0];
+A = [4.44, 4.44, -4.24; 7.15, -7.15, -5.43; 2.39, -2.39, 2.28];
+x = [1.0; 1.0; 1.0];
+c = [1.0; 1.0; 1.0];
 
 length = 50;
 sizex = size(x, 1);
@@ -13,12 +13,15 @@ ideal_thrusts = c .* (ones(sizex, 1) + 9.0);
 step = 1e-3;
 unbalance_factor = 0.01;
 adapt = 10.0;
+switched = 0;
 
 step_history = zeros(1, length);
 
 for i=1:length
-    if i > 10
+    if ((i > 10) || (step == 1e-20)) && (switched == 0)
         unbalance_factor = 100;
+        switched = 1;
+        step = 1e-3;
     end
         
     terr = A * x;
@@ -39,10 +42,10 @@ for i=1:length
         end
     end
     
-    trerr = c .* x - ideal_thrusts;
+    trerr = (c .* x - ideal_thrusts) / sizex;
     sqrerr = sqrerr + dot(trerr, trerr);
     
-    grad_thrust = 2.0 * c .* trerr;
+    grad_thrust = 2.0 * c .* trerr / sizex;
     
     for j=1:sizex
         if (x(j, 1) == 1.0) && (grad_thrust(j, 1) < 0.0)
@@ -73,21 +76,21 @@ for i=1:length
     xold = x;    
     subiter = 0;
     
-    while (subiter < 50)
+    while (subiter < 30)
         x = xold - grad * step;
         
         terr = A * x;
         sqrnew = unbalance_factor * dot(terr, terr);
-        trerr = c .* x - ideal_thrusts;
+        trerr = (c .* x - ideal_thrusts) / sizex;
         sqrnew = sqrnew + dot(trerr, trerr);
         
         if (sqrnew < sqrerr)
-            step = step * (1.0 + 1.0 * (adapt - 1));
+            step = step * (1.0 + 0.5 * (adapt - 1));
             break;
         end
         step = step / adapt;
-        if (step < 1e-10)
-            step = 1e-10;
+        if (step < 1e-20)
+            step = 1e-20;
             break;
         end
         
@@ -115,7 +118,7 @@ plot(x_history(1,:), x_history(2,:), '*-');
 subplot(3, 2, 2);
 plot(terr_history(1,:));
 subplot(3, 2, 3);
-plot(x_history(3,:), x_history(4,:), '*-');
+plot(x_history(3,:), '*-');
 subplot(3, 2, 4);
 plot(terr_history(2,:));
 subplot(3, 2, 5);
@@ -125,5 +128,5 @@ plot(x_history(1,:), 'r');
 hold on
 plot(x_history(2,:), 'r');
 plot(x_history(3,:), 'b');
-plot(x_history(4,:), 'b');
+%plot(x_history(4,:), 'b');
 hold off
