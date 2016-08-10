@@ -188,10 +188,10 @@ namespace AtmosphereAutopilot
             //        optimizer.x[i + engines.Count, 0] = 1.0 - optimizer.x[i, 0];
             //    }
             //}
-            //Debug.Log("A = \r\n" + optimizer.A.ToString());
-            //Debug.Log("b = \r\n" + optimizer.b.ToString());
-            //Debug.Log("c = \r\n" + optimizer.c.ToString());
-            //Debug.Log("x = \r\n" + optimizer.x.ToString());
+            Debug.Log("A = \r\n" + optimizer.A.ToString());
+            Debug.Log("b = \r\n" + optimizer.b.ToString());
+            Debug.Log("c = \r\n" + optimizer.c.ToString());
+            Debug.Log("x = \r\n" + optimizer.x.ToString());
         }
 
         [AutoGuiAttr("balancer_steering_k", true, "G4")]
