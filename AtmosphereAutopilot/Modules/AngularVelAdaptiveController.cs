@@ -47,7 +47,7 @@ namespace AtmosphereAutopilot
             : base(vessel, wnd_id, module_name)
         {
             this.axis = axis;
-            AutoTrim = false;
+            ApplyTrim = false;
         }
 
         public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
@@ -120,7 +120,7 @@ namespace AtmosphereAutopilot
             output_acc = get_desired_acc(desired_v) + target_acc;           // produce output acceleration
 
             // check if we're stable on given input value
-            if (AutoTrim && vessel == AtmosphereAutopilot.Instance.ActiveVessel)
+            if (ApplyTrim && vessel == AtmosphereAutopilot.Instance.ActiveVessel)
             {
                 if (Math.Abs(vel) < 0.002f)
                 {
@@ -151,9 +151,9 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("DEBUG desired_v", false, "G6")]
         protected float desired_v;
 
-        [GlobalSerializable("AutoTrim")]
-        [AutoGuiAttr("AutoTrim", true)]
-        public bool AutoTrim { get; set; }
+        [GlobalSerializable("ApplyTrim")]
+        [AutoGuiAttr("ApplyTrim", true)]
+        public bool ApplyTrim { get; set; }
     }
 
 
