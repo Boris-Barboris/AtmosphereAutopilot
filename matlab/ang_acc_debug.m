@@ -1,11 +1,12 @@
 clear;
 model = aircraft_model();
+model.aero_model = true;        % far model
 %model.angular_vel(3) = 0.1;
-model.force_spd_maintain = true;
+model.force_spd_maintain = false;
 pitch_acc_c = ang_acc_pitch_yaw(0, model);
 roll_acc_c = ang_acc_roll(model);
 dt = 0.05;
-sim_length = 500;
+sim_length = 100;
 time = zeros(1, sim_length);
 positions = zeros(3, sim_length);
 forwards = zeros(3, sim_length);
@@ -18,11 +19,11 @@ cntrl = zeros(3, sim_length);
 csurf = zeros(3, sim_length);
 for frame = 1:sim_length
     time(frame) = dt * (frame - 1);
-    model.preupdate();
+    model.preupdate(dt);
     p_output = pitch_acc_c.eval(0.0, dt);
     y_output = 0.0;
     if (time(frame) > 2 && time(frame) < 2.5)
-        des_roll_acc = 1.0;
+        des_roll_acc = 0.0;
     else
         des_roll_acc = 0.0;
     end
