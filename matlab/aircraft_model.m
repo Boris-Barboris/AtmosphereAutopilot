@@ -1,5 +1,5 @@
 classdef aircraft_model < handle
-    %AIRCRAFT_MODEL Linear plane model for control methods development
+    %AIRCRAFT_MODEL Linear plane model for control system development
     
     properties (SetAccess = public)        
         %
@@ -45,7 +45,7 @@ classdef aircraft_model < handle
         yaw_lift_m = [0.0 8.0 -2.5];     % sideslip lift model
         
         drag_model = [1.0 20.0 3.0];     % drag model
-        force_spd_maintain = false;      % forcefully maintain speed
+        force_spd_maintain = false;      % forcefully maintain speed for debug purposes
         
         % engine power
         

@@ -6,7 +6,7 @@ classdef ang_vel_controller < handle
         axis = 0;                   % 0 - pitch 1 - roll 2 - yaw
         target_vel = 0.0;
         output_acc = 0.0;
-        user_controlled = true;     % true when target is user control
+        user_controlled = false;    % true when target is user control
     end
     
     methods (Access = public)

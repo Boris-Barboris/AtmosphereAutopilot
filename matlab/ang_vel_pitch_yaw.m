@@ -1,7 +1,7 @@
 classdef ang_vel_pitch_yaw < ang_vel_controller
     
     properties (SetAccess = public)
-        max_v_construction = 0.5;
+        max_v_construction = 0.7;
         max_aoa = 15.0;
         max_g = 15.0;
         moderate_aoa = true;
@@ -25,6 +25,9 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
         
         max_aoa_v = 0.0;
         min_aoa_v = 0.0;
+        
+        transit_max_v = 0.7;
+        transit_v_mult = 0.5;
     end
     
     methods (Access = public)
@@ -67,6 +70,8 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
             end
             
             % evaluate equilibrium regimes and moderation limits
+            
+            % AoA section
             if (obj.moderate_aoa && obj.model.dyn_pressure > 100.0)
                 moderated = true;
                 if (abs_cur_aoa < rad_max_aoa * 1.5)
@@ -85,8 +90,8 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
                         obj.min_input_v = 0.6 * eq_x(2, 1);
                     else
                         obj.stable = true;
-                        obj.max_input_aoa = 0.98 * eq_x(1, 1);
-                        obj.max_input_v = 0.98 * eq_x(2, 1);
+                        obj.max_input_aoa = eq_x(1, 1);
+                        obj.max_input_v = eq_x(2, 1);
                     end                    
                     % get equilibrium aoa and angular_v for -1.0 input
                     eq_B = [A(1, 3) + A(1, 4) + B(1, 1) - C(1, 1); A(2, 3) + A(2, 4) + B(2, 1) - C(2, 1)];
@@ -95,8 +100,8 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
                         obj.max_input_aoa = 0.6 * eq_x(1, 1);
                         obj.max_input_v = 0.6 * eq_x(2, 1);
                     else
-                        obj.min_input_aoa = 0.98 * eq_x(1, 1);
-                        obj.min_input_v = 0.98 * eq_x(2, 1);
+                        obj.min_input_aoa = eq_x(1, 1);
+                        obj.min_input_v = eq_x(2, 1);
                     end
                     
                     % max aoa section
@@ -119,7 +124,7 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
                     obj.res_equilibr_v_lower = obj.min_input_v;
                 end
                 
-                % let's apply simple AoA moderation
+                % apply simple AoA moderation
                 if (rad_max_aoa < obj.res_max_aoa)
                     obj.res_max_aoa = rad_max_aoa;
                     obj.res_equilibr_v_upper = obj.max_aoa_v;
@@ -130,6 +135,8 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
                 end
             end
             
+            
+            % G force section
             if (obj.moderate_g && obj.model.dyn_pressure > 100.0)
                 moderated = true;
                 if (abs(A(1, 1)) > 1e-5 && abs_cur_aoa < rad_max_aoa * 1.5)
@@ -164,7 +171,36 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
             end
             
             % transit velocity evaluation
-            
+            if (abs_cur_aoa < rad_max_aoa * 1.5 && obj.moderated)
+                transit_max_aoa = min(rad_max_aoa, obj.res_max_aoa);
+                state_mat = zeros(4);
+                if (obj.stable)
+                    state_mat(1, 1) = transit_max_aoa / 3.0;
+                else
+                    state_mat(1, 1) = transit_max_aoa;
+                end
+                state_mat(3, 1) = -1.0;
+                state_mat(4, 1) = -1.0;
+                state_mat(1, 1) = -1.0;
+                input_mat = -1.0;
+                stderiv = A * state_mat + B * input_mat + C;
+                acc = stderiv(2);
+                dyn_max_v = obj.transit_v_mult * sqrt(2.0 * transit_max_aoa * (-acc));
+                if (isnan(dyn_max_v))
+                    obj.transit_max_v = obj.max_v_construction;
+                else
+                    % for cases when static authority is too small to comply to long-term dynamics, 
+                    % we need to artificially increase it
+                    if (dyn_max_v < obj.res_equilibr_v_upper * 1.2 || ...
+                        dyn_max_v < -obj.res_equilibr_v_lower * 1.2)
+                        dyn_max_v = 1.2 * max(abs(obj.res_equilibr_v_upper), abs(obj.res_equilibr_v_lower));
+                    end
+                    dyn_max_v = aircraft_model.clamp(dyn_max_v, -obj.max_v_construction, obj.max_v_construction);
+                    obj.transit_max_v = dyn_max_v;
+                end
+            else
+                obj.transit_max_v = obj.max_v_construction;    
+            end
         end
         
         function desired_v = moderate(obj, des_v)
