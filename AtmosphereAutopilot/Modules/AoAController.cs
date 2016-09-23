@@ -158,6 +158,13 @@ namespace AtmosphereAutopilot
             // parabolic descend to desired angle of attack
             double error = Common.Clampf(desired_aoa - cur_aoa, Mathf.Abs(v_controller.res_max_aoa - v_controller.res_min_aoa));
 
+            // special workaround for twitches on out of controllable regions for overdamped planes
+            bool stable_out_of_bounds = false;
+            if (v_controller.staticaly_stable &&
+                   ((desired_aoa == v_controller.max_input_aoa && error < 0.0) ||
+                    (desired_aoa == v_controller.min_input_aoa && error > 0.0)))
+                stable_out_of_bounds = true;
+
             double k = v_controller.transit_max_v * v_controller.transit_max_v / 2.0 / (v_controller.res_max_aoa - v_controller.res_min_aoa);
             double t = -Math.Sqrt(Math.Abs(error / k));
             double descend_v;
@@ -189,6 +196,9 @@ namespace AtmosphereAutopilot
                     descend_v = k_cubic * (t_step * t_step * t_step - t_cubic * t_cubic * t_cubic) * Math.Sign(error) / TimeWarp.fixedDeltaTime;
                 }
             }
+
+            if (stable_out_of_bounds)
+                descend_v = 0.0;
 
             output_v = (float)(descend_v + desired_aoa_equilibr_v);
 
