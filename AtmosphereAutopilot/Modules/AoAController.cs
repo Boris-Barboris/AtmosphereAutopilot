@@ -198,7 +198,7 @@ namespace AtmosphereAutopilot
             }
 
             if (stable_out_of_bounds)
-                descend_v = 0.0;
+                descend_v = -0.2 * descend_v;
 
             output_v = (float)(descend_v + desired_aoa_equilibr_v);
 

@@ -29,7 +29,6 @@ namespace AtmosphereAutopilot
         {}
 
         FlightModel imodel;
-        //AccelerationController acc_c;
         DirectorController dir_c;
         ProgradeThrustController thrust_c;
 
@@ -119,7 +118,7 @@ namespace AtmosphereAutopilot
 
         public class CenterIndicator: MonoBehaviour
         {
-            Material mat = new Material(Shader.Find("KSP/Sprite"));
+            Material mat = new Material(Shader.Find("Sprites/Default"));
 
             Vector3 startVector = new Vector3(0.494f, 0.5f, -0.001f);
             Vector3 endVector = new Vector3(0.506f, 0.5f, -0.001f);

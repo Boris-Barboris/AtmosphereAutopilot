@@ -72,6 +72,16 @@ namespace AtmosphereAutopilot
             GameEvents.onGameUnpause.Add(OnApplicationUnpause);
             Instance = this;
             ActiveVessel = null;
+
+            HashSet<string> shaders = new HashSet<string>();
+
+            FindObjectsOfType<Shader>().ToList().ForEach(sh => shaders.Add(sh.name));
+            Resources.FindObjectsOfTypeAll<Shader>().ToList().ForEach(sh => shaders.Add(sh.name));
+
+            Debug.Log(shaders.Count.ToString() + " loaded shaders");
+            List<string> sorted = new List<string>(shaders); sorted.Sort();
+            foreach (var sh in sorted)
+                Debug.Log(sh);
         }
 
         public enum AerodinamycsModel

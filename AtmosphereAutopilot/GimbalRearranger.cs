@@ -22,7 +22,9 @@ namespace AtmosphereAutopilot
             {
                 GameObject go = new GameObject("GimbalRearranger");
                 Rearranger ra = go.AddComponent<Rearranger>();
+                CSurfaceReplacer re = go.AddComponent<CSurfaceReplacer>();
                 list.Insert(list.Count - 1, ra);
+                list.Insert(list.Count - 1, re);
             }
 
             DontDestroyOnLoad(this);
@@ -95,6 +97,33 @@ namespace AtmosphereAutopilot
                         fx_node.SetValue("thrustProviderModuleIndex", (old_index + 1).ToString());
                     }
                 }
+            }
+        }
+
+
+        class CSurfaceReplacer : LoadingSystem
+        {
+            bool ready = false;
+
+            public override bool IsReady()
+            {
+                return ready;
+            }
+
+            public override void StartLoad()
+            {
+                // replace ModuleControlSurface modules with SyncModuleControlSurface
+                var part_configs = GameDatabase.Instance.GetConfigNodes("PART");
+                foreach (var part in part_configs)
+                {
+                    ConfigNode csurf_node;
+                    if ((csurf_node = part.nodes.GetNode("MODULE", "name", "ModuleControlSurface")) != null)
+                    {
+                        Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains ModuleControlSurface, replacing it");
+                        csurf_node.SetValue("name", "SyncModuleControlSurface", false);                        
+                    }
+                }
+                ready = true;
             }
         }
     }

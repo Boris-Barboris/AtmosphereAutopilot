@@ -100,7 +100,8 @@ namespace AtmosphereAutopilot
 
         void check_csurfaces()
         {
-            HasControlSurfaces = vessel.Parts.Find(p => p.Modules.Contains(AtmosphereAutopilot.control_surface_module_type.Name)) != null;
+            HasControlSurfaces = vessel.Parts.Find(
+                p => p.Modules.Contains(AtmosphereAutopilot.control_surface_module_type.Name)) != null;
         }
 
         Vector3 get_sas_authority()
@@ -124,7 +125,7 @@ namespace AtmosphereAutopilot
         {
             cntrl_part_to_world = vessel.ReferenceTransform.rotation;
             world_to_cntrl_part = Quaternion.Inverse(cntrl_part_to_world);            // from world to control part rotation
-            CoM = vessel.findWorldCenterOfMass();
+            CoM = vessel.CoM;
             MOI = Vector3d.zero;
             AM = Vector3d.zero;
             sum_mass = 0.0f;
@@ -132,32 +133,8 @@ namespace AtmosphereAutopilot
             int indexing = vessel.parts.Count;
 
             // Get velocity
-            surface_v = Vector3d.zero;
-            Vector3d v_impulse = Vector3d.zero;
-            for (int pi = 0; pi < indexing; pi++)
-            {
-                Part part = vessel.parts[pi];
-                if (part.physicalSignificance == Part.PhysicalSignificance.NONE)
-                    continue;
-                if (part.vessel != vessel || part.State == PartStates.DEAD)
-                {
-                    moments_cycle_counter = 0;      // iterating over old part list
-                    continue;
-                }
-                float mass = 0.0f;
-                if (part.rb != null)
-                {
-                    mass = part.rb.mass;
-                    v_impulse += part.rb.velocity * mass;
-                }
-                else
-                {
-                    mass = part.mass + part.GetResourceMass();
-                    v_impulse += part.vel * mass;
-                }
-                sum_mass += mass;
-            }
-            surface_v = v_impulse / sum_mass;
+            surface_v = vessel.rb_velocityD;
+            sum_mass = (float)vessel.totalMass;
 
             // Get angular velocity
             for (int pi = 0; pi < indexing; pi++)
