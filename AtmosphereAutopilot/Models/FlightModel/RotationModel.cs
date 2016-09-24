@@ -108,11 +108,12 @@ namespace AtmosphereAutopilot
         {
             Vector3 res = Vector3.zero;
             foreach (var rw in vessel.FindPartModulesImplementing<ModuleReactionWheel>())
-                if (rw.isEnabled && rw.wheelState == ModuleReactionWheel.WheelState.Active && rw.operational)
+                if (rw.isEnabled && rw.wheelState == ModuleReactionWheel.WheelState.Active && 
+                    rw.operational && rw.actuatorModeCycle != (int)VesselActuatorMode.SAS)
                 {
-                    res.x += rw.PitchTorque;
-                    res.y += rw.RollTorque;
-                    res.z += rw.YawTorque;
+                    res.x += rw.PitchTorque * rw.authorityLimiter;
+                    res.y += rw.RollTorque * rw.authorityLimiter;
+                    res.z += rw.YawTorque * rw.authorityLimiter;
                 }
             return res;
         }

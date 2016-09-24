@@ -1,6 +1,6 @@
 clear;
 model = aircraft_model();
-model.aero_model = true;         % stock model
+model.aero_model = false;         % stock model
 model.force_spd_maintain = true;
 pitch_acc_c = ang_acc_pitch_yaw(0, model);
 pitch_vel_c = ang_vel_pitch_yaw(0, pitch_acc_c);
@@ -48,7 +48,7 @@ H3 = plot(time, cntrl(1,:), 'r');
 H4 = plot(time, csurf(1,:), 'k:');
 hold off
 xlabel('time');
-legend([H0,H1,H2,H3,H4], 'acc', 'ang vel', 'AoA', 'pitch c', 'pitch csurf');
+legend([H0,H1,H2,H3,H4], 'acc', 'ang vel', 'AoA', 'pitch ctrl', 'pitch csurf');
 h = gca;
 set(h, 'Position', [0.045 0.08 0.91 0.90]);
 %% Plot roll

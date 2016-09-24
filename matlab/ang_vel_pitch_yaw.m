@@ -219,8 +219,6 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
                 A = obj.model.pitch_A;
                 B = obj.model.pitch_B;
                 C = obj.model.pitch_C;
-                Au = obj.model.pitch_A_undelayed;
-                Bu = obj.model.pitch_B_undelayed;
             else
                 A = obj.model.yaw_A;
                 B = obj.model.yaw_B;
