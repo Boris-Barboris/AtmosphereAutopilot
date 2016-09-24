@@ -28,6 +28,12 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
         
         transit_max_v = 0.7;
         transit_v_mult = 0.5;
+        
+        % get_desired_acc section
+        quadr_Kp = 0.45;
+        relaxation_k = 1.0;
+        relaxation_Kp = 0.5;
+        relax_count = 0;
     end
     
     methods (Access = public)
@@ -36,14 +42,14 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
             c.axis = ax;
         end
         
-        function cntrl = eval(obj, target, dt)
+        function cntrl = eval(obj, target, target_acc, dt)
             obj.target_vel = target;
             obj.update_pars();
-            if (obj.user_input)
+            if (obj.user_controlled)
                 target = moderate(target);
             end
             obj.output_acc = obj.get_desired_acc(target, dt);
-            cntrl = obj.acc_c.eval(obj.output_acc, dt);
+            cntrl = obj.acc_c.eval(obj.output_acc + target_acc, dt);
         end
     end
     
@@ -55,7 +61,7 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
             obj.res_equilibr_v_upper = 0.0;
             obj.res_equilibr_v_lower = 0.0;
             
-            cur_aoa = obj.model.aoa(axis + 1);
+            cur_aoa = obj.model.aoa(obj.axis + 1);
             abs_cur_aoa = abs(cur_aoa);
             moderated = false;
             
@@ -80,7 +86,7 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
                     eq_A = zeros(2);
                     eq_A(1, 1) = A(1, 1);
                     eq_A(1, 2) = A(1, 2);
-                    eq_A(2, 1) = A(1, 0);
+                    eq_A(2, 1) = A(2, 1);
                     eq_A(2, 2) = 0.0;
                     eq_B = [-(A(1, 3) + A(1, 4) + B(1, 1) + C(1, 1)); -(A(2, 3) + A(2, 4) + B(2, 1) + C(2, 1))];
                     eq_x = eq_A \ eq_B;
@@ -139,15 +145,15 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
             % G force section
             if (obj.moderate_g && obj.model.dyn_pressure > 100.0)
                 moderated = true;
-                if (abs(A(1, 1)) > 1e-5 && abs_cur_aoa < rad_max_aoa * 1.5)
+                if ((abs(A(1, 1)) > 1e-5) && (abs_cur_aoa < rad_max_aoa * 1.5))
                     if (obj.axis == 0)
                         gravity_acc = obj.model.pitch_gravity_acc;
                     else
                         gravity_acc = obj.model.yaw_gravity_acc;
                     end
                     % get equilibrium aoa and angular v for max_g g-force
-                    obj.max_g_v = (obj.max_g_force * 9.81 + gravity_acc) / obj.model.velocity_magn;
-                    obj.min_g_v = (-obj.max_g_force * 9.81 + gravity_acc) / obj.model.velocity_magn;
+                    obj.max_g_v = (obj.max_g * 9.81 + gravity_acc) / obj.model.velocity_magn;
+                    obj.min_g_v = (-obj.max_g * 9.81 + gravity_acc) / obj.model.velocity_magn;
                     eq_A = [A(1, 1), A(1, 3) + A(1, 4) + B(1, 1); A(2, 1), A(2, 3) + A(2, 4) + B(2, 1)];
                     eq_B = [-(obj.max_g_v + C(1, 1)); -C(2, 1)];
                     eq_X = eq_A \ eq_B;
@@ -171,9 +177,9 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
             end
             
             % transit velocity evaluation
-            if (abs_cur_aoa < rad_max_aoa * 1.5 && obj.moderated)
+            if ((abs_cur_aoa < rad_max_aoa * 1.5) && moderated)
                 transit_max_aoa = min(rad_max_aoa, obj.res_max_aoa);
-                state_mat = zeros(4);
+                state_mat = zeros(4, 1);
                 if (obj.stable)
                     state_mat(1, 1) = transit_max_aoa / 3.0;
                 else
@@ -204,11 +210,39 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
         end
         
         function desired_v = moderate(obj, des_v)
-            
+            % not implemented
+            desired_v = des_v;
         end
         
         function des_acc = get_desired_acc(obj, des_v, dt)
-                
+            if (obj.axis == 0)
+                A = obj.model.pitch_A;
+                B = obj.model.pitch_B;
+                C = obj.model.pitch_C;
+                Au = obj.model.pitch_A_undelayed;
+                Bu = obj.model.pitch_B_undelayed;
+            else
+                A = obj.model.yaw_A;
+                B = obj.model.yaw_B;
+                C = obj.model.yaw_C;
+            end
+            
+            if (obj.model.aero_model) %if FAR
+                kacc_quadr = obj.quadr_Kp * (A(2, 3) * B(3, 1) + A(2, 4) * C(4, 1) + B(2, 1));
+            else
+                kacc_quadr = obj.quadr_Kp * (A(2, 3) * C(3, 1) + A(2, 4) * C(4, 1) + B(2, 1));
+            end
+            kacc_quadr = abs(kacc_quadr);
+            cur_v = obj.model.angular_vel(obj.axis + 1);
+            v_error = cur_v - des_v;
+            quadr_x = -sqrt(abs(v_error) / kacc_quadr);
+            if (quadr_x >= - obj.relaxation_k * dt)
+                desired_deriv = obj.relaxation_Kp * (-v_error) / (dt * ceil(obj.relaxation_k));
+            else
+                leftover_dt = min(dt, -quadr_x);
+                desired_deriv = sign(v_error) * (kacc_quadr * (quadr_x + leftover_dt) ^ 2 - kacc_quadr * quadr_x^2) / dt;
+            end
+            des_acc = desired_deriv;
         end
     end
     

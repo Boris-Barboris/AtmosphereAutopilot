@@ -16,6 +16,7 @@ classdef aircraft_model < handle
         angular_vel = [0.0 0.0 0.0];     % angular vel vector
         angular_acc = [0.0 0.0 0.0];     % angular acc vector
         csurf_state = [0.0 0.0 0.0];     % control surfaces position
+        csurf_state_new = [0.0 0.0 0.0];     % control surfaces FAR service buffer
         gimbal_state = [0.0 0.0 0.0];    % gimbal directions
         aoa = [0.0 0.0 0.0];             % aoas
         
@@ -131,9 +132,9 @@ classdef aircraft_model < handle
                 obj.csurf_state(2) = aircraft_model.moveto(obj.csurf_state(2), input(2), dt * obj.stock_csurf_spd);
                 obj.csurf_state(3) = aircraft_model.moveto(obj.csurf_state(3), input(3), dt * obj.stock_csurf_spd);
             else
-                obj.csurf_state(1) = aircraft_model.moveto_far(obj.csurf_state(1), input(1), dt / obj.far_timeConstant);
-                obj.csurf_state(2) = aircraft_model.moveto_far(obj.csurf_state(2), input(2), dt / obj.far_timeConstant);
-                obj.csurf_state(3) = aircraft_model.moveto_far(obj.csurf_state(3), input(3), dt / obj.far_timeConstant);
+                obj.csurf_state_new(1) = aircraft_model.moveto_far(obj.csurf_state(1), input(1), dt / obj.far_timeConstant);
+                obj.csurf_state_new(2) = aircraft_model.moveto_far(obj.csurf_state(2), input(2), dt / obj.far_timeConstant);
+                obj.csurf_state_new(3) = aircraft_model.moveto_far(obj.csurf_state(3), input(3), dt / obj.far_timeConstant);
             end
         end
         
@@ -174,6 +175,10 @@ classdef aircraft_model < handle
             yaw_acc = obj.yaw_A * [obj.aoa(3), obj.angular_vel(3), obj.csurf_state(3), 0.0].' +...
                 obj.yaw_B * input(3) + obj.yaw_C;
             obj.angular_acc(3) = yaw_acc(2);
+            
+            if (obj.aero_model)
+                obj.csurf_state = obj.csurf_state_new;
+            end
             
             rot_deltas = obj.angular_vel * dt + 0.5 * dt * dt * obj.angular_acc;
             rot_quat = quaternion.eulerangles('xyz', rot_deltas);
@@ -230,6 +235,7 @@ classdef aircraft_model < handle
                 obj.pitch_B(2, 1) = obj.sas_torque(1) / obj.MOI(1);
                 obj.pitch_C(3, 1) = obj.stock_csurf_spd;
             else
+                % FAR
                 obj.pitch_A(2, 3) = K2 * (1.0 - dt / obj.far_timeConstant);
                 obj.pitch_B(2, 1) = obj.sas_torque(1) / obj.MOI(1) + K2 * dt / obj.far_timeConstant;
                 obj.pitch_A(3, 3) = -1.0 / obj.far_timeConstant;

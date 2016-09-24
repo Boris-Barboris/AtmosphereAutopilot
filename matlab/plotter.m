@@ -7,12 +7,12 @@ scrsz = get(0,'ScreenSize');
 figure('Name','Telemetry Plotter',...
     'Position',[100 50 scrsz(3)*0.9 scrsz(4)*0.8])
 hold on
-plot(time, 2 .* acc,'r','Marker','.','MarkerSize',5)
-plot(time, 2 .* predict,'r-.')
-plot(time, control,'k','Marker','.','MarkerSize',5)
-plot(time, output,'k:','Marker','.','MarkerSize',5)
-plot(time, 10000 .* aoa,'b','Marker','.','MarkerSize',5)
-plot(time, 500 .* v,'g')
+plot(time, 1.0 .* acc,'r','Marker','.','MarkerSize',5)
+plot(time, 1.0 .* predict,'r-.')
+plot(time, 1.0 * control,'k','Marker','.','MarkerSize',5)
+plot(time, 1.0 * output,'k:','Marker','.','MarkerSize',5)
+plot(time, 1.0 .* aoa,'b','Marker','.','MarkerSize',5)
+plot(time, 5.0 .* v,'g')
 hold off
 xlabel('time')
 legend('acc','predict','csurf','control','aoa','v');

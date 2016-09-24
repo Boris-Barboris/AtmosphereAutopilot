@@ -505,7 +505,7 @@ namespace AtmosphereAutopilot
         }
 
         [AutoGuiAttr("quadr Kp", true, "G6")]
-        protected float quadr_Kp = 0.3f;
+        protected float quadr_Kp = 0.45f;
 
         [AutoGuiAttr("kacc_quadr", false, "G6")]
         internal float kacc_quadr;
