@@ -684,7 +684,7 @@ namespace AtmosphereAutopilot
             float cur_aoa = imodel.AoA(YAW);
             
             // let's find maximum angular v on 0.0 AoA and 0.0 Yaw input from model
-            if (cur_aoa < 0.3 && imodel.dyn_pressure > 100.0)
+            if (Math.Abs(cur_aoa) < 0.3 && imodel.dyn_pressure > 100.0)
             {
                 float new_max_input_v =
                     (float)((imodel.roll_rot_model_gen.C[0, 0] + imodel.roll_rot_model_gen.B[0, 0] +
@@ -820,54 +820,32 @@ namespace AtmosphereAutopilot
             double quadr_x;
             float desired_deriv;
             float dt = TimeWarp.fixedDeltaTime;
-            if (v_error >= 0.0)
+
+            quadr_x = -Math.Sqrt(Math.Abs(v_error) / kacc_quadr);
+            if (quadr_x >= -relaxation_k * dt)
             {
-                quadr_x = -Math.Sqrt(v_error / kacc_quadr);
-                if (quadr_x >= -relaxation_k * dt)
+                if (++relax_count > relaxation_frame)
                 {
-                    if (++relax_count > relaxation_frame)
-                    {
-                        float avg_vel = 0.0f;
-                        for (int i = 0; i < relaxation_frame; i++)
-                            avg_vel += imodel.AngularVelHistory(ROLL).getFromTail(i);
-                        avg_vel /= (float)relaxation_frame;
-                        v_error = avg_vel - des_v;
-                        if (relax_count > relaxation_frame * 2)
-                            relax_count--;
-                    }
-                    desired_deriv = (float)(relaxation_Kp * -v_error / (Math.Ceiling(relaxation_k) * dt));
+                    float avg_vel = 0.0f;
+                    for (int i = 0; i < relaxation_frame; i++)
+                        avg_vel += imodel.AngularVelHistory(axis).getFromTail(i);
+                    avg_vel /= (float)relaxation_frame;
+                    v_error = avg_vel - des_v;
+                    if (relax_count > relaxation_frame * 2)
+                        relax_count--;
                 }
-                else
-                {
-                    relax_count = 0;
-                    double leftover_dt = Math.Min(dt, -quadr_x);
-                    desired_deriv = (float)(kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) - kacc_quadr * quadr_x * quadr_x) / dt;
-                }
+                desired_deriv = (float)(relaxation_Kp * -v_error / (Math.Ceiling(relaxation_k) * dt));
             }
             else
             {
-                quadr_x = -Math.Sqrt(v_error / -kacc_quadr);
-                if (quadr_x >= -relaxation_k * dt)
-                {
-                    if (++relax_count > relaxation_frame)
-                    {
-                        float avg_vel = 0.0f;
-                        for (int i = 0; i < relaxation_frame; i++)
-                            avg_vel += imodel.AngularVelHistory(ROLL).getFromTail(i);
-                        avg_vel /= (float)relaxation_frame;
-                        v_error = avg_vel - des_v;
-                        if (relax_count > relaxation_frame * 2)
-                            relax_count--;
-                    }
-                    desired_deriv = (float)(relaxation_Kp * -v_error / (Math.Ceiling(relaxation_k) * dt));
-                }
+                relax_count = 0;
+                double leftover_dt = Math.Min(dt, -quadr_x);
+                if (double.IsNaN(v_error))
+                    desired_deriv = 0.0f;
                 else
-                {
-                    double leftover_dt = Math.Min(dt, -quadr_x);
-                    desired_deriv = (float)(-kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) + kacc_quadr * quadr_x * quadr_x) / dt;
-                    relax_count = 0;
-                }
+                    desired_deriv = (float)(Math.Sign(v_error) * (kacc_quadr * Math.Pow(quadr_x + leftover_dt, 2.0) - kacc_quadr * quadr_x * quadr_x)) / dt;
             }
+
             return desired_deriv;
         }
     }

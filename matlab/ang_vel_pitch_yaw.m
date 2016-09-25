@@ -214,7 +214,7 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
             desired_v = des_v;
         end
         
-        function des_acc = get_desired_acc(obj, des_v, dt)
+        function des_acc = get_desired_acc(obj, des_v, dt)            
             if (obj.axis == 0)
                 A = obj.model.pitch_A;
                 B = obj.model.pitch_B;
