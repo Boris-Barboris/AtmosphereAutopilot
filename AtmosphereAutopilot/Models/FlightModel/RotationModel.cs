@@ -111,9 +111,9 @@ namespace AtmosphereAutopilot
                 if (rw.isEnabled && rw.wheelState == ModuleReactionWheel.WheelState.Active && 
                     rw.operational && rw.actuatorModeCycle != (int)VesselActuatorMode.SAS)
                 {
-                    res.x += rw.PitchTorque * rw.authorityLimiter;
-                    res.y += rw.RollTorque * rw.authorityLimiter;
-                    res.z += rw.YawTorque * rw.authorityLimiter;
+                    res.x += rw.PitchTorque * rw.authorityLimiter * 0.01f;
+                    res.y += rw.RollTorque * rw.authorityLimiter * 0.01f;
+                    res.z += rw.YawTorque * rw.authorityLimiter * 0.01f;
                 }
             return res;
         }
