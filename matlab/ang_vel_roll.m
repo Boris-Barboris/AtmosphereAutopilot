@@ -10,6 +10,8 @@ classdef ang_vel_roll < ang_vel_controller
         relaxation_k = 1.0;
         relaxation_Kp = 0.5;
         relax_count = 0;
+        
+        already_preupdated = false;
     end
     
     methods (Access = public)
@@ -24,10 +26,20 @@ classdef ang_vel_roll < ang_vel_controller
             obj.output_acc = obj.get_desired_acc(target, dt);
             cntrl = obj.acc_c.eval(obj.output_acc + target_acc, yaw_ctl, dt);
         end
+        
+        function preupdate(obj)
+            obj.update_pars()
+            obj.already_preupdated = true;
+        end
     end
     
     methods (Access = private)
         function update_pars(obj)
+            if (obj.already_preupdated)
+                obj.already_preupdated = false;
+                return
+            end
+            
             A = obj.model.roll_A;
             B = obj.model.roll_B;
             C = obj.model.roll_C;

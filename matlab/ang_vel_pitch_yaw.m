@@ -34,6 +34,8 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
         relaxation_k = 1.0;
         relaxation_Kp = 0.5;
         relax_count = 0;
+        
+        already_preupdated = false;
     end
     
     methods (Access = public)
@@ -51,10 +53,20 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
             obj.output_acc = obj.get_desired_acc(target, dt);
             cntrl = obj.acc_c.eval(obj.output_acc + target_acc, dt);
         end
+        
+        function preupdate(obj)
+            obj.update_pars()
+            obj.already_preupdated = true;
+        end
     end
     
     methods (Access = private)
         function update_pars(obj)
+            if (obj.already_preupdated)
+                obj.already_preupdated = false;
+                return
+            end
+            
             rad_max_aoa = obj.max_aoa * pi / 180.0;
             obj.res_max_aoa = 100.0;
             obj.res_min_aoa = -100.0;

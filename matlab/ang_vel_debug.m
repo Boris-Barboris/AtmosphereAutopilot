@@ -6,8 +6,8 @@ pitch_acc_c = ang_acc_pitch_yaw(0, model);
 pitch_vel_c = ang_vel_pitch_yaw(0, pitch_acc_c);
 roll_acc_c = ang_acc_roll(model);
 roll_vel_c = ang_vel_roll(roll_acc_c);
-dt = 0.05;
-sim_length = 50;
+dt = 0.02;
+sim_length = 150;
 time = zeros(1, sim_length);
 positions = zeros(3, sim_length);
 forwards = zeros(3, sim_length);
@@ -33,14 +33,14 @@ for frame = 2:sim_length
     time(frame) = dt * (frame - 1);
     model.preupdate(dt);
     if (time(frame) > 0.0 && time(frame) < 1.0)
-        des_pitch_v = -0.4;
+        des_pitch_v = -0.2;
     else
         des_pitch_v = 0.0;
     end
     p_output = pitch_vel_c.eval(des_pitch_v, 0.0, dt);
-    r_output = roll_vel_c.eval(0.1, 0.0, dt, 0.0);
-    %cntrl(:, frame) = [p_output, 0, 0];
-    cntrl(:, frame) = [0, r_output, 0];
+    r_output = roll_vel_c.eval(des_pitch_v, 0.0, dt, 0.0);
+    cntrl(:, frame) = [p_output, 0, 0];
+    %cntrl(:, frame) = [0, r_output, 0];
     model.simulation_step(dt, cntrl(:, frame));
     
     positions(:, frame) = model.position.';

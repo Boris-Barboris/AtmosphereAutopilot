@@ -516,7 +516,7 @@ namespace AtmosphereAutopilot
         protected float kacc_smoothing = 10.0f;
 
         [AutoGuiAttr("relaxation_k", true, "G5")]
-        public float relaxation_k = 2.0f;
+        public float relaxation_k = 1.0f;
 
         [AutoGuiAttr("relaxation_Kp", true, "G5")]
         public float relaxation_Kp = 0.5f;

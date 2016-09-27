@@ -1,6 +1,6 @@
 clear;
 model = aircraft_model();
-model.aero_model = true;
+model.aero_model = false;
 %model.force_spd_maintain = true;
 sim_length = 100;
 dt = 0.05;
