@@ -7,7 +7,7 @@ classdef ang_vel_roll < ang_vel_controller
         
         % get_desired_acc section
         quadr_Kp = 0.45;
-        relaxation_k = 1.0;
+        relaxation_k = -1.0;
         relaxation_Kp = 0.5;
         relax_count = 0;
         
