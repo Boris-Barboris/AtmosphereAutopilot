@@ -186,4 +186,6 @@ FakesAssemblies/
 /matlab/quaternion/quaterniondemo.m
 /matlab/quaternion/quaternion matlab class documentation.pdf
 /AtmosphereAutopilot/Thumbs.db
-/AtmosphereAutopilot/.vs/config/applicationhost.config
+Thumbs.db
+TempUnityProject
+.vs
