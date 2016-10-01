@@ -11,7 +11,7 @@ classdef aoa_controller < handle
         target_aoa = 0.0;
         cur_aoa_equilibr = 0.0;     % equilibrium angular velocity to stay on current AoA
         
-        Kp = 1.0;
+        params = [1.0, 0.0, 0.0];        % math parameters
         
         already_preupdated = false;
     end
@@ -75,17 +75,22 @@ classdef aoa_controller < handle
             
             error = target_aoa - cur_aoa;
             
-            output = obj.Kp * error;
+            output = obj.get_output(error);
             cur_ang_vel = obj.model.angular_vel(obj.axis + 1);
             shift_ang_vel = cur_ang_vel - obj.cur_aoa_equilibr;
             if (shift_ang_vel * error > 0.0)
                 predicted_error = error - shift_ang_vel * dt;
                 factor = min(shift_ang_vel / output, 1.0) ^ 2;
-                out_acc = factor * obj.Kp * (predicted_error - error) / dt;
+                out_acc = factor * (obj.get_output(predicted_error) - output) / dt;
             else
                 out_acc = 0.0;
             end
             out_vel = obj.cur_aoa_equilibr + output;
+        end
+        
+        function output = get_output(obj, error)
+            output = obj.params(1, 1) * error + sign(error) * obj.params(1, 2) * error ^ 2;
+            output = output + obj.params(1, 3) * error ^ 3;
         end
         
     end

@@ -5,9 +5,9 @@ model.force_spd_maintain = true;
 pitch_acc_c = ang_acc_pitch_yaw(0, model);
 pitch_vel_c = ang_vel_pitch_yaw(0, pitch_acc_c);
 pitch_aoa_c = aoa_controller(0, pitch_vel_c);
-pitch_aoa_c.Kp = 3.0;
-dt = 0.02;
-sim_length = 180;
+pitch_aoa_c.params = [1.598, 12.162, 2.032];
+dt = 0.05;
+sim_length = 80;
 time = zeros(1, sim_length);
 positions = zeros(3, sim_length);
 forwards = zeros(3, sim_length);
@@ -32,10 +32,10 @@ ang_vel(:, frame) = model.angular_vel;
 for frame = 2:sim_length
     time(frame) = dt * (frame - 1);
     model.preupdate(dt);
-    if (time(frame) > 0.0 && time(frame) < 1.0)
-        des_aoa = 0.15;
+    if (time(frame) > 0.0 && time(frame) < 2.0)
+        des_aoa = 0.2;
     else
-        des_aoa = 0.02;
+        des_aoa = 0.0;
     end
     p_output = pitch_aoa_c.eval(des_aoa, 0.0, dt);
     cntrl(:, frame) = [p_output, 0, 0];
