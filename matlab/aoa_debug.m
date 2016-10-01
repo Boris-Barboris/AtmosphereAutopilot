@@ -5,9 +5,9 @@ model.force_spd_maintain = true;
 pitch_acc_c = ang_acc_pitch_yaw(0, model);
 pitch_vel_c = ang_vel_pitch_yaw(0, pitch_acc_c);
 pitch_aoa_c = aoa_controller(0, pitch_vel_c);
-pitch_aoa_c.Kp = 10.0;
+pitch_aoa_c.Kp = 3.0;
 dt = 0.02;
-sim_length = 150;
+sim_length = 180;
 time = zeros(1, sim_length);
 positions = zeros(3, sim_length);
 forwards = zeros(3, sim_length);
@@ -33,7 +33,7 @@ for frame = 2:sim_length
     time(frame) = dt * (frame - 1);
     model.preupdate(dt);
     if (time(frame) > 0.0 && time(frame) < 1.0)
-        des_aoa = 0.05;
+        des_aoa = 0.15;
     else
         des_aoa = 0.02;
     end

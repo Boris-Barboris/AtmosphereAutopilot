@@ -80,9 +80,10 @@ classdef aoa_controller < handle
             shift_ang_vel = cur_ang_vel - obj.cur_aoa_equilibr;
             if (shift_ang_vel * error > 0.0)
                 predicted_error = error - shift_ang_vel * dt;
-                out_acc = obj.Kp * (predicted_error - error) / dt;
+                factor = min(shift_ang_vel / output, 1.0) ^ 2;
+                out_acc = factor * obj.Kp * (predicted_error - error) / dt;
             else
-                out_acc = 0.0
+                out_acc = 0.0;
             end
             out_vel = obj.cur_aoa_equilibr + output;
         end
