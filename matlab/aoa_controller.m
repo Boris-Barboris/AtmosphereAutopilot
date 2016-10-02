@@ -25,20 +25,20 @@ classdef aoa_controller < handle
         
         function cntrl = eval(obj, target_aoa, target_vel, dt)
             obj.vel_c.preupdate();
-            obj.update_pars();
+            obj.update_pars(target_aoa);
             [obj.output_vel, obj.output_acc] = obj.get_desired_output(target_aoa, dt);
             cntrl = obj.vel_c.eval(obj.output_vel + target_vel, obj.output_acc, dt);
         end
         
         function preupdate(obj)
-            obj.update_pars()
+            obj.update_pars(0.0)
             obj.already_preupdated = true;
         end
     end
     
     methods (Access = private)
         
-        function update_pars(obj)
+        function update_pars(obj, des_aoa)
             if (obj.already_preupdated)
                 obj.already_preupdated = false;
                 return
@@ -63,8 +63,8 @@ classdef aoa_controller < handle
             eq_A(1, 2) = A(1, 3) + A(1, 4) + B(1, 1);
             eq_A(2, 1) = A(2, 2);
             eq_A(2, 2) = A(2, 3) + B(2, 1) + A(2, 4);
-            eq_B(1, 1) = -(A(1, 1) * cur_aoa + C(1, 1));
-            eq_B(2, 1) = -(A(2, 1) * cur_aoa + C(2, 1));
+            eq_B(1, 1) = -(A(1, 1) * des_aoa + C(1, 1));
+            eq_B(2, 1) = -(A(2, 1) * des_aoa + C(2, 1));
             eq_x = eq_A \ eq_B;
             obj.cur_aoa_equilibr = eq_x(1, 1);
         end
