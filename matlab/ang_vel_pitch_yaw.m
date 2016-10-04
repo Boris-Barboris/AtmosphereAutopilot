@@ -47,6 +47,13 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
         end
         
         function cntrl = eval(obj, target, target_deriv, dt)
+            if (target > obj.max_v_construction)
+                target_deriv = min(target_deriv, 0.0);
+                target = obj.max_v_construction;
+            elseif (target < -obj.max_v_construction)
+                target_deriv = max(target_deriv, 0.0);
+                target = -obj.max_v_construction;
+            end
             target = aircraft_model.clamp(target, -obj.max_v_construction, obj.max_v_construction);
             obj.target_vel = target;
             obj.update_pars();
@@ -250,7 +257,7 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
             c = v_error - k * s^2;
             quadr_x = 0.0;
             if (b + s <= dt)
-                desired_deriv = (d * dt - k * (quadr_x - s) ^ 2) / dt;
+                desired_deriv = (d * dt - k * (quadr_x - s) ^ 2 - c) / dt;
             else
                 intersect_x = dt;
                 desired_deriv = k * ((intersect_x - s) ^ 2 - (quadr_x - s) ^ 2) / dt;

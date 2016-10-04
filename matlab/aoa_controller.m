@@ -6,6 +6,10 @@ classdef aoa_controller < handle
         axis = 0;                   % 0 - pitch 1 - roll 2 - yaw
         output_vel = 0.0;
         output_acc = 0.0;
+        predicted_aoa = 0.0;
+        predicted_eq_v = 0.0;
+        predicted_error = 0.0;
+        pred_output = 0.0;
         user_controlled = false;    % true when target is user control
         
         target_aoa = 0.0;
@@ -25,7 +29,7 @@ classdef aoa_controller < handle
         
         function cntrl = eval(obj, target_aoa, target_vel, dt)
             obj.vel_c.preupdate();
-            obj.update_pars(target_aoa);
+            obj.update_pars();
             [obj.output_vel, obj.output_acc] = obj.get_desired_output(target_aoa, dt);
             cntrl = obj.vel_c.eval(obj.output_vel + target_vel, obj.output_acc, dt);
         end
@@ -38,7 +42,7 @@ classdef aoa_controller < handle
     
     methods (Access = private)
         
-        function update_pars(obj, des_aoa)
+        function update_pars(obj)
             if (obj.already_preupdated)
                 obj.already_preupdated = false;
                 return
@@ -114,14 +118,12 @@ classdef aoa_controller < handle
             cur_ang_vel = obj.model.angular_vel(obj.axis + 1);
             shift_ang_vel = cur_ang_vel - obj.cur_aoa_equilibr;
             %if (shift_ang_vel * error > 0.0)
-                predicted_aoa = cur_aoa + shift_ang_vel * dt;
-                predicted_error = target_aoa - predicted_aoa;
-                if (predicted_error * error < 0.0)
-                    predicted_error = 0.0;
-                    predicted_aoa = target_aoa;
-                end
-                predicted_eq_v = obj.get_equlibr_v(predicted_aoa);
-                out_acc = (predicted_eq_v + obj.get_output(predicted_error, dt) - out_vel) / dt;
+                obj.predicted_aoa = cur_aoa + shift_ang_vel * dt;
+                obj.predicted_error = target_aoa - obj.predicted_aoa;
+                obj.pred_output = obj.get_output(obj.predicted_error, dt);
+                obj.predicted_eq_v = obj.get_equlibr_v(obj.predicted_aoa);
+                %out_acc = (predicted_eq_v + obj.get_output(predicted_error, dt) - out_vel) / dt;
+                out_acc = (obj.predicted_eq_v + obj.pred_output - out_vel) / dt;
                 %out_acc = 0.0;
             %else
             %    out_acc = 0.0;
