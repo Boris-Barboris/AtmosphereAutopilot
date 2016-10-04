@@ -42,20 +42,7 @@ classdef aoa_controller < handle
             if (obj.already_preupdated)
                 obj.already_preupdated = false;
                 return
-            end
-            
-            % internal math update
-            % let's find cur_aoa_equilibr
-            if (obj.axis == 0)
-                A = obj.model.pitch_A; 
-                B = obj.model.pitch_B;
-                C = obj.model.pitch_C;
-            else
-                A = obj.model.yaw_A; 
-                B = obj.model.yaw_B;
-                C = obj.model.yaw_C;
             end            
-            
             cur_aoa = obj.model.aoa(obj.axis + 1);
             obj.cur_aoa_equilibr = obj.get_equlibr_v(cur_aoa);
         end
@@ -135,6 +122,7 @@ classdef aoa_controller < handle
                 end
                 predicted_eq_v = obj.get_equlibr_v(predicted_aoa);
                 out_acc = (predicted_eq_v + obj.get_output(predicted_error, dt) - out_vel) / dt;
+                %out_acc = 0.0;
             %else
             %    out_acc = 0.0;
             %end

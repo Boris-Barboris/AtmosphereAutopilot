@@ -43,7 +43,7 @@ for frame = 2:sim_length
     p_output = pitch_aoa_c.eval(des_aoa, 0.0, dt);
     output_vel(frame) = pitch_aoa_c.output_vel;
     output_acc(frame) = pitch_aoa_c.output_acc;
-    real_setpoint_acc(frame-1) = (output_vel(frame) - output_vel(frame-1)) / dt;
+    real_setpoint_acc(frame) = (output_vel(frame) - output_vel(frame-1)) / dt;
     cntrl(:, frame) = [p_output, 0, 0];
     %cntrl(:, frame) = [0, r_output, 0];
     model.simulation_step(dt, cntrl(:, frame));

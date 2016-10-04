@@ -249,10 +249,10 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
             s = (-d + sign(k) * 2.0 * sqrt(k * v_error)) / 2.0 / k;
             c = v_error - k * s^2;
             quadr_x = 0.0;
-            if (b + s <= obj.relaxation_k * dt)
-                desired_deriv = obj.relaxation_Kp * (-v_error) / (dt * ceil(obj.relaxation_k)) + target_deriv;
+            if (b + s <= dt)
+                desired_deriv = (d * dt - k * (quadr_x - s) ^ 2) / dt;
             else
-                intersect_x = min(dt, b + s);
+                intersect_x = dt;
                 desired_deriv = k * ((intersect_x - s) ^ 2 - (quadr_x - s) ^ 2) / dt;
             end
             des_acc = desired_deriv;
