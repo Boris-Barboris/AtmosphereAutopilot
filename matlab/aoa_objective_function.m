@@ -5,9 +5,9 @@ function output_val = aoa_objective_function(params)
     pitch_acc_c = ang_acc_pitch_yaw(0, model);
     pitch_vel_c = ang_vel_pitch_yaw(0, pitch_acc_c);
     pitch_aoa_c = aoa_controller(0, pitch_vel_c);
-    pitch_aoa_c.params(1, 2) = params;
+    pitch_aoa_c.params = params;
     dt = 0.05;
-    sim_length = 80;
+    sim_length = 120;
     time = zeros(1, sim_length);
     aoas = zeros(3, sim_length);
 
@@ -18,7 +18,7 @@ function output_val = aoa_objective_function(params)
     for frame = 2:sim_length
         time(frame) = dt * (frame - 1);
         model.preupdate(dt);
-        if (time(frame) > 0.0 && time(frame) < 2.0)
+        if (time(frame) > 0.0 && time(frame) < 2.5)
             des_aoa = 0.2;
         else
             des_aoa = 0.0;

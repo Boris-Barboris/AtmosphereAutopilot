@@ -2,12 +2,12 @@ clear;
 model = aircraft_model();
 model.aero_model = false;         % stock model
 model.force_spd_maintain = true;
-model.MOI(1) = 165.0;
-model.pitch_rot_m(2) = -0.5;
+%model.MOI(1) = 165.0;
+%model.pitch_rot_m(2) = 0.5;
 pitch_acc_c = ang_acc_pitch_yaw(0, model);
 pitch_vel_c = ang_vel_pitch_yaw(0, pitch_acc_c);
 pitch_aoa_c = aoa_controller(0, pitch_vel_c);
-pitch_aoa_c.params = [3.0, 0.1, 500.0];
+pitch_aoa_c.params = [4.5, 0.15, 500.0];
 dt = 0.05;
 sim_length = 120;
 time = zeros(1, sim_length);
