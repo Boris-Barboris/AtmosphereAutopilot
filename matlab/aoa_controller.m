@@ -114,7 +114,10 @@ classdef aoa_controller < handle
             error = target_aoa - cur_aoa;
             
             output = obj.get_output(error, dt);
-            out_vel = obj.cur_aoa_equilibr + output; %obj.get_des_v(output);
+            
+            des_aoa_equilibr = obj.get_equlibr_v(target_aoa);
+            
+            out_vel = des_aoa_equilibr + output; %obj.get_des_v(output);
             cur_ang_vel = obj.model.angular_vel(obj.axis + 1);
             shift_ang_vel = cur_ang_vel - obj.cur_aoa_equilibr;
             %if (shift_ang_vel * error > 0.0)
@@ -123,7 +126,14 @@ classdef aoa_controller < handle
                 obj.pred_output = obj.get_output(obj.predicted_error, dt);
                 obj.predicted_eq_v = obj.get_equlibr_v(obj.predicted_aoa);
                 %out_acc = (predicted_eq_v + obj.get_output(predicted_error, dt) - out_vel) / dt;
-                out_acc = (obj.predicted_eq_v + obj.pred_output - out_vel) / dt;
+                %if (abs(error) > 1e-4)
+                    prev_out_vel = obj.output_vel;
+                    cur_deriv = (out_vel - prev_out_vel) / dt;
+                    pred_deriv = (obj.pred_output - output) / dt;
+                    out_acc = 0.5 * (cur_deriv + pred_deriv);
+                %else
+                %    out_acc = 0.0;
+                %end
                 %out_acc = 0.0;
             %else
             %    out_acc = 0.0;

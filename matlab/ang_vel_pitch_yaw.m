@@ -47,20 +47,18 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
         end
         
         function cntrl = eval(obj, target, target_deriv, dt)
-            if (target > obj.max_v_construction)
-                target_deriv = min(target_deriv, 0.0);
-                target = obj.max_v_construction;
-            elseif (target < -obj.max_v_construction)
-                target_deriv = max(target_deriv, 0.0);
-                target = -obj.max_v_construction;
-            end
-            target = aircraft_model.clamp(target, -obj.max_v_construction, obj.max_v_construction);
             obj.target_vel = target;
             obj.update_pars();
             if (obj.user_controlled)
                 target = moderate(target);
             end
-            obj.output_acc = obj.get_desired_acc(target, target_deriv, dt);
+            acc_unconst = obj.get_desired_acc(target, target_deriv, dt);
+            acc_constrained = obj.get_desired_acc(sign(target) * obj.max_v_construction, 0.0, dt);
+            if (sign(target) * acc_constrained < sign(target) * acc_unconst)
+                obj.output_acc = acc_constrained;
+            else
+                obj.output_acc = acc_unconst;
+            end            
             cntrl = obj.acc_c.eval(obj.output_acc, dt);
         end
         
