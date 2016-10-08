@@ -452,14 +452,13 @@ namespace AtmosphereAutopilot
             // waypoint picking button
             if (WaypointMode)
             {
-                if (GUILayout.Button("pick waypoint", GUIStyles.toggleButtonStyle) && !picking_waypoint)
-                    start_picking_waypoint();
                 GUILayout.BeginHorizontal();
 				//GUILayout.Label(current_waypt.latitude.ToString("G5"), GUIStyles.labelStyleCenter);
 				desired_latitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
 				//GUILayout.Label(current_waypt.longtitude.ToString("G5"), GUIStyles.labelStyleCenter);
 				desired_longitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
-                GUILayout.Label((dist_to_dest / 1000.0).ToString("#0.0") + " km", GUIStyles.labelStyleCenter);
+				if (GUILayout.Button("Pick", GUIStyles.toggleButtonStyle) && !picking_waypoint)
+					start_picking_waypoint();
                 GUILayout.EndHorizontal();
             }
 
@@ -494,7 +493,14 @@ namespace AtmosphereAutopilot
 			GUILayout.BeginHorizontal();
 			GUILayout.Label(vessel.latitude.ToString("G6"), GUIStyles.labelStyleCenter);
 			GUILayout.Label(vessel.longitude.ToString("G7"), GUIStyles.labelStyleCenter);
-			GUILayout.Label(vessel.altitude.ToString("G5") + " m", GUIStyles.labelStyleCenter);
+			if (WaypointMode)
+			{
+				GUILayout.Label((dist_to_dest / 1000.0).ToString("#0.0") + " km", GUIStyles.labelStyleCenter);
+			}
+			else
+			{
+				GUILayout.Label(vessel.altitude.ToString("G5") + " m", GUIStyles.labelStyleCenter);
+			}
 			GUILayout.EndHorizontal();
 
 			// advanced options
