@@ -1,4 +1,4 @@
-﻿/*
+/*
 Atmosphere Autopilot, plugin for Kerbal Space Program.
 Copyright (C) 2015-2016, Baranin Alexander aka Boris-Barboris.
  
