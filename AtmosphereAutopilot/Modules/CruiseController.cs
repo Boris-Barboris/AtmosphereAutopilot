@@ -16,8 +16,6 @@ along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>.
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 
 namespace AtmosphereAutopilot
@@ -188,10 +186,10 @@ namespace AtmosphereAutopilot
             {
                 // we're turning for more than 45 degrees, let's force the turn to be horizontal
                 Vector3d right_turn = Vector3d.Cross(planet2vesNorm, imodel.surface_v);
-                double sign = Math.Sign(Vector3d.Dot(right_turn, desired_velocity));
-                if (sign == 0.0)
-                    sign = 1.0;
-                desired_velocity = right_turn.normalized * sign * Math.Tan(0.5) + hor_vel.normalized;
+                int sign = Math.Sign(Vector3d.Dot(right_turn, desired_velocity));
+                if (sign == 0)
+                    sign = 1;
+				desired_velocity = right_turn.normalized * (double)sign * Math.Tan(0.5) + hor_vel.normalized;
             }
         }
 
