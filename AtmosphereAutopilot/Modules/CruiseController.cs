@@ -491,6 +491,15 @@ namespace AtmosphereAutopilot
             desired_vertspeed.DisplayLayout(GUIStyles.textBoxStyle);
             GUILayout.EndHorizontal();
 
+			// current status
+			GUILayout.Space(5.0f);
+			GUILayout.BeginHorizontal();
+			GUILayout.Label(vessel.latitude.ToString("G6"), GUIStyles.labelStyleCenter);
+			GUILayout.Label(vessel.longitude.ToString("G7"), GUIStyles.labelStyleCenter);
+			GUILayout.Label(vessel.altitude.ToString("G5") + " m", GUIStyles.labelStyleCenter);
+			GUILayout.EndHorizontal();
+
+			// advanced options
             GUILayout.Space(5.0f);
             bool adv_o = advanced_options;
             advanced_options = GUILayout.Toggle(advanced_options, "Advanced options", GUIStyles.toggleButtonStyle);
