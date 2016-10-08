@@ -20,7 +20,6 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-
     public struct Waypoint
     {
         public Waypoint(double longt, double lat)
@@ -226,10 +225,10 @@ namespace AtmosphereAutopilot
         public DelayedFieldFloat desired_course = new DelayedFieldFloat(90.0f, "G4");
 
 		[VesselSerializable("desired_latitude_field")]
-		public DelayedFieldFloat desired_latitude = new DelayedFieldFloat(-0.0486178f, "G6");	// latitude of KSC runway, west end (default position for launched vessels)
+		public DelayedFieldFloat desired_latitude = new DelayedFieldFloat(-0.0486178f, "#0.0000");	// latitude of KSC runway, west end (default position for launched vessels)
 
 		[VesselSerializable("desired_longitude_field")]
-		public DelayedFieldFloat desired_longitude = new DelayedFieldFloat(-74.72444f, "G7");   // longitude of KSC runway, west end (default position for launched vessels)
+		public DelayedFieldFloat desired_longitude = new DelayedFieldFloat(-74.72444f, "#0.0000");  // longitude of KSC runway, west end (default position for launched vessels)
 
 		[VesselSerializable("vertical_control")]
         public bool vertical_control = false;
@@ -349,8 +348,6 @@ namespace AtmosphereAutopilot
                 desired_vert_acc = parabolic_acc * (1.0 - relax_transition_k) + proportional_acc * relax_transition_k;
             return res.normalized;
         }
-
-
 
         internal bool LevelFlightMode
         {
