@@ -463,12 +463,15 @@ namespace AtmosphereAutopilot
                 GUILayout.EndHorizontal();
             }
 
-            // course
-            GUILayout.Space(7.0f);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("desired course", GUIStyles.labelStyleLeft);
-            desired_course.DisplayLayout(GUIStyles.textBoxStyle);
-            GUILayout.EndHorizontal();
+			if (CourseHoldMode)
+			{
+				// course
+				GUILayout.Space(7.0f);
+				GUILayout.BeginHorizontal();
+				GUILayout.Label("desired course", GUIStyles.labelStyleLeft);
+				desired_course.DisplayLayout(GUIStyles.textBoxStyle);
+				GUILayout.EndHorizontal();
+			}
 
             // speed
             GUILayout.Space(3.0f);
