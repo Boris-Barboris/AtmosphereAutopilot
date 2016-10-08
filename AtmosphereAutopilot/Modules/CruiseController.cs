@@ -216,13 +216,13 @@ namespace AtmosphereAutopilot
         internal bool waypoint_entered = false;
 
         // axis to rotate around in level flight mode
-        protected Vector3d circle_axis = Vector3d.zero;
+        internal Vector3d circle_axis = Vector3d.zero;
 
         [AutoGuiAttr("Director controller GUI", true)]
-        protected bool DircGUI { get { return dir_c.IsShown(); } set { if (value) dir_c.ShowGUI(); else dir_c.UnShowGUI(); } }
+        public bool DircGUI { get { return dir_c.IsShown(); } set { if (value) dir_c.ShowGUI(); else dir_c.UnShowGUI(); } }
 
         [AutoGuiAttr("Thrust controller GUI", true)]
-        protected bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
+        public bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
 
         [VesselSerializable("desired_course_field")]
         public DelayedFieldFloat desired_course = new DelayedFieldFloat(90.0f, "G4");
