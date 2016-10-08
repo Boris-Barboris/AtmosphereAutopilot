@@ -227,11 +227,19 @@ namespace AtmosphereAutopilot
         [VesselSerializable("desired_course_field")]
         public DelayedFieldFloat desired_course = new DelayedFieldFloat(90.0f, "G4");
 
-        [VesselSerializable("vertical_control")]
+		[VesselSerializable("desired_latitude_field")]
+		public DelayedFieldFloat desired_latitude = new DelayedFieldFloat(-0.0486178f, "G6");	// latitude of KSC runway, west end (default position for launched vessels)
+
+		[VesselSerializable("desired_longitude_field")]
+		public DelayedFieldFloat desired_longitude = new DelayedFieldFloat(-74.72444f, "G7");   // longitude of KSC runway, west end (default position for launched vessels)
+
+		[VesselSerializable("vertical_control")]
         public bool vertical_control = false;
 
+		[VesselSerializable("desired_altitude_field")]
         public DelayedFieldFloat desired_altitude = new DelayedFieldFloat(1000.0f, "G5");
 
+		[VesselSerializable("desired_vertspeed_field")]
         public DelayedFieldFloat desired_vertspeed = new DelayedFieldFloat(0.0f, "G4");
 
         [GlobalSerializable("preudo_flc")]
@@ -452,8 +460,10 @@ namespace AtmosphereAutopilot
                 if (GUILayout.Button("pick waypoint", GUIStyles.toggleButtonStyle) && !picking_waypoint)
                     start_picking_waypoint();
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(current_waypt.latitude.ToString("G5"), GUIStyles.labelStyleCenter);
-                GUILayout.Label(current_waypt.longtitude.ToString("G5"), GUIStyles.labelStyleCenter);
+				//GUILayout.Label(current_waypt.latitude.ToString("G5"), GUIStyles.labelStyleCenter);
+				desired_latitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
+				//GUILayout.Label(current_waypt.longtitude.ToString("G5"), GUIStyles.labelStyleCenter);
+				desired_longitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
                 GUILayout.Label((dist_to_dest / 1000.0).ToString("#0.0") + " km", GUIStyles.labelStyleCenter);
                 GUILayout.EndHorizontal();
             }
@@ -523,6 +533,9 @@ namespace AtmosphereAutopilot
                         current_waypt.latitude = vessel.mainBody.GetLatitude(surfacePoint);
                         picking_waypoint = false;
                         waypoint_entered = true;
+
+						desired_latitude.Value = (float)current_waypt.latitude;
+						desired_longitude.Value = (float)current_waypt.longtitude;
 
                         dist_to_dest = Vector3d.Distance(surfacePoint, vessel.ReferenceTransform.position);
                         AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
