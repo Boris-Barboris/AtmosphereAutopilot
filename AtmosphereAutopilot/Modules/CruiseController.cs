@@ -25,10 +25,10 @@ namespace AtmosphereAutopilot
     {
         public Waypoint(double longt, double lat)
         {
-            longtitude = longt;
+            longitude = longt;
             latitude = lat;
         }
-        public double longtitude;
+        public double longitude;
         public double latitude;
     }
 
@@ -146,7 +146,7 @@ namespace AtmosphereAutopilot
                     {
                         // set new axis
                         Vector3d world_target_pos = vessel.mainBody.GetWorldSurfacePosition(current_waypt.latitude,
-                            current_waypt.longtitude, vessel.altitude);
+                            current_waypt.longitude, vessel.altitude);
                         dist_to_dest = Vector3d.Distance(world_target_pos, vessel.ReferenceTransform.position);
                         if (dist_to_dest > 10000.0)
                         {
@@ -536,13 +536,13 @@ namespace AtmosphereAutopilot
                     if (PQS.LineSphereIntersection(relOrigin, mouseRay.direction, curRadius, out relSurfacePosition))
                     {
                         Vector3d surfacePoint = vessel.mainBody.position + relSurfacePosition;
-                        current_waypt.longtitude = vessel.mainBody.GetLongitude(surfacePoint);
+                        current_waypt.longitude = vessel.mainBody.GetLongitude(surfacePoint);
                         current_waypt.latitude = vessel.mainBody.GetLatitude(surfacePoint);
                         picking_waypoint = false;
                         waypoint_entered = true;
 
 						desired_latitude.Value = (float)current_waypt.latitude;
-						desired_longitude.Value = (float)current_waypt.longtitude;
+						desired_longitude.Value = (float)current_waypt.longitude;
 
                         dist_to_dest = Vector3d.Distance(surfacePoint, vessel.ReferenceTransform.position);
                         AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
