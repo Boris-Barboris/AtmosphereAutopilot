@@ -448,13 +448,11 @@ namespace AtmosphereAutopilot
             WaypointMode = GUILayout.Toggle(WaypointMode, "Waypoint", GUIStyles.toggleButtonStyle);
             GUILayout.EndHorizontal();
             
-            // waypoint picking button
             if (WaypointMode)
             {
+				GUILayout.Space(5.0f);
                 GUILayout.BeginHorizontal();
-				//GUILayout.Label(current_waypt.latitude.ToString("G5"), GUIStyles.labelStyleCenter);
 				desired_latitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
-				//GUILayout.Label(current_waypt.longtitude.ToString("G5"), GUIStyles.labelStyleCenter);
 				desired_longitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
 				if (GUILayout.Button("Pick", GUIStyles.toggleButtonStyle) && !picking_waypoint)
 					start_picking_waypoint();
@@ -463,8 +461,7 @@ namespace AtmosphereAutopilot
 
 			if (CourseHoldMode)
 			{
-				// course
-				GUILayout.Space(7.0f);
+				GUILayout.Space(5.0f);
 				GUILayout.BeginHorizontal();
 				GUILayout.Label("desired course", GUIStyles.labelStyleLeft);
 				desired_course.DisplayLayout(GUIStyles.textBoxStyle);
@@ -472,7 +469,7 @@ namespace AtmosphereAutopilot
 			}
 
             // speed
-            GUILayout.Space(3.0f);
+            GUILayout.Space(5.0f);
             thrust_c.SpeedCtrlGUIBlock();
 
             // vertical control
@@ -489,13 +486,28 @@ namespace AtmosphereAutopilot
 
 			// current status
 			GUILayout.Space(5.0f);
+			GUILayout.Label("Status", GUIStyles.labelStyleCenter);
 			GUILayout.BeginHorizontal();
+			GUILayout.BeginVertical();
+			GUILayout.Label("Latitude", GUIStyles.labelStyleCenter);
 			GUILayout.Label(vessel.latitude.ToString("G6"), GUIStyles.labelStyleCenter);
+			GUILayout.EndVertical();
+			GUILayout.BeginVertical();
+			GUILayout.Label("Longitude", GUIStyles.labelStyleCenter);
 			GUILayout.Label(vessel.longitude.ToString("G7"), GUIStyles.labelStyleCenter);
+			GUILayout.EndVertical();
+			GUILayout.BeginVertical();
 			if (WaypointMode)
-				GUILayout.Label((dist_to_dest / 1000.0).ToString("#0.0") + " km", GUIStyles.labelStyleCenter);
+			{
+				GUILayout.Label("Dist (km)", GUIStyles.labelStyleCenter);
+				GUILayout.Label((dist_to_dest / 1000.0).ToString("#0.0"), GUIStyles.labelStyleCenter);
+			}
 			else
+			{
+				GUILayout.Label("Alt (m)", GUIStyles.labelStyleCenter);
 				GUILayout.Label(vessel.altitude.ToString("G5") + " m", GUIStyles.labelStyleCenter);
+			}
+			GUILayout.EndVertical();
 			GUILayout.EndHorizontal();
 
 			// advanced options
