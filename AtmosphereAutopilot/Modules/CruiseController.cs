@@ -144,8 +144,7 @@ namespace AtmosphereAutopilot
                     else
                     {
                         // set new axis
-                        Vector3d world_target_pos = vessel.mainBody.GetWorldSurfacePosition(current_waypt.latitude,
-                            current_waypt.longitude, vessel.altitude);
+                        Vector3d world_target_pos = vessel.mainBody.GetWorldSurfacePosition(desired_latitude, desired_longitude, vessel.altitude);
                         dist_to_dest = Vector3d.Distance(world_target_pos, vessel.ReferenceTransform.position);
                         if (dist_to_dest > 10000.0)
                         {
@@ -494,13 +493,9 @@ namespace AtmosphereAutopilot
 			GUILayout.Label(vessel.latitude.ToString("G6"), GUIStyles.labelStyleCenter);
 			GUILayout.Label(vessel.longitude.ToString("G7"), GUIStyles.labelStyleCenter);
 			if (WaypointMode)
-			{
 				GUILayout.Label((dist_to_dest / 1000.0).ToString("#0.0") + " km", GUIStyles.labelStyleCenter);
-			}
 			else
-			{
 				GUILayout.Label(vessel.altitude.ToString("G5") + " m", GUIStyles.labelStyleCenter);
-			}
 			GUILayout.EndHorizontal();
 
 			// advanced options
@@ -736,6 +731,8 @@ namespace AtmosphereAutopilot
             }
 
             desired_course.OnUpdate();
+			desired_latitude.OnUpdate();
+			desired_longitude.OnUpdate();
             desired_altitude.OnUpdate();
             desired_vertspeed.OnUpdate();
         }
