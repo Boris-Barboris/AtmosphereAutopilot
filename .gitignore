@@ -190,3 +190,5 @@ Thumbs.db
 TempUnityProject
 .vs
 *.asv
+/AtmosphereAutopilot/.vs/config/applicationhost.config
+*.userprefs
