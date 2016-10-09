@@ -6,8 +6,8 @@ function output_val = aoa_objective_function(params)
     pitch_vel_c = ang_vel_pitch_yaw(0, pitch_acc_c);
     pitch_aoa_c = aoa_controller(0, pitch_vel_c);
     pitch_aoa_c.params = params;
-    dt = 0.05;
-    sim_length = 120;
+    dt = 0.1;
+    sim_length = 50;
     time = zeros(1, sim_length);
     aoas = zeros(3, sim_length);
 
@@ -21,7 +21,7 @@ function output_val = aoa_objective_function(params)
         if (time(frame) > 0.0 && time(frame) < 2.5)
             des_aoa = 0.2;
         else
-            des_aoa = 0.0;
+            des_aoa = -0.2;
         end
         p_output = pitch_aoa_c.eval(des_aoa, 0.0, dt);
         signal = [p_output, 0, 0];
@@ -30,13 +30,13 @@ function output_val = aoa_objective_function(params)
         aoas(:, frame) = model.aoa.';
         aoa = model.aoa(1, 1);
         if (time(frame) >= 0.0 && time(frame) < 2.0)
-            factor = 0.1 + time(frame);
+            factor = time(frame);
             if (aoa > 0.2)
                 factor = factor * 1000.0;
             end
         else
-            factor = 0.1 + time(frame) - 2.0;
-            if (aoa < 0.0)
+            factor = time(frame) - 2.5;
+            if (aoa < -0.2)
                 factor = factor * 1000.0;
             end
         end

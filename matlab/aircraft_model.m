@@ -145,7 +145,7 @@ classdef aircraft_model < handle
             dk0 = obj.drag_model(1) * 1e-3 * obj.dyn_pressure / obj.mass;
             dk1 = obj.drag_model(2) * 1e-3 * obj.dyn_pressure / obj.mass;
             dk2 = obj.drag_model(3) * 1e-3 * obj.dyn_pressure / obj.mass;
-            drag_acc = - (obj.velocity / obj.velocity_magn * (dk0 + dk1 * obj.aoa(1) + dk2 * obj.aoa(3)));
+            drag_acc = - (obj.velocity / obj.velocity_magn * (dk0 + dk1 * obj.aoa(1) * obj.aoa(1) + dk2 * obj.aoa(3) * obj.aoa(3)));
             
             Cl0 = obj.pitch_lift_m(1) * 1e-3 * obj.dyn_pressure / obj.mass;
             Cl1 = obj.pitch_lift_m(2) * 1e-3 * obj.dyn_pressure / obj.mass;

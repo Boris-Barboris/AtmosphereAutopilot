@@ -16,7 +16,7 @@ function [optimal_value, optimal_coord] = PSO(target_func, space, pcount, w, c1,
     end
     while iter < max_iter        
         % evaluate 
-        for i = 1:pcount
+        parfor i = 1:pcount
             denorm_params = space(1,:) + space_delta .* particles(i,:);
             new_val = target_func(denorm_params);
             if (new_val < values(i))
@@ -28,7 +28,7 @@ function [optimal_value, optimal_coord] = PSO(target_func, space, pcount, w, c1,
         [min_value, min_part] = min(values);
         if (min_value < optimal_value)
             optimal_value = min_value;
-            optimal_coord = particles(min_part,:);
+            optimal_coord = space(1,:) + space_delta .* particles(min_part,:);
         end
         optimal_history(iter + 1) = optimal_value;
         

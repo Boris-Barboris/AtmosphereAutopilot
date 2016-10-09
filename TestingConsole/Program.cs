@@ -311,10 +311,10 @@ namespace TestingConsole
             linsolver.c[0, 0] = 1.0;
             linsolver.c[1, 0] = 1.0;
 
-            linsolver.solve(0.01, 10);
-            linsolver.solve(100.0, 10);
-            linsolver.solve(100.0, 10);
-            linsolver.solve(100.0, 10);
+            //linsolver.solve(0.01, 10);
+            //linsolver.solve(100.0, 10);
+            //linsolver.solve(100.0, 10);
+            //linsolver.solve(100.0, 10);
             //linsolver.solve(1e-4, 0.5, 1000);
         }
     }
