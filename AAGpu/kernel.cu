@@ -78,7 +78,7 @@ cudaError_t run_simulation()
     }
 
     // Launch a kernel on the GPU with one thread for each element.
-    model_kernel<<<1, 1>>>(d_aoas, 100.0f, 150.0f, make_float3(0.0f, -1.0f, 1.15f),
+    model_kernel<<<1, 1>>>(d_aoas, 200.0f, 165.0f, make_float3(0.0f, -1.0f, 1.15f),
         make_float3(0.0f, 60.0f, -0.25f), make_float2(1.0f, 20.0f), 14.0f, 
         15.0f, 0.05f, 100);
 
@@ -119,6 +119,15 @@ cudaError_t run_simulation()
         printf("%f ", aoas[i]);
         if (i == 100)
             printf("\n");
+    }
+
+    auto file = fopen("simul.csv", "w");
+    for (int i = 1; i < 101; i++)
+    {
+        if (i < 100)
+            fprintf(file, "%f, ", aoas[i]);
+        else
+            fprintf(file, "%f", aoas[i]);
     }
 
 Error:    

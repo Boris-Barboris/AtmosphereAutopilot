@@ -1,7 +1,7 @@
 clear;
 model = aircraft_model();
 model.aero_model = false;
-%model.force_spd_maintain = true;
+model.force_spd_maintain = true;
 sim_length = 100;
 dt = 0.05;
 time = zeros(1, sim_length);
@@ -14,7 +14,7 @@ csurf = zeros(3, sim_length);
 for frame = 1:sim_length
     time(frame) = dt * (frame - 1);
     model.preupdate(dt);
-    model.simulation_step(dt, [0.05, 0, 0]);
+    model.simulation_step(dt, [0, 0, 0]);
     positions(:, frame) = model.position.';
     forwards(:, frame) = model.forward_vector.';
     rights(:, frame) = model.right_vector.';
@@ -38,6 +38,12 @@ h = figure(1337);
 plot(time, aoas(1, :));
 xlabel('time');
 ylabel('AoA');
+%% CUDA
+ksp_plots_path ='D:\Coding\В разработке\KSP_mods\AtmosphereAutopilot\AAGpu\';
+cuda_aoa = csvread([ksp_plots_path, 'simul.csv']);
+hold on
+plot(time, cuda_aoa(1, :), 'r');
+hold off
 %% Graph
 h = figure(1338);
 plot(time, speed(1, :));

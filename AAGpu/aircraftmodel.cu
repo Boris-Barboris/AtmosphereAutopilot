@@ -26,9 +26,9 @@ __device__ void pitch_model::preupdate(float dt)
     float Cl0 = lift_m.x * 1e-3f * dyn_pressure / mass;
     float Cl1 = lift_m.y * 1e-3f * dyn_pressure / mass;
     float Cl2 = lift_m.z * 1e-3f * dyn_pressure / mass;
-    float K0 = rot_m.x * 1e-3f * dyn_pressure / moi;
-    float K1 = rot_m.y * 1e-3f * dyn_pressure / moi;
-    float K2 = rot_m.z * 1e-3f * dyn_pressure / moi;
+    float K0 = rot_m.x * 1e-2f * dyn_pressure / moi;
+    float K1 = rot_m.y * 1e-2f * dyn_pressure / moi;
+    float K2 = rot_m.z * 1e-2f * dyn_pressure / moi;
 
     pitch_A(0, 0) = - Cl1 / velocity_magn;
     pitch_A(0, 1) = 1.0f;
@@ -98,11 +98,10 @@ __device__ void pitch_model::simulation_step(float dt, float input)
 
     // rotation section
 
-    float pitch_acc = (float)(pitch_A.rowSlice<1>() * colVec(aoa, ang_vel, csurf_state) + \
-        pitch_B(1, 0) * input + pitch_C(1, 0));
+    float pitch_acc = (float)(pitch_A.rowSlice<1>() * colVec(aoa, ang_vel, csurf_state)) + \
+        pitch_B(1, 0) * input + pitch_C(1, 0);
     if (aero_model)
         csurf_state = csurf_state_new;
-    float rot_delta = ang_vel * dt + 0.5f * dt * dt * pitch_acc;
-    pitch_angle += rot_delta;
+    pitch_angle += ang_vel * dt + 0.5f * dt * dt * pitch_acc;
     ang_vel += dt * pitch_acc;
 }
