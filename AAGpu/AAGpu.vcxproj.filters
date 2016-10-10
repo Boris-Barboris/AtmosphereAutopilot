@@ -7,9 +7,6 @@
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="aircraftmodel">
       <UniqueIdentifier>{ee9dbe1c-953d-454d-a15b-69bd2ccb680d}</UniqueIdentifier>
     </Filter>
@@ -27,7 +24,6 @@
     <ClInclude Include="vector_utils.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="AAGpu.h" />
-    <ClInclude Include="kernel.hpp" />
+    <ClInclude Include="AAGpu.hpp" />
   </ItemGroup>
 </Project>

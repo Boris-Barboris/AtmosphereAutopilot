@@ -1,2 +1,2 @@
-.NET - CUDA project for controller optimization tasks
-=====================================================
+CUDA C++ Dll project for controller optimization tasks
+======================================================
