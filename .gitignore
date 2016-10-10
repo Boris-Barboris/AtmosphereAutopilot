@@ -193,3 +193,5 @@ TempUnityProject
 /AtmosphereAutopilot/.vs/config/applicationhost.config
 *.userprefs
 /AAGpu/simul.csv
+*.VC.*db
+*.settings

@@ -27,5 +27,7 @@
     <ClInclude Include="vector_utils.h">
       <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="AAGpu.h" />
+    <ClInclude Include="kernel.hpp" />
   </ItemGroup>
 </Project>
