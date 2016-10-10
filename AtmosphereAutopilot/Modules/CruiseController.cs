@@ -390,11 +390,15 @@ namespace AtmosphereAutopilot
             {
                 if (value)
                 {
-                    if (current_mode != CruiseMode.Waypoint)
+					if ((current_mode != CruiseMode.Waypoint) && !waypoint_entered)
                     {
-                        waypoint_entered = false;
-                        circle_axis = Vector3d.Cross(vessel.srf_velocity, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
-                        start_picking_waypoint();
+						if (this.Active)
+						{
+							circle_axis = Vector3d.Cross(vessel.srf_velocity, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
+							start_picking_waypoint();
+						}
+						else
+							MessageManager.post_quick_message("Can't pick waypoint when the Cruise Flight controller is disabled");
                     }
                     current_mode = CruiseMode.Waypoint;
                 }
@@ -428,7 +432,7 @@ namespace AtmosphereAutopilot
         void start_picking_waypoint()
         {
             MapView.EnterMapView();
-            MessageManager.post_quick_message("Pick destination");
+            MessageManager.post_quick_message("Pick waypoint");
             picking_waypoint = true;
         }
 
@@ -455,7 +459,12 @@ namespace AtmosphereAutopilot
 				desired_latitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
 				desired_longitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
 				if (GUILayout.Button("Pick", GUIStyles.toggleButtonStyle) && !picking_waypoint)
-					start_picking_waypoint();
+				{
+					if (this.Active)
+						start_picking_waypoint();
+					else
+						MessageManager.post_quick_message("Can't pick waypoint when the Cruise Flight controller is disabled");
+				}
                 GUILayout.EndHorizontal();
             }
 
