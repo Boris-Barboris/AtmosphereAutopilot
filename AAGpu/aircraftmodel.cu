@@ -74,7 +74,7 @@ __device__ void pitch_model::simulation_step(float dt, float input)
     if (!aero_model)
         csurf_state = moveto(csurf_state, input, dt * stock_csurf_spd);
     else
-        csurf_state_new = moveto(csurf_state, input, dt / far_timeConstant);
+        csurf_state_new = moveto_far(csurf_state, input, dt / far_timeConstant);
 
     // integrate_dynamics
 

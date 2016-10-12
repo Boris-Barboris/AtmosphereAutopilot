@@ -20,7 +20,7 @@ namespace AAGpuWrapper
         RawModelExperiment()
         {
             dt = 0.05f;
-            experiment_length = 10.0f;
+            experiment_length = 5.0f;
             MOI = 165.0f;
             mass = 14.0f;
             sas = 15.0;
