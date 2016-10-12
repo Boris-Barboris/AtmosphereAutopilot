@@ -28,11 +28,11 @@ struct __align__(8) pitch_model
     float sas_torque;                   // 80
 
     // matrixes
-    matrix<3, 3> pitch_A;               // 116
-    matrix<3, 1> pitch_B;               // 128
-    matrix<3, 1> pitch_C;               // 140
-    matrix<2, 2> pitch_A_undelayed;     // 156
-    matrix<2, 1> pitch_B_undelayed;     // 164
+    matrix<3, 3> A;               // 116
+    matrix<3, 1> B;               // 128
+    matrix<3, 1> C;               // 140
+    matrix<2, 2> A_undelayed;     // 156
+    matrix<2, 1> B_undelayed;     // 164
 
     // Methods
     __device__ void preupdate(float dt);

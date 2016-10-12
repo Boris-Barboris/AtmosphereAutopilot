@@ -30,31 +30,31 @@ __device__ void pitch_model::preupdate(float dt)
     float K1 = rot_m.y * 1e-2f * dyn_pressure / moi;
     float K2 = rot_m.z * 1e-2f * dyn_pressure / moi;
 
-    pitch_A(0, 0) = - Cl1 / velocity_magn;
-    pitch_A(0, 1) = 1.0f;
-    pitch_A(0, 2) = - Cl2 / velocity_magn;
-    pitch_A(1, 0) = K1;
+    A(0, 0) = - Cl1 / velocity_magn;
+    A(0, 1) = 1.0f;
+    A(0, 2) = - Cl2 / velocity_magn;
+    A(1, 0) = K1;
     if (!aero_model)
     {
-        pitch_A(1, 2) = K2;
-        pitch_B(1, 0) = sas_torque / moi;
-        pitch_C(2, 0) = stock_csurf_spd;
+        A(1, 2) = K2;
+        B(1, 0) = sas_torque / moi;
+        C(2, 0) = stock_csurf_spd;
     }
     else
     {
         // FAR
-        pitch_A(1, 2) = K2 * (1.0f - dt / far_timeConstant);
-        pitch_B(1, 0) = sas_torque / moi + K2 * dt / far_timeConstant;
-        pitch_A(2, 2) = -1.0f / far_timeConstant;
-        pitch_B(2, 0) = 1.0f / far_timeConstant;
+        A(1, 2) = K2 * (1.0f - dt / far_timeConstant);
+        B(1, 0) = sas_torque / moi + K2 * dt / far_timeConstant;
+        A(2, 2) = -1.0f / far_timeConstant;
+        B(2, 0) = 1.0f / far_timeConstant;
     }
-    pitch_C(0, 0) = -(pitch_gravity_acc + Cl0) / velocity_magn;
-    pitch_C(1, 0) = K0;
+    C(0, 0) = -(pitch_gravity_acc + Cl0) / velocity_magn;
+    C(1, 0) = K0;
 
-    pitch_A_undelayed.copyFrom(pitch_A);
-    pitch_A_undelayed(1, 2) = 0.0f;
-    pitch_B_undelayed.copyFrom(pitch_B);
-    pitch_B_undelayed(1, 0) = sas_torque / moi + K2;
+    A_undelayed.copyFrom(A);
+    A_undelayed(1, 2) = 0.0f;
+    B_undelayed.copyFrom(B);
+    B_undelayed(1, 0) = sas_torque / moi + K2;
 
     // update aoa
     float2 fwd_vector = make_float2(cosf(pitch_angle), sinf(pitch_angle));
@@ -99,8 +99,8 @@ __device__ void pitch_model::simulation_step(float dt, float input)
 
     // rotation section
 
-    ang_acc = (pitch_A.rowSlice<1>() * colVec(aoa, ang_vel, csurf_state))(0, 0) + 
-        pitch_B(1, 0) * input + pitch_C(1, 0);
+    ang_acc = (float)(A.rowSlice<1>() * colVec(aoa, ang_vel, csurf_state)) + 
+        B(1, 0) * input + C(1, 0);
     if (aero_model)
         csurf_state = csurf_state_new;
     pitch_angle += ang_vel * dt + 0.5f * dt * dt * ang_acc;

@@ -5,6 +5,9 @@
       <Filter>aircraftmodel</Filter>
     </CudaCompile>
     <CudaCompile Include="raw_kernel.cu" />
+    <CudaCompile Include="ang_acc_pitch.cu">
+      <Filter>angacc</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="aircraftmodel">
@@ -12,6 +15,9 @@
     </Filter>
     <Filter Include="common">
       <UniqueIdentifier>{5c7c1fdf-97dc-4f89-8a93-982c6baf88a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="angacc">
+      <UniqueIdentifier>{8eb208b0-8327-4a07-952e-73e8b6e1c139}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -27,6 +33,9 @@
     </ClInclude>
     <ClInclude Include="matrix.cuh">
       <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="ang_acc_pitch.cuh">
+      <Filter>angacc</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

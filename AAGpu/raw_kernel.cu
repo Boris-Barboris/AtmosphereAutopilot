@@ -2,6 +2,7 @@
 
 #include "cuda_wrappers.hpp"
 #include "aircraftmodel.cuh"
+#include "ang_acc_pitch.cuh"
 
 
 __global__ void raw_kernel(

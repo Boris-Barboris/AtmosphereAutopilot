@@ -2,23 +2,25 @@
 
 #include "cuda_runtime.h"
 
-template <int Rows, int Cols> struct matrix
+template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow;
+
+template <unsigned Rows, unsigned Cols> struct matrix
 {
-    float body[Rows * Cols];
+    float data[Rows * Cols];
 
     __inline__ __device__ __host__ float& operator()(unsigned row, unsigned column)
     {
-        return body[Cols * row + column];
+        return data[Cols * row + column];
     }
 
     __inline__ __device__ __host__ float& get(unsigned row, unsigned column)
     {
-        return body[Cols * row + column];
+        return data[Cols * row + column];
     }
 
     __inline__ __device__ __host__ float getc(unsigned row, unsigned column) const
     {
-        return body[Cols * row + column];
+        return data[Cols * row + column];
     }
 
     template <unsigned R, unsigned C>
@@ -32,7 +34,7 @@ template <int Rows, int Cols> struct matrix
     }
 
     template <unsigned R>
-    __device__ __host__ matrix<Rows, R> operator*(const matrix<Cols, R> &&rhs) const
+    __device__ __host__ matrix<Rows, R> operator*(const matrix<Cols, R> &rhs) const
     {
         matrix<Rows, R> res;
         for (int r = 0; r < Rows; r++)
@@ -64,7 +66,7 @@ template <int Rows, int Cols> struct matrix
         return res;
     }
 
-    __device__ __host__ matrix<Rows, Cols> operator+(const matrix<Rows, Cols> &&rhs) const
+    __device__ __host__ matrix<Rows, Cols> operator+(const matrix<Rows, Cols> &rhs) const
     {
         matrix<Rows, Cols> res;
         for (int r = 0; r < Rows; r++)
@@ -86,18 +88,91 @@ template <int Rows, int Cols> struct matrix
     {
         static_assert((Rows == 1) && (Cols == 1), "We're not matrix-element");
 
-        return body[0];
+        return data[0];
     }
 
     template <unsigned R>
-    __device__ __host__ matrix<1, Cols> rowSlice() const
+    __inline__ __device__ __host__ matrixrow<R, Rows, Cols> rowSlice()
     {
         static_assert(R < Rows, "No such row");
 
+        matrixrow<R, Rows, Cols> res(*this);
+        return res;
+    }
+};
+
+template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
+{
+    matrix<Rows, Cols> &hdl;
+
+    __device__ __host__ matrixrow(matrix<Rows, Cols> &host) : hdl(host) {}
+
+    __inline__ __device__ __host__ float& operator()(unsigned row, unsigned column)
+    {
+        return hdl.data[Row * Cols + column];
+    }
+
+    __inline__ __device__ __host__ float& get(unsigned row, unsigned column)
+    {
+        return hdl.data[Row * Cols + column];
+    }
+
+    __inline__ __device__ __host__ float getc(unsigned row, unsigned column) const
+    {
+        return hdl.data[Row * Cols + column];
+    }
+
+    template <unsigned R>
+    __device__ __host__ matrix<1, R> operator*(const matrix<Cols, R> &rhs) const
+    {
+        matrix<1, R> res;
+        for (int c = 0; c < R; c++)
+        {
+            float val = 0.0f;
+            for (int k = 0; k < Cols; k++)
+                val += getc(0, k) * rhs.getc(k, c);
+            res(0, c) = val;
+        }
+        return res;
+    }
+
+    __device__ __host__ matrix<1, Cols> operator*(float rhs) const
+    {
         matrix<1, Cols> res;
         for (int c = 0; c < Cols; c++)
-            res(0, c) = getc(R, c);
+            res(0, c) = rhs * getc(0, c);
         return res;
+    }
+
+    __device__ __host__ matrix<1, Cols> operator+(float rhs) const
+    {
+        matrix<1, Cols> res;
+        for (int c = 0; c < Cols; c++)
+            res(0, c) = rhs + getc(0, c);
+        return res;
+    }
+
+    __device__ __host__ matrix<1, Cols> operator+(const matrix<1, Cols> &&rhs) const
+    {
+        matrix<1, Cols> res;
+        for (int c = 0; c < Cols; c++)
+            res(0, c) = rhs.getc(0, c) + getc(0, c);
+        return res;
+    }
+
+    __device__ __host__ matrix<1, Cols> operator-(float rhs) const
+    {
+        matrix<1, Cols> res;
+        for (int c = 0; c < Cols; c++)
+            res(0, c) = getc(0, c) - rhs;
+        return res;
+    }
+
+    __inline__ __device__ __host__ explicit operator float() const
+    {
+        static_assert((Cols == 1), "We're not matrix-element");
+
+        return getc(0, 0);
     }
 };
 
