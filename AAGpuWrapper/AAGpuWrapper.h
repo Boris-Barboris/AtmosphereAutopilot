@@ -24,9 +24,17 @@ namespace AAGpuWrapper
             MOI = 165.0f;
             mass = 14.0f;
             sas = 15.0;
-            pitchRotModel = gcnew array<Single> { 0.0f, -1.0f, 1.15f };
-            pitchLiftModel = gcnew array<Single> { 0.0f, 60.0f, -0.25f };
-            dragModel = gcnew array<Single> { 1.0f, 20.0f };
+            pitchRotModel = gcnew List<Single>();
+            pitchRotModel->Add(0.0f);
+            pitchRotModel->Add(-1.0f);
+            pitchRotModel->Add(1.15f);
+            pitchLiftModel = gcnew List<Single>();
+            pitchLiftModel->Add(0.0f);
+            pitchLiftModel->Add(60.0f);
+            pitchLiftModel->Add(-0.25f);
+            dragModel = gcnew List<Single>();
+            dragModel->Add(1.0f);
+            dragModel->Add(20.0f);
             aerodynamics = AeroModel::StockAero;
             startVel = 200.0f;
             keepSpeed = false;
@@ -55,15 +63,15 @@ namespace AAGpuWrapper
 
         [CategoryAttribute("Craft parameters")]
         [DisplayNameAttribute("Pitch rot model")]
-        property array<Single> ^pitchRotModel;
+        property List<Single> ^pitchRotModel;
 
         [CategoryAttribute("Craft parameters")]
         [DisplayNameAttribute("Pitch lift model")]
-        property array<Single> ^pitchLiftModel;
+        property List<Single> ^pitchLiftModel;
 
         [CategoryAttribute("Craft parameters")]
         [DisplayNameAttribute("Drag model")]
-        property array<Single> ^dragModel;
+        property List<Single> ^dragModel;
 
         [CategoryAttribute("Global parameters")]
         [DisplayNameAttribute("Aero model")]
