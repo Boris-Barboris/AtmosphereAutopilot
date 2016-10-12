@@ -23,6 +23,7 @@ __global__ void raw_kernel(
 {
     __shared__ pitch_model model;
     // initialize model
+    model.zero_init();
     model.velocity.x = start_vel;
     model.moi = moi;
     model.rot_m = rot_m;

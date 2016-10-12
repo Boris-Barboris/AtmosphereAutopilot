@@ -58,13 +58,14 @@ __device__ void pitch_model::preupdate(float dt)
 
     // update aoa
     float2 fwd_vector = make_float2(cosf(pitch_angle), sinf(pitch_angle));
-    float aoa_angle = acosf(fminf(1.0f, fmaxf(-1.0f, 
-        dot(normalize(velocity), normalize(fwd_vector)))));
-    float2 up_vector = normalize(make_float2(cosf(up_angle), sinf(up_angle)));
-    if (dot(velocity, up_vector) > 0.0f)
-        aoa_angle = -aoa_angle;
+    float rightv = fminf(1.0f, fmaxf(-1.0f, 
+        hypercross(normalize(velocity), fwd_vector)));
+    float asin = asinf(rightv);
+    if (dot(fwd_vector, velocity) >= 0.0f)
+        aoa = asin;
+    else
+        aoa = CUDART_PI - asin;
     pitch_tangent = normalize(make_float2(-velocity.y, velocity.x));
-    aoa = aoa_angle;
 }
 
 __device__ void pitch_model::simulation_step(float dt, float input)

@@ -38,6 +38,13 @@ struct __align__(8) pitch_model
     __device__ void preupdate(float dt);
     __device__ void simulation_step(float dt, float input);
 
+    // Initializer
+    __device__ void zero_init()
+    {
+        for (int i = 0; i < sizeof(pitch_model); i++)
+            *((char *)this) = (char)0;
+    }
+
     // Misc
     float dyn_pressure;                 // 168
     float2 pitch_tangent;               // 176

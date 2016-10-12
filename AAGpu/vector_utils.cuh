@@ -64,3 +64,8 @@ __VECTOR_UTILS_DECL__ float2 normalize(const float2 &vec)
     float norm = magn(vec);
     return make_float2(vec.x / norm, vec.y / norm);
 }
+
+__VECTOR_UTILS_DECL__ float hypercross(const float2 &lhs, const float2 &rhs)
+{
+    return lhs.x * rhs.y - lhs.y * rhs.x;
+}
