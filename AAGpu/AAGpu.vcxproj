@@ -172,6 +172,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="ang_acc_pitch.cu" />
+    <CudaCompile Include="ang_vel_pitch.cu" />
     <CudaCompile Include="raw_kernel.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -185,6 +186,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </ClInclude>
     <ClInclude Include="aircraftmodel.cuh" />
     <ClInclude Include="ang_acc_pitch.cuh" />
+    <ClInclude Include="ang_vel_pitch.cuh" />
     <ClInclude Include="cuda_wrappers.hpp" />
     <ClInclude Include="matrix.cuh">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>

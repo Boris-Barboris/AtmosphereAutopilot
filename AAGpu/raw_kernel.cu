@@ -1,9 +1,15 @@
 #include "AAGpu.h"
 
 #include "cuda_wrappers.hpp"
-#include "aircraftmodel.cuh"
-#include "ang_acc_pitch.cuh"
+//#include "aircraftmodel.cuh"
+#include "ang_vel_pitch.cuh"
 
+
+struct thread_context
+{
+    pitch_model mdl;
+    ang_vel_p vel_c;
+};
 
 __global__ void raw_kernel(
     float *angvel_output, 
@@ -22,7 +28,8 @@ __global__ void raw_kernel(
     float2 drag_m, 
     float start_vel)
 {
-    __shared__ pitch_model model;
+    __shared__ thread_context context;
+    pitch_model &model = context.mdl;
     // initialize model
     model.zero_init();
     model.velocity.x = start_vel;
@@ -33,6 +40,12 @@ __global__ void raw_kernel(
     model.sas_torque = sas;
     model.mass = mass;
 
+    ang_vel_p &vel_c = context.vel_c;
+    // initialize controller
+    vel_c.max_v_construction = 0.5f;
+    vel_c.max_aoa = 0.25f;
+    vel_c.quadr_Kp = 0.45f;
+
     // simulate
     angvel_output[0] = model.ang_vel;
     aoa_output[0] = model.aoa;
@@ -42,7 +55,9 @@ __global__ void raw_kernel(
     for (int i = 0; i < step_count; i++)
     {
         model.preupdate(dt);
-        model.simulation_step(dt, input);
+        float ctl = vel_c.eval(&context.mdl, input, 0.0f, dt);
+        model.simulation_step(dt, ctl);
+        //model.simulation_step(dt, input);
         angvel_output[i + 1] = model.ang_vel;
         aoa_output[i + 1] = model.aoa;
         acc_output[i + 1] = model.ang_acc;
@@ -76,9 +91,9 @@ void raw_execute(
     cuwrap(cudaSetDevice, 0);
     massalloc(step_count + 1, &d_angvel, &d_aoa, &d_acc, &d_csurf, &d_input);
 
-    cudaError r;
-    r = cudaMemcpyToSymbol(::aero_model, &aero_model, sizeof(bool));
-    r = cudaMemcpyToSymbol(::spd_const, &keep_speed, sizeof(bool));
+    //cudaError r;
+    cudaMemcpyToSymbol(::aero_model, &aero_model, sizeof(bool));
+    cudaMemcpyToSymbol(::spd_const, &keep_speed, sizeof(bool));
 
     raw_kernel<<<1, 1>>>(
         d_angvel,

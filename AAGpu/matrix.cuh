@@ -13,6 +13,11 @@ template <unsigned Rows, unsigned Cols> struct matrix
         return data[Cols * row + column];
     }
 
+    __inline__ __device__ __host__ float operator()(unsigned row, unsigned column) const
+    {
+        return data[Cols * row + column];
+    }
+
     __inline__ __device__ __host__ float& get(unsigned row, unsigned column)
     {
         return data[Cols * row + column];
@@ -112,6 +117,11 @@ template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
         return hdl.data[Row * Cols + column];
     }
 
+    __inline__ __device__ __host__ float operator()(unsigned row, unsigned column) const
+    {
+        return hdl.data[Row * Cols + column];
+    }
+
     __inline__ __device__ __host__ float& get(unsigned row, unsigned column)
     {
         return hdl.data[Row * Cols + column];
@@ -176,7 +186,6 @@ template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
     }
 };
 
-//template <unsigned N> using sqrmat = matrix<N, N>;
 
 template <int N, int Size, typename T1, typename ...T>
 __device__ __host__ void __colVec(matrix<Size, 1> &mat, T1 v1, T... args)
@@ -198,4 +207,14 @@ __device__ __host__ matrix<sizeof...(T), 1> colVec(T... args)
     matrix<size, 1> res;
     __colVec<0, size, T...>(res, args...);
     return res;
+}
+
+
+// solve A*x=b with nonzero A(0, 0)
+__device__ __host__ matrix<2, 1> operator/(const matrix<2, 2> &A, const matrix<2, 1> &b)
+{
+    float y = (b(1, 0) - A(1, 0) * b(0, 0) / A(0, 0)) /
+        (A(1, 1) - A(1, 0) * A(0, 1) / A(0, 0));
+    float x = (b(0, 0) - A(0, 1) * y) / A(0, 0);
+    return colVec(x, y);
 }
