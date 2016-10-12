@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CudaCompile Include="kernel.cu" />
     <CudaCompile Include="aircraftmodel.cu">
       <Filter>aircraftmodel</Filter>
     </CudaCompile>
+    <CudaCompile Include="raw_kernel.cu" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="aircraftmodel">
@@ -18,12 +18,15 @@
     <ClInclude Include="aircraftmodel.cuh">
       <Filter>aircraftmodel</Filter>
     </ClInclude>
+    <ClInclude Include="AAGpu.h" />
+    <ClInclude Include="vector_utils.cuh">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_wrappers.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
     <ClInclude Include="matrix.cuh">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="vector_utils.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="AAGpu.hpp" />
   </ItemGroup>
 </Project>

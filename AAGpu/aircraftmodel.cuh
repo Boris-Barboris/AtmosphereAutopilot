@@ -1,6 +1,5 @@
 #pragma once
 
-#include "cuda_runtime.h"
 #include "matrix.cuh"
 
 extern __constant__ float   density;
@@ -12,7 +11,7 @@ extern __constant__ float   stock_csurf_spd;
 
 // Pitch dynamics model
 // need 8-byte alignment because we use float2
-struct pitch_model
+struct __align__(8) pitch_model
 {
     float2 position;                    // 8
     float2 velocity;                    // 16
@@ -42,9 +41,9 @@ struct pitch_model
     // Misc
     float dyn_pressure;                 // 168
     float2 pitch_tangent;               // 176
-    //float pitch_gravity_acc;            // 172
-
-    //float _stride;                      // 176
+    float ang_acc;                      // 180
+    
+    //int _stride;                        // 184
 };
 
 __inline__ __device__ float clamp(float val, float lower, float upper)

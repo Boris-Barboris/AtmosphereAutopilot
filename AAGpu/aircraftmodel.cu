@@ -1,7 +1,7 @@
 #include "aircraftmodel.cuh"
 #include "math_functions.hpp"
 #include "math_constants.h"
-#include "vector_utils.h"
+#include "vector_utils.cuh"
 
 __constant__ float   density = 1.0f;
 __constant__ bool    aero_model = false;         // false - stock, true - FAR
@@ -59,8 +59,8 @@ __device__ void pitch_model::preupdate(float dt)
     // update aoa
     float2 fwd_vector = make_float2(cosf(pitch_angle), sinf(pitch_angle));
     float aoa_angle = acosf(fminf(1.0f, fmaxf(-1.0f, 
-        dot(normalize(velocity), fwd_vector))));
-    float2 up_vector = make_float2(cosf(up_angle), sinf(up_angle));
+        dot(normalize(velocity), normalize(fwd_vector)))));
+    float2 up_vector = normalize(make_float2(cosf(up_angle), sinf(up_angle)));
     if (dot(velocity, up_vector) > 0.0f)
         aoa_angle = -aoa_angle;
     pitch_tangent = normalize(make_float2(-velocity.y, velocity.x));
@@ -98,10 +98,10 @@ __device__ void pitch_model::simulation_step(float dt, float input)
 
     // rotation section
 
-    float pitch_acc = (float)(pitch_A.rowSlice<1>() * colVec(aoa, ang_vel, csurf_state)) + \
+    ang_acc = (pitch_A.rowSlice<1>() * colVec(aoa, ang_vel, csurf_state))(0, 0) + 
         pitch_B(1, 0) * input + pitch_C(1, 0);
     if (aero_model)
         csurf_state = csurf_state_new;
-    pitch_angle += ang_vel * dt + 0.5f * dt * dt * pitch_acc;
-    ang_vel += dt * pitch_acc;
+    pitch_angle += ang_vel * dt + 0.5f * dt * dt * ang_acc;
+    ang_vel += dt * ang_acc;
 }
