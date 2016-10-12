@@ -1,7 +1,7 @@
 ﻿/*
 Atmosphere Autopilot, plugin for Kerbal Space Program.
 Copyright (C) 2015-2016, Baranin Alexander aka Boris-Barboris.
- 
+
 Atmosphere Autopilot is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -11,7 +11,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
-along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>. 
+along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System;
@@ -34,7 +34,7 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Manages cruise flight modes, like heading and altitude holds
     /// </summary>
-    public sealed class CruiseController: StateController
+    public sealed class CruiseController : StateController
     {
         internal CruiseController(Vessel v)
             : base(v, "Cruise Flight controller", 88437226)
@@ -86,7 +86,7 @@ namespace AtmosphereAutopilot
             if (vessel.LandedOrSplashed)
                 return;
 
-            if (thrust_c.spd_control_enabled)  
+            if (thrust_c.spd_control_enabled)
                 thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
 
             desired_velocity = Vector3d.zero;
@@ -187,7 +187,7 @@ namespace AtmosphereAutopilot
                 int sign = Math.Sign(Vector3d.Dot(right_turn, desired_velocity));
                 if (sign == 0)
                     sign = 1;
-				desired_velocity = right_turn.normalized * (double)sign * Math.Tan(0.5) + hor_vel.normalized;
+                desired_velocity = right_turn.normalized * (double)sign * Math.Tan(0.5) + hor_vel.normalized;
             }
         }
 
@@ -223,19 +223,19 @@ namespace AtmosphereAutopilot
         [VesselSerializable("desired_course_field")]
         public DelayedFieldFloat desired_course = new DelayedFieldFloat(90.0f, "G4");
 
-		[VesselSerializable("desired_latitude_field")]
-		public DelayedFieldFloat desired_latitude = new DelayedFieldFloat(-0.0486178f, "#0.0000");	// latitude of KSC runway, west end (default position for launched vessels)
+        [VesselSerializable("desired_latitude_field")]
+        public DelayedFieldFloat desired_latitude = new DelayedFieldFloat(-0.0486178f, "#0.0000");  // latitude of KSC runway, west end (default position for launched vessels)
 
-		[VesselSerializable("desired_longitude_field")]
-		public DelayedFieldFloat desired_longitude = new DelayedFieldFloat(-74.72444f, "#0.0000");  // longitude of KSC runway, west end (default position for launched vessels)
+        [VesselSerializable("desired_longitude_field")]
+        public DelayedFieldFloat desired_longitude = new DelayedFieldFloat(-74.72444f, "#0.0000");  // longitude of KSC runway, west end (default position for launched vessels)
 
-		[VesselSerializable("vertical_control")]
+        [VesselSerializable("vertical_control")]
         public bool vertical_control = false;
 
-		[VesselSerializable("desired_altitude_field")]
+        [VesselSerializable("desired_altitude_field")]
         public DelayedFieldFloat desired_altitude = new DelayedFieldFloat(1000.0f, "G5");
 
-		[VesselSerializable("desired_vertspeed_field")]
+        [VesselSerializable("desired_vertspeed_field")]
         public DelayedFieldFloat desired_vertspeed = new DelayedFieldFloat(0.0f, "G4");
 
         [GlobalSerializable("preudo_flc")]
@@ -292,11 +292,11 @@ namespace AtmosphereAutopilot
                 relax_transition_k = Common.Clamp(2.0 * (height_relax_frame - Math.Abs(height_error)), 0.0, 1.0);
                 // we're in relaxation frame
                 relax_vert_speed = height_relax_Kp * height_error;
-                // exponential descent                
+                // exponential descent
                 if (cur_vert_speed * height_error > 0.0)
                     proportional_acc = -planet2vesNorm * height_relax_Kp * cur_vert_speed;
             }
-            
+
             // let's assume parabolic ascent\descend
             Vector3d parabolic_acc = Vector3d.zero;
             if (height_error >= 0.0)
@@ -390,15 +390,15 @@ namespace AtmosphereAutopilot
             {
                 if (value)
                 {
-					if ((current_mode != CruiseMode.Waypoint) && !waypoint_entered)
+                    if ((current_mode != CruiseMode.Waypoint) && !waypoint_entered)
                     {
-						if (this.Active)
-						{
-							circle_axis = Vector3d.Cross(vessel.srf_velocity, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
-							start_picking_waypoint();
-						}
-						else
-							MessageManager.post_quick_message("Can't pick waypoint when the Cruise Flight controller is disabled");
+                        if (this.Active)
+                        {
+                            circle_axis = Vector3d.Cross(vessel.srf_velocity, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
+                            start_picking_waypoint();
+                        }
+                        else
+                            MessageManager.post_quick_message("Can't pick waypoint when the Cruise Flight controller is disabled");
                     }
                     current_mode = CruiseMode.Waypoint;
                 }
@@ -433,7 +433,7 @@ namespace AtmosphereAutopilot
         {
             MapView.EnterMapView();
             MessageManager.post_quick_message("Pick waypoint");
-            picking_waypoint = true;            
+            picking_waypoint = true;
         }
 
         internal bool picking_waypoint = false;
@@ -445,82 +445,84 @@ namespace AtmosphereAutopilot
             close_button();
             GUILayout.BeginVertical();
 
-            // three buttons to switch mode
-            GUILayout.BeginHorizontal();
-            LevelFlightMode = GUILayout.Toggle(LevelFlightMode, "Level", GUIStyles.toggleButtonStyle);
-            CourseHoldMode = GUILayout.Toggle(CourseHoldMode, "Course", GUIStyles.toggleButtonStyle);
-            WaypointMode = GUILayout.Toggle(WaypointMode, "Waypoint", GUIStyles.toggleButtonStyle);
-            GUILayout.EndHorizontal();
-            
-            if (WaypointMode)
-            {
-				GUILayout.Space(5.0f);
-                GUILayout.BeginHorizontal();
-				desired_latitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
-				desired_longitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
-				if (GUILayout.Button("Pick", GUIStyles.toggleButtonStyle) && !picking_waypoint)
-				{
-					if (this.Active)
-						start_picking_waypoint();
-					else
-						MessageManager.post_quick_message("Can't pick waypoint when the Cruise Flight controller is disabled");
-				}
-                GUILayout.EndHorizontal();
-            }
+            // cruise flight control modes
 
-			if (CourseHoldMode)
-			{
-				GUILayout.Space(5.0f);
-				GUILayout.BeginHorizontal();
-				GUILayout.Label("desired course", GUIStyles.labelStyleLeft);
-				desired_course.DisplayLayout(GUIStyles.textBoxStyle);
-				GUILayout.EndHorizontal();
-			}
+            LevelFlightMode = GUILayout.Toggle(LevelFlightMode, "Level", GUIStyles.toggleButtonStyle);
+
+            GUILayout.Space(5.0f);
+
+            CourseHoldMode = GUILayout.Toggle(CourseHoldMode, "Heading", GUIStyles.toggleButtonStyle);
+            desired_course.DisplayLayout(GUIStyles.textBoxStyle);
+
+            GUILayout.Space(5.0f);
+
+            WaypointMode = GUILayout.Toggle(WaypointMode, "Waypoint", GUIStyles.toggleButtonStyle);
+            GUILayout.BeginHorizontal();
+            desired_latitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
+            desired_longitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
+            if (GUILayout.Button("Pick", GUIStyles.toggleButtonStyle) && !picking_waypoint)
+            {
+                if (this.Active)
+                    start_picking_waypoint();
+                else
+                    MessageManager.post_quick_message("Can't pick waypoint when the Cruise Flight controller is disabled");
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(10.0f);
 
             // speed
-            GUILayout.Space(5.0f);
+
             thrust_c.SpeedCtrlGUIBlock();
 
-            // vertical control
-            GUILayout.Space(5.0f);
-            vertical_control = GUILayout.Toggle(vertical_control, "Vertical motion control", GUIStyles.toggleButtonStyle);
+            GUILayout.Space(10.0f);
+
+            // vertical motion
+
+            vertical_control = GUILayout.Toggle(vertical_control, "Vertical motion", GUIStyles.toggleButtonStyle);
             GUILayout.BeginHorizontal();
-            AltitudeMode = GUILayout.Toggle(AltitudeMode, "Altitude", GUIStyles.toggleButtonStyle, GUILayout.Width(90.0f));
+            GUILayout.BeginVertical();
+            AltitudeMode = GUILayout.Toggle(AltitudeMode, "Altitude", GUIStyles.toggleButtonStyle);     // GUILayout.Width(90.0f)
+            desired_altitude.DisplayLayout(GUIStyles.textBoxStyle);                                     // GUILayout.Width(90.0f)
+            GUILayout.EndVertical();
+            GUILayout.BeginVertical();
             VerticalSpeedMode = GUILayout.Toggle(VerticalSpeedMode, "Vertical speed", GUIStyles.toggleButtonStyle);
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            desired_altitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(90.0f));
             desired_vertspeed.DisplayLayout(GUIStyles.textBoxStyle);
+            GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
-			// current status
-			GUILayout.Space(5.0f);
-			GUILayout.Label("Status", GUIStyles.labelStyleCenter);
-			GUILayout.BeginHorizontal();
-			GUILayout.BeginVertical();
-			GUILayout.Label("Latitude", GUIStyles.labelStyleCenter);
-			GUILayout.Label(vessel.latitude.ToString("G6"), GUIStyles.labelStyleCenter);
-			GUILayout.EndVertical();
-			GUILayout.BeginVertical();
-			GUILayout.Label("Longitude", GUIStyles.labelStyleCenter);
-			GUILayout.Label(vessel.longitude.ToString("G7"), GUIStyles.labelStyleCenter);
-			GUILayout.EndVertical();
-			GUILayout.BeginVertical();
-			if (WaypointMode)
-			{
-				GUILayout.Label("Dist (km)", GUIStyles.labelStyleCenter);
-				GUILayout.Label((dist_to_dest / 1000.0).ToString("#0.0"), GUIStyles.labelStyleCenter);
-			}
-			else
-			{
-				GUILayout.Label("Alt (m)", GUIStyles.labelStyleCenter);
-				GUILayout.Label(vessel.altitude.ToString("G5") + " m", GUIStyles.labelStyleCenter);
-			}
-			GUILayout.EndVertical();
-			GUILayout.EndHorizontal();
+            GUILayout.Space(10.0f);
 
-			// advanced options
-            GUILayout.Space(5.0f);
+            // status
+
+            GUILayout.Label("Status", GUIStyles.labelStyleCenter);
+            GUILayout.BeginHorizontal();
+            GUILayout.BeginVertical();
+            GUILayout.Label("Latitude", GUIStyles.labelStyleCenter);
+            GUILayout.Label(vessel.latitude.ToString("G6"), GUIStyles.labelStyleCenter);
+            GUILayout.EndVertical();
+            GUILayout.BeginVertical();
+            GUILayout.Label("Longitude", GUIStyles.labelStyleCenter);
+            GUILayout.Label(vessel.longitude.ToString("G7"), GUIStyles.labelStyleCenter);
+            GUILayout.EndVertical();
+            GUILayout.BeginVertical();
+            if (WaypointMode)
+            {
+                GUILayout.Label("Dist (km)", GUIStyles.labelStyleCenter);
+                GUILayout.Label((dist_to_dest / 1000.0).ToString("#0.0"), GUIStyles.labelStyleCenter);
+            }
+            else
+            {
+                GUILayout.Label("Alt (m)", GUIStyles.labelStyleCenter);
+                GUILayout.Label(vessel.altitude.ToString("G5") + " m", GUIStyles.labelStyleCenter);
+            }
+            GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(10.0f);
+
+            // advanced options
+
             bool adv_o = advanced_options;
             advanced_options = GUILayout.Toggle(advanced_options, "Advanced options", GUIStyles.toggleButtonStyle);
             if (advanced_options)
@@ -563,8 +565,8 @@ namespace AtmosphereAutopilot
                         picking_waypoint = false;
                         waypoint_entered = true;
 
-						desired_latitude.Value = (float)current_waypt.latitude;
-						desired_longitude.Value = (float)current_waypt.longitude;
+                        desired_latitude.Value = (float)current_waypt.latitude;
+                        desired_longitude.Value = (float)current_waypt.longitude;
 
                         dist_to_dest = Vector3d.Distance(surfacePoint, vessel.ReferenceTransform.position);
                         AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
@@ -604,7 +606,7 @@ namespace AtmosphereAutopilot
                     float pitch_change_sign = 0.0f;
                     // Pitch
                     if (GameSettings.PITCH_UP.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
-                    {                        
+                    {
                         pitch_change_sign = 1.0f;
                         pitch_key_pressed = true;
                     }
@@ -752,8 +754,8 @@ namespace AtmosphereAutopilot
             }
 
             desired_course.OnUpdate();
-			desired_latitude.OnUpdate();
-			desired_longitude.OnUpdate();
+            desired_latitude.OnUpdate();
+            desired_longitude.OnUpdate();
             desired_altitude.OnUpdate();
             desired_vertspeed.OnUpdate();
         }
