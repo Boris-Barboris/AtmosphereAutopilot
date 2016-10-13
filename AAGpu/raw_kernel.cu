@@ -1,7 +1,6 @@
 #include "AAGpu.h"
 
 #include "cuda_wrappers.hpp"
-//#include "aircraftmodel.cuh"
 #include "ang_vel_pitch.cuh"
 
 
@@ -28,17 +27,18 @@ __global__ void raw_kernel(
     float2 drag_m, 
     float start_vel)
 {
+    __shared__ pitch_model mdl;
     __shared__ thread_context context;
-    pitch_model &model = context.mdl;
+    pitch_model *model = &mdl;
     // initialize model
-    model.zero_init();
-    model.velocity.x = start_vel;
-    model.moi = moi;
-    model.rot_m = rot_m;
-    model.lift_m = lift_m;
-    model.drag_m = drag_m;
-    model.sas_torque = sas;
-    model.mass = mass;
+    model->zero_init();
+    model->velocity.x = start_vel;
+    model->moi = moi;
+    model->rot_m = rot_m;
+    model->lift_m = lift_m;
+    model->drag_m = drag_m;
+    model->sas_torque = sas;
+    model->mass = mass;
 
     ang_vel_p &vel_c = context.vel_c;
     // initialize controller
@@ -47,21 +47,22 @@ __global__ void raw_kernel(
     vel_c.quadr_Kp = 0.45f;
 
     // simulate
-    angvel_output[0] = model.ang_vel;
-    aoa_output[0] = model.aoa;
-    acc_output[0] = model.ang_acc;
-    csurf_output[0] = model.csurf_state;
+    angvel_output[0] = model->ang_vel;
+    aoa_output[0] = model->aoa;
+    acc_output[0] = model->ang_acc;
+    csurf_output[0] = model->csurf_state;
     input_output[0] = 0.0f;
     for (int i = 0; i < step_count; i++)
     {
-        model.preupdate(dt);
-        float ctl = vel_c.eval(&context.mdl, input, 0.0f, dt);
-        model.simulation_step(dt, ctl);
-        //model.simulation_step(dt, input);
-        angvel_output[i + 1] = model.ang_vel;
-        aoa_output[i + 1] = model.aoa;
-        acc_output[i + 1] = model.ang_acc;
-        csurf_output[i + 1] = model.csurf_state;
+        model->preupdate(dt);
+        //float ctl = 0.0f;
+        float ctl = vel_c.eval(model, input, 0.0f, dt);
+        model->simulation_step(dt, ctl);
+        //model->simulation_step(dt, input);
+        angvel_output[i + 1] = model->ang_vel;
+        aoa_output[i + 1] = model->aoa;
+        acc_output[i + 1] = model->ang_acc;
+        csurf_output[i + 1] = model->csurf_state;
         input_output[i + 1] = input;
     }
 }

@@ -8,28 +8,28 @@ template <unsigned Rows, unsigned Cols> struct matrix
 {
     float data[Rows * Cols];
 
-    __inline__ __device__ __host__ float& operator()(unsigned row, unsigned column)
+    __inline__ __device__ float& operator()(unsigned row, unsigned column)
     {
         return data[Cols * row + column];
     }
 
-    __inline__ __device__ __host__ float operator()(unsigned row, unsigned column) const
+    __inline__ __device__ float operator()(unsigned row, unsigned column) const
     {
         return data[Cols * row + column];
     }
 
-    __inline__ __device__ __host__ float& get(unsigned row, unsigned column)
+    __inline__ __device__ float& get(unsigned row, unsigned column)
     {
         return data[Cols * row + column];
     }
 
-    __inline__ __device__ __host__ float getc(unsigned row, unsigned column) const
+    __inline__ __device__ float getc(unsigned row, unsigned column) const
     {
         return data[Cols * row + column];
     }
 
     template <unsigned R, unsigned C>
-    __device__ __host__ void copyFrom(const matrix<R, C> &mat)
+    __device__ void copyFrom(const matrix<R, C> &mat)
     {
         static_assert((R >= Rows) && (C >= Cols), "Can only copy from the matrix larger than current");
 
@@ -39,7 +39,7 @@ template <unsigned Rows, unsigned Cols> struct matrix
     }
 
     template <unsigned R>
-    __device__ __host__ matrix<Rows, R> operator*(const matrix<Cols, R> &rhs) const
+    __device__ matrix<Rows, R> operator*(const matrix<Cols, R> &rhs) const
     {
         matrix<Rows, R> res;
         for (int r = 0; r < Rows; r++)
@@ -53,7 +53,7 @@ template <unsigned Rows, unsigned Cols> struct matrix
         return res;
     }
 
-    __device__ __host__ matrix<Rows, Cols> operator*(float rhs) const
+    __device__ matrix<Rows, Cols> operator*(float rhs) const
     {
         matrix<Rows, Cols> res;
         for (int r = 0; r < Rows; r++)
@@ -62,7 +62,7 @@ template <unsigned Rows, unsigned Cols> struct matrix
         return res;
     }
 
-    __device__ __host__ matrix<Rows, Cols> operator+(float rhs) const
+    __device__ matrix<Rows, Cols> operator+(float rhs) const
     {
         matrix<Rows, Cols> res;
         for (int r = 0; r < Rows; r++)
@@ -71,7 +71,7 @@ template <unsigned Rows, unsigned Cols> struct matrix
         return res;
     }
 
-    __device__ __host__ matrix<Rows, Cols> operator+(const matrix<Rows, Cols> &rhs) const
+    __device__ matrix<Rows, Cols> operator+(const matrix<Rows, Cols> &rhs) const
     {
         matrix<Rows, Cols> res;
         for (int r = 0; r < Rows; r++)
@@ -80,7 +80,16 @@ template <unsigned Rows, unsigned Cols> struct matrix
         return res;
     }
 
-    __device__ __host__ matrix<Rows, Cols> operator-(float rhs) const
+    __device__ matrix<Rows, Cols> operator-(const matrix<Rows, Cols> &rhs) const
+    {
+        matrix<Rows, Cols> res;
+        for (int r = 0; r < Rows; r++)
+            for (int c = 0; c < Cols; c++)
+                res(r, c) = getc(r, c) - rhs.getc(r, c);
+        return res;
+    }
+
+    __device__ matrix<Rows, Cols> operator-(float rhs) const
     {
         matrix<Rows, Cols> res;
         for (int r = 0; r < Rows; r++)
@@ -89,7 +98,7 @@ template <unsigned Rows, unsigned Cols> struct matrix
         return res;
     }
 
-    __inline__ __device__ __host__ explicit operator float() const
+    __inline__ __device__ explicit operator float() const
     {
         static_assert((Rows == 1) && (Cols == 1), "We're not matrix-element");
 
@@ -97,7 +106,7 @@ template <unsigned Rows, unsigned Cols> struct matrix
     }
 
     template <unsigned R>
-    __inline__ __device__ __host__ matrixrow<R, Rows, Cols> rowSlice()
+    __inline__ __device__ matrixrow<R, Rows, Cols> rowSlice()
     {
         static_assert(R < Rows, "No such row");
 
@@ -110,30 +119,30 @@ template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
 {
     matrix<Rows, Cols> &hdl;
 
-    __device__ __host__ matrixrow(matrix<Rows, Cols> &host) : hdl(host) {}
+    __device__ matrixrow(matrix<Rows, Cols> &host) : hdl(host) {}
 
-    __inline__ __device__ __host__ float& operator()(unsigned row, unsigned column)
+    __inline__ __device__ float& operator()(unsigned row, unsigned column)
     {
         return hdl.data[Row * Cols + column];
     }
 
-    __inline__ __device__ __host__ float operator()(unsigned row, unsigned column) const
+    __inline__ __device__ float operator()(unsigned row, unsigned column) const
     {
         return hdl.data[Row * Cols + column];
     }
 
-    __inline__ __device__ __host__ float& get(unsigned row, unsigned column)
+    __inline__ __device__ float& get(unsigned row, unsigned column)
     {
         return hdl.data[Row * Cols + column];
     }
 
-    __inline__ __device__ __host__ float getc(unsigned row, unsigned column) const
+    __inline__ __device__ float getc(unsigned row, unsigned column) const
     {
         return hdl.data[Row * Cols + column];
     }
 
     template <unsigned R>
-    __device__ __host__ matrix<1, R> operator*(const matrix<Cols, R> &rhs) const
+    __device__ matrix<1, R> operator*(const matrix<Cols, R> &rhs) const
     {
         matrix<1, R> res;
         for (int c = 0; c < R; c++)
@@ -146,7 +155,7 @@ template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
         return res;
     }
 
-    __device__ __host__ matrix<1, Cols> operator*(float rhs) const
+    __device__ matrix<1, Cols> operator*(float rhs) const
     {
         matrix<1, Cols> res;
         for (int c = 0; c < Cols; c++)
@@ -154,7 +163,7 @@ template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
         return res;
     }
 
-    __device__ __host__ matrix<1, Cols> operator+(float rhs) const
+    __device__ matrix<1, Cols> operator+(float rhs) const
     {
         matrix<1, Cols> res;
         for (int c = 0; c < Cols; c++)
@@ -162,7 +171,7 @@ template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
         return res;
     }
 
-    __device__ __host__ matrix<1, Cols> operator+(const matrix<1, Cols> &&rhs) const
+    __device__ matrix<1, Cols> operator+(const matrix<1, Cols> &rhs) const
     {
         matrix<1, Cols> res;
         for (int c = 0; c < Cols; c++)
@@ -170,7 +179,7 @@ template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
         return res;
     }
 
-    __device__ __host__ matrix<1, Cols> operator-(float rhs) const
+    __device__ matrix<1, Cols> operator-(float rhs) const
     {
         matrix<1, Cols> res;
         for (int c = 0; c < Cols; c++)
@@ -178,7 +187,15 @@ template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
         return res;
     }
 
-    __inline__ __device__ __host__ explicit operator float() const
+    __device__ matrix<1, Cols> operator-(const matrix<1, Cols> &rhs) const
+    {
+        matrix<1, Cols> res;
+        for (int c = 0; c < Cols; c++)
+            res(0, c) = getc(0, c) - rhs.getc(0, c);
+        return res;
+    }
+
+    __inline__ __device__ explicit operator float() const
     {
         static_assert((Cols == 1), "We're not matrix-element");
 
@@ -188,20 +205,20 @@ template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
 
 
 template <int N, int Size, typename T1, typename ...T>
-__device__ __host__ void __colVec(matrix<Size, 1> &mat, T1 v1, T... args)
+__device__ void __colVec(matrix<Size, 1> &mat, T1 v1, T... args)
 {
     mat(N, 0) = v1;
     __colVec<N+1, Size, T...>(mat, args...);
 }
 
 template <int N, int Size, typename T1>
-__device__ __host__ void __colVec(matrix<Size, 1> &mat, T1 v1)
+__device__ void __colVec(matrix<Size, 1> &mat, T1 v1)
 {
     mat(N, 0) = v1;
 }
 
 template <typename ...T> 
-__device__ __host__ matrix<sizeof...(T), 1> colVec(T... args)
+__device__ matrix<sizeof...(T), 1> colVec(T... args)
 {
     const int size = sizeof...(T);
     matrix<size, 1> res;
@@ -211,7 +228,7 @@ __device__ __host__ matrix<sizeof...(T), 1> colVec(T... args)
 
 
 // solve A*x=b with nonzero A(0, 0)
-__device__ __host__ matrix<2, 1> operator/(const matrix<2, 2> &A, const matrix<2, 1> &b)
+__device__ matrix<2, 1> operator/(const matrix<2, 2> &A, const matrix<2, 1> &b)
 {
     float y = (b(1, 0) - A(1, 0) * b(0, 0) / A(0, 0)) /
         (A(1, 1) - A(1, 0) * A(0, 1) / A(0, 0));

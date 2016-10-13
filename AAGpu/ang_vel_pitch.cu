@@ -3,7 +3,7 @@
 
 #include "math_constants.h"
 
-__device__ void vel_update_pars(ang_vel_p &obj, pitch_model *mdl)
+__device__ static void vel_update_pars(ang_vel_p &obj, pitch_model *mdl)
 {
     if (obj.already_preupdated)
     {
@@ -112,7 +112,7 @@ __device__ void vel_update_pars(ang_vel_p &obj, pitch_model *mdl)
     obj.kacc_quadr = fabsf(kacc);
 }
 
-__device__ float get_desired_acc(ang_vel_p &obj, pitch_model *mdl, float des_v, 
+__device__ static float get_desired_acc(ang_vel_p &obj, pitch_model *mdl, float des_v, 
     float target_deriv, float dt)
 {
     float cur_v = mdl->ang_vel;
@@ -132,6 +132,7 @@ __device__ float get_desired_acc(ang_vel_p &obj, pitch_model *mdl, float des_v,
         float ds = intersect_x - s;
         return k * (ds * ds - s * s) / dt;
     }
+    return 0.0f;
 }
 
 __device__ float ang_vel_p::eval(pitch_model *mdl, float target, float target_deriv, 
@@ -147,10 +148,10 @@ __device__ float ang_vel_p::eval(pitch_model *mdl, float target, float target_de
         output_acc = acc_constrained;
     else
         output_acc = acc_unconst;
-    return ang_acc_p::eval(mdl, output_acc, dt);
+    return ang_acc_p::eval_ac(mdl, output_acc, dt);
 }
 
-__device__ void ang_vel_p::preupdate(pitch_model *mdl)
+__device__ void ang_vel_p::preupdatev(pitch_model *mdl)
 {
     vel_update_pars(*this, mdl);
     already_preupdated = true;

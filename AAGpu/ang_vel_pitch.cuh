@@ -37,5 +37,5 @@ struct ang_vel_p
     float target_vel;
 
     __device__ float eval(pitch_model *mdl, float target, float target_deriv, float dt);
-    __device__ void preupdate(pitch_model *mdl);
+    __device__ void preupdatev(pitch_model *mdl);
 };
