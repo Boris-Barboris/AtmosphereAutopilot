@@ -77,10 +77,11 @@ __device__ __host__ void pitch_model::preupdate(float dt)
 __device__ __host__ void pitch_model::simulation_step(float dt, float input)
 {
     // update_control_states
+    bool collapse = false;
     if (!aero_model)
-        csurf_state = moveto(csurf_state, input, dt * stock_csurf_spd);
+        csurf_state_new = moveto(csurf_state, input, dt * stock_csurf_spd);
     else
-        csurf_state_new = moveto_far(csurf_state, input, dt / far_timeConstant);
+        csurf_state_new = moveto_far(csurf_state, input, dt / far_timeConstant, collapse);
 
     // integrate_dynamics
 
@@ -95,7 +96,7 @@ __device__ __host__ void pitch_model::simulation_step(float dt, float input)
     float Cl0 = lift_m.x * 1e-3 * dyn_pressure / mass;
     float Cl1 = lift_m.y * 1e-3 * dyn_pressure / mass;
     float Cl2 = lift_m.z * 1e-3 * dyn_pressure / mass;
-    float2 pitch_lift_acc = pitch_tangent * (Cl0 + Cl1 * aoa + Cl2 * csurf_state);
+    float2 pitch_lift_acc = pitch_tangent * (Cl0 + Cl1 * aoa + Cl2 * csurf_state_new);
 
     acc = acc + drag_acc + pitch_lift_acc;
     position = position + velocity * dt + 0.5f * acc * (dt * dt);
@@ -105,10 +106,17 @@ __device__ __host__ void pitch_model::simulation_step(float dt, float input)
 
     // rotation section
 
-    ang_acc = (float)(A.rowSlice<1>() * colVec(aoa, ang_vel, csurf_state)) + 
-        B(1, 0) * input + C(1, 0);
-    if (aero_model)
-        csurf_state = csurf_state_new;
+    float csurf_used = aero_model ? csurf_state : csurf_state_new;
+    if (aero_model && collapse)
+        ang_acc = (float)(A_undelayed.rowSlice<1>() * colVec(aoa, ang_vel)) +
+            B_undelayed(1, 0) * csurf_state_new + C(1, 0) +
+            (input - csurf_state_new) * (sas_torque / moi);
+    else
+        ang_acc = (float)(A.rowSlice<1>() * colVec(aoa, ang_vel, csurf_used)) +
+            B(1, 0) * input + C(1, 0);
+
+    csurf_state = csurf_state_new;
+
     pitch_angle += ang_vel * dt + 0.5f * dt * dt * ang_acc;
     ang_vel += dt * ang_acc;
 }

@@ -110,12 +110,18 @@ float moveto(float cur_state, float des_state, float max_delta)
 }
 
 inline __device__ __host__
-float moveto_far(float cur_state, float des_state, float time_div)
+float moveto_far(float cur_state, float des_state, float time_div, bool &collapse)
 {
     float error = des_state - cur_state;
     if (fabsf(error) * 10.0f >= 0.1f)
-        return cur_state + clamp(error * time_div, 
+    {
+        collapse = false;
+        return cur_state + clamp(error * time_div,
             -fabsf(0.6f * error), fabsf(0.6f * error));
+    }
     else
+    {
+        collapse = true;
         return des_state;
+    }
 }

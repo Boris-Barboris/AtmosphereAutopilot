@@ -63,15 +63,15 @@ RAWPREFIX void RAWFUNCNAME(
     for (int i = 0; i < step_count; i++)
     {
         model.preupdate(dt);
-        float ctl = vel_c.eval(&model, input, 0.0f, dt);
+        //float ctl = vel_c.eval(&model, input, 0.0f, dt);
         //ctl = ang_acc_p::eval_ac(model, input, dt);
-        model.simulation_step(dt, ctl);
-        //model.simulation_step(dt, input);
+        //model.simulation_step(dt, ctl);
+        model.simulation_step(dt, input);
         angvel_output[i + 1] = model.ang_vel;
         aoa_output[i + 1] = model.aoa;
         acc_output[i + 1] = model.ang_acc;
         csurf_output[i + 1] = model.csurf_state;
-        input_output[i + 1] = ctl;
+        input_output[i + 1] = input;
     }
 }
 
@@ -106,7 +106,7 @@ void RAWEXECFUNCNAME(
     cudaMemcpyToSymbol(d_aero_model, &aero_model_par, sizeof(bool));
     cudaMemcpyToSymbol(d_spd_const, &keep_speed, sizeof(bool));
 
-    raw_kernel << <1, 1 >> >(
+    raw_kernel <<<1, 1>>>(
         d_angvel,
         d_aoa,
         d_acc,

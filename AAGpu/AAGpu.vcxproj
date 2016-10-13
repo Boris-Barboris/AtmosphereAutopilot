@@ -173,6 +173,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   <ItemGroup>
     <CudaCompile Include="ang_acc_pitch.cu" />
     <CudaCompile Include="ang_vel_pitch.cu" />
+    <CudaCompile Include="aoa_ctrl.cu" />
+    <CudaCompile Include="aoa_eval_kernel.cu" />
     <CudaCompile Include="matrix.cu" />
     <CudaCompile Include="raw_kernel.cu" />
   </ItemGroup>
@@ -188,11 +190,13 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="aircraftmodel.cuh" />
     <ClInclude Include="ang_acc_pitch.cuh" />
     <ClInclude Include="ang_vel_pitch.cuh" />
+    <ClInclude Include="aoa_ctrl.cuh" />
+    <ClInclude Include="aoa_eval_kernel_common.cuh" />
     <ClInclude Include="cuda_wrappers.cuh" />
     <ClInclude Include="matrix.cuh">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="raw_kernel_common.cu">
+    <ClInclude Include="raw_kernel_common.cuh">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="vector_utils.cuh" />

@@ -23,13 +23,27 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <xctk:PropertyGrid Grid.Row="0" SelectedObject="{Binding Path=rawExperiment}"/>
+                        <xctk:PropertyGrid Grid.Row="0" SelectedObject="{Binding rawExperiment}"/>
                         <Button Content="Simulate" Grid.Row="1" Command="{Binding startRawCommand}" Height="35" FontSize="16"/>
                     </Grid>
                 </Grid>
             </TabItem>
-            <TabItem Header="Ang vel" Background="#FF979797">
-                <Grid Background="#FFE5E5E5" Opacity="0"/>
+            <TabItem Header="AoA eval" Background="#FF979797">
+                <Grid Background="#FF302E2E">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="260"/>
+                    </Grid.ColumnDefinitions>
+                    <oxy:PlotView Model="{Binding Path=AoAExperimentPlot.Model}"/>
+                    <Grid Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <xctk:PropertyGrid Grid.Row="0" SelectedObject="{Binding aoaEvalEeperiment}"/>
+                        <Button Content="Simulate" Grid.Row="1" Command="{Binding startAoAEvalCommand}" Height="35" FontSize="16"/>
+                    </Grid>
+                </Grid>
             </TabItem>
         </TabControl>
     </Grid>

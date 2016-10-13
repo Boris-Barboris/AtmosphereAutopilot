@@ -4,7 +4,6 @@
     <CudaCompile Include="aircraftmodel.cu">
       <Filter>aircraftmodel</Filter>
     </CudaCompile>
-    <CudaCompile Include="raw_kernel.cu" />
     <CudaCompile Include="ang_acc_pitch.cu">
       <Filter>angacc</Filter>
     </CudaCompile>
@@ -13,6 +12,15 @@
     </CudaCompile>
     <CudaCompile Include="matrix.cu">
       <Filter>common</Filter>
+    </CudaCompile>
+    <CudaCompile Include="aoa_ctrl.cu">
+      <Filter>aoa</Filter>
+    </CudaCompile>
+    <CudaCompile Include="aoa_eval_kernel.cu">
+      <Filter>kernels</Filter>
+    </CudaCompile>
+    <CudaCompile Include="raw_kernel.cu">
+      <Filter>kernels</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
@@ -27,6 +35,12 @@
     </Filter>
     <Filter Include="angvel">
       <UniqueIdentifier>{f918fd32-ae4b-44f3-8531-40c8965f083e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="aoa">
+      <UniqueIdentifier>{c9ba137e-cec3-4155-8a54-be4bf0c74dd3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="kernels">
+      <UniqueIdentifier>{98ebe465-db2b-40ec-a825-86943f8a3a05}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -49,6 +63,14 @@
     <ClInclude Include="cuda_wrappers.cuh">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="raw_kernel_common.cu" />
+    <ClInclude Include="aoa_ctrl.cuh">
+      <Filter>aoa</Filter>
+    </ClInclude>
+    <ClInclude Include="raw_kernel_common.cuh">
+      <Filter>kernels</Filter>
+    </ClInclude>
+    <ClInclude Include="aoa_eval_kernel_common.cuh">
+      <Filter>kernels</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

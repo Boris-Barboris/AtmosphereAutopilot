@@ -124,4 +124,32 @@ namespace AAGpuWrapper
         property List<Single> ^inputHistory;
     };
 
+
+
+
+    public ref class AoAEvalExperiment : public RawModelExperiment
+    {
+    public:
+        AoAEvalExperiment(): RawModelExperiment()
+        {
+            startAoA = 0.0f;
+            AoA_params = gcnew List<Single>();
+            AoA_params->Add(1.0f);
+            AoA_params->Add(3.0f);
+        }
+
+        [CategoryAttribute("Global parameters")]
+        [DisplayNameAttribute("Start AoA")]
+        property Single startAoA;
+
+        [CategoryAttribute("Controllers")]
+        [DisplayNameAttribute("AoA params")]
+        property List<Single> ^AoA_params;
+
+        [Browsable(false)]
+        property List<Single> ^outputVelHistory;
+
+        virtual void execute() override;
+    };
+
 }

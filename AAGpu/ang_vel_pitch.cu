@@ -11,9 +11,9 @@ __device__ __host__ static void vel_update_pars(ang_vel_p &obj, pitch_model *mdl
         return;
     }
 
-    float rad_max_aoa = obj.max_aoa * (float)(CUDART_PI / 180.0);
+    float rad_max_aoa = obj.max_aoa;
     obj.res_max_aoa = 100.0f;
-    obj.res_min_aoa = 100.0f;
+    obj.res_min_aoa = -100.0f;
     obj.res_equilibr_v_upper = 0.0f;
     obj.res_equilibr_v_lower = 0.0f;
 
@@ -106,7 +106,7 @@ __device__ __host__ static void vel_update_pars(ang_vel_p &obj, pitch_model *mdl
     // kacc_quadr section
     float kacc;
     if (aero_model)
-        kacc = obj.quadr_Kp * (mdl->A(1, 2) * mdl->B(2, 0) + mdl->B(1, 0)); // FAR
+        kacc = obj.quadr_Kp * (mdl->A(1, 2) * (0.25f / far_timeConstant) + mdl->B(1, 0)); // FAR
     else
         kacc = obj.quadr_Kp * (mdl->A(1, 2) * mdl->C(2, 0) + mdl->B(1, 0)); // stock
     obj.kacc_quadr = fabsf(kacc);
@@ -125,7 +125,7 @@ __device__ __host__ static float get_desired_acc(ang_vel_p &obj, pitch_model *md
     float s = (-d + copysignf(2.0f * sqrtf(k * v_error), k)) / 2.0f / k;
     float c = v_error - k * s * s;
     if (b + s <= dt)
-        return (d * dt - k * s * s - c) / dt;
+        return (d * dt - v_error) / dt;
     else
     {
         float intersect_x = dt;

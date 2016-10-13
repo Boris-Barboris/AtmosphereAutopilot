@@ -10,7 +10,7 @@ struct thread_context
 };
 
 #define RAWKERNELGPU
-#include "raw_kernel_common.cu"
+#include "raw_kernel_common.cuh"
 
 #undef RAWKERNELGPU
-#include "raw_kernel_common.cu"
+#include "raw_kernel_common.cuh"
