@@ -39,7 +39,7 @@ struct __align__(8) pitch_model
     __device__ void simulation_step(float dt, float input);
 
     // Initializer
-    __device__ void zero_init()
+    inline __device__ void zero_init()
     {
         for (int i = 0; i < sizeof(pitch_model); i++)
             *((char *)this) = (char)0;
@@ -53,17 +53,17 @@ struct __align__(8) pitch_model
     //int _stride;                        // 184
 };
 
-__inline__ __device__ float clamp(float val, float lower, float upper)
+inline __device__ float clamp(float val, float lower, float upper)
 {
     return fmaxf(lower, fminf(upper, val));
 }
 
-__inline__ __device__ float moveto(float cur_state, float des_state, float max_delta)
+inline __device__ float moveto(float cur_state, float des_state, float max_delta)
 {
     return cur_state + clamp(des_state - cur_state, -max_delta, max_delta);
 }
 
-__inline__ __device__ float moveto_far(float cur_state, float des_state, float time_div)
+inline __device__ float moveto_far(float cur_state, float des_state, float time_div)
 {
     float error = des_state - cur_state;
     if (fabsf(error) * 10.0f >= 0.1f)

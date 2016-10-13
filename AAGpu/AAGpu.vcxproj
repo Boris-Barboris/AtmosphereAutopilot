@@ -173,6 +173,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   <ItemGroup>
     <CudaCompile Include="ang_acc_pitch.cu" />
     <CudaCompile Include="ang_vel_pitch.cu" />
+    <CudaCompile Include="matrix.cu" />
     <CudaCompile Include="raw_kernel.cu" />
   </ItemGroup>
   <ItemGroup>

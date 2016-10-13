@@ -11,6 +11,9 @@
     <CudaCompile Include="ang_vel_pitch.cu">
       <Filter>angvel</Filter>
     </CudaCompile>
+    <CudaCompile Include="matrix.cu">
+      <Filter>common</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="aircraftmodel">

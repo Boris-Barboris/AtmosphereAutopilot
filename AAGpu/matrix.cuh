@@ -8,22 +8,22 @@ template <unsigned Rows, unsigned Cols> struct matrix
 {
     float data[Rows * Cols];
 
-    __inline__ __device__ float& operator()(unsigned row, unsigned column)
+    inline __device__ float& operator()(unsigned row, unsigned column)
     {
         return data[Cols * row + column];
     }
 
-    __inline__ __device__ float operator()(unsigned row, unsigned column) const
+    inline __device__ float operator()(unsigned row, unsigned column) const
     {
         return data[Cols * row + column];
     }
 
-    __inline__ __device__ float& get(unsigned row, unsigned column)
+    inline __device__ float& get(unsigned row, unsigned column)
     {
         return data[Cols * row + column];
     }
 
-    __inline__ __device__ float getc(unsigned row, unsigned column) const
+    inline __device__ float getc(unsigned row, unsigned column) const
     {
         return data[Cols * row + column];
     }
@@ -98,7 +98,7 @@ template <unsigned Rows, unsigned Cols> struct matrix
         return res;
     }
 
-    __inline__ __device__ explicit operator float() const
+    inline __device__ explicit operator float() const
     {
         static_assert((Rows == 1) && (Cols == 1), "We're not matrix-element");
 
@@ -106,7 +106,7 @@ template <unsigned Rows, unsigned Cols> struct matrix
     }
 
     template <unsigned R>
-    __inline__ __device__ matrixrow<R, Rows, Cols> rowSlice()
+    inline __device__ matrixrow<R, Rows, Cols> rowSlice()
     {
         static_assert(R < Rows, "No such row");
 
@@ -121,22 +121,22 @@ template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
 
     __device__ matrixrow(matrix<Rows, Cols> &host) : hdl(host) {}
 
-    __inline__ __device__ float& operator()(unsigned row, unsigned column)
+    inline __device__ float& operator()(unsigned row, unsigned column)
     {
         return hdl.data[Row * Cols + column];
     }
 
-    __inline__ __device__ float operator()(unsigned row, unsigned column) const
+    inline __device__ float operator()(unsigned row, unsigned column) const
     {
         return hdl.data[Row * Cols + column];
     }
 
-    __inline__ __device__ float& get(unsigned row, unsigned column)
+    inline __device__ float& get(unsigned row, unsigned column)
     {
         return hdl.data[Row * Cols + column];
     }
 
-    __inline__ __device__ float getc(unsigned row, unsigned column) const
+    inline __device__ float getc(unsigned row, unsigned column) const
     {
         return hdl.data[Row * Cols + column];
     }
@@ -195,7 +195,7 @@ template <unsigned Row, unsigned Rows, unsigned Cols> struct matrixrow
         return res;
     }
 
-    __inline__ __device__ explicit operator float() const
+    inline __device__ explicit operator float() const
     {
         static_assert((Cols == 1), "We're not matrix-element");
 
@@ -228,10 +228,4 @@ __device__ matrix<sizeof...(T), 1> colVec(T... args)
 
 
 // solve A*x=b with nonzero A(0, 0)
-__device__ matrix<2, 1> operator/(const matrix<2, 2> &A, const matrix<2, 1> &b)
-{
-    float y = (b(1, 0) - A(1, 0) * b(0, 0) / A(0, 0)) /
-        (A(1, 1) - A(1, 0) * A(0, 1) / A(0, 0));
-    float x = (b(0, 0) - A(0, 1) * y) / A(0, 0);
-    return colVec(x, y);
-}
+__device__ matrix<2, 1> operator/(const matrix<2, 2> &A, const matrix<2, 1> &b);
