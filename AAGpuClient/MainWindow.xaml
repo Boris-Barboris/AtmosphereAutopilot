@@ -24,14 +24,7 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <xctk:PropertyGrid Grid.Row="0" SelectedObject="{Binding Path=rawExperiment}"/>
-                        <Grid Grid.Row="1" Height="30">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="130"/>
-                                <ColumnDefinition Width="130"/>
-                            </Grid.ColumnDefinitions>
-                            <Button Content="Simulate" Grid.Column="0" Command="{Binding startRawCommand}"/>
-                            <Button Content="Stop" Grid.Column="1"/>
-                        </Grid>
+                        <Button Content="Simulate" Grid.Row="1" Command="{Binding startRawCommand}" Height="35" FontSize="16"/>
                     </Grid>
                 </Grid>
             </TabItem>
