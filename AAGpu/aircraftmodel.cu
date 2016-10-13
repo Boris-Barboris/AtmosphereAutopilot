@@ -3,16 +3,22 @@
 #include "math_constants.h"
 #include "vector_utils.cuh"
 
-__constant__ float   density = 1.0f;
-__constant__ bool    aero_model = false;         // false - stock, true - FAR
-__constant__ bool    spd_const = true;
-__constant__ float   gravity = -9.8f;
-__constant__ float   far_timeConstant = 0.25f;
-__constant__ float   stock_csurf_spd = 2.0f;
+__constant__ float   d_density = 1.0f;
+__constant__ bool    d_aero_model = false;         // false - stock, true - FAR
+__constant__ bool    d_spd_const = true;
+__constant__ float   d_gravity = -9.8f;
+__constant__ float   d_far_timeConstant = 0.25f;
+__constant__ float   d_stock_csurf_spd = 2.0f;
+
+float   h_density = 1.0f;
+bool    h_aero_model = false;         // false - stock, true - FAR
+bool    h_spd_const = true;
+float   h_gravity = -9.8f;
+float   h_far_timeConstant = 0.25f;
+float   h_stock_csurf_spd = 2.0f;
 
 
-
-__device__ void pitch_model::preupdate(float dt)
+__device__ __host__ void pitch_model::preupdate(float dt)
 {
     float veldot = dot(velocity, velocity);
     float velocity_magn = sqrtf(veldot);
@@ -68,7 +74,7 @@ __device__ void pitch_model::preupdate(float dt)
     pitch_tangent = normalize(make_float2(-velocity.y, velocity.x));
 }
 
-__device__ void pitch_model::simulation_step(float dt, float input)
+__device__ __host__ void pitch_model::simulation_step(float dt, float input)
 {
     // update_control_states
     if (!aero_model)

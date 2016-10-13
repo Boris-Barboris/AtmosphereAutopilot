@@ -2,7 +2,7 @@
 
 #include "vector_functions.h"
 
-#define __VECTOR_UTILS_DECL__ __inline__ __device__
+#define __VECTOR_UTILS_DECL__ inline __device__ __host__
 
 __VECTOR_UTILS_DECL__ float2 operator *(const float2 &lhs, const float2 &rhs)
 {
@@ -69,3 +69,7 @@ __VECTOR_UTILS_DECL__ float hypercross(const float2 &lhs, const float2 &rhs)
 {
     return lhs.x * rhs.y - lhs.y * rhs.x;
 }
+
+#define float2_zero make_float2(0.0f, 0.0f)
+#define float3_zero make_float3(0.0f, 0.0f, 0.0f)
+#define float4_zero make_float3(0.0f, 0.0f, 0.0f, 0.0f)

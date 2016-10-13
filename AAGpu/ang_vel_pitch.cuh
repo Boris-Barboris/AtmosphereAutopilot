@@ -36,6 +36,29 @@ struct ang_vel_p
 
     float target_vel;
 
-    __device__ float eval(pitch_model *mdl, float target, float target_deriv, float dt);
-    __device__ void preupdatev(pitch_model *mdl);
+    // Initializer
+    inline __device__ __host__ void zero_init()
+    {
+        max_v_construction = 0.0f;
+        max_aoa = 0.0f;
+        quadr_Kp = 0.0f;
+        moderate_aoa = false;
+        stable = false;
+        already_preupdated = false;
+        res_max_aoa = 0.0f;
+        res_min_aoa = 0.0f;
+        res_equilibr_v_upper = 0.0f;
+        res_equilibr_v_lower = 0.0f;
+        max_input_aoa = 0.0f;
+        min_input_aoa = 0.0f;
+        max_input_v = 0.0f;
+        min_input_v = 0.0f;
+        max_aoa_v = 0.0f;
+        min_aoa_v = 0.0f;
+        kacc_quadr = 0.0f;
+        target_vel = 0.0f;
+    }
+
+    __device__ __host__ float eval(pitch_model *mdl, float target, float target_deriv, float dt);
+    __device__ __host__ void preupdatev(pitch_model *mdl);
 };

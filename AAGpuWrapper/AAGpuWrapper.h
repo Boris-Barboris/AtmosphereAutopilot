@@ -14,6 +14,13 @@ namespace AAGpuWrapper
         FARAero
     };
 
+    public enum class ExecutionHost
+    {
+        CPU,
+        GPU,
+        Mixed
+    };
+
     public ref class RawModelExperiment
     {
     public:
@@ -39,6 +46,7 @@ namespace AAGpuWrapper
             startVel = 200.0f;
             keepSpeed = false;
             control = 0.0f;
+            computeHost = ExecutionHost::CPU;
         }
 
         [CategoryAttribute("Time parameters")]
@@ -88,6 +96,10 @@ namespace AAGpuWrapper
         [CategoryAttribute("Control")]
         [DisplayNameAttribute("Pitch input")]
         property Single control;
+
+        [CategoryAttribute("Computation")]
+        [DisplayNameAttribute("Host")]
+        property ExecutionHost computeHost;
 
         virtual void execute();
 

@@ -122,7 +122,7 @@ classdef ang_vel_pitch_yaw < ang_vel_controller
                     % get equilibrium aoa and angular_v for -1.0 input
                     eq_B = [A(1, 3) + A(1, 4) + B(1, 1) - C(1, 1); A(2, 3) + A(2, 4) + B(2, 1) - C(2, 1)];
                     eq_x = eq_A \ eq_B;
-                    if (eq_x(1, 1) >= 0.0)
+                    if (eq_x(1, 1) > 0.0)
                         obj.max_input_aoa = 0.6 * eq_x(1, 1);
                         obj.max_input_v = 0.6 * eq_x(2, 1);
                     else

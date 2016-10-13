@@ -46,12 +46,34 @@ void massalloc(unsigned count, T ptr, Ts... args)
 }
 
 template <typename T>
+void massalloc_cpu(unsigned count, T **ptr)
+{
+    size_t tsize = sizeof(T);
+    *ptr = (T*)malloc(count * tsize);
+}
+
+template <typename T, typename ...Ts>
+void massalloc_cpu(unsigned count, T **ptr, Ts**... args)
+{
+    size_t tsize = sizeof(T);
+    *ptr = (T*)malloc(count * tsize);
+    massalloc_cpu(count, args...);
+}
+
+template <typename T>
 void copyGpuCpu(T *gpu, T *host, unsigned count)
 {
     size_t tsize = sizeof(T) * count;
     cudaError st = cudaMemcpy(host, gpu, tsize, cudaMemcpyDeviceToHost);
     if (st != cudaSuccess)
         throw std::runtime_error("GPU-CPU transfer error");
+}
+
+template <typename T>
+void copyCpuCpu(T *cpu, T *host, unsigned count)
+{
+    size_t tsize = sizeof(T) * count;
+    memcpy(host, cpu, tsize);
 }
 
 template <typename T>
@@ -69,4 +91,17 @@ void massfree(T ptr, Ts... args)
     if (st != cudaSuccess)
         throw std::runtime_error("Free error");
     massfree(args...);
+}
+
+template <typename T>
+void massfree_cpu(T ptr)
+{
+    free(ptr);
+}
+
+template <typename T, typename ...Ts>
+void massfree_cpu(T ptr, Ts... args)
+{
+    free(ptr);
+    massfree_cpu(args...);
 }

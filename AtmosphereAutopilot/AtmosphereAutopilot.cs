@@ -489,6 +489,8 @@ namespace AtmosphereAutopilot
             }
             if (ActiveVessel == null)
                 return;
+            if (!autopilot_module_lists.ContainsKey(ActiveVessel))
+                return;
             if (!HighLogic.LoadedSceneIsFlight)
                 return;            
             GUIStyles.set_colors();

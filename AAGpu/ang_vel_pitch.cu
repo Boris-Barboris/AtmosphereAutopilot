@@ -3,7 +3,7 @@
 
 #include "math_constants.h"
 
-__device__ static void vel_update_pars(ang_vel_p &obj, pitch_model *mdl)
+__device__ __host__ static void vel_update_pars(ang_vel_p &obj, pitch_model *mdl)
 {
     if (obj.already_preupdated)
     {
@@ -18,7 +18,7 @@ __device__ static void vel_update_pars(ang_vel_p &obj, pitch_model *mdl)
     obj.res_equilibr_v_lower = 0.0f;
 
     float cur_aoa = mdl->aoa;
-    float abs_cur_aoa = fabsf(cur_aoa);
+    //float abs_cur_aoa = fabsf(cur_aoa);
     
     // let's omit all moderated stuff
     if (obj.moderate_aoa)
@@ -51,7 +51,7 @@ __device__ static void vel_update_pars(ang_vel_p &obj, pitch_model *mdl)
             mdl->A(0, 2) + mdl->B(0, 0) - mdl->C(0, 0),
             mdl->A(1, 2) + mdl->B(1, 0) - mdl->C(1, 0));
         eq_x = eq_A / eq_B;
-        if (eq_x(0, 0) >= 0.0)
+        if (eq_x(0, 0) > 0.0)
         {
             obj.max_input_aoa = 0.6f * eq_x(0, 0);
             obj.max_input_v = 0.6f * eq_x(1, 0);
@@ -112,17 +112,17 @@ __device__ static void vel_update_pars(ang_vel_p &obj, pitch_model *mdl)
     obj.kacc_quadr = fabsf(kacc);
 }
 
-__device__ static float get_desired_acc(ang_vel_p &obj, pitch_model *mdl, float des_v, 
+__device__ __host__ static float get_desired_acc(ang_vel_p &obj, pitch_model *mdl, float des_v,
     float target_deriv, float dt)
 {
     float cur_v = mdl->ang_vel;
     float v_error = cur_v - des_v;
     float k = copysignf(obj.kacc_quadr, v_error);
     if (k == 0.0f)
-        return 0.0f;
+        return target_deriv;
     float d = target_deriv;
     float b = d / 2.0f / k;
-    float s = (-d + copysignf(2.0 * sqrtf(k * v_error), k)) / 2.0f / k;
+    float s = (-d + copysignf(2.0f * sqrtf(k * v_error), k)) / 2.0f / k;
     float c = v_error - k * s * s;
     if (b + s <= dt)
         return (d * dt - k * s * s - c) / dt;
@@ -135,7 +135,7 @@ __device__ static float get_desired_acc(ang_vel_p &obj, pitch_model *mdl, float 
     return 0.0f;
 }
 
-__device__ float ang_vel_p::eval(pitch_model *mdl, float target, float target_deriv, 
+__device__ __host__ float ang_vel_p::eval(pitch_model *mdl, float target, float target_deriv,
     float dt)
 {
     target_vel = target;
@@ -144,14 +144,14 @@ __device__ float ang_vel_p::eval(pitch_model *mdl, float target, float target_de
     float acc_constrained = get_desired_acc(*this, mdl,
         copysignf(max_v_construction, target), 0.0f, dt);
     float output_acc;
-    if (copysignf(acc_constrained, target) < copysignf(acc_unconst, target))
+    if (acc_constrained * copysignf(1.0f, target) < acc_unconst * copysignf(1.0f, target))
         output_acc = acc_constrained;
     else
         output_acc = acc_unconst;
     return ang_acc_p::eval_ac(mdl, output_acc, dt);
 }
 
-__device__ void ang_vel_p::preupdatev(pitch_model *mdl)
+__device__ __host__ void ang_vel_p::preupdatev(pitch_model *mdl)
 {
     vel_update_pars(*this, mdl);
     already_preupdated = true;

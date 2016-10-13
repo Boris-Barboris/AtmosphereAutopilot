@@ -9,8 +9,7 @@
 #define AAGPU_EXPORTS_API __declspec(dllimport) 
 #endif
 
-
-AAGPU_EXPORTS_API void __cdecl raw_execute(
+typedef void raw_prototype(
     float dt,
     int step_count,
     float moi,
@@ -28,3 +27,7 @@ AAGPU_EXPORTS_API void __cdecl raw_execute(
     std::vector<float> &out_acc,
     std::vector<float> &out_csurf,
     std::vector<float> &out_input);
+
+AAGPU_EXPORTS_API raw_prototype raw_execute;
+
+AAGPU_EXPORTS_API raw_prototype raw_execute_cpu;

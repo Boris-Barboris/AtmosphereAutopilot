@@ -35,6 +35,36 @@ namespace AtmosphereAutopilot
         protected float prev_roll_action = 0.0f;
         protected float prev_yaw_action = 0.0f;
 
+        protected bool was_deployed = false;
+
+        public override void OnStart(PartModule.StartState state)
+        {
+            base.OnStart(state);
+            if (HighLogic.LoadedSceneIsFlight)
+            {
+                if (!usesMirrorDeploy)
+                {
+                    usesMirrorDeploy = true;
+                    mirrorDeploy = false;
+                    if (part.symMethod == SymmetryMethod.Mirror && 
+                        part.symmetryCounterparts != null &&
+                        part.symmetryCounterparts.Count > 0)
+                    {
+                        Part p = part.symmetryCounterparts[0];
+                        if (Mathf.Abs(part.transform.localRotation.w) < Mathf.Abs(p.transform.localRotation.w))
+                        {
+                            this.mirrorDeploy = true;
+                        }
+                        else if (Mathf.Abs(part.transform.localRotation.w) == Mathf.Abs(p.transform.localRotation.w) 
+                            && part.transform.localRotation.x < p.transform.localRotation.x)
+                        {
+                            this.mirrorDeploy = true;
+                        }
+                    }
+                }
+            }
+        }
+
         protected override void CtrlSurfaceUpdate(Vector3 vel)
         {
             if (vessel.transform == null)
@@ -54,11 +84,11 @@ namespace AtmosphereAutopilot
             float fwd_airstream_factor = Mathf.Sign(Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity) + 0.1f);
             float exp_spd_factor = actuatorSpeed / actuatorSpeedNormScale * TimeWarp.fixedDeltaTime;
 
-            if (this.deploy)
+            if (deploy)
             {
-                float target = this.deployInvert ? 1.0f : -1.0f;
-                if (this.usesMirrorDeploy)
-                    if (this.mirrorDeploy)
+                float target = deployInvert ? 1.0f : -1.0f;                        
+                if (usesMirrorDeploy)
+                    if (mirrorDeploy)
                         target *= -1.0f;
                 if (!ignorePitch)
                     prev_pitch_action = target;
@@ -66,6 +96,7 @@ namespace AtmosphereAutopilot
                     prev_roll_action = target;
                 if (!ignoreYaw)
                     prev_yaw_action = target;
+                was_deployed = true;
                 deflection = action = action + Common.Clampf(target - action, spd_factor);
                 ctrlSurface.localRotation = Quaternion.AngleAxis(deflection * ctrlSurfaceRange * 0.01f * authorityLimiter, Vector3.right) * neutral;
             }
@@ -74,7 +105,10 @@ namespace AtmosphereAutopilot
                 if (!ignorePitch)
                 {
                     float axis_factor = Vector3.Dot(vessel.ReferenceTransform.right, baseTransform.right) * fwd_airstream_factor;
-                    float new_pitch_action = pitch_input * axis_factor * Math.Sign(Vector3.Dot(world_com - baseTransform.position, vessel.ReferenceTransform.up));
+                    float pitch_factor = axis_factor * Math.Sign(Vector3.Dot(world_com - baseTransform.position, vessel.ReferenceTransform.up));
+                    if (was_deployed)
+                        prev_pitch_action = Common.Clampf(prev_pitch_action, Mathf.Abs(pitch_factor));
+                    float new_pitch_action = pitch_input * pitch_factor;
                     if (useExponentialSpeed)
                         prev_pitch_action = Mathf.Lerp(prev_pitch_action, new_pitch_action, exp_spd_factor);
                     else
@@ -86,8 +120,11 @@ namespace AtmosphereAutopilot
                 if (!ignoreRoll)
                 {
                     float axis_factor = Vector3.Dot(vessel.ReferenceTransform.up, baseTransform.up) * fwd_airstream_factor;
-                    float new_roll_action = roll_input * axis_factor * Math.Sign(Vector3.Dot(vessel.ReferenceTransform.up,
+                    float roll_factor = axis_factor * Math.Sign(Vector3.Dot(vessel.ReferenceTransform.up, 
                         Vector3.Cross(world_com - baseTransform.position, baseTransform.forward)));
+                    if (was_deployed)
+                        prev_roll_action = Common.Clampf(prev_roll_action, Mathf.Abs(roll_factor));
+                    float new_roll_action = roll_input * roll_factor;
                     if (useExponentialSpeed)
                         prev_roll_action = Mathf.Lerp(prev_roll_action, new_roll_action, exp_spd_factor);
                     else
@@ -99,7 +136,10 @@ namespace AtmosphereAutopilot
                 if (!ignoreYaw)
                 {
                     float axis_factor = Vector3.Dot(vessel.ReferenceTransform.forward, baseTransform.right) * fwd_airstream_factor;
-                    float new_yaw_action = yaw_input * axis_factor * Math.Sign(Vector3.Dot(world_com - baseTransform.position, vessel.ReferenceTransform.up));
+                    float yaw_factor = axis_factor * Math.Sign(Vector3.Dot(world_com - baseTransform.position, vessel.ReferenceTransform.up));
+                    if (was_deployed)
+                        prev_yaw_action = Common.Clampf(prev_yaw_action, Mathf.Abs(yaw_factor));
+                    float new_yaw_action = yaw_input * yaw_factor;
                     if (useExponentialSpeed)
                         prev_yaw_action = Mathf.Lerp(prev_yaw_action, new_yaw_action, exp_spd_factor);
                     else
@@ -107,6 +147,8 @@ namespace AtmosphereAutopilot
                 }
                 else
                     prev_yaw_action = 0.0f;
+
+                was_deployed = false;
 
                 deflection = action =  0.01f * authorityLimiter * Common.Clampf(prev_pitch_action + prev_roll_action + prev_yaw_action, 1.0f);
                 ctrlSurface.localRotation = Quaternion.AngleAxis(deflection * ctrlSurfaceRange, Vector3.right) * neutral;

@@ -26,7 +26,13 @@ namespace AAGpuWrapper
             out_csurf(points_count), 
             out_input(points_count);
 
-        raw_execute(
+        raw_prototype *exec_func;
+        if (computeHost == ExecutionHost::CPU)
+            exec_func = raw_execute_cpu;
+        else
+            exec_func = raw_execute;
+
+        exec_func(
             dt, 
             points_count-1, 
             MOI, 
