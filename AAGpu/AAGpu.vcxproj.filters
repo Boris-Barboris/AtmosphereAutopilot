@@ -37,9 +37,6 @@
     <ClInclude Include="vector_utils.cuh">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="cuda_wrappers.hpp">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="matrix.cuh">
       <Filter>common</Filter>
     </ClInclude>
@@ -49,5 +46,9 @@
     <ClInclude Include="ang_vel_pitch.cuh">
       <Filter>angvel</Filter>
     </ClInclude>
+    <ClInclude Include="cuda_wrappers.cuh">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="raw_kernel_common.cu" />
   </ItemGroup>
 </Project>
