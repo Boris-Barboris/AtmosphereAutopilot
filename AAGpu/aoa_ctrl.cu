@@ -24,6 +24,18 @@ __device__ __host__ matrix<2, 1> aoa_ctrl::get_equlibr(pitch_model *mdl, float a
     return eq_x;
 }
 
+__device__ __host__ static float predict_aoa(pitch_model *mdl, float ctrl, float dt)
+{
+    float csurf;
+    if (aero_model)
+        csurf = mdl->csurf_state;
+    else
+        csurf = moveto(mdl->csurf_state, ctrl, dt * stock_csurf_spd);
+    float pred_aoa = (float)(mdl->A.rowSlice<0>() * colVec(mdl->aoa, mdl->ang_vel, csurf)) +
+        mdl->B(0, 0) * ctrl + mdl->C(0, 0);
+    return mdl->aoa + pred_aoa * dt;
+}
+
 __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c, 
     float target, float target_deriv, float dt)
 {
@@ -38,13 +50,30 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
     output_vel = output_shift + des_aoa_equil;
     float shift_ang_vel = mdl->ang_vel - cur_aoa_equilibr;
     predicted_aoa = cur_aoa + shift_ang_vel * dt;
+    if ((target_aoa - cur_aoa) * (target_aoa - predicted_aoa) < 0.0f)
+        predicted_aoa = target_aoa;
     predicted_output = get_output(vel_c, predicted_aoa, target_aoa, dt);
-    predicted_eq_v = get_equlibr(mdl, predicted_aoa)(0, 0);
-    float cur_deriv = (output_vel - prev_out_vel) / dt;
+    //predicted_eq_v = get_equlibr(mdl, predicted_aoa)(0, 0);
+    //float cur_deriv = (output_vel - prev_out_vel) / dt;
     float pred_deriv = (predicted_output - output_shift) / dt;
-    output_acc = 0.5f * (cur_deriv + pred_deriv);
+    output_acc = pred_deriv;
 
-    return vel_c->eval(mdl, output_vel, output_acc, dt);
+    float cout = vel_c->eval(mdl, output_vel, output_acc, dt);
+    vel_c->already_preupdated = true;
+
+    // now let's reiterate derivative calculation
+    predicted_aoa = predict_aoa(mdl, cout, dt);
+
+    if ((target_aoa - cur_aoa) * (target_aoa - predicted_aoa) < 0.0f)
+        predicted_aoa = target_aoa;
+    predicted_output = get_output(vel_c, predicted_aoa, target_aoa, dt);
+    //predicted_eq_v = get_equlibr(mdl, predicted_aoa)(0, 0);
+    pred_deriv = (predicted_output - output_shift) / dt;
+    output_acc = pred_deriv;
+
+    cout = vel_c->eval(mdl, output_vel, output_acc, dt);
+
+    return cout;
 }
 
 __device__ __host__ void aoa_ctrl::preupdate(pitch_model *mdl)

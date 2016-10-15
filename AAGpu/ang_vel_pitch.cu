@@ -125,7 +125,7 @@ __device__ __host__ static float get_desired_acc(ang_vel_p &obj, pitch_model *md
     float s = (-d + copysignf(2.0f * sqrtf(k * v_error), k)) / 2.0f / k;
     float c = v_error - k * s * s;
     if (b + s <= dt)
-        return (d * dt - v_error) / dt;
+        return  (d * dt - v_error) / dt;
     else
     {
         float intersect_x = dt;

@@ -84,7 +84,7 @@ RAWPREFIX void RAWFUNCNAME(
         acc_output[i + 1] = model.ang_acc;
         csurf_output[i + 1] = model.csurf_state;
         input_output[i + 1] = ctl;
-        output_vel_output[i + 1] = aoa_c.output_vel;
+        output_vel_output[i] = aoa_c.output_vel;
     }
 }
 
