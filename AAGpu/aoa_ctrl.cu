@@ -61,11 +61,11 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
     float pred_deriv = (predicted_output - output_shift) / dt;
     output_acc = pred_deriv;
 
-    if (aoa_err * output_acc > 0.0f)
+    /*if (aoa_err * output_acc > 0.0f)
     {
         output_acc = 0.0f;
         return vel_c->eval(mdl, output_vel, output_acc, dt);
-    }
+    }*/
 
     for (int i = 0; i < AOAPCITER; i++)
     {
@@ -75,8 +75,8 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
         // now let's reiterate derivative calculation
         predicted_aoa = predict_aoa(mdl, cout, dt);
 
-        if (aoa_err * (target_aoa - predicted_aoa) < 0.0f)
-            predicted_aoa = target_aoa;
+        //if (aoa_err * (target_aoa - predicted_aoa) < 0.0f)
+        //    predicted_aoa = target_aoa;
         predicted_output = get_output(vel_c, predicted_aoa, target_aoa, dt);
         //predicted_eq_v = get_equlibr(mdl, predicted_aoa)(0, 0);
         pred_deriv = (predicted_output - output_shift) / dt;
