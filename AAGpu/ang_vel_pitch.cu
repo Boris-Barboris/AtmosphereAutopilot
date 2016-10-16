@@ -117,15 +117,16 @@ __device__ __host__ static float get_desired_acc(ang_vel_p &obj, pitch_model *md
 {
     float cur_v = mdl->ang_vel;
     float v_error = cur_v - des_v;
-    float k = copysignf(obj.kacc_quadr, v_error);
+    float d = target_deriv;
+    float k = copysignf(obj.kacc_quadr, v_error + d * dt);
     if (k == 0.0f)
         return target_deriv;
-    float d = target_deriv;
     float b = d / 2.0f / k;
-    float s = (-d + copysignf(2.0f * sqrtf(k * v_error), k)) / 2.0f / k;
+    float s = (-d + copysignf(2.0f * sqrtf(k * (v_error + d * dt)), k)) / 2.0f / k;
     float c = v_error - k * s * s;
     if (b + s <= dt)
-        return  (d * dt - v_error) / dt;
+        //return  (d * dt - v_error) / dt;
+        return  - v_error / dt;
     else
     {
         float intersect_x = dt;
