@@ -106,7 +106,7 @@ __device__ __host__ static void vel_update_pars(ang_vel_p &obj, pitch_model *mdl
     // kacc_quadr section
     float kacc;
     if (aero_model)
-        kacc = obj.quadr_Kp * (mdl->A(1, 2) * (0.25f / far_timeConstant) + mdl->B(1, 0)); // FAR
+        kacc = obj.quadr_Kp * (mdl->A(1, 2) * (0.5f / far_timeConstant) + mdl->B(1, 0)); // FAR
     else
         kacc = obj.quadr_Kp * (mdl->A(1, 2) * mdl->C(2, 0) + mdl->B(1, 0)); // stock
     obj.kacc_quadr = fabsf(kacc);
