@@ -710,6 +710,11 @@ namespace AtmosphereAutopilot
                     max_input_v = (float)Common.simple_filter(new_max_input_v, max_input_v, moder_filter);
                     min_input_v = (float)Common.simple_filter(new_min_input_v, min_input_v, moder_filter);
                 }
+                else
+                {
+                    max_input_v = max_v_construction;
+                    min_input_v = -max_v_construction;
+                }
             }
             else
             {
