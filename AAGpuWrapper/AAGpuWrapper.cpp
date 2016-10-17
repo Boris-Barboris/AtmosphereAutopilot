@@ -2,7 +2,6 @@
 
 #include "AAGpuWrapper.h"
 #include "AAGpu.h"
-#include "aoa_ctrl_constants.h"
 
 namespace AAGpuWrapper
 {
@@ -75,7 +74,7 @@ namespace AAGpuWrapper
         Random ^rng = gcnew Random();
         for (int i = 0; i < AOAPARS; i++)
         {
-            float val = (float)(0.5 * (rng->NextDouble() - 0.5));
+            float val = (float)(rng->NextDouble() - 0.5);
             AoA_params->Add(val);
         }
     }

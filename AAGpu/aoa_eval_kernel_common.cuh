@@ -65,11 +65,11 @@ RAWPREFIX void RAWFUNCNAME(
     // aoa_c
     //aoa_c.params = aoa_pars;
     aoa_c.net.input_norm(0, 0) = 0.0f;
-    aoa_c.net.input_norm(0, 1) = 100.0f;
+    aoa_c.net.input_norm(0, 1) = 10.0f;
     aoa_c.net.input_norm(1, 0) = 0.0f;
     aoa_c.net.input_norm(1, 1) = 2.0f;
-    aoa_c.net.input_norm(2, 0) = -10.0f;
-    aoa_c.net.input_norm(2, 1) = 10.0f;
+    aoa_c.net.input_norm(2, 0) = -0.05f;
+    aoa_c.net.input_norm(2, 1) = 0.05f;
     aoa_c.net.input_norm(3, 0) = 0.0f;
     aoa_c.net.input_norm(3, 1) = 0.5f;
     aoa_c.net.output_norm(0, 0) = -1.0f;
