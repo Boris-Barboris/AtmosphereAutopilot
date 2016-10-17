@@ -19,13 +19,13 @@ template <unsigned Inputs, unsigned Neurons, unsigned Outputs> struct ann
     {
         int i = 0;
         for (int j = 0; j < Neurons * Inputs; j++)
-            weights1.data[j] = pars[i++];
+            weights1.data[j] = pars.data[i++];
         for (int j = 0; j < Neurons; j++)
-            biases1.data[j] = pars[i++];
+            biases1.data[j] = pars.data[i++];
         for (int j = 0; j < Outputs * Neurons; j++)
-            weights2.data[j] = pars[i++];
+            weights2.data[j] = pars.data[i++];
         for (int j = 0; j < Outputs; j++)
-            biases2.data[j] = pars[i++];
+            biases2.data[j] = pars.data[i++];
     }
 
     __device__ __host__ matrix<Outputs, 1> eval(const matrix<Inputs, 1> &input)

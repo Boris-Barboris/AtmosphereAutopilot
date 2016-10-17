@@ -134,8 +134,9 @@ namespace AAGpuWrapper
         {
             startAoA = 0.0f;
             AoA_params = gcnew List<Single>();
-            AoA_params->Add(1.0f);
-            AoA_params->Add(3.0f);
+            randomize_params();
+            //AoA_params->Add(1.0f);
+            //AoA_params->Add(3.0f);
         }
 
         [CategoryAttribute("Global parameters")]
@@ -150,6 +151,9 @@ namespace AAGpuWrapper
         property List<Single> ^outputVelHistory;
 
         virtual void execute() override;
+
+    private:
+        void randomize_params();
     };
 
 }

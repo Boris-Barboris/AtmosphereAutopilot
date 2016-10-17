@@ -53,7 +53,7 @@ typedef void aoa_eval_prototype(
     float start_aoa,
     bool keep_speed,
     float target_aoa,
-    const std::array<float, 2> &aoa_params,
+    const std::array<float, AOAPARS> &aoa_params,
     std::vector<float> &out_angvel,
     std::vector<float> &out_aoa,
     std::vector<float> &out_acc,

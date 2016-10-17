@@ -2,6 +2,7 @@
 
 #include "AAGpuWrapper.h"
 #include "AAGpu.h"
+#include "aoa_ctrl_constants.h"
 
 namespace AAGpuWrapper
 {
@@ -69,7 +70,15 @@ namespace AAGpuWrapper
         }
     }
 
-
+    void AoAEvalExperiment::randomize_params()
+    {
+        Random ^rng = gcnew Random();
+        for (int i = 0; i < AOAPARS; i++)
+        {
+            float val = (float)(0.5 * (rng->NextDouble() - 0.5));
+            AoA_params->Add(val);
+        }
+    }
 
     void AoAEvalExperiment::execute()
     {
@@ -81,8 +90,9 @@ namespace AAGpuWrapper
         { pitchLiftModel[0], pitchLiftModel[1], pitchLiftModel[2] };
         std::array<float, 2> drag_model =
         { dragModel[0], dragModel[1] };
-        std::array<float, 2> aoa_params =
-        { AoA_params[0], AoA_params[1] };
+        std::array<float, AOAPARS> aoa_params;
+        for (int i = 0; i < AOAPARS; i++)
+            aoa_params[i] = AoA_params[i];
 
         bool aero_model = aerodynamics == AeroModel::FARAero ? true : false;
 

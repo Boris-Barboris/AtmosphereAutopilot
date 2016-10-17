@@ -30,7 +30,7 @@ RAWPREFIX void RAWFUNCNAME(
     float3 rot_m,
     float3 lift_m,
     float2 drag_m,
-    matrix<2, 1> aoa_pars,
+    matrix<AOAPARS, 1> aoa_pars,
     float start_vel,
     float start_aoa)
 {
@@ -63,7 +63,7 @@ RAWPREFIX void RAWFUNCNAME(
     vel_c.moderate_aoa = true;
 
     // aoa_c
-    aoa_c.params = aoa_pars;
+    //aoa_c.params = aoa_pars;
     aoa_c.net.input_norm(0, 0) = 0.0f;
     aoa_c.net.input_norm(0, 1) = 100.0f;
     aoa_c.net.input_norm(1, 0) = 0.0f;
@@ -74,6 +74,7 @@ RAWPREFIX void RAWFUNCNAME(
     aoa_c.net.input_norm(3, 1) = 0.5f;
     aoa_c.net.output_norm(0, 0) = -1.0f;
     aoa_c.net.output_norm(0, 1) = 1.0f;
+    aoa_c.net.init(aoa_pars);
 
     // simulate
     angvel_output[0] = model.ang_vel;
@@ -114,7 +115,7 @@ void RAWEXECFUNCNAME(
     float start_aoa,
     bool keep_speed,
     float input,
-    const std::array<float, 2> &aoa_params,
+    const std::array<float, AOAPARS> &aoa_params,
     std::vector<float> &out_angvel,
     std::vector<float> &out_aoa,
     std::vector<float> &out_acc,
@@ -122,6 +123,10 @@ void RAWEXECFUNCNAME(
     std::vector<float> &out_input,
     std::vector<float> &out_vel_output)
 {
+    matrix<AOAPARS, 1> aoa_params_mat;
+    for (int i = 0; i < AOAPARS; i++)
+        aoa_params_mat(i, 0) = aoa_params[i];
+
 #ifdef AOAKERNELGPU
     float *d_angvel, *d_aoa, *d_acc, *d_csurf, *d_input, *d_out_vel;
 
@@ -131,7 +136,7 @@ void RAWEXECFUNCNAME(
 
     //cudaError r;
     cudaMemcpyToSymbol(d_aero_model, &aero_model_par, sizeof(bool));
-    cudaMemcpyToSymbol(d_spd_const, &keep_speed, sizeof(bool));
+    cudaMemcpyToSymbol(d_spd_const, &keep_speed, sizeof(bool));    
 
     aoa_eval_kernel <<<1, 1>>>(
         d_angvel,
@@ -149,7 +154,7 @@ void RAWEXECFUNCNAME(
         make_float3(rot_model[0], rot_model[1], rot_model[2]),
         make_float3(lift_model[0], lift_model[1], lift_model[2]),
         make_float2(drag_model[0], drag_model[1]),
-        colVec(aoa_params[0], aoa_params[1]),
+        aoa_params_mat,
         start_vel,
         start_aoa);
 
@@ -188,7 +193,7 @@ void RAWEXECFUNCNAME(
         make_float3(rot_model[0], rot_model[1], rot_model[2]),
         make_float3(lift_model[0], lift_model[1], lift_model[2]),
         make_float2(drag_model[0], drag_model[1]),
-        colVec(aoa_params[0], aoa_params[1]),
+        aoa_params_mat,
         start_vel,
         start_aoa);
 #endif // AOAKERNELGPU

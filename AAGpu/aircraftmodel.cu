@@ -93,9 +93,9 @@ __device__ __host__ void pitch_model::simulation_step(float dt, float input)
     float dk1 = drag_m.y * 1e-3f * dyn_pressure / mass;
     float2 drag_acc = - (velocity / speed * (dk0 + dk1 * aoa * aoa));
 
-    float Cl0 = lift_m.x * 1e-3 * dyn_pressure / mass;
-    float Cl1 = lift_m.y * 1e-3 * dyn_pressure / mass;
-    float Cl2 = lift_m.z * 1e-3 * dyn_pressure / mass;
+    float Cl0 = lift_m.x * 1e-3f * dyn_pressure / mass;
+    float Cl1 = lift_m.y * 1e-3f * dyn_pressure / mass;
+    float Cl2 = lift_m.z * 1e-3f * dyn_pressure / mass;
     float2 pitch_lift_acc = pitch_tangent * (Cl0 + Cl1 * aoa + Cl2 * csurf_state_new);
 
     acc = acc + drag_acc + pitch_lift_acc;

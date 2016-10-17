@@ -9,7 +9,7 @@
 struct aoa_ctrl
 {
     // tunable parameters
-    matrix<2, 1> params;
+    //matrix<2, 1> params;
     ann<AOAINPUTS, AOANEURONS, AOAOUTPUTS> net;
     
     // state
@@ -26,7 +26,7 @@ struct aoa_ctrl
     // Initializer
     inline __device__ __host__ void zero_init()
     {
-        params = matrix<2, 1>();
+        //params = matrix<2, 1>();
         output_vel = 0.0;
         output_acc = 0.0;
         predicted_aoa = 0.0;
@@ -44,6 +44,6 @@ struct aoa_ctrl
 
 private:
     __device__ __host__ void update_pars(pitch_model *mdl);
-    __device__ __host__ float get_output(ang_vel_p *vel_c, float cur_aoa, 
-        float des_aoa, float dt);
+    /*__device__ __host__ float get_output(ang_vel_p *vel_c, float cur_aoa, 
+        float des_aoa, float dt);*/
 };
