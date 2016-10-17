@@ -2,12 +2,15 @@
 
 #include "aircraftmodel.cuh"
 #include "ang_vel_pitch.cuh"
+#include "ann.cuh"
+#include "aoa_ctrl_constants.h"
 
 // Pitch AoA controller
 struct aoa_ctrl
 {
     // tunable parameters
     matrix<2, 1> params;
+    ann<AOAINPUTS, AOANEURONS, AOAOUTPUTS> net;
     
     // state
     float output_vel;

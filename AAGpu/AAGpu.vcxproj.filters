@@ -72,5 +72,11 @@
     <ClInclude Include="aoa_eval_kernel_common.cuh">
       <Filter>kernels</Filter>
     </ClInclude>
+    <ClInclude Include="ann.cuh">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="aoa_ctrl_constants.h">
+      <Filter>aoa</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -53,7 +53,9 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
     float cur_aoa = mdl->aoa;
     float prev_out_vel = output_vel;
     float output_shift = get_output(vel_c, cur_aoa, target, dt);
-    float des_aoa_equil = get_equlibr(mdl, target)(0, 0);
+    auto eq_x = get_equlibr(mdl, target);
+    float des_aoa_equil = eq_x(0, 0);
+    float des_aoa_ctl = eq_x(1, 0);
     //float des_aoa_equil = get_equlibr_vel(mdl, target, mdl->csurf_state);
     float aoa_err = target_aoa - cur_aoa;
     output_vel = output_shift + des_aoa_equil;
@@ -73,8 +75,16 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
     pred_deriv = (predicted_output - output_shift) / dt;
     output_acc = pred_deriv;
 
-    if ((target - predicted_aoa) * (target - cur_aoa) < 0.0f)
-    {
+    matrix<AOAINPUTS, 1> nninputs;
+    nninputs(0, 0) = vel_c->kacc_quadr;
+    nninputs(1, 0) = des_aoa_ctl - copysignf(1.0f, -aoa_err);
+    nninputs(2, 0) = mdl->A(0, 2);
+    nninputs(3, 0) = fabsf(aoa_err);
+
+    auto nnoutput = net.eval(nninputs);
+
+    //if ((target - predicted_aoa) * (target - cur_aoa) < 0.0f)
+    //{
         // let's simply make shift_vel zero
         //output_vel = des_aoa_equil;
 
@@ -103,7 +113,7 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
         //predicted_output = get_output(vel_c, predicted_aoa, target_aoa, dt);
         //pred_deriv = (predicted_output - output_shift) / dt;
         //output_acc = pred_deriv;
-    }
+    //}
 
     return vel_c->eval(mdl, output_vel, output_acc, dt);
 }

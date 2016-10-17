@@ -190,7 +190,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="aircraftmodel.cuh" />
     <ClInclude Include="ang_acc_pitch.cuh" />
     <ClInclude Include="ang_vel_pitch.cuh" />
+    <ClInclude Include="ann.cuh" />
     <ClInclude Include="aoa_ctrl.cuh" />
+    <ClInclude Include="aoa_ctrl_constants.h" />
     <ClInclude Include="aoa_eval_kernel_common.cuh" />
     <ClInclude Include="cuda_wrappers.cuh" />
     <ClInclude Include="matrix.cuh">

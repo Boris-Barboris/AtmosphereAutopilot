@@ -99,8 +99,8 @@ __device__ __host__ void pitch_model::simulation_step(float dt, float input)
     float2 pitch_lift_acc = pitch_tangent * (Cl0 + Cl1 * aoa + Cl2 * csurf_state_new);
 
     acc = acc + drag_acc + pitch_lift_acc;
-    position = position + velocity * dt + 0.5f * acc * (dt * dt);
     velocity = velocity + acc * dt;
+    position = position + velocity * dt;    
     if (spd_const)
         velocity = normalize(velocity) * speed;
 
@@ -117,6 +117,6 @@ __device__ __host__ void pitch_model::simulation_step(float dt, float input)
 
     csurf_state = csurf_state_new;
 
-    pitch_angle += ang_vel * dt + 0.5f * dt * dt * ang_acc;
     ang_vel += dt * ang_acc;
+    pitch_angle += ang_vel * dt;    
 }

@@ -3,6 +3,8 @@
 #include <array>
 #include <vector>
 
+#include "aoa_ctrl_constants.h"
+
 #ifdef AAGPU_EXPORTS
 #define AAGPU_EXPORTS_API __declspec(dllexport) 
 #else
