@@ -55,7 +55,7 @@ namespace AtmosphereAutopilot
             this.imodel = modules[typeof(FlightModel)] as FlightModel;
         }
 
-        protected override void OnActivate() 
+        protected override void OnActivate()
         {
             imodel.Activate();
             acc_controller.Activate();
@@ -114,7 +114,7 @@ namespace AtmosphereAutopilot
                 // control from above
                 desired_v = Common.Clampf(target_value, max_v_construction);
             }
-            
+
             desired_v = process_desired_v(desired_v, user_controlled);      // moderation stage
 
             output_acc = get_desired_acc(desired_v) + target_acc;           // produce output acceleration
@@ -240,7 +240,7 @@ namespace AtmosphereAutopilot
             float cur_aoa = imodel.AoA(axis);
             float abs_cur_aoa = Math.Abs(cur_aoa);
             bool moderated = false;
-            
+
 
             // AoA moderation section
             if (moderate_aoa && imodel.dyn_pressure > moder_cutoff_ias * moder_cutoff_ias)
@@ -405,7 +405,7 @@ namespace AtmosphereAutopilot
                     }
                     catch (MSingularException) { }
                 }
-                
+
                 // apply moderation
                 if (max_g_aoa < 2.0 && max_g_aoa > 0.0 && min_g_aoa > -2.0 && max_g_aoa > min_g_aoa)       // sanity check
                 {
@@ -509,7 +509,7 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("kacc_quadr", false, "G6")]
         internal float kacc_quadr;
-        
+
         protected bool first_quadr = true;
 
         [AutoGuiAttr("kacc_smoothing", true, "G5")]
@@ -664,7 +664,7 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("wing_leveler")]
         [AutoGuiAttr("Wing leveler", true)]
         public bool wing_leveler = true;
-        
+
         [AutoGuiAttr("Snap angle", true, "G4")]
         public float leveler_snap_angle = 3.0f;
 
@@ -679,12 +679,12 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("snapping_Kp", true, "G5")]
         public float snapping_Kp = 0.25f;
 
-        protected const float min_abs_angv = 0.05f;
+        public const float min_abs_angv = 0.05f;
 
         protected override float process_desired_v(float des_v, bool user_input)
         {
             float cur_aoa = imodel.AoA(YAW);
-            
+
             // let's find maximum angular v on 0.0 AoA and 0.0 Yaw input from model
             if (Math.Abs(cur_aoa) < 0.3 && imodel.dyn_pressure > 100.0)
             {
