@@ -134,7 +134,12 @@ namespace AAGpuWrapper
         {
             startAoA = 0.0f;
             AoA_params = gcnew List<Single>();
+            InputLowerBounds = gcnew List<Single>();
+            InputUpperBounds = gcnew List<Single>();
+            OutputLowerBounds = gcnew List<Single>();
+            OutputUpperBounds = gcnew List<Single>();
             randomize_params();
+            init_normals();
             //AoA_params->Add(1.0f);
             //AoA_params->Add(3.0f);
         }
@@ -147,6 +152,22 @@ namespace AAGpuWrapper
         [DisplayNameAttribute("AoA params")]
         property List<Single> ^AoA_params;
 
+        [CategoryAttribute("Controllers")]
+        [DisplayNameAttribute("NN input lower")]
+        property List<Single> ^InputLowerBounds;
+
+        [CategoryAttribute("Controllers")]
+        [DisplayNameAttribute("NN input upper")]
+        property List<Single> ^InputUpperBounds;
+
+        [CategoryAttribute("Controllers")]
+        [DisplayNameAttribute("NN output lower")]
+        property List<Single> ^OutputLowerBounds;
+
+        [CategoryAttribute("Controllers")]
+        [DisplayNameAttribute("NN output upper")]
+        property List<Single> ^OutputUpperBounds;
+
         [Browsable(false)]
         property List<Single> ^outputVelHistory;
 
@@ -154,6 +175,7 @@ namespace AAGpuWrapper
 
     private:
         void randomize_params();
+        void init_normals();
     };
 
 }

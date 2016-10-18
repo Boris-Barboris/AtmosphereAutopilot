@@ -54,6 +54,8 @@ typedef void aoa_eval_prototype(
     bool keep_speed,
     float target_aoa,
     const std::array<float, AOAPARS> &aoa_params,
+    const std::array<std::tuple<float, float>, AOAINPUTS> &input_norms,
+    const std::array<std::tuple<float, float>, AOAOUTPUTS> &output_norms,
     std::vector<float> &out_angvel,
     std::vector<float> &out_aoa,
     std::vector<float> &out_acc,

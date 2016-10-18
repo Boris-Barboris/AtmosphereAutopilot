@@ -79,4 +79,9 @@
       <Filter>aoa</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="aoa_pso_kernel_common.cuh">
+      <Filter>kernels</Filter>
+    </None>
+  </ItemGroup>
 </Project>
