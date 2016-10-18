@@ -679,6 +679,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("snapping_Kp", true, "G5")]
         public float snapping_Kp = 0.25f;
 
+        protected const float min_abs_angv = 0.05f;
+
         protected override float process_desired_v(float des_v, bool user_input)
         {
             float cur_aoa = imodel.AoA(YAW);
@@ -703,8 +705,15 @@ namespace AtmosphereAutopilot
                         new_max_input_v = max_v_construction;
                         new_min_input_v = -max_v_construction;
                     }
+                    new_max_input_v = Mathf.Max(min_abs_angv, new_max_input_v);
+                    new_min_input_v = Mathf.Min(-min_abs_angv, new_min_input_v);
                     max_input_v = (float)Common.simple_filter(new_max_input_v, max_input_v, moder_filter);
                     min_input_v = (float)Common.simple_filter(new_min_input_v, min_input_v, moder_filter);
+                }
+                else
+                {
+                    max_input_v = max_v_construction;
+                    min_input_v = -max_v_construction;
                 }
             }
             else

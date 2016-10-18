@@ -33,10 +33,10 @@ for frame = 2:sim_length
     time(frame) = dt * (frame - 1);
     model.preupdate(dt);
     if (time(frame) > 0.0 && time(frame) < 1.0)
-        des_pitch_v = 0.2 * time(frame);
-        des_acc = 0.2;
+        des_pitch_v = -0.2 * time(frame);
+        des_acc = -0.2;
     else
-        des_pitch_v = -0.0;
+        des_pitch_v = 0.0;
         des_acc = 0.0;
     end
     p_output = pitch_vel_c.eval(des_pitch_v, des_acc, dt);

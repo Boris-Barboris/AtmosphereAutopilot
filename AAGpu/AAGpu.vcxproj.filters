@@ -1,9 +1,26 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CudaCompile Include="kernel.cu" />
     <CudaCompile Include="aircraftmodel.cu">
       <Filter>aircraftmodel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="ang_acc_pitch.cu">
+      <Filter>angacc</Filter>
+    </CudaCompile>
+    <CudaCompile Include="ang_vel_pitch.cu">
+      <Filter>angvel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="matrix.cu">
+      <Filter>common</Filter>
+    </CudaCompile>
+    <CudaCompile Include="aoa_ctrl.cu">
+      <Filter>aoa</Filter>
+    </CudaCompile>
+    <CudaCompile Include="aoa_eval_kernel.cu">
+      <Filter>kernels</Filter>
+    </CudaCompile>
+    <CudaCompile Include="raw_kernel.cu">
+      <Filter>kernels</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
@@ -13,17 +30,53 @@
     <Filter Include="common">
       <UniqueIdentifier>{5c7c1fdf-97dc-4f89-8a93-982c6baf88a1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="angacc">
+      <UniqueIdentifier>{8eb208b0-8327-4a07-952e-73e8b6e1c139}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="angvel">
+      <UniqueIdentifier>{f918fd32-ae4b-44f3-8531-40c8965f083e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="aoa">
+      <UniqueIdentifier>{c9ba137e-cec3-4155-8a54-be4bf0c74dd3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="kernels">
+      <UniqueIdentifier>{98ebe465-db2b-40ec-a825-86943f8a3a05}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="aircraftmodel.cuh">
       <Filter>aircraftmodel</Filter>
     </ClInclude>
+    <ClInclude Include="AAGpu.h" />
+    <ClInclude Include="vector_utils.cuh">
+      <Filter>common</Filter>
+    </ClInclude>
     <ClInclude Include="matrix.cuh">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="vector_utils.h">
+    <ClInclude Include="ang_acc_pitch.cuh">
+      <Filter>angacc</Filter>
+    </ClInclude>
+    <ClInclude Include="ang_vel_pitch.cuh">
+      <Filter>angvel</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_wrappers.cuh">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="AAGpu.hpp" />
+    <ClInclude Include="aoa_ctrl.cuh">
+      <Filter>aoa</Filter>
+    </ClInclude>
+    <ClInclude Include="raw_kernel_common.cuh">
+      <Filter>kernels</Filter>
+    </ClInclude>
+    <ClInclude Include="aoa_eval_kernel_common.cuh">
+      <Filter>kernels</Filter>
+    </ClInclude>
+    <ClInclude Include="ann.cuh">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="aoa_ctrl_constants.h">
+      <Filter>aoa</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
