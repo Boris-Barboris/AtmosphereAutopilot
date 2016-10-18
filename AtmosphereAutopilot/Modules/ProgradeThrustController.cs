@@ -22,11 +22,10 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-
     public enum SpeedType
     {
         MetersPerSecond,
-		Knots,
+        Knots,
         Mach,
         IAS,
         KIAS
@@ -383,26 +382,12 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("pid_Kd", true, "G4")]
         public double pid_Kd { get { return pid.KD; } set { pid.KD = value; } }
 
-
-
-
         #region GUI
 
         static readonly string[] spd_str_arr = new string[] { "OFF", "ms", "kts", "M", "ias", "kias" };
 
         public int chosen_spd_mode = 0;
-
-        public bool spd_control_enabled
-        {
-            get { return chosen_spd_mode != 0; }
-            set
-            {
-                if (chosen_spd_mode == 0)
-                    chosen_spd_mode = (int)type + 1;
-                else
-                    chosen_spd_mode = 0;
-            }
-        }
+        public bool spd_control_enabled = false;
 
         [VesselSerializable("spd_type")]
         SpeedType type = SpeedType.MetersPerSecond;
@@ -456,7 +441,7 @@ namespace AtmosphereAutopilot
                 {
                     float ms = setpoint.value;
                     new_vs = ms - Time.deltaTime * hotkey_speed_factor * ms;
-                    changed_by_hotkey = true;                
+                    changed_by_hotkey = true;
                 }
 
                 if (changed_by_hotkey)
@@ -521,9 +506,9 @@ namespace AtmosphereAutopilot
         /// <returns>true if speed control is enabled</returns>
         public bool SpeedCtrlGUIBlock()
         {
-            GUILayout.Label("Speed control", GUIStyles.labelStyleCenter);
+            spd_control_enabled = GUILayout.Toggle(spd_control_enabled, "Speed control", GUIStyles.toggleButtonStyle);
             GUILayout.BeginHorizontal();
-            for (int i = 0; i < 6; i++)
+            for (int i = 1; i < 6; i++)
             {
                 if (GUILayout.Toggle(chosen_spd_mode == i, spd_str_arr[i], GUIStyles.toggleButtonStyle))
                     chosen_spd_mode = i;
@@ -546,10 +531,9 @@ namespace AtmosphereAutopilot
             else
                 setpoint = new SpeedSetpoint(type, setpoint_field, vessel);
 
-            return (chosen_spd_mode != 0);
+            return spd_control_enabled;
         }
 
         #endregion
-
     }
 }
