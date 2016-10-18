@@ -495,31 +495,31 @@ namespace AtmosphereAutopilot
 
             // status
 
-            GUILayout.Label("Status", GUIStyles.labelStyleCenter);
-            GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical();
-            GUILayout.Label("Latitude", GUIStyles.labelStyleCenter);
-            GUILayout.Label(vessel.latitude.ToString("G6"), GUIStyles.labelStyleCenter);
-            GUILayout.EndVertical();
-            GUILayout.BeginVertical();
-            GUILayout.Label("Longitude", GUIStyles.labelStyleCenter);
-            GUILayout.Label(vessel.longitude.ToString("G7"), GUIStyles.labelStyleCenter);
-            GUILayout.EndVertical();
-            GUILayout.BeginVertical();
-            if (WaypointMode)
-            {
-                GUILayout.Label("Dist (km)", GUIStyles.labelStyleCenter);
-                GUILayout.Label((dist_to_dest / 1000.0).ToString("#0.0"), GUIStyles.labelStyleCenter);
-            }
-            else
-            {
-                GUILayout.Label("Alt (m)", GUIStyles.labelStyleCenter);
-                GUILayout.Label(vessel.altitude.ToString("G5") + " m", GUIStyles.labelStyleCenter);
-            }
-            GUILayout.EndVertical();
-            GUILayout.EndHorizontal();
+            //GUILayout.Label("Status", GUIStyles.labelStyleCenter);
+            //GUILayout.BeginHorizontal();
+            //GUILayout.BeginVertical();
+            //GUILayout.Label("Latitude", GUIStyles.labelStyleCenter);
+            //GUILayout.Label(vessel.latitude.ToString("G6"), GUIStyles.labelStyleCenter);
+            //GUILayout.EndVertical();
+            //GUILayout.BeginVertical();
+            //GUILayout.Label("Longitude", GUIStyles.labelStyleCenter);
+            //GUILayout.Label(vessel.longitude.ToString("G7"), GUIStyles.labelStyleCenter);
+            //GUILayout.EndVertical();
+            //GUILayout.BeginVertical();
+            //if (WaypointMode)
+            //{
+            //    GUILayout.Label("Dist (km)", GUIStyles.labelStyleCenter);
+            //    GUILayout.Label((dist_to_dest / 1000.0).ToString("#0.0"), GUIStyles.labelStyleCenter);
+            //}
+            //else
+            //{
+            //    GUILayout.Label("Alt (m)", GUIStyles.labelStyleCenter);
+            //    GUILayout.Label(vessel.altitude.ToString("G5") + " m", GUIStyles.labelStyleCenter);
+            //}
+            //GUILayout.EndVertical();
+            //GUILayout.EndHorizontal();
 
-            GUILayout.Space(10.0f);
+            //GUILayout.Space(10.0f);
 
             // advanced options
 
