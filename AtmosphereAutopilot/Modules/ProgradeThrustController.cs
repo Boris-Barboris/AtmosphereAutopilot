@@ -26,7 +26,7 @@ namespace AtmosphereAutopilot
     public enum SpeedType
     {
         MetersPerSecond,
-		Knots,
+        Knots,
         Mach,
         IAS,
         KIAS
@@ -143,7 +143,7 @@ namespace AtmosphereAutopilot
         }
 
         [AutoGuiAttr("desired_v", false, "G5")]
-        protected float desired_v = 0.0f;
+        public float desired_v = 0.0f;
 
         [AutoGuiAttr("current_v", false, "G5")]
         public double current_v = 0.0f;
@@ -170,9 +170,9 @@ namespace AtmosphereAutopilot
         public double acc_filter_k = 1.0;
 
         [AutoGuiAttr("relaxation_acc_error", true, "G5")]
-        protected double relaxation_acc_error = 0.1;
+        public double relaxation_acc_error = 0.1;
 
-        protected Vector3d surfspd_dir;
+        public Vector3d surfspd_dir;
 
         /// <summary>
         /// Main control function
@@ -240,14 +240,14 @@ namespace AtmosphereAutopilot
                 surfspd_dir = imodel.surface_v.normalized;
                 cntrl.mainThrottle = solve_thrust_req(prograde_thrust + thrust_error, prev_input);
 
-                prev_thrust = prograde_thrust;
+                //prev_thrust = prograde_thrust;
             }
 
             prev_input = cntrl.mainThrottle;
             return cntrl.mainThrottle;
         }
 
-        double prev_thrust;
+        //double prev_thrust;
         float prev_input;
 
         int[] throttle_directions;
@@ -265,8 +265,8 @@ namespace AtmosphereAutopilot
             estimated_max_thrust = 0.0;
             for (int i = 0; i < imodel.engines.Count; i++)
             {
-                ModuleEngines eng = imodel.engines[i].engine;
-                double e_prograde_thrust = Vector3.Dot(imodel.engines[i].thrust, surfspd_dir);
+                //ModuleEngines eng = imodel.engines[i].engine;
+                //double e_prograde_thrust = Vector3.Dot(imodel.engines[i].thrust, surfspd_dir);
                 estimated_max_thrust += imodel.engines[i].estimated_max_thrust;
             }
 
@@ -351,7 +351,7 @@ namespace AtmosphereAutopilot
         }
 
         [AutoGuiAttr("iter_count", false)]
-        protected int iter_count;
+        public int iter_count;
 
         [AutoGuiAttr("v_error", false, "G5")]
         double v_error;
@@ -432,12 +432,12 @@ namespace AtmosphereAutopilot
 
         public override void OnUpdate()
         {
-            bool changed = false;
+            //bool changed = false;
             if (Input.GetKeyDown(spd_control_toggle_key))
             {
                 spd_control_enabled = !spd_control_enabled;
                 MessageManager.post_status_message(spd_control_enabled ? "Speed control enabled" : "Speed control disabled");
-                changed = true;
+                //changed = true;
             }
 
             if (use_throttle_hotkeys && spd_control_enabled &&
@@ -456,7 +456,7 @@ namespace AtmosphereAutopilot
                 {
                     float ms = setpoint.value;
                     new_vs = ms - Time.deltaTime * hotkey_speed_factor * ms;
-                    changed_by_hotkey = true;                
+                    changed_by_hotkey = true;
                 }
 
                 if (changed_by_hotkey)
@@ -465,7 +465,7 @@ namespace AtmosphereAutopilot
                     need_to_show_change = true;
                     setpoint_change_counter = 0;
                     setpoint_field.Value = new_vs;
-                    changed = true;
+                    //changed = true;
                 }
 
                 if (need_to_show_change)

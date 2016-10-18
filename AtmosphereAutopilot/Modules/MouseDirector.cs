@@ -22,19 +22,19 @@ using UnityEngine;
 
 namespace AtmosphereAutopilot
 {
-    public sealed class MouseDirector: StateController
+    public sealed class MouseDirector : StateController
     {
         internal MouseDirector(Vessel v)
             : base(v, "Mouse Director", 88437227)
-        {}
+        { }
 
-        FlightModel imodel;
+        //FlightModel imodel;
         DirectorController dir_c;
         ProgradeThrustController thrust_c;
 
         public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
         {
-            imodel = modules[typeof(FlightModel)] as FlightModel;
+            //imodel = modules[typeof(FlightModel)] as FlightModel;
             dir_c = modules[typeof(DirectorController)] as DirectorController;
             thrust_c = modules[typeof(ProgradeThrustController)] as ProgradeThrustController;
         }
@@ -69,7 +69,7 @@ namespace AtmosphereAutopilot
                 thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
         }
 
-        bool camera_correct = false;
+        //bool camera_correct = false;
         Vector3 camera_direction;
 
         static CenterIndicator indicator;
@@ -79,7 +79,7 @@ namespace AtmosphereAutopilot
         {
             if (HighLogic.LoadedSceneIsFlight && CameraManager.Instance.currentCameraMode == CameraManager.CameraMode.Flight)
             {
-                camera_correct = true;
+                //camera_correct = true;
                 Camera maincamera = FlightCamera.fetch.mainCamera;
                 camera_direction = maincamera.cameraToWorldMatrix.MultiplyPoint(Vector3.back) -
                     FlightCamera.fetch.mainCamera.transform.position;
@@ -95,16 +95,16 @@ namespace AtmosphereAutopilot
             }
             else
             {
-                camera_correct = false;
+                //camera_correct = false;
                 indicator.enabled = false;
             }
         }
 
         [AutoGuiAttr("Director controller GUI", true)]
-        protected bool DirGUI { get { return dir_c.IsShown(); } set { if (value) dir_c.ShowGUI(); else dir_c.UnShowGUI(); } }
+        public bool DirGUI { get { return dir_c.IsShown(); } set { if (value) dir_c.ShowGUI(); else dir_c.UnShowGUI(); } }
 
         [AutoGuiAttr("Thrust controller GUI", true)]
-        protected bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
+        public bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
 
         protected override void _drawGUI(int id)
         {
@@ -116,14 +116,14 @@ namespace AtmosphereAutopilot
             GUI.DragWindow();
         }
 
-        public class CenterIndicator: MonoBehaviour
+        public class CenterIndicator : MonoBehaviour
         {
             Material mat = new Material(Shader.Find("Sprites/Default"));
 
             Vector3 startVector = new Vector3(0.494f, 0.5f, -0.001f);
             Vector3 endVector = new Vector3(0.506f, 0.5f, -0.001f);
 
-            public bool enabled = false;
+            //public new bool enabled = false;
 
             public void OnPostRender()
             {

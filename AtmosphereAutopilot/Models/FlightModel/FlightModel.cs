@@ -33,7 +33,7 @@ namespace AtmosphereAutopilot
     /// </summary>
     public sealed partial class FlightModel : AutopilotModule
     {
-        internal FlightModel(Vessel v):
+        internal FlightModel(Vessel v) :
             base(v, 34278832, "Flight model")
         {
             for (int i = 0; i < 3; i++)
@@ -46,11 +46,11 @@ namespace AtmosphereAutopilot
                 aoa_buf[i] = new CircularBufferAA<float>(BUFFER_SIZE, true);
             }
             initialize_lin_tainers();
-            integrator = vessel.GetComponent<FlightIntegrator>();
+            //integrator = vessel.GetComponent<FlightIntegrator>();
             window.width = 240.0f;  // some vector components need love
         }
 
-        FlightIntegrator integrator;
+        //FlightIntegrator integrator;
 
         protected override void OnActivate()
         {
@@ -237,8 +237,8 @@ namespace AtmosphereAutopilot
 
         OnlineLinTrainerWindow pitch_lin_wnd, roll_lin_wnd, yaw_lin_wnd,
             lift_lin_wnd, slide_lin_wnd;
-        OnlineLinTrainerWindow[] trainer_windows = new OnlineLinTrainerWindow[5];        
-        int shown_trainer = -1;
+        OnlineLinTrainerWindow[] trainer_windows = new OnlineLinTrainerWindow[5];
+        //int shown_trainer = -1;
 
         void initialize_trainer_windows()
         {

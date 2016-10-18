@@ -76,10 +76,12 @@ namespace AtmosphereAutopilot
         public Vector3d prev_yaw_tangent;
 
         public Vector3d prev_surface_v;
-        Vector3d prev_gravity_acc, prev_noninert_acc;
+        //Vector3d prev_gravity_acc;
+        //Vector3d prev_noninert_acc;
         float prev_mass = 1.0f;
         public Quaternion prev_cntrl2world = Quaternion.identity;
-        Vector3 prev_right, prev_forward;
+        //Vector3 prev_right;
+        //Vector3 prev_forward;
 
         void update_dynamics()
         {
@@ -114,12 +116,12 @@ namespace AtmosphereAutopilot
         {
             // update previous states with current values
             prev_surface_v = surface_v;
-            prev_noninert_acc = noninert_acc;
-            prev_gravity_acc = gravity_acc;
+            //prev_noninert_acc = noninert_acc;
+            //prev_gravity_acc = gravity_acc;
             prev_mass = sum_mass;
             prev_cntrl2world = cntrl_part_to_world;
-            prev_right = vessel.ReferenceTransform.right;
-            prev_forward = vessel.ReferenceTransform.forward;
+            //prev_right = vessel.ReferenceTransform.right;
+            //prev_forward = vessel.ReferenceTransform.forward;
             prev_pitch_tangent = pitch_tangent;
             prev_yaw_tangent = yaw_tangent;
             prev_pitch_gravity_acc = pitch_gravity_acc;

@@ -32,7 +32,7 @@ namespace AtmosphereAutopilot
         // Immediate buffer
         CircularBufferAA<Vector> imm_buf_inputs;
         VectorArray imm_buf_vectors;
-        CircularBufferAA<double> imm_buf_outputs;   
+        CircularBufferAA<double> imm_buf_outputs;
 
         // Buffers for linear regression
 
@@ -49,7 +49,7 @@ namespace AtmosphereAutopilot
         //List<double> imm_error_weights = new List<double>();
         //List<double> grad_error_weights = new List<double>();
         //List<double> gen_error_weights = new List<double>();
-        
+
         // Views to adapt inputs for Approximator
         ListView<Vector> input_view;
         ListView<double> output_view;
@@ -234,7 +234,7 @@ namespace AtmosphereAutopilot
         //[AutoGuiAttr("inputs_changed", false)]
         readonly bool[] inputs_changed;         // flags that input has changed
 
-        int added_to_imm = 0;                   // how many inputs where added to training imm_buf during last Train() call
+        //int added_to_imm = 0;                   // how many inputs where added to training imm_buf during last Train() call
 
         [AutoGuiAttr("max value decay", true, "G6")]
         public volatile float max_value_decay = 0.001f;
@@ -249,7 +249,7 @@ namespace AtmosphereAutopilot
             {
                 int count = imm_buf_inputs.Size;
                 iteration_time = count * last_time_elapsed;
-                added_to_imm = count;
+                //added_to_imm = count;
                 while (count > 0)
                 {
                     cur_time += last_time_elapsed;
@@ -340,12 +340,12 @@ namespace AtmosphereAutopilot
 
         float base_gen_weight = 0.1f;
 
-        float linear_time_decay = 0.02f;
+        //float linear_time_decay = 0.02f;
 
-        float nonlin_time_decay = 0.5f;
+        //float nonlin_time_decay = 0.5f;
 
         [AutoGuiAttr("nonlin_cutoff_time", true)]
-        public volatile int nonlin_cutoff_time  = 1000;
+        public volatile int nonlin_cutoff_time = 1000;
 
         [AutoGuiAttr("linear criteria", true, "G6")]
         public volatile float linear_err_criteria = 0.05f;
@@ -514,7 +514,7 @@ namespace AtmosphereAutopilot
                     var cur_struct = gen_buffers[i][j];
                     int cur_age = Math.Min(cur_time - cur_struct.birth, max_age);
                     gen_buffers[i][j] = new GenStruct(cur_struct.val, max_age - cur_age, cur_struct.coord);
-                }            
+                }
             for (int i = 0; i < grad_training.Size; i++)
             {
                 int cur_age = Math.Min(cur_time - grad_training[i].birth, max_age);
