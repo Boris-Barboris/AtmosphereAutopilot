@@ -37,7 +37,7 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Manages cruise flight modes, like heading and altitude holds
     /// </summary>
-    public sealed class CruiseController: StateController
+    public sealed class CruiseController : StateController
     {
         internal CruiseController(Vessel v)
             : base(v, "Cruise Flight controller", 88437226)
@@ -89,7 +89,7 @@ namespace AtmosphereAutopilot
             if (vessel.LandedOrSplashed)
                 return;
 
-            if (thrust_c.spd_control_enabled)  
+            if (thrust_c.spd_control_enabled)
                 thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
 
             desired_velocity = Vector3d.zero;
@@ -216,13 +216,13 @@ namespace AtmosphereAutopilot
         internal bool waypoint_entered = false;
 
         // axis to rotate around in level flight mode
-        protected Vector3d circle_axis = Vector3d.zero;
+        public Vector3d circle_axis = Vector3d.zero;
 
         [AutoGuiAttr("Director controller GUI", true)]
-        protected bool DircGUI { get { return dir_c.IsShown(); } set { if (value) dir_c.ShowGUI(); else dir_c.UnShowGUI(); } }
+        public bool DircGUI { get { return dir_c.IsShown(); } set { if (value) dir_c.ShowGUI(); else dir_c.UnShowGUI(); } }
 
         [AutoGuiAttr("Thrust controller GUI", true)]
-        protected bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
+        public bool PTCGUI { get { return thrust_c.IsShown(); } set { if (value) thrust_c.ShowGUI(); else thrust_c.UnShowGUI(); } }
 
         [VesselSerializable("desired_course_field")]
         public DelayedFieldFloat desired_course = new DelayedFieldFloat(90.0f, "G4");
@@ -292,7 +292,7 @@ namespace AtmosphereAutopilot
                 if (cur_vert_speed * height_error > 0.0)
                     proportional_acc = -planet2vesNorm * height_relax_Kp * cur_vert_speed;
             }
-            
+
             // let's assume parabolic ascent\descend
             Vector3d parabolic_acc = Vector3d.zero;
             if (height_error >= 0.0)
@@ -427,7 +427,7 @@ namespace AtmosphereAutopilot
         {
             MapView.EnterMapView();
             MessageManager.post_quick_message("Pick destination");
-            picking_waypoint = true;            
+            picking_waypoint = true;
         }
 
         internal bool picking_waypoint = false;
@@ -445,7 +445,7 @@ namespace AtmosphereAutopilot
             CourseHoldMode = GUILayout.Toggle(CourseHoldMode, "Course", GUIStyles.toggleButtonStyle);
             WaypointMode = GUILayout.Toggle(WaypointMode, "Waypoint", GUIStyles.toggleButtonStyle);
             GUILayout.EndHorizontal();
-            
+
             // waypoint picking button
             if (WaypointMode)
             {
@@ -562,7 +562,7 @@ namespace AtmosphereAutopilot
                     float pitch_change_sign = 0.0f;
                     // Pitch
                     if (GameSettings.PITCH_UP.GetKey() && !GameSettings.MODIFIER_KEY.GetKey())
-                    {                        
+                    {
                         pitch_change_sign = 1.0f;
                         pitch_key_pressed = true;
                     }

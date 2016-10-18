@@ -28,7 +28,7 @@ namespace AtmosphereAutopilot
     /// <summary>
     /// Window to manage hotkeys for different modules
     /// </summary>
-    public sealed class AutoHotkey: GUIWindow, ISerializable
+    public sealed class AutoHotkey : GUIWindow, ISerializable
     {
         struct HotkeyField
         {
@@ -51,11 +51,11 @@ namespace AtmosphereAutopilot
             {
                 foreach (var field in module_type.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
                 {
-                    var attrs = (AutoHotkeyAttr[]) field.GetCustomAttributes(typeof(AutoHotkeyAttr), true);
+                    var attrs = (AutoHotkeyAttr[])field.GetCustomAttributes(typeof(AutoHotkeyAttr), true);
                     if (attrs == null || attrs.Length < 1)
                         continue;
                     hotkey_map.Add(new HotkeyField(field, attrs[0]));
-                }                
+                }
             }
         }
 
@@ -115,7 +115,7 @@ namespace AtmosphereAutopilot
         }
 
         [GlobalSerializable("window_x")]
-        protected float WindowLeft
+        public float WindowLeft
         {
             get { return window.xMin; }
             set
@@ -127,7 +127,7 @@ namespace AtmosphereAutopilot
         }
 
         [GlobalSerializable("window_y")]
-        protected float WindowTop
+        public float WindowTop
         {
             get { return window.yMin; }
             set

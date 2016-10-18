@@ -126,7 +126,7 @@ namespace AtmosphereAutopilot
         protected float csurf_output { get { return imodel.ControlSurfPos(axis); } }
 
         [AutoGuiAttr("Write telemetry", true)]
-        protected bool write_telemetry 
+        protected bool write_telemetry
         {
             get { return _write_telemetry; }
             set
@@ -145,10 +145,10 @@ namespace AtmosphereAutopilot
                     {
                         close_writers();
                         _write_telemetry = value;
-                    }                   
+                    }
                 }
             }
-        }       
+        }
         bool _write_telemetry = false;
 
         [AutoGuiAttr("desired acc", false, "G6")]
@@ -291,7 +291,7 @@ namespace AtmosphereAutopilot
                     new_input = Common.Clampf(new_input, 1.0f);
                 }
                 model_predicted_acc = cur_acc_prediction + authority * (new_input - input_mat[0, 0]);
-            }            
+            }
 
             if (write_telemetry)
             {
@@ -350,7 +350,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("model_predicted_acc", false, "G6")]
         double model_predicted_acc;
 
-        double cur_model_acc, prev_model_acc;
+        //double cur_model_acc;
+        //double prev_model_acc;
 
         [AutoGuiAttr("authority", false, "G6")]
         double authority;
