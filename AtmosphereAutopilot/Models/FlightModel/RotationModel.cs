@@ -60,14 +60,14 @@ namespace AtmosphereAutopilot
                     return -1;
                 else
                     if (x.mass == y.mass)
-                        return 0;
-                    else
-                        return 1;
+                    return 0;
+                else
+                    return 1;
             }
         }
 
-        Vector3 partial_MOI = Vector3.zero;
-        Vector3 partial_AM = Vector3.zero;
+        //Vector3 partial_MOI = Vector3.zero;
+        //Vector3 partial_AM = Vector3.zero;
 
         const int FullMomentFreq = 40;      // with standard 0.025 sec fixedDeltaTime it gives freq around 1 Hz
         int moments_cycle_counter = 0;
@@ -94,7 +94,7 @@ namespace AtmosphereAutopilot
                 get_moments();
             moments_cycle_counter = (moments_cycle_counter + 1) % FullMomentFreq;
         }
-        
+
         [AutoGuiAttr("has csurf", false)]
         public bool HasControlSurfaces { get; private set; }
 
@@ -108,7 +108,7 @@ namespace AtmosphereAutopilot
         {
             Vector3 res = Vector3.zero;
             foreach (var rw in vessel.FindPartModulesImplementing<ModuleReactionWheel>())
-                if (rw.isEnabled && rw.wheelState == ModuleReactionWheel.WheelState.Active && 
+                if (rw.isEnabled && rw.wheelState == ModuleReactionWheel.WheelState.Active &&
                     rw.operational && rw.actuatorModeCycle != (int)VesselActuatorMode.SAS)
                 {
                     res.x += rw.PitchTorque * rw.authorityLimiter * 0.01f;
@@ -299,12 +299,12 @@ namespace AtmosphereAutopilot
                     }
                     else
                         if (AtmosphereAutopilot.AeroModel == AtmosphereAutopilot.AerodinamycsModel.FAR)
-                        {
-                            if (csurf_buf[i].Size >= 1 && sequential_dt)
-                                csurf_input = far_exponential_blend(csurf_buf[i].getLast(), raw_input);
-                            else
-                                csurf_input = raw_input;
-                        }
+                    {
+                        if (csurf_buf[i].Size >= 1 && sequential_dt)
+                            csurf_input = far_exponential_blend(csurf_buf[i].getLast(), raw_input);
+                        else
+                            csurf_input = raw_input;
+                    }
                     csurf_buf[i].Put(csurf_input);
                 }
                 else
@@ -387,7 +387,7 @@ namespace AtmosphereAutopilot
                         Vector3 tup = world_to_cntrl_part * t.up;
 
                         // positive authority
-                        float pitch_force = rcsm.enablePitch ? 
+                        float pitch_force = rcsm.enablePitch ?
                             Mathf.Max(0.0f, Vector3.Dot(Vector3.Cross(Vector3.right, rvn), tup)) : 0.0f;
                         float roll_force = rcsm.enableRoll ?
                             Mathf.Max(0.0f, Vector3.Dot(Vector3.Cross(Vector3.up, rvn), tup)) : 0.0f;
