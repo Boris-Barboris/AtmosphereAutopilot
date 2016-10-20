@@ -53,6 +53,15 @@ template <unsigned Rows, unsigned Cols> struct matrix
         return res;
     }
 
+    __device__ __host__ matrix<Rows, Cols> scale(const matrix<Rows, Cols> &rhs) const
+    {
+        matrix<Rows, Cols> res;
+        for (int r = 0; r < Rows; r++)
+            for (int c = 0; c < Cols; c++)
+                res(r, c) = rhs(r, c) * getc(r, c);
+        return res;
+    }
+
     __device__ __host__ matrix<Rows, Cols> operator*(float rhs) const
     {
         matrix<Rows, Cols> res;

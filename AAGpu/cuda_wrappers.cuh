@@ -70,6 +70,15 @@ void copyGpuCpu(T *gpu, T *host, unsigned count)
 }
 
 template <typename T>
+void copyCpuGpu(T *host, T *gpu, unsigned count)
+{
+    size_t tsize = sizeof(T) * count;
+    cudaError st = cudaMemcpy(gpu, host, tsize, cudaMemcpyHostToDevice);
+    if (st != cudaSuccess)
+        throw std::runtime_error("CPU-GPU transfer error");
+}
+
+template <typename T>
 void copyCpuCpu(T *cpu, T *host, unsigned count)
 {
     size_t tsize = sizeof(T) * count;

@@ -144,9 +144,9 @@ void RAWEXECFUNCNAME(
 
     //cudaError r;
     cudaMemcpyToSymbol(d_aero_model, &aero_model_par, sizeof(bool));
-    cudaMemcpyToSymbol(d_spd_const, &keep_speed, sizeof(bool));    
+    cudaMemcpyToSymbol(d_spd_const, &keep_speed, sizeof(bool));
 
-    aoa_eval_kernel <<<1, 1>>>(
+    aoa_eval_kernel<<<1, 1>>>(
         d_angvel,
         d_aoa,
         d_acc,

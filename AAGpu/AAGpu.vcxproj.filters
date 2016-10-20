@@ -22,6 +22,9 @@
     <CudaCompile Include="raw_kernel.cu">
       <Filter>kernels</Filter>
     </CudaCompile>
+    <CudaCompile Include="aoa_pso_kernel.cu">
+      <Filter>kernels</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="aircraftmodel">
