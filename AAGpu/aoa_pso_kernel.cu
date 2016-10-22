@@ -5,11 +5,17 @@
 
 #include <thread>
 #include <ctime>
+#include <random>
 
 
 static std::thread *aoa_pso_thread = new std::thread();
 static bool stop_flag = false;
 
+
+float4 make_float4(const std::array<float, 4> &arr)
+{
+    return make_float4(arr[0], arr[1], arr[2], arr[3]);
+}
 
 void do_start_aoa_pso(
     float dt,
@@ -29,6 +35,9 @@ void do_start_aoa_pso(
     float w,
     float c1,
     float c2,
+    float initial_span,
+    int aoa_divisions,
+    std::array<float, 4> exper_weights,
     report_dlg repotrer)
 {
     // initialize norms
@@ -70,19 +79,16 @@ void do_start_aoa_pso(
     
     // randomize
     unsigned long long seed = (long long)std::time(nullptr);
-    curandGenerator_t generator;
-    curandCreateGenerator(&generator, curandRngType::CURAND_RNG_PSEUDO_XORWOW);
-    curandSetPseudoRandomGeneratorSeed(generator, seed);
-    curandGenerateUniform(generator, (float*)particles, 
-        prtcl_blocks * PARTICLEBLOCK * AOAPARS);
-    curandGenerateUniform(generator, (float*)velocities,
-        prtcl_blocks * PARTICLEBLOCK * AOAPARS);
-    for (int i = 0; i < prtcl_blocks * PARTICLEBLOCK * AOAPARS; i++)
-    {
-        ((float*)particles)[i] = 2.0f * (((float*)particles)[i] - 0.5f);
-        ((float*)best_particles)[i] = ((float*)particles)[i];
-        ((float*)velocities)[i] = 0.05f * ((float*)velocities)[i];  // smaller velocities
-    }
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> rng(-1.0f, 1.0f);
+    for (int i = 0; i < prtcl_blocks * PARTICLEBLOCK; i++)
+        for (int j = 0; j < AOAPARS; j++)
+        {
+            particles[i](j, 0) = initial_span * rng(gen);
+            best_particles[i](j, 0) = particles[i](j, 0);
+            velocities[i](j, 0) = 0.2f * initial_span * rng(gen);
+        }        
 
     // allocate GPU memory
     cuwrap(cudaSetDevice, 0);
@@ -109,7 +115,7 @@ void do_start_aoa_pso(
     cudaMemcpyToSymbol(d_spd_const, &keep_speed, sizeof(bool));
 
     // main cycle
-    unsigned long long offset = prtcl_blocks * PARTICLEBLOCK * AOAPARS;
+    unsigned long long offset = prtcl_blocks * PARTICLEBLOCK;
     int epoch = 0;
     while (!stop_flag)
     {
@@ -122,7 +128,10 @@ void do_start_aoa_pso(
             0,
             dt,
             step_count,
-            make_float4(10.0f, 1.0f, 0.6f, 1000.0f));
+            aoa_divisions,
+            make_float4(exper_weights));
+
+        cuwrap(cudaGetLastError);
 
         aoa_pso_outer_kernel<<<prtcl_blocks, PARTICLEBLOCK>>>(
             d_particles,
@@ -130,11 +139,14 @@ void do_start_aoa_pso(
             d_outputs,
             d_best_outputs);
 
+        cuwrap(cudaGetLastError);
+
         aoa_pso_sort_kernel<<<1, 1>>>(
-            d_best_particles,
             d_best_outputs,
             d_best_index,
             prtcl_blocks * PARTICLEBLOCK);
+
+        cuwrap(cudaGetLastError);
 
         aoa_pso_update_kernel<<<prtcl_blocks, PARTICLEBLOCK>>>(
             d_particles,
@@ -149,18 +161,17 @@ void do_start_aoa_pso(
             seed,
             offset);
 
-        offset += prtcl_blocks * PARTICLEBLOCK * AOAPARS;
+        offset += prtcl_blocks * PARTICLEBLOCK * 2;
 
         cuwrap(cudaGetLastError);
         cuwrap(cudaDeviceSynchronize);
-        // get best point
+
         int best_index = 0;
         copyGpuCpu(d_best_index, &best_index, 1);
         matrix<AOAPARS, 1> best_particle;
-        copyGpuCpu(d_best_particles + best_index * sizeof(matrix<AOAPARS, 1>), 
-            &best_particle, 1);
+        copyGpuCpu(d_best_particles + best_index, &best_particle, 1);
         float best_target_func = 0.0f;
-        copyGpuCpu(d_best_outputs + best_index * sizeof(float),
+        copyGpuCpu(d_best_outputs + best_index,
             &best_target_func, 1);
         // report to caller
         std::array<float, AOAPARS> best_particle_arr;
@@ -179,7 +190,7 @@ void do_start_aoa_pso(
 
 
 
-void start_aoa_pso(
+bool start_aoa_pso(
     float dt,
     int step_count,
     float moi,
@@ -197,16 +208,20 @@ void start_aoa_pso(
     float w,
     float c1,
     float c2,
+    float initial_span,
+    int aoa_divisions,
+    const std::array<float, 4> &exper_weights,
     report_dlg repotrer)
 {
     if (aoa_pso_thread->joinable())
-        return;
+        return false;
     delete aoa_pso_thread;
     stop_flag = false;
     aoa_pso_thread = new std::thread(do_start_aoa_pso,
         dt, step_count, moi, mass, sas, rot_model, lift_model, drag_model,
         a_model, start_vel, keep_speed, input_norms, output_norms,
-        prtcl_blocks, w, c1, c2, repotrer);
+        prtcl_blocks, w, c1, c2, initial_span, aoa_divisions, exper_weights, repotrer);
+    return true;
 }
 
 void stop_aoa_pso()

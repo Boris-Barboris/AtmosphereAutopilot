@@ -60,7 +60,7 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
 
     matrix<AOAINPUTS, 1> nninputs;
     nninputs(0, 0) = vel_c->kacc_quadr;
-    nninputs(1, 0) = des_aoa_ctl - copysignf(1.0f, -aoa_err);
+    nninputs(1, 0) = fabs(des_aoa_ctl - copysignf(1.0f, -aoa_err));
     nninputs(2, 0) = mdl->A(0, 2);
     nninputs(3, 0) = fabsf(aoa_err);
 

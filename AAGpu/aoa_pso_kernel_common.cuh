@@ -24,7 +24,6 @@
 #define FUNCNAME4 aoa_pso_update_kernel_cpu
 #endif // AOAPSOKERNELGPU
 
-
 PREFIX void FUNCNAME(
 #ifndef AOAPSOKERNELGPU
     int pi,
@@ -37,13 +36,12 @@ PREFIX void FUNCNAME(
     int model_index,
     float dt,
     int step_count,
+    int aoa_divisions,
     float4 weights)
 {
 #ifdef AOAPSOKERNELGPU
     int pi = blockIdx.x * blockDim.x + threadIdx.x;
 #endif
-    // local aircraft model
-    pitch_model model = corpus[model_index];
     // local controllers
     ang_vel_p vel_c;
     vel_c.zero_init();
@@ -61,57 +59,58 @@ PREFIX void FUNCNAME(
     aoa_c.net.output_norm = output_norms;
     aoa_c.net.init(particles[pi]);
 
-    // First pass, zero AoA maintance
-    float func_result1 = 0.0f;
-    for (int i = 0; i < step_count; i++)
-    {
-        model.preupdate(dt);
-        float ctl = aoa_c.eval(&model, &vel_c, 0.0f, 0.0f, dt);
-        model.simulation_step(dt, ctl);
-        float diff = model.aoa * model.aoa;
-        if (model.aoa < 0.0f)
-            diff *= weights.w;
-        func_result1 += diff;
-    }
-    func_result1 *= weights.x;
+    float result = 0.0f;
 
-    // Second pass, zero AoA to max AoA
-    float func_result2 = 0.0f;
-    model = corpus[model_index];
-    vel_c.preupdatev(&model);
-    float target_aoa = vel_c.res_max_aoa;
-    for (int i = 0; i < step_count; i++)
+    // passes from zero AoA to some positive AoA
+    for (int i = 0; i < aoa_divisions; i++)
     {
-        model.preupdate(dt);
-        float ctl = aoa_c.eval(&model, &vel_c, target_aoa, 0.0f, dt);
-        model.simulation_step(dt, ctl);
-        float diff = model.aoa * model.aoa;
-        if (model.aoa > target_aoa)
-            diff *= weights.w;
-        func_result2 += diff;
+        float lres = 0.0f;
+        // local aircraft model
+        pitch_model model = corpus[model_index];
+        vel_c.preupdatev(&model);
+        model.pitch_angle = vel_c.res_min_aoa * i / (float)(aoa_divisions - 1);
+        float target_aoa = vel_c.res_max_aoa * i / (float)(aoa_divisions - 1);
+        for (int i = 0; i < step_count; i++)
+        {
+            model.preupdate(dt);
+            float ctl = aoa_c.eval(&model, &vel_c, target_aoa, 0.0f, dt);
+            model.simulation_step(dt, ctl);
+            float err = (model.aoa - target_aoa);
+            float diff = err * err;
+            if (model.aoa > target_aoa)
+                diff *= weights.w;
+            lres += diff * dt * i;
+        }
+        lres *= weights.x;
+        result += lres;
     }
-    func_result2 *= weights.y;
 
-    // Third pass, max AoA to min AoA
-    float func_result3 = 0.0f;
-    model = corpus[model_index];
-    vel_c.preupdatev(&model);
-    model.pitch_angle = vel_c.res_max_aoa;
-    target_aoa = vel_c.res_min_aoa;
-    for (int i = 0; i < step_count; i++)
+    // passes from max AoA to some negative AoA
+    for (int i = 0; i < aoa_divisions; i++)
     {
-        model.preupdate(dt);
-        float ctl = aoa_c.eval(&model, &vel_c, target_aoa, 0.0f, dt);
-        model.simulation_step(dt, ctl);
-        float diff = model.aoa * model.aoa;
-        if (model.aoa < target_aoa)
-            diff *= weights.w;
-        func_result2 += diff;
+        float lres = 0.0f;
+        // local aircraft model
+        pitch_model model = corpus[model_index];
+        vel_c.preupdatev(&model);
+        model.pitch_angle = vel_c.res_max_aoa * i / (float)(aoa_divisions - 1);
+        float target_aoa = vel_c.res_min_aoa * i / (float)(aoa_divisions - 1);
+        for (int i = 0; i < step_count; i++)
+        {
+            model.preupdate(dt);
+            float ctl = aoa_c.eval(&model, &vel_c, target_aoa, 0.0f, dt);
+            model.simulation_step(dt, ctl);
+            float err = (model.aoa - target_aoa);
+            float diff = err * err;
+            if (model.aoa < target_aoa)
+                diff *= weights.w;
+            lres += diff * dt * i;
+        }
+        lres *= weights.y;
+        result += lres;
     }
-    func_result3 *= weights.z;
 
-    // export results
-    float result = func_result1 + func_result2 + func_result3;
+    result = result / (float)aoa_divisions;
+
     outputs[pi] += result;
 }
 
@@ -136,7 +135,6 @@ PREFIX void FUNCNAME2(
 }
 
 PREFIX void FUNCNAME3(
-    matrix<AOAPARS, 1> *best_particles,
     float *best_outputs,
     int *best_particle,
     int particle_count)
@@ -174,18 +172,21 @@ PREFIX void FUNCNAME4(
     // generate random vectors b1 and b2
     curandStateXORWOW_t rand_state;
     curand_init(seed, pi, offset, &rand_state);
-    matrix<AOAPARS, 1> b1, b2;
+    /*matrix<AOAPARS, 1> b1, b2;
     for (int i = 0; i < AOAPARS; i++)
     {
-        b1(i, 0) = curand_uniform(&rand_state);
-        b2(i, 0) = curand_uniform(&rand_state);
-    }
+        b1(i, 0) = 2.0f * (curand_uniform(&rand_state) - 0.5f);
+        b2(i, 0) = 2.0f * (curand_uniform(&rand_state) - 0.5f);
+    }*/
+    float b1 = curand_uniform(&rand_state);
+    float b2 = curand_uniform(&rand_state);
+
     // update velocities
     matrix<AOAPARS, 1> local_best = best_particles[pi];
     matrix<AOAPARS, 1> global_best = best_particles[*best_particle];
     matrix<AOAPARS, 1> vel = velocities[pi];
-    vel = vel * w + b1.scale(local_best - particles[pi]) * c1 +
-        b2.scale(global_best - particles[pi]) * c2;
+    vel = vel * w + (local_best - particles[pi]) * c1 * b1 +
+        (global_best - particles[pi]) * c2 * b2;
     // update particles
     particles[pi] = particles[pi] + vel;
     velocities[pi] = vel;

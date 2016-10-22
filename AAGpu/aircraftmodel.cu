@@ -70,7 +70,7 @@ __device__ __host__ void pitch_model::preupdate(float dt)
     if (dot(fwd_vector, velocity) >= 0.0f)
         aoa = asin;
     else
-        aoa = CUDART_PI - asin;
+        aoa = CUDART_PI_F - asin;
     pitch_tangent = normalize(make_float2(-velocity.y, velocity.x));
 }
 

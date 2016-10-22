@@ -171,6 +171,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <Defines>AAGPU_EXPORTS</Defines>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
+      <CodeGeneration>compute_20,sm_20;compute_30,sm_30</CodeGeneration>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -51,6 +51,7 @@ namespace AAGpuClient
         }
     }
 
+
     public class DynamicsPlotModel
     {
         public DynamicsPlotModel()
@@ -59,8 +60,61 @@ namespace AAGpuClient
         }
 
         public PlotModel Model { get; private set; }
+
+        public void addListAsSeries(List<float> x, List<float> y,
+            string name, OxyColor col, LineStyle style = LineStyle.Solid)
+        {
+            var ser = new LineSeries();
+            ser.Title = name;
+            ser.Color = col;
+            ser.StrokeThickness = 1.0;
+            ser.LineStyle = style;
+            for (int i = 0; i < x.Count; i++)
+                ser.Points.Add(new DataPoint(x[i], y[i]));
+            Model.Series.Add(ser);
+        }
     }
 
+
+    public class OptHistoryPlotModel
+    {
+        public OptHistoryPlotModel()
+        {
+            Model = new PlotModel();
+            ser = new LineSeries();
+            ser.Title = "objective";
+            ser.Color = OxyColors.Blue;
+            ser.StrokeThickness = 1.0;
+            ser.LineStyle = LineStyle.Solid;
+            Model.Series.Add(ser);
+        }
+
+        LineSeries ser;
+
+        public PlotModel Model { get; private set; }
+
+        public void update(int epoch, float value)
+        {
+            if (ser.Points.Count > 500)
+            {
+                var lpoint = ser.Points[ser.Points.Count - 1];
+                ser.Points.Clear();
+                ser.Points.Add(lpoint);
+            }
+            ser.Points.Add(new DataPoint(epoch, value));
+            Model.InvalidatePlot(true);
+        }
+
+        public void clean()
+        {
+            ser.Points.Clear();
+            Model.ResetAllAxes();
+            Model.InvalidatePlot(true);
+        }
+    }
+
+
+    // Main application class
     public class AppLogic
     {
         public AppLogic(MainWindow form)
@@ -69,40 +123,87 @@ namespace AAGpuClient
 
             rawExperimentPlot = new DynamicsPlotModel();
             AoAExperimentPlot = new DynamicsPlotModel();
+            AoAPsoPlot = new OptHistoryPlotModel();
 
             rawExperiment = new RawModelExperiment();
-            aoaEvalEeperiment = new AoAEvalExperiment();
+            aoaEvalExperiment = new AoAEvalExperiment();
+            aoaPSOContext = new AoAPsoOptimization(reportAoAPso);
 
             startRawCommand = new CommandHandler();
-            startRawCommand._action = 
-                () => startSimulation(ref rawTask, doSimulRaw, startRawCommand);
+            startRawCommand._action =
+                () => AsyncStartAction(ref rawTask, doSimulRaw, startRawCommand);
             startRawCommand._canExecute =
-                () => canStart(ref rawTask);
+                () => canStartByTask(ref rawTask);
 
             startAoAEvalCommand = new CommandHandler();
             startAoAEvalCommand._action =
-                () => startSimulation(ref aoaEvalTask, doSimulAoA, startAoAEvalCommand);
+                () => AsyncStartAction(ref aoaEvalTask, doSimulAoA, startAoAEvalCommand);
             startAoAEvalCommand._canExecute =
-                () => canStart(ref aoaEvalTask);
+                () => canStartByTask(ref aoaEvalTask);
+
+            startAoAPSOCommand = new CommandHandler();
+            startAoAPSOCommand._action =
+                () =>
+                {
+                    if (startOptimizeAoAPso())
+                        AoAPsoPlot.clean();
+                };
+            startAoAPSOCommand._canExecute = () => { return true; };
+
+            stopAoAPSOCommand = new CommandHandler();
+            stopAoAPSOCommand._action =
+                () => AsyncStartAction(ref stopPsoTask, stopOptimizeAoAPso, stopAoAPSOCommand);
+            stopAoAPSOCommand._canExecute = () => canStartByTask(ref stopPsoTask);
+
+            exportAoAParamsCommand = new CommandHandler();
+            exportAoAParamsCommand._action =
+                () =>
+                {
+                    if (best_aoa_params != null)
+                        aoaEvalExperiment.AoA_params = new List<float>(best_aoa_params);
+                    aoaEvalExperiment.InputLowerBounds = new List<float>(aoaPSOContext.InputLowerBounds);
+                    aoaEvalExperiment.InputUpperBounds = new List<float>(aoaPSOContext.InputUpperBounds);
+                    aoaEvalExperiment.OutputLowerBounds = new List<float>(aoaPSOContext.OutputLowerBounds);
+                    aoaEvalExperiment.OutputUpperBounds = new List<float>(aoaPSOContext.OutputUpperBounds);
+                };
+            exportAoAParamsCommand._canExecute = () => { return true; };
         }
 
         private MainWindow owner_form;
+
+        // plots
 
         public DynamicsPlotModel rawExperimentPlot { get; private set; }
 
         public DynamicsPlotModel AoAExperimentPlot { get; private set; }
 
+        public OptHistoryPlotModel AoAPsoPlot { get; private set; }
+
+        // experiments
+
         public RawModelExperiment rawExperiment { get; private set; }
 
-        public AoAEvalExperiment aoaEvalEeperiment { get; private set; }
+        public AoAEvalExperiment aoaEvalExperiment { get; private set; }
+
+        public AoAPsoOptimization aoaPSOContext { get; private set; }
+
+        // commands
 
         public CommandHandler startRawCommand { get; private set; }
 
         public CommandHandler startAoAEvalCommand { get; private set; }
 
-        Task rawTask, aoaEvalTask;
+        public CommandHandler startAoAPSOCommand { get; private set; }
 
-        private void startSimulation(ref Task task, Action action, CommandHandler cmd)
+        public CommandHandler stopAoAPSOCommand { get; private set; }
+
+        public CommandHandler exportAoAParamsCommand { get; private set; }
+
+        // tasks
+
+        Task rawTask, aoaEvalTask, stopPsoTask;
+
+        private void AsyncStartAction(ref Task task, Action action, CommandHandler cmd)
         {
             if (task != null)
                 if (!(task.IsCompleted || task.IsFaulted || task.IsCanceled))
@@ -121,8 +222,18 @@ namespace AAGpuClient
 
         private void doSimulAoA()
         {
-            aoaEvalEeperiment.execute();
+            aoaEvalExperiment.execute();
             owner_form.Dispatcher.Invoke(publishAoASimulResult);
+        }
+
+        private bool startOptimizeAoAPso()
+        {
+            return aoaPSOContext.start();
+        }
+
+        private void stopOptimizeAoAPso()
+        {
+            aoaPSOContext.stop();
         }
 
         private void threaded_buttonupdate(CommandHandler cmd)
@@ -130,7 +241,7 @@ namespace AAGpuClient
             owner_form.Dispatcher.Invoke(() => cmd.raiseCanExecuteChanged());
         }
 
-        private bool canStart(ref Task t)
+        private bool canStartByTask(ref Task t)
         {
             if (t == null || t.IsCompleted || t.IsFaulted || t.IsCanceled)
                 return true;
@@ -141,15 +252,15 @@ namespace AAGpuClient
         {
             rawExperimentPlot.Model.Series.Clear();
 
-            addListAsSeries(rawExperimentPlot.Model, rawExperiment.timePoints, rawExperiment.angVelHistory,
+            rawExperimentPlot.addListAsSeries(rawExperiment.timePoints, rawExperiment.angVelHistory,
                 "ang vel", OxyColors.Blue);
-            addListAsSeries(rawExperimentPlot.Model, rawExperiment.timePoints, rawExperiment.AOAHistory,
+            rawExperimentPlot.addListAsSeries(rawExperiment.timePoints, rawExperiment.AOAHistory,
                 "AoA", OxyColors.Red);
-            addListAsSeries(rawExperimentPlot.Model, rawExperiment.timePoints, rawExperiment.angAccHistory,
+            rawExperimentPlot.addListAsSeries(rawExperiment.timePoints, rawExperiment.angAccHistory,
                 "ang acc", OxyColors.Green);
-            addListAsSeries(rawExperimentPlot.Model, rawExperiment.timePoints, rawExperiment.csurfHistory,
+            rawExperimentPlot.addListAsSeries(rawExperiment.timePoints, rawExperiment.csurfHistory,
                 "csurf", OxyColors.Black, LineStyle.Dot);
-            addListAsSeries(rawExperimentPlot.Model, rawExperiment.timePoints, rawExperiment.inputHistory,
+            rawExperimentPlot.addListAsSeries(rawExperiment.timePoints, rawExperiment.inputHistory,
                 "input", OxyColors.Black);
 
             rawExperimentPlot.Model.ResetAllAxes();
@@ -160,34 +271,33 @@ namespace AAGpuClient
         {
             AoAExperimentPlot.Model.Series.Clear();
 
-            addListAsSeries(AoAExperimentPlot.Model, aoaEvalEeperiment.timePoints, aoaEvalEeperiment.angVelHistory,
+            AoAExperimentPlot.addListAsSeries(aoaEvalExperiment.timePoints, aoaEvalExperiment.angVelHistory,
                 "ang vel", OxyColors.Blue);
-            addListAsSeries(AoAExperimentPlot.Model, aoaEvalEeperiment.timePoints, aoaEvalEeperiment.AOAHistory,
+            AoAExperimentPlot.addListAsSeries(aoaEvalExperiment.timePoints, aoaEvalExperiment.AOAHistory,
                 "AoA", OxyColors.Red);
-            addListAsSeries(AoAExperimentPlot.Model, aoaEvalEeperiment.timePoints, aoaEvalEeperiment.angAccHistory,
+            AoAExperimentPlot.addListAsSeries(aoaEvalExperiment.timePoints, aoaEvalExperiment.angAccHistory,
                 "ang acc", OxyColors.Green);
-            addListAsSeries(AoAExperimentPlot.Model, aoaEvalEeperiment.timePoints, aoaEvalEeperiment.csurfHistory,
+            AoAExperimentPlot.addListAsSeries(aoaEvalExperiment.timePoints, aoaEvalExperiment.csurfHistory,
                 "csurf", OxyColors.Black, LineStyle.Dot);
-            addListAsSeries(AoAExperimentPlot.Model, aoaEvalEeperiment.timePoints, aoaEvalEeperiment.inputHistory,
+            AoAExperimentPlot.addListAsSeries(aoaEvalExperiment.timePoints, aoaEvalExperiment.inputHistory,
                 "input", OxyColors.Black);
-            addListAsSeries(AoAExperimentPlot.Model, aoaEvalEeperiment.timePoints, aoaEvalEeperiment.outputVelHistory,
+            AoAExperimentPlot.addListAsSeries(aoaEvalExperiment.timePoints, aoaEvalExperiment.outputVelHistory,
                 "vel output", OxyColors.DarkMagenta);
 
             AoAExperimentPlot.Model.ResetAllAxes();
             AoAExperimentPlot.Model.InvalidatePlot(true);
         }
 
-        private void addListAsSeries(PlotModel plot, List<float> x, List<float> y, 
-            string name, OxyColor col, LineStyle style = LineStyle.Solid)
+        private List<float> best_aoa_params = null;
+
+        private void reportAoAPso(int epoch, float val, List<float> pars)
         {
-            var ser = new LineSeries();
-            ser.Title = name;
-            ser.Color = col;
-            ser.StrokeThickness = 1.0;
-            ser.LineStyle = style;
-            for (int i = 0; i < x.Count; i++)
-                ser.Points.Add(new DataPoint(x[i], y[i]));
-            plot.Series.Add(ser);
+            owner_form.Dispatcher.Invoke(
+                () =>
+                {
+                    best_aoa_params = pars;
+                    AoAPsoPlot.update(epoch, val);
+                });
         }
     }
 

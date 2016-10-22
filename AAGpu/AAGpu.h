@@ -69,11 +69,11 @@ AAGPU_EXPORTS_API aoa_eval_prototype aoa_execute_cpu;
 
 
 // AoA PSO single model optimization
-typedef void report_dlg(int epoch, float value, std::array<float, AOAPARS> params);
+typedef void (__stdcall *report_dlg)(int epoch, float value, std::array<float, AOAPARS> params);
 
 #define PARTICLEBLOCK 256
 
-AAGPU_EXPORTS_API void start_aoa_pso(
+AAGPU_EXPORTS_API bool start_aoa_pso(
     float dt,
     int step_count,
     float moi,
@@ -91,6 +91,9 @@ AAGPU_EXPORTS_API void start_aoa_pso(
     float w,
     float c1,
     float c2,
+    float initial_span,
+    int aoa_divisions,
+    const std::array<float, 4> &exper_weights,
     report_dlg repotrer);
 
 AAGPU_EXPORTS_API void stop_aoa_pso();

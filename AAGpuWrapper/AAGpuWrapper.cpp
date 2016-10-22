@@ -3,6 +3,8 @@
 #include "AAGpuWrapper.h"
 #include "AAGpu.h"
 
+using namespace System::Runtime::InteropServices;
+
 namespace AAGpuWrapper
 {
 
@@ -81,6 +83,11 @@ namespace AAGpuWrapper
 
     void AoAEvalExperiment::init_normals()
     {
+        InputLowerBounds = gcnew List<Single>();
+        InputUpperBounds = gcnew List<Single>();
+        OutputLowerBounds = gcnew List<Single>();
+        OutputUpperBounds = gcnew List<Single>();
+
         InputLowerBounds->Add(0.0f);
         InputLowerBounds->Add(0.0f);
         InputLowerBounds->Add(-0.01f);
@@ -92,7 +99,7 @@ namespace AAGpuWrapper
         InputUpperBounds->Add(0.5f);
 
         OutputLowerBounds->Add(-0.1f);
-        OutputUpperBounds->Add(50.0f);
+        OutputUpperBounds->Add(10.0f);
     }
 
     void AoAEvalExperiment::execute()
@@ -173,6 +180,106 @@ namespace AAGpuWrapper
             inputHistory->Add(out_input[i]);
             outputVelHistory->Add(out_outvel[i]);
         }
+    }
+
+
+
+
+    void AoAPsoOptimization::init_normals()
+    {
+        InputLowerBounds = gcnew List<Single>();
+        InputUpperBounds = gcnew List<Single>();
+        OutputLowerBounds = gcnew List<Single>();
+        OutputUpperBounds = gcnew List<Single>();
+
+        InputLowerBounds->Add(0.0f);
+        InputLowerBounds->Add(0.0f);
+        InputLowerBounds->Add(-0.1f);
+        InputLowerBounds->Add(0.0f);
+
+        InputUpperBounds->Add(10.0f);
+        InputUpperBounds->Add(2.0f);
+        InputUpperBounds->Add(0.1f);
+        InputUpperBounds->Add(0.5f);
+
+        OutputLowerBounds->Add(-0.1f);
+        OutputUpperBounds->Add(10.0f);
+    }
+
+    delegate void native_reporter(int epoch, float val, std::array<float, AOAPARS> bp);
+
+    static GCHandle reporter_handle1;
+    static bool dlg_init = false;
+    static report_dlg pinned_report_func_ptr;
+
+    static void report_native(int epoch, float val, std::array<float, AOAPARS> bp)
+    {
+        List<float> ^l = gcnew List<float>(AOAPARS);
+        for (int i = 0; i < AOAPARS; i++)
+            l->Add(bp[i]);
+        AoAPsoOptimization::report_dlg_stat(epoch, val, l);
+    }
+
+    void AoAPsoOptimization::init_delegate()
+    {
+        if (dlg_init)
+            reporter_handle1.Free();
+        native_reporter ^native_dlg = gcnew native_reporter(report_native);
+        reporter_handle1 = GCHandle::Alloc(native_dlg);
+        IntPtr ip = Marshal::GetFunctionPointerForDelegate(native_dlg);
+        pinned_report_func_ptr = static_cast<report_dlg>(ip.ToPointer());
+        dlg_init = true;
+    }
+
+    bool AoAPsoOptimization::start()
+    {
+        int points_count = Math::Ceiling(experiment_length / dt) + 1;
+
+        std::array<float, 3> rot_model =
+        { pitchRotModel[0], pitchRotModel[1], pitchRotModel[2] };
+        std::array<float, 3> lift_model =
+        { pitchLiftModel[0], pitchLiftModel[1], pitchLiftModel[2] };
+        std::array<float, 2> drag_model =
+        { dragModel[0], dragModel[1] };
+        std::array<float, 4> weights =
+        { ExperimentWeights[0], ExperimentWeights[1], ExperimentWeights[2],
+          ExperimentWeights[3]};
+        std::array<std::tuple<float, float>, AOAINPUTS> input_norms;
+        for (int i = 0; i < AOAINPUTS; i++)
+            input_norms[i] = std::make_tuple(InputLowerBounds[i], InputUpperBounds[i]);
+        std::array<std::tuple<float, float>, AOAOUTPUTS> output_norms;
+        for (int i = 0; i < AOAOUTPUTS; i++)
+            output_norms[i] = std::make_tuple(OutputLowerBounds[i], OutputUpperBounds[i]);
+
+        bool aero_model = aerodynamics == AeroModel::FARAero ? true : false;       
+
+        return start_aoa_pso(
+            dt,
+            points_count - 1,
+            MOI,
+            mass,
+            sas,
+            rot_model,
+            lift_model,
+            drag_model,
+            aero_model,
+            startVel,
+            keepSpeed,
+            input_norms,
+            output_norms,
+            threadBlocks,
+            w,
+            c1,
+            c2,
+            span,
+            aoa_divisions,
+            weights,
+            pinned_report_func_ptr);
+    }
+
+    void AoAPsoOptimization::stop()
+    {
+        stop_aoa_pso();
     }
 
 }
