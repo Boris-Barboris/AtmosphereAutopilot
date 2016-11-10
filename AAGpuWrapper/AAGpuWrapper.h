@@ -214,8 +214,8 @@ namespace AAGpuWrapper
             threadBlocks = 1;
             init_normals();
             w = 0.9f;
-            c1 = 0.5f;
-            c2 = 0.5f;
+            c1 = 0.4f;
+            c2 = 0.4f;
             span = 1.0f;
             aoa_divisions = 5;
             report_dlg_stat = reporter;

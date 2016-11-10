@@ -68,7 +68,7 @@ PREFIX void FUNCNAME(
         // local aircraft model
         pitch_model model = corpus[model_index];
         vel_c.preupdatev(&model);
-        model.pitch_angle = vel_c.res_min_aoa * i / (float)(aoa_divisions - 1);
+        model.pitch_angle = vel_c.res_min_aoa * i / (float)(aoa_divisions - 2);
         float target_aoa = vel_c.res_max_aoa * i / (float)(aoa_divisions - 1);
         for (int i = 0; i < step_count; i++)
         {
@@ -92,7 +92,7 @@ PREFIX void FUNCNAME(
         // local aircraft model
         pitch_model model = corpus[model_index];
         vel_c.preupdatev(&model);
-        model.pitch_angle = vel_c.res_max_aoa * i / (float)(aoa_divisions - 1);
+        model.pitch_angle = vel_c.res_max_aoa * i / (float)(aoa_divisions - 2);
         float target_aoa = vel_c.res_min_aoa * i / (float)(aoa_divisions - 1);
         for (int i = 0; i < step_count; i++)
         {
