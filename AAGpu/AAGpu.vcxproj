@@ -182,6 +182,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="aoa_ctrl.cu" />
     <CudaCompile Include="aoa_eval_kernel.cu" />
     <CudaCompile Include="aoa_pso_kernel.cu" />
+    <CudaCompile Include="corpus.cu" />
     <CudaCompile Include="matrix.cu" />
     <CudaCompile Include="raw_kernel.cu" />
   </ItemGroup>

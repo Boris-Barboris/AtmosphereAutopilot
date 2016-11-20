@@ -68,7 +68,30 @@ AAGPU_EXPORTS_API aoa_eval_prototype aoa_execute;
 AAGPU_EXPORTS_API aoa_eval_prototype aoa_execute_cpu;
 
 
-// AoA PSO single model optimization
+// AoA PSO corpus optimization
+
+struct pitch_model_params
+{
+    float moi;
+    float mass;
+    float sas;
+    std::array<float, 3> rot_model;
+    std::array<float, 3> lift_model;
+    std::array<float, 2> drag_model;
+};
+
+AAGPU_EXPORTS_API std::vector<pitch_model_params> generate_corpus(
+    const pitch_model_params &base_model,
+    int moi_steps,
+    float moi_min,
+    float moi_max,
+    int t_ratio_steps,
+    float ratio_min,
+    float ratio_max,
+    int cl2_steps,
+    float cl2_min,
+    float cl2_max);
+
 typedef void (__stdcall *report_dlg)(int epoch, float value, std::array<float, AOAPARS> params);
 
 #define PARTICLEBLOCK 256
@@ -76,12 +99,7 @@ typedef void (__stdcall *report_dlg)(int epoch, float value, std::array<float, A
 AAGPU_EXPORTS_API bool start_aoa_pso(
     float dt,
     int step_count,
-    float moi,
-    float mass,
-    float sas,
-    const std::array<float, 3> &rot_model,
-    const std::array<float, 3> &lift_model,
-    const std::array<float, 2> &drag_model,
+    const std::vector<pitch_model_params> &corpus,
     bool aero_model,
     float start_vel,
     bool keep_speed,

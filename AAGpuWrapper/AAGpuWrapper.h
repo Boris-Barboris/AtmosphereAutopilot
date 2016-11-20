@@ -188,6 +188,7 @@ namespace AAGpuWrapper
         {
             dt = 0.05f;
             experiment_length = 5.0f;
+
             MOI = 165.0f;
             mass = 14.0f;
             sas = 15.0;
@@ -202,6 +203,18 @@ namespace AAGpuWrapper
             dragModel = gcnew List<Single>();
             dragModel->Add(1.0f);
             dragModel->Add(20.0f);
+
+            // corpus
+            moi_steps = 7;
+            moi_min = 20.0f;
+            moi_max = 1000.0f;
+            t_ratio_steps = 5;
+            ratio_min = -0.15f;
+            ratio_max = 0.1f;
+            cl2_steps = 5;
+            cl2_min = -1.0f;
+            cl2_max = 1.0f;
+
             ExperimentWeights = gcnew List<Single>();
             ExperimentWeights->Add(1.0f);
             ExperimentWeights->Add(1.0f);
@@ -253,6 +266,42 @@ namespace AAGpuWrapper
         [CategoryAttribute("Craft parameters")]
         [DisplayNameAttribute("Drag model")]
         property List<Single> ^dragModel;
+
+        [CategoryAttribute("Model corpus")]
+        [DisplayNameAttribute("MOI samples")]
+        property int moi_steps;
+
+        [CategoryAttribute("Model corpus")]
+        [DisplayNameAttribute("MOI min")]
+        property Single moi_min;
+
+        [CategoryAttribute("Model corpus")]
+        [DisplayNameAttribute("MOI max")]
+        property Single moi_max;
+
+        [CategoryAttribute("Model corpus")]
+        [DisplayNameAttribute("CM ratio samples")]
+        property int t_ratio_steps;
+
+        [CategoryAttribute("Model corpus")]
+        [DisplayNameAttribute("CM min")]
+        property Single ratio_min;
+
+        [CategoryAttribute("Model corpus")]
+        [DisplayNameAttribute("CM max")]
+        property Single ratio_max;
+
+        [CategoryAttribute("Model corpus")]
+        [DisplayNameAttribute("CL2 samples")]
+        property int cl2_steps;
+
+        [CategoryAttribute("Model corpus")]
+        [DisplayNameAttribute("CL2 min")]
+        property Single cl2_min;
+
+        [CategoryAttribute("Model corpus")]
+        [DisplayNameAttribute("CL2 max")]
+        property Single cl2_max;
 
         [CategoryAttribute("Global parameters")]
         [DisplayNameAttribute("Aero model")]

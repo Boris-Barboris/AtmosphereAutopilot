@@ -241,6 +241,15 @@ namespace AAGpuWrapper
         { pitchLiftModel[0], pitchLiftModel[1], pitchLiftModel[2] };
         std::array<float, 2> drag_model =
         { dragModel[0], dragModel[1] };
+
+        pitch_model_params base_model;
+        base_model.mass = mass;
+        base_model.moi = MOI;
+        base_model.sas = sas;
+        base_model.rot_model = rot_model;
+        base_model.lift_model = lift_model;
+        base_model.drag_model = drag_model;
+
         std::array<float, 4> weights =
         { ExperimentWeights[0], ExperimentWeights[1], ExperimentWeights[2],
           ExperimentWeights[3]};
@@ -251,17 +260,16 @@ namespace AAGpuWrapper
         for (int i = 0; i < AOAOUTPUTS; i++)
             output_norms[i] = std::make_tuple(OutputLowerBounds[i], OutputUpperBounds[i]);
 
-        bool aero_model = aerodynamics == AeroModel::FARAero ? true : false;       
+        bool aero_model = aerodynamics == AeroModel::FARAero ? true : false;
+
+        // create corpus
+        auto corpus = generate_corpus(base_model, moi_steps, moi_min, moi_max,
+            t_ratio_steps, ratio_min, ratio_max, cl2_steps, cl2_min, cl2_max);
 
         return start_aoa_pso(
             dt,
             points_count - 1,
-            MOI,
-            mass,
-            sas,
-            rot_model,
-            lift_model,
-            drag_model,
+            corpus,
             aero_model,
             startVel,
             keepSpeed,

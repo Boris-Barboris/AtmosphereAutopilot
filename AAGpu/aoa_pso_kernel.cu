@@ -20,12 +20,7 @@ float4 make_float4(const std::array<float, 4> &arr)
 void do_start_aoa_pso(
     float dt,
     int step_count,
-    float moi,
-    float mass,
-    float sas,
-    std::array<float, 3> rot_model,
-    std::array<float, 3> lift_model,
-    std::array<float, 2> drag_model,
+    const std::vector<pitch_model_params> &corpus,
     bool a_model,
     float start_vel,
     bool keep_speed,
@@ -56,15 +51,19 @@ void do_start_aoa_pso(
 
     // initialize models
     pitch_model *models;
-    massalloc_cpu(1, &models);
-    models[0].zero_init();
-    models[0].velocity.x = start_vel;
-    models[0].moi = moi;
-    models[0].rot_m = make_float3(rot_model[0], rot_model[1], rot_model[2]);
-    models[0].lift_m = make_float3(lift_model[0], lift_model[1], lift_model[2]);
-    models[0].drag_m = make_float2(drag_model[0], drag_model[1]);
-    models[0].sas_torque = sas;
-    models[0].mass = mass;
+    int model_count = corpus.size();
+    massalloc_cpu(model_count, &models);
+    for (int i = 0; i < model_count; i++)
+    {
+        models[i].zero_init();
+        models[i].velocity.x = start_vel;
+        models[i].moi = corpus[i].moi;
+        models[i].rot_m = make_float3(corpus[i].rot_model);
+        models[i].lift_m = make_float3(corpus[i].lift_model);
+        models[i].drag_m = make_float2(corpus[i].drag_model);
+        models[i].sas_torque = corpus[i].sas;
+        models[i].mass = corpus[i].mass;
+    }    
 
     // initialize particles
     matrix<AOAPARS, 1> *particles, *best_particles, *velocities;
@@ -93,18 +92,18 @@ void do_start_aoa_pso(
     // allocate GPU memory
     cuwrap(cudaSetDevice, 0);
 
-    pitch_model *corpus;
+    pitch_model *d_corpus;
     matrix<AOAPARS, 1> *d_particles, *d_best_particles, *d_velocities;
     float *d_outputs, *d_best_outputs;
     int *d_best_index;
 
-    massalloc(1, &corpus);
+    massalloc(model_count, &d_corpus);
     massalloc(prtcl_blocks * PARTICLEBLOCK, &d_particles, &d_best_particles, 
         &d_velocities, &d_outputs, &d_best_outputs);
     massalloc(1, &d_best_index);
 
     // initialize it
-    copyCpuGpu(models, corpus, 1);
+    copyCpuGpu(models, d_corpus, model_count);
     copyCpuGpu(particles, d_particles, prtcl_blocks * PARTICLEBLOCK);
     copyCpuGpu(best_particles, d_best_particles, prtcl_blocks * PARTICLEBLOCK);
     copyCpuGpu(velocities, d_velocities, prtcl_blocks * PARTICLEBLOCK);
@@ -119,19 +118,32 @@ void do_start_aoa_pso(
     int epoch = 0;
     while (!stop_flag)
     {
-        aoa_pso_kernel<<<prtcl_blocks, PARTICLEBLOCK>>>(
-            corpus,
-            d_particles,
-            in_norms,
-            out_norms,
-            d_outputs,
-            0,
-            dt,
-            step_count,
-            aoa_divisions,
-            make_float4(exper_weights));
-
-        cuwrap(cudaGetLastError);
+        // group blocks of 16 models in sequential kernel calls
+        int m_index = 0;
+        while (m_index < model_count)
+        {
+            for (int sub = 0; sub < 16; sub++)
+            {
+                if (m_index >= model_count)
+                    break;
+                // lauch kernel
+                aoa_pso_kernel<<<prtcl_blocks, PARTICLEBLOCK>>> (
+                    d_corpus,
+                    d_particles,
+                    in_norms,
+                    out_norms,
+                    d_outputs,
+                    m_index,
+                    dt,
+                    step_count,
+                    aoa_divisions,
+                    make_float4(exper_weights));
+                cuwrap(cudaGetLastError);
+                m_index++;
+            }
+            // wait for batch execution completed
+            cuwrap(cudaDeviceSynchronize);
+        }
 
         aoa_pso_outer_kernel<<<prtcl_blocks, PARTICLEBLOCK>>>(
             d_particles,
@@ -171,8 +183,7 @@ void do_start_aoa_pso(
         matrix<AOAPARS, 1> best_particle;
         copyGpuCpu(d_best_particles + best_index, &best_particle, 1);
         float best_target_func = 0.0f;
-        copyGpuCpu(d_best_outputs + best_index,
-            &best_target_func, 1);
+        copyGpuCpu(d_best_outputs + best_index, &best_target_func, 1);
         // report to caller
         std::array<float, AOAPARS> best_particle_arr;
         for (int i = 0; i < AOAPARS; i++)
@@ -181,7 +192,7 @@ void do_start_aoa_pso(
     }
 
     // Clean up
-    massfree(corpus, d_particles, d_best_particles, d_velocities, d_outputs, 
+    massfree(d_corpus, d_particles, d_best_particles, d_velocities, d_outputs,
         d_best_outputs, d_best_index);
     massfree_cpu(models, particles, best_particles, velocities, outputs,
         best_outputs);
@@ -193,12 +204,7 @@ void do_start_aoa_pso(
 bool start_aoa_pso(
     float dt,
     int step_count,
-    float moi,
-    float mass,
-    float sas,
-    const std::array<float, 3> &rot_model,
-    const std::array<float, 3> &lift_model,
-    const std::array<float, 2> &drag_model,
+    const std::vector<pitch_model_params> &corpus,
     bool a_model,
     float start_vel,
     bool keep_speed,
@@ -218,8 +224,7 @@ bool start_aoa_pso(
     delete aoa_pso_thread;
     stop_flag = false;
     aoa_pso_thread = new std::thread(do_start_aoa_pso,
-        dt, step_count, moi, mass, sas, rot_model, lift_model, drag_model,
-        a_model, start_vel, keep_speed, input_norms, output_norms,
+        dt, step_count, corpus, a_model, start_vel, keep_speed, input_norms, output_norms,
         prtcl_blocks, w, c1, c2, initial_span, aoa_divisions, exper_weights, repotrer);
     return true;
 }
