@@ -192,14 +192,14 @@ namespace AAGpuWrapper
         OutputLowerBounds = gcnew List<Single>();
         OutputUpperBounds = gcnew List<Single>();
 
-        InputLowerBounds->Add(0.0f);
-        InputLowerBounds->Add(0.0f);
-        InputLowerBounds->Add(-0.1f);
-        InputLowerBounds->Add(0.0f);
+        InputLowerBounds->Add(-1.0f);
+        InputLowerBounds->Add(-0.2f);
+        InputLowerBounds->Add(-0.03f);
+        InputLowerBounds->Add(-0.05f);
 
         InputUpperBounds->Add(10.0f);
         InputUpperBounds->Add(2.0f);
-        InputUpperBounds->Add(0.1f);
+        InputUpperBounds->Add(0.03f);
         InputUpperBounds->Add(0.5f);
 
         OutputLowerBounds->Add(-0.1f);

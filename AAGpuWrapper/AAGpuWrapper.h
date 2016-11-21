@@ -216,21 +216,21 @@ namespace AAGpuWrapper
             cl2_max = 1.0f;
 
             ExperimentWeights = gcnew List<Single>();
+            ExperimentWeights->Add(100.0f);
             ExperimentWeights->Add(1.0f);
             ExperimentWeights->Add(1.0f);
-            ExperimentWeights->Add(0.5f);
             ExperimentWeights->Add(1000.0f);
             aerodynamics = AeroModel::StockAero;
             startVel = 200.0f;
-            keepSpeed = false;
+            keepSpeed = true;
             computeHost = ExecutionHost::GPU;
             threadBlocks = 1;
             init_normals();
-            w = 0.9f;
-            c1 = 0.4f;
-            c2 = 0.4f;
+            w = 0.7f;
+            c1 = 0.6f;
+            c2 = 0.6f;
             span = 1.0f;
-            aoa_divisions = 5;
+            aoa_divisions = 7;
             report_dlg_stat = reporter;
             init_delegate();
         }

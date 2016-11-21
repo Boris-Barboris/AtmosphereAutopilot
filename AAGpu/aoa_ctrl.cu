@@ -55,8 +55,8 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
     float aoa_err = target_aoa - cur_aoa;
 
     auto eq_x = get_equlibr(mdl, target);
-    float des_aoa_equil = eq_x(0, 0);
-    float des_aoa_ctl = eq_x(1, 0);
+    float des_aoa_equil = eq_x(0, 0);   // equlibrium angular velocity on target aoa
+    float des_aoa_ctl = eq_x(1, 0);     // equilibrium control input
     float abs_err = fabsf(aoa_err);
 
     matrix<AOAINPUTS, 1> nninputs;

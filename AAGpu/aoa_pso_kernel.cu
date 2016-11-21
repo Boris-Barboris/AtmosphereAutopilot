@@ -63,7 +63,7 @@ void do_start_aoa_pso(
         models[i].drag_m = make_float2(corpus[i].drag_model);
         models[i].sas_torque = corpus[i].sas;
         models[i].mass = corpus[i].mass;
-    }    
+    }
 
     // initialize particles
     matrix<AOAPARS, 1> *particles, *best_particles, *velocities;
@@ -116,6 +116,8 @@ void do_start_aoa_pso(
     // main cycle
     unsigned long long offset = prtcl_blocks * PARTICLEBLOCK;
     int epoch = 0;
+    int cycles_in_vain = 0;
+    float global_best = std::numeric_limits<float>::infinity();
     while (!stop_flag)
     {
         // group blocks of 16 models in sequential kernel calls
@@ -124,6 +126,8 @@ void do_start_aoa_pso(
         {
             for (int sub = 0; sub < 16; sub++)
             {
+                if (stop_flag)
+                    goto cleanup_label;
                 if (m_index >= model_count)
                     break;
                 // lauch kernel
@@ -139,10 +143,11 @@ void do_start_aoa_pso(
                     aoa_divisions,
                     make_float4(exper_weights));
                 cuwrap(cudaGetLastError);
+                cuwrap(cudaDeviceSynchronize);
                 m_index++;
             }
             // wait for batch execution completed
-            cuwrap(cudaDeviceSynchronize);
+            //cuwrap(cudaDeviceSynchronize);
         }
 
         aoa_pso_outer_kernel<<<prtcl_blocks, PARTICLEBLOCK>>>(
@@ -184,12 +189,37 @@ void do_start_aoa_pso(
         copyGpuCpu(d_best_particles + best_index, &best_particle, 1);
         float best_target_func = 0.0f;
         copyGpuCpu(d_best_outputs + best_index, &best_target_func, 1);
+        
         // report to caller
         std::array<float, AOAPARS> best_particle_arr;
         for (int i = 0; i < AOAPARS; i++)
             best_particle_arr[i] = best_particle(i, 0);
         repotrer(epoch++, best_target_func, best_particle_arr);
+
+        // check if we didn't improve
+        if (best_target_func < global_best)
+        {
+            global_best = best_target_func;
+            cycles_in_vain = 0;
+        }
+        else
+            cycles_in_vain++;
+        // rerandomize particles if needed
+        if (cycles_in_vain >= 100)
+        {
+            cycles_in_vain = 0;
+            for (int i = 0; i < prtcl_blocks * PARTICLEBLOCK; i++)
+                for (int j = 0; j < AOAPARS; j++)
+                {
+                    particles[i](j, 0) = initial_span * rng(gen) + best_particle(j, 0);
+                    velocities[i](j, 0) = 0.2f * initial_span * rng(gen);
+                }
+            copyCpuGpu(particles, d_particles, prtcl_blocks * PARTICLEBLOCK);
+            copyCpuGpu(velocities, d_velocities, prtcl_blocks * PARTICLEBLOCK);
+        }
     }
+
+    cleanup_label:
 
     // Clean up
     massfree(d_corpus, d_particles, d_best_particles, d_velocities, d_outputs,

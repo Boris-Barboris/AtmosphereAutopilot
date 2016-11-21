@@ -61,55 +61,70 @@ PREFIX void FUNCNAME(
 
     float result = 0.0f;
 
-    // passes from zero AoA to some positive AoA
-    for (int i = 0; i < aoa_divisions; i++)
-    {
-        float lres = 0.0f;
-        // local aircraft model
-        pitch_model model = corpus[model_index];
-        vel_c.preupdatev(&model);
-        model.pitch_angle = vel_c.res_min_aoa * i / (float)(aoa_divisions - 2);
-        float target_aoa = vel_c.res_max_aoa * i / (float)(aoa_divisions - 1);
-        for (int i = 0; i < step_count; i++)
-        {
-            model.preupdate(dt);
-            float ctl = aoa_c.eval(&model, &vel_c, target_aoa, 0.0f, dt);
-            model.simulation_step(dt, ctl);
-            float err = (model.aoa - target_aoa);
-            float diff = err * err;
-            if (model.aoa > target_aoa)
-                diff *= weights.w;
-            lres += diff * dt * i;
-        }
-        lres *= weights.x;
-        result += lres;
-    }
+    // let's get our AoA bounds
+    pitch_model model = corpus[model_index];
+    model.preupdate(dt);
+    vel_c.preupdatev(&model);
+    float min_aoa = vel_c.res_min_aoa;
+    float max_aoa = vel_c.res_max_aoa;
+    float aoa_step = (max_aoa - min_aoa) / (float)(aoa_divisions - 1);
 
-    // passes from max AoA to some negative AoA
-    for (int i = 0; i < aoa_divisions; i++)
-    {
-        float lres = 0.0f;
-        // local aircraft model
-        pitch_model model = corpus[model_index];
-        vel_c.preupdatev(&model);
-        model.pitch_angle = vel_c.res_max_aoa * i / (float)(aoa_divisions - 2);
-        float target_aoa = vel_c.res_min_aoa * i / (float)(aoa_divisions - 1);
-        for (int i = 0; i < step_count; i++)
-        {
-            model.preupdate(dt);
-            float ctl = aoa_c.eval(&model, &vel_c, target_aoa, 0.0f, dt);
-            model.simulation_step(dt, ctl);
-            float err = (model.aoa - target_aoa);
-            float diff = err * err;
-            if (model.aoa < target_aoa)
-                diff *= weights.w;
-            lres += diff * dt * i;
-        }
-        lres *= weights.y;
-        result += lres;
-    }
+    // experiment scheme:
+    // we have aoa_divisions marks from min_aoa to max_aoa
+    // we will perform experiments as transitions from current
+    // AoA mark to every other AoA mark larger than current.
+    // Then we will perform special case experiments (zero AoA stability)
 
-    result = result / (float)aoa_divisions;
+    int exper_count = 0;
+    for (int i = 0; i < aoa_divisions - 1; i++)
+        for (int j = i + 1; j < aoa_divisions; j++)
+        {
+            float lres = 0.0f;
+            float target_aoa = min_aoa + j * aoa_step;
+            // local aircraft model
+            model = corpus[model_index];
+            model.pitch_angle = min_aoa + i * aoa_step;
+            // let's set initial control to equilibrium one
+            model.preupdate(dt);
+            model.csurf_state = aoa_ctrl::get_equlibr(&model, model.pitch_angle)(1, 0);
+            // perform simulation
+            for (int s = 0; s < step_count; s++)
+            {
+                model.preupdate(dt);
+                float ctl = aoa_c.eval(&model, &vel_c, target_aoa, 0.0f, dt);
+                model.simulation_step(dt, ctl);
+                float err = (model.aoa - target_aoa);
+                float diff = err * err;
+                if (model.aoa > target_aoa)
+                    diff *= weights.w;
+                lres += diff * dt * s;
+            }
+            exper_count++;
+            result += lres;
+        }
+
+    // special case - zero start aoa, zero target aoa
+    float target_aoa = 0.0f;
+    model = corpus[model_index];
+    model.pitch_angle = 0.0f;
+    model.preupdate(dt);
+    model.csurf_state = aoa_ctrl::get_equlibr(&model, model.pitch_angle)(1, 0);
+    float lres = 0.0f;
+    for (int s = 0; s < step_count; s++)
+    {
+        model.preupdate(dt);
+        float ctl = aoa_c.eval(&model, &vel_c, target_aoa, 0.0f, dt);
+        model.simulation_step(dt, ctl);
+        float err = (model.aoa - target_aoa);
+        float diff = err * err;
+        lres += diff * dt * s;
+    }
+    lres *= weights.x;
+    result += lres;
+    exper_count++;
+
+    // scale by experiment count
+    result = result / (float)exper_count;
 
     outputs[pi] += result;
 }
