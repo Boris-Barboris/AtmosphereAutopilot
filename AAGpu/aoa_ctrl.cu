@@ -70,7 +70,7 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
     float err_sign = copysignf(1.0f, aoa_err);
     float output_shift = nnoutput(0, 0) * err_sign * powf(abs_err, 2.0f / 3.0f);
     // handle discrete time overshoot
-    if (fabsf(output_shift) * dt > abs_err)
+    if ((target_aoa - cur_aoa - output_shift * dt) * aoa_err < 0.0f)
         output_shift = 0.9f * aoa_err / dt;
 
     //float output_shift = get_output(vel_c, cur_aoa, target, dt);    
@@ -88,6 +88,8 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
     nnoutput = net.eval(nninputs);
     predicted_output = nnoutput(0, 0) * pred_err_sign * 
         powf(abs_pred_error, 2.0f / 3.0f);
+    if ((target_aoa - predicted_aoa - predicted_output * dt) < 0.0f)
+        predicted_output = 0.9f * pred_error / dt;
 
     float pred_deriv = (predicted_output - output_shift) / dt;
     output_acc = pred_deriv;
