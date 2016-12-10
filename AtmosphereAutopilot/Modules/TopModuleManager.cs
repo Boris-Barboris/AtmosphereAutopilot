@@ -45,7 +45,7 @@ namespace AtmosphereAutopilot
         // settings window
         CraftSettingsWindow settings_wnd;
 
-        protected void create_context()
+        public void create_context()
         {
             // We need to create all those modules. Module type needs to define constructor of
             // Constructor(Vessel v) prototype.
@@ -126,7 +126,7 @@ namespace AtmosphereAutopilot
             foreach (var controller in HighLevelControllers.Values)
             {
                 GUILayout.BeginHorizontal();
-                bool pressed = GUILayout.Toggle(active_controller == controller, controller.ModuleName, 
+                bool pressed = GUILayout.Toggle(active_controller == controller, controller.ModuleName,
                     GUIStyles.toggleButtonStyle, GUILayout.Width(155.0f), GUILayout.ExpandWidth(false));
                 if (pressed && !controller.Active)
                 {
@@ -162,10 +162,10 @@ namespace AtmosphereAutopilot
                 settings_wnd.OnGUI();
             else
                 if (settings_wnd.IsShown())
-                {
-                    create_context();
-                    settings_wnd.OnGUI();
-                }
+            {
+                create_context();
+                settings_wnd.OnGUI();
+            }
         }
 
         /// <summary>
@@ -223,7 +223,7 @@ namespace AtmosphereAutopilot
 
             public CraftSettingsWindow(TopModuleManager manager)
                 : base("Craft settings", 29414122, new Rect(50.0f, 80.0f, 200.0f, 50.0f))
-            { 
+            {
                 owner = manager;
             }
 
@@ -244,7 +244,7 @@ namespace AtmosphereAutopilot
             protected override void _drawGUI(int id)
             {
                 GUILayout.BeginVertical();
-                
+
                 // Moderation sections
                 GUILayout.BeginHorizontal();
                 pvc.moderate_aoa = GUILayout.Toggle(pvc.moderate_aoa, "Moderate AoA", GUIStyles.toggleButtonStyle);
@@ -384,7 +384,7 @@ namespace AtmosphereAutopilot
                     moderate_aoa = wnd.pvc.moderate_aoa;
                     max_aoa = wnd.pvc.max_aoa;
                     moderate_g = wnd.pvc.moderate_g;
-                    max_g = wnd.pvc.max_g_force;;
+                    max_g = wnd.pvc.max_g_force; ;
                     ptich_v = wnd.pvc.max_v_construction;
 
                     moderate_sideslip = wnd.yvc.moderate_aoa;

@@ -61,7 +61,7 @@ namespace AtmosphereAutopilot
             for (int i = 0; i < engines.Count; i++)
             {
                 EngineMoment em = engines[i];
-                ModuleEngines eng = em.engine;
+                //ModuleEngines eng = em.engine;
 
                 // check if balanceble
                 if (i == 0)
@@ -110,7 +110,7 @@ namespace AtmosphereAutopilot
             {
                 // fill x values
                 optimizer.x[i, 0] = limiters[i];
-            }            
+            }
         }
 
         double[] max_potentials = new double[3];
