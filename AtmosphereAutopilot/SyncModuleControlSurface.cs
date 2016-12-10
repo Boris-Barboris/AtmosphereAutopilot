@@ -72,7 +72,7 @@ namespace AtmosphereAutopilot
 
             this.alwaysRecomputeLift = true;
 
-            Vector3 world_com = vessel.CoM + vessel.rb_velocity * TimeWarp.fixedDeltaTime;
+            Vector3 world_com = vessel.CoM;
             float pitch_input = ignorePitch ? 0.0f : vessel.ctrlState.pitch;
             float roll_input = ignoreRoll ? 0.0f : vessel.ctrlState.roll;
             float yaw_input = ignoreYaw ? 0.0f : vessel.ctrlState.yaw;
