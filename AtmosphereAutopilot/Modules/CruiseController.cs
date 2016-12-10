@@ -184,10 +184,10 @@ namespace AtmosphereAutopilot
             {
                 // we're turning for more than 45 degrees, let's force the turn to be horizontal
                 Vector3d right_turn = Vector3d.Cross(planet2vesNorm, imodel.surface_v);
-                int sign = Math.Sign(Vector3d.Dot(right_turn, desired_velocity));
-                if (sign == 0)
-                    sign = 1;
-                desired_velocity = right_turn.normalized * (double)sign * Math.Tan(0.5) + hor_vel.normalized;
+                double sign = Math.Sign(Vector3d.Dot(right_turn, desired_velocity));
+                if (sign == 0.0)
+                    sign = 1.0;
+                desired_velocity = right_turn.normalized * sign * Math.Tan(0.5) + hor_vel.normalized;
             }
         }
 
@@ -451,8 +451,11 @@ namespace AtmosphereAutopilot
 
             GUILayout.Space(5.0f);
 
-            CourseHoldMode = GUILayout.Toggle(CourseHoldMode, "Heading", GUIStyles.toggleButtonStyle);
+            CourseHoldMode = GUILayout.Toggle(CourseHoldMode, "Heading",    GUIStyles.toggleButtonStyle);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("desired course", GUIStyles.labelStyleLeft);
             desired_course.DisplayLayout(GUIStyles.textBoxStyle);
+            GUILayout.EndHorizontal();
 
             GUILayout.Space(5.0f);
 

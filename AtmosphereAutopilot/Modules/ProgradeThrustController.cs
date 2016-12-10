@@ -256,7 +256,7 @@ namespace AtmosphereAutopilot
         float solve_thrust_req(double required_thrust, float prev_throttle)
         {
             if (imodel.engines.Count == 0)
-                return 0.0f;
+                return 0.1f;
 
             Common.Realloc(ref throttle_directions, imodel.engines.Count);
 
@@ -317,7 +317,7 @@ namespace AtmosphereAutopilot
                         thrust_authority += em.estimated_max_thrust;
                 }
                 if (thrust_authority == 0.0)
-                    return 0.0f;
+                    return 0.1f;
                 desired_throttle = Common.Clamp(prev_throttle + t_error / thrust_authority, 0.0, 1.0);
 
                 // now check if we changed spooling direction

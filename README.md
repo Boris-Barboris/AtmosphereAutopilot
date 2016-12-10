@@ -7,6 +7,7 @@ Original author: Boris-Barboris.
 
 Contributors:
 * radistmorse (aka Morse on KSP forums) - Neo-GUI design and implementation.
+* CraigCottingham - Cruise flight and speed control GUI refactoring, coordinate input to waypoint mode.
 
 License: GNU GPL version 3
 
@@ -76,7 +77,7 @@ Cruise Flight (CF) is high-level autopilot, designet for travel automation. Just
 CF uses "Director controller" for controlling velocity vector and "Prograde thrust controller" for throttle automation.
 Functions:
 * Simple leveling.
-* Baromethric (orbital) height and airspeed control.
+* Baromethric height and airspeed control.
 * Primitive waypoint functionality, picking point on planet surface (mouse click) on the map and flying to it.
 
 Short GUI description:
