@@ -22,6 +22,12 @@
     <CudaCompile Include="raw_kernel.cu">
       <Filter>kernels</Filter>
     </CudaCompile>
+    <CudaCompile Include="aoa_pso_kernel.cu">
+      <Filter>kernels</Filter>
+    </CudaCompile>
+    <CudaCompile Include="corpus.cu">
+      <Filter>kernels</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="aircraftmodel">
@@ -78,5 +84,10 @@
     <ClInclude Include="aoa_ctrl_constants.h">
       <Filter>aoa</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="aoa_pso_kernel_common.cuh">
+      <Filter>kernels</Filter>
+    </None>
   </ItemGroup>
 </Project>

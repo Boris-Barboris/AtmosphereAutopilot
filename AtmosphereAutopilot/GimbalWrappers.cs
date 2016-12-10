@@ -66,7 +66,11 @@ namespace AtmosphereAutopilot
 
         public Quaternion neutralLocalRotation(int thrustTransformIndex)
         {
-            return module.initRots[thrustTransformIndex];
+            // strange behaviour of sstu-s engines, need to check bounds
+            int index = Math.Min(module.initRots.Count - 1, thrustTransformIndex);
+            if (index < 0)
+                return Quaternion.identity;
+            return module.initRots[index];
         }
     }
 

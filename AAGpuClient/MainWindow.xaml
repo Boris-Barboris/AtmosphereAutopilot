@@ -40,8 +40,34 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <xctk:PropertyGrid Grid.Row="0" SelectedObject="{Binding aoaEvalEeperiment}"/>
+                        <xctk:PropertyGrid Grid.Row="0" SelectedObject="{Binding aoaEvalExperiment}"/>
                         <Button Content="Simulate" Grid.Row="1" Command="{Binding startAoAEvalCommand}" Height="35" FontSize="16"/>
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="AoA PSO" Background="#FF979797">
+                <Grid Background="#FF302E2E">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="260"/>
+                    </Grid.ColumnDefinitions>
+                    <oxy:PlotView Model="{Binding Path=AoAPsoPlot.Model}"/>
+                    <Grid Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <xctk:PropertyGrid Grid.Row="0" SelectedObject="{Binding aoaPSOContext}"/>
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Content="Start" Grid.Column="0" Command="{Binding startAoAPSOCommand}" Height="35" FontSize="16"/>
+                            <Button Content="Stop" Grid.Column="1" Command="{Binding stopAoAPSOCommand}" Height="35" FontSize="16"/>
+                            <Button Content="Export" Grid.Column="2" Command="{Binding exportAoAParamsCommand}" Height="35" FontSize="16"/>
+                        </Grid>
                     </Grid>
                 </Grid>
             </TabItem>
