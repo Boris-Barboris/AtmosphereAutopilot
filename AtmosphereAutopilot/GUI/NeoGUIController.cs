@@ -136,8 +136,11 @@ namespace AtmosphereAutopilot {
       }
 
       set {
-        if (parent.ActiveVessel != null)
+        if (parent.ActiveVessel != null) {
+          speedAP.setpoint_field.Value = value;
+          speedAP.chosen_spd_mode = 1;
           speedAP.setpoint = new SpeedSetpoint(SpeedType.MetersPerSecond, value, parent.ActiveVessel);
+        }
       }
     }
 
