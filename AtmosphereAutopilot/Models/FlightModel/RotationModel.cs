@@ -151,7 +151,7 @@ namespace AtmosphereAutopilot
                 Vector3 world_pv = part.rb.worldCenterOfMass - CoM;
                 Vector3 pv = world_to_cntrl_part * world_pv;
                 Vector3 impulse = mass * (world_to_cntrl_part * (part.rb.velocity - surface_v));
-                // from part.rb principal frame to root part rotation
+                // from part.rb principal frame to control from part rotation
                 Quaternion principal_to_cntrl = part_to_cntrl * part.rb.inertiaTensorRotation;
                 // MOI of part as offsetted material point
                 moi += mass * new Vector3(pv.y * pv.y + pv.z * pv.z, pv.x * pv.x + pv.z * pv.z, pv.x * pv.x + pv.y * pv.y);
@@ -175,7 +175,6 @@ namespace AtmosphereAutopilot
         static Matrix rot_matrix = new Matrix(3, 3);
         static Matrix rot_matrix_t = new Matrix(3, 3);
         static Matrix tmp_mat = new Matrix(3, 3);
-        static Matrix tmp_mat2 = new Matrix(3, 3);
         static Matrix new_inert = new Matrix(3, 3);
 
         public static Vector3 get_rotated_moi(Vector3 inertia_tensor, Quaternion rotation)
@@ -183,8 +182,7 @@ namespace AtmosphereAutopilot
             Common.rotationMatrix(rotation, rot_matrix);
             Matrix.TransposeUnsafe(rot_matrix, rot_matrix_t);
             optimized_inert_mult(rot_matrix, inertia_tensor, tmp_mat);
-            Matrix.MultiplyUnsafe(rot_matrix, tmp_mat, tmp_mat2);
-            Matrix.MultiplyUnsafe(tmp_mat2, rot_matrix_t, new_inert);
+            Matrix.MultiplyUnsafe(tmp_mat, rot_matrix_t, new_inert);
             return new Vector3((float)new_inert[0, 0], (float)new_inert[1, 1], (float)new_inert[2, 2]);
         }
 

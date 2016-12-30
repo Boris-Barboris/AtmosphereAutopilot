@@ -393,7 +393,7 @@ namespace AtmosphereAutopilot
         SpeedType type = SpeedType.MetersPerSecond;
 
         [VesselSerializable("setpoint_field")]
-        DelayedFieldFloat setpoint_field = new DelayedFieldFloat(100.0f, "G4");
+        internal DelayedFieldFloat setpoint_field = new DelayedFieldFloat(100.0f, "G4");
 
         /// <summary>
         /// Current speed setpoint, wich is maintained by controller
