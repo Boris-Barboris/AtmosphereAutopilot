@@ -88,6 +88,7 @@ namespace AtmosphereAutopilot
             if (cur_ves_modules.Count == 1)
                 create_context();
 
+            vessel.ActionGroups.SetGroup(KSPActionGroup.SAS, false);
             if (active_controller != null)
                 active_controller.Activate();
             vessel.OnAutopilotUpdate += new FlightInputCallback(ApplyControl);

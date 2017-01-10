@@ -142,7 +142,7 @@ namespace AtmosphereAutopilot
 
         [VesselSerializable("max_v_construction")]
         [AutoGuiAttr("Max v construction", true, "G6")]
-        public float max_v_construction = 0.5f;
+        public float max_v_construction = 0.7f;
 
         protected virtual float process_desired_v(float des_v, bool user_input) { return des_v; }
 
@@ -171,8 +171,6 @@ namespace AtmosphereAutopilot
             min_input_aoa = -max_input_aoa;
             max_g_aoa = max_input_aoa;
             min_g_aoa = -max_g_aoa;
-            if (axis == PITCH)
-                max_v_construction = 0.7f;
         }
 
         protected Matrix eq_A = new Matrix(2, 2);
