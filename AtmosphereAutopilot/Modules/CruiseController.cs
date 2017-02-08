@@ -459,7 +459,13 @@ namespace AtmosphereAutopilot
 
             GUILayout.Space(5.0f);
 
-            WaypointMode = GUILayout.Toggle(WaypointMode, "Waypoint", GUIStyles.toggleButtonStyle);
+            string waypoint_btn_str;
+            if (WaypointMode)
+                waypoint_btn_str = "WPT " + (dist_to_dest / 1000.0).ToString("#0.0") + " km";
+            else
+                waypoint_btn_str = "Waypoint";
+            WaypointMode = GUILayout.Toggle(WaypointMode, waypoint_btn_str,
+                GUIStyles.toggleButtonStyle);
             GUILayout.BeginHorizontal();
             desired_latitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
             desired_longitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));

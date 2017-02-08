@@ -84,6 +84,8 @@ Pitch_ang_vel_controller
 {
 	moder_cutoff_ias = 10
 	user_input_deriv_clamp = 5
+    precision_mode_factor = 0.33
+    watch_precision_mode = True
 	AutoTrim = False
 	window_x = 315
 	window_y = 254
@@ -92,6 +94,8 @@ Roll_ang_vel_controller
 {
 	wing_leveler = True
 	user_input_deriv_clamp = 10
+    watch_precision_mode = True
+    precision_mode_factor = 0.33
 	AutoTrim = False
 	window_x = 369
 	window_y = 283
@@ -100,6 +104,8 @@ Yaw_ang_vel_controller
 {
 	moder_cutoff_ias = 10
 	user_input_deriv_clamp = 5
+    watch_precision_mode = True
+    precision_mode_factor = 0.33
 	AutoTrim = False
 	window_x = 529
 	window_y = 282

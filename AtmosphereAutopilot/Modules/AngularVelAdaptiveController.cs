@@ -82,6 +82,14 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("Input deriv limit", true, "G6")]
         public float user_input_deriv_clamp = 5.0f;
 
+        [GlobalSerializable("watch_precision_mode")]
+        [AutoGuiAttr("watch precision mode", true)]
+        public bool watch_precision_mode = true;
+
+        [GlobalSerializable("precision_mode_factor")]
+        //[AutoGuiAttr("precision_mode_factor", true)]
+        public float precision_mode_factor = 0.33f;
+
         [AutoGuiAttr("prev_input", false, "G6")]
         protected float prev_input;
 
@@ -98,11 +106,11 @@ namespace AtmosphereAutopilot
             if (user_input != 0.0f || user_controlled)
             {
                 // user is interfering with control
-                float clamp = FlightInputHandler.fetch.precisionMode ?
-                    0.33f * user_input_deriv_clamp * TimeWarp.fixedDeltaTime :
+                float clamp = (watch_precision_mode && FlightInputHandler.fetch.precisionMode) ?
+                    precision_mode_factor * user_input_deriv_clamp * TimeWarp.fixedDeltaTime :
                     user_input_deriv_clamp * TimeWarp.fixedDeltaTime;
-                if (FlightInputHandler.fetch.precisionMode)
-                    user_input *= 0.33f;
+                if (watch_precision_mode && FlightInputHandler.fetch.precisionMode)
+                    user_input *= precision_mode_factor;
                 float delta_input = Common.Clampf(user_input - prev_input, clamp);
                 user_input = prev_input + delta_input;
                 prev_input = user_input;

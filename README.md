@@ -193,7 +193,7 @@ Short GUI description:
 ## Pitch and yaw angular velocity controllers
 Model-reference controllers, that perform pitch and yaw angular velocity control with respect to moderation and controllability restrictions. Input: [-1, 1] user input or desired angular velocity. Output: desired angular acceleration, passed to angular acceleration controller.
 
-When navball is in surface mode, controller is dealing with surface-oriented reference frame. Zero input will keep zero velocity relative to ground - useful on planes. In orbit mode inertial reference frame will be used - usefull for spacecrafts. Precision mode (CAPS LOCK) divides input by the factor of 3 to provide more precise control, or to aid with control on high physical warp regimes.
+When navball is in surface mode, controller is dealing with surface-oriented reference frame. Zero input will keep zero angular velocity relative to the ground - useful on planes. In orbit navball mode inertial reference frame will be used - usefull for spacecrafts. Precision mode (CAPS LOCK) multiplies input by the factor of 0.33 (_precision mode factor_ option in global_settings.txt) to provide more precise control, or to aid with control on high physical warp regimes. To ignore precision mode, unser _watch precision mode_ toggle in respected ang vel controllers.
 
 Short GUI description:
 * _Auto trim_ button - turn on of you want control trim to preserve after controller shutdown. Off by default.
