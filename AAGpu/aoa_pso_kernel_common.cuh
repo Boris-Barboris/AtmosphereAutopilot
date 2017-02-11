@@ -30,8 +30,6 @@ PREFIX void FUNCNAME(
 #endif // !AOAPSOKERNELGPU
     pitch_model *corpus,
     matrix<AOAPARS, 1> *particles,
-    matrix<AOAINPUTS, 2> input_norms,
-    matrix<AOAOUTPUTS, 2> output_norms,
     float *outputs,
     int model_index,
     float dt,
@@ -55,9 +53,7 @@ PREFIX void FUNCNAME(
     vel_c.moderate_aoa = true;
 
     // aoa_c
-    aoa_c.net.input_norm = input_norms;
-    aoa_c.net.output_norm = output_norms;
-    aoa_c.net.init(particles[pi]);
+    aoa_c.params = particles[pi];
 
     float result = 0.0f;
 
@@ -72,18 +68,21 @@ PREFIX void FUNCNAME(
     // experiment scheme:
     // we have aoa_divisions marks from min_aoa to max_aoa
     // we will perform experiments as transitions from current
-    // AoA mark to every other AoA mark larger than current.
+    // AoA mark to every other AoA mark.
     // Then we will perform special case experiments (zero AoA stability)
 
     int exper_count = 0;
-    for (int i = 0; i < aoa_divisions - 1; i++)
-        for (int j = i + 1; j < aoa_divisions; j++)
+    for (int i = 0; i < aoa_divisions; i++)
+        for (int j = 0; j < aoa_divisions; j++)
         {
+            if (i == j)
+                continue;
             float lres = 0.0f;
             float target_aoa = min_aoa + j * aoa_step;
             // local aircraft model
             model = corpus[model_index];
-            model.pitch_angle = min_aoa + i * aoa_step;
+            float start_aoa = min_aoa + i * aoa_step;
+            model.pitch_angle = start_aoa;
             // let's set initial control to equilibrium one
             model.preupdate(dt);
             model.csurf_state = aoa_ctrl::get_equlibr(&model, model.pitch_angle)(1, 0);
@@ -95,7 +94,7 @@ PREFIX void FUNCNAME(
                 model.simulation_step(dt, ctl);
                 float err = (model.aoa - target_aoa);
                 float diff = err * err;
-                if (model.aoa > target_aoa)
+                if ((model.aoa - target_aoa) * (start_aoa - target_aoa) < 0.0f)
                     diff *= weights.w;
                 lres += diff * dt * s;
             }

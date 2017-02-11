@@ -41,7 +41,7 @@ __device__ __host__ static float predict_aoa(pitch_model *mdl, float ctrl, float
     return mdl->aoa + pred_aoa * dt;
 }
 
-# define AOAPCITER 3
+# define AOAPCITER 2
 
 __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c, 
     float target, float target_deriv, float dt)
@@ -58,46 +58,82 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
     float des_aoa_equil = eq_x(0, 0);   // equlibrium angular velocity on target aoa
     float des_aoa_ctl = eq_x(1, 0);     // equilibrium control input
     float abs_err = fabsf(aoa_err);
-
-    matrix<AOAINPUTS, 1> nninputs;
-    nninputs(0, 0) = vel_c->kacc_quadr;
-    nninputs(1, 0) = fabs(des_aoa_ctl - copysignf(1.0f, -aoa_err));
-    nninputs(2, 0) = mdl->A(0, 2);
-    nninputs(3, 0) = abs_err;
-
-    auto nnoutput = net.eval(nninputs);
+    // replace ANN approximator with polynom
 
     float err_sign = copysignf(1.0f, aoa_err);
-    float output_shift = nnoutput(0, 0) * err_sign * powf(abs_err, 2.0f / 3.0f);
-    // handle discrete time overshoot
-    if ((target_aoa - cur_aoa - output_shift * dt) * aoa_err < 0.0f)
-        output_shift = 0.9f * aoa_err / dt;
+    float f1_abs_err = powf(abs_err, 2.0f / 3.0f);
+    float f3_ctl_err = fabs(des_aoa_ctl - copysignf(1.0f, -aoa_err));
+    float f4_vel_err = mdl->ang_vel - des_aoa_equil;
+    if (f4_vel_err * aoa_err < 0.0f)
+        f4_vel_err = 0.0f;
+    //float f3 = 1.0f + fabsf(params(2, 0));
+    float abs_output_shift = f1_abs_err * (params(0, 0) + params(1, 0) * abs_err +
+        params(2, 0) * f3_ctl_err + params(3, 0) * f4_vel_err);
+    float output_shift = err_sign * abs_output_shift;
 
-    //float output_shift = get_output(vel_c, cur_aoa, target, dt);    
-    //float des_aoa_equil = get_equlibr_vel(mdl, target, mdl->csurf_state);    
-    output_vel = output_shift + des_aoa_equil;
-    float shift_ang_vel = mdl->ang_vel - cur_aoa_equilibr;
-    predicted_aoa = cur_aoa + shift_ang_vel * dt;
-    //if (aoa_err * (target_aoa - predicted_aoa) < 0.0f)
-    //    predicted_aoa = target_aoa;
-    //predicted_output = get_output(vel_c, predicted_aoa, target_aoa, dt);
-    float pred_error = target_aoa - predicted_aoa;
-    float abs_pred_error = fabsf(pred_error);
-    float pred_err_sign = copysignf(1.0f, pred_error);
-    nninputs(3, 0) = abs_pred_error;
-    nnoutput = net.eval(nninputs);
-    predicted_output = nnoutput(0, 0) * pred_err_sign * 
-        powf(abs_pred_error, 2.0f / 3.0f);
-    if ((target_aoa - predicted_aoa - predicted_output * dt) < 0.0f)
-        predicted_output = 0.9f * pred_error / dt;
+    //float des_delta_aoa = aoa_err;
+    if (abs_output_shift * dt >= 0.9f * abs_err)
+    {
+        predicted_output = 0.0f;
+        output_acc = (predicted_output - output_shift) / dt;
+    }
+    else
+    {
 
-    float pred_deriv = (predicted_output - output_shift) / dt;
-    output_acc = pred_deriv;
+        //// handle discrete time overshoot
+        ////if ((aoa_err - f3 * output_shift * dt) * aoa_err < 0.0f)
+        ////    output_shift = 1.0f / f3 * aoa_err / dt;
 
-    // now let's get more accurate predictions of output_acc
-    //float cout = vel_c->eval(mdl, output_vel, output_acc, dt);
-    //vel_c->already_preupdated = true;
-    //predicted_aoa = predict_aoa(mdl, cout, dt);
+        ////float output_shift = get_output(vel_c, cur_aoa, target, dt);    
+        ////float des_aoa_equil = get_equlibr_vel(mdl, target, mdl->csurf_state);
+
+        float shift_ang_vel = mdl->ang_vel - cur_aoa_equilibr;
+        predicted_aoa = cur_aoa + shift_ang_vel * dt;
+        output_vel = output_shift + des_aoa_equil;
+
+        //for (int i = 0; i < AOAPCITER; i++)
+        //{
+        //    //if (aoa_err * (target_aoa - predicted_aoa) < 0.0f)
+        //    //    predicted_aoa = target_aoa;
+        //    //predicted_output = get_output(vel_c, predicted_aoa, target_aoa, dt);
+        float pred_error = target_aoa - predicted_aoa;
+        float abs_pred_error = fabsf(pred_error);
+        f1_abs_err = powf(abs_pred_error, 2.0f / 3.0f);
+        f3_ctl_err = fabs(des_aoa_ctl - copysignf(1.0f, -pred_error));
+        f4_vel_err = output_vel - des_aoa_equil;
+        if (f4_vel_err * pred_error < 0.0f)
+            f4_vel_err = 0.0f;
+        float pred_err_sign = copysignf(1.0f, pred_error);
+
+        float abs_pred_output = f1_abs_err * (params(0, 0) + params(1, 0) * abs_pred_error +
+            params(2, 0) * f3_ctl_err + params(3, 0) * f4_vel_err);
+        predicted_output = pred_err_sign * abs_pred_output;
+
+        /*if (abs_pred_output * dt >= 0.5f * abs_pred_error)
+            predicted_output = 0.5f * pred_error / dt;*/
+
+        //    //if ((pred_error - f3 * predicted_output * dt) * pred_error < 0.0f)
+        //    //    predicted_output = 1.0f / f3 * pred_error / dt;
+
+        float pred_deriv = (predicted_output - output_shift) / dt;
+        output_acc = pred_deriv;
+
+    }
+    //    // now let's get more accurate predictions of output_acc
+    //    float cout = vel_c->eval(mdl, output_vel, output_acc, dt);
+    //    vel_c->already_preupdated = true;
+    //    predicted_aoa = predict_aoa(mdl, cout, dt);
+    //    float pred_delta_aoa = predicted_aoa - cur_aoa;
+    //    // compare pred_delta_aoa to desired shift and change output_shift accordingly
+    //    if ((pred_delta_aoa * des_delta_aoa > 0.0f) && (fabs(pred_delta_aoa) > fabs(des_delta_aoa)))
+    //    {
+    //        // we're overshooting
+    //        output_shift *= 0.9f * des_delta_aoa / pred_delta_aoa;
+    //        output_vel = output_shift + des_aoa_equil;
+    //    }
+    //    else
+    //        break;
+    //}
     //
     ////predicted_output = get_output(vel_c, predicted_aoa, target_aoa, dt);
     //pred_error = target_aoa - predicted_aoa;
@@ -143,7 +179,7 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
         //output_acc = pred_deriv;
     //}
 
-    return vel_c->eval(mdl, output_vel, output_acc, dt);
+    return vel_c->eval(mdl, output_vel, 0.0f, dt);
 }
 
 __device__ __host__ void aoa_ctrl::preupdate(pitch_model *mdl)

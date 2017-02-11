@@ -53,9 +53,7 @@ typedef void aoa_eval_prototype(
     float start_aoa,
     bool keep_speed,
     float target_aoa,
-    const std::array<float, AOAPARS> &aoa_params,
-    const std::array<std::tuple<float, float>, AOAINPUTS> &input_norms,
-    const std::array<std::tuple<float, float>, AOAOUTPUTS> &output_norms,
+    const std::array<float, AOALINPARAMS> &aoa_params,
     std::vector<float> &out_angvel,
     std::vector<float> &out_aoa,
     std::vector<float> &out_acc,
@@ -92,19 +90,17 @@ AAGPU_EXPORTS_API std::vector<pitch_model_params> generate_corpus(
     float cl2_min,
     float cl2_max);
 
-typedef void (__stdcall *report_dlg)(int epoch, float value, std::array<float, AOAPARS> params);
+typedef void (__stdcall *report_dlg)(int epoch, float value, std::array<float, AOALINPARAMS> params);
 
 #define PARTICLEBLOCK 256
 
 AAGPU_EXPORTS_API bool start_aoa_pso(
     float dt,
     int step_count,
-    const std::vector<pitch_model_params> &corpus,
+    const pitch_model_params &model_params,
     bool aero_model,
     float start_vel,
     bool keep_speed,
-    const std::array<std::tuple<float, float>, AOAINPUTS> &input_norms,
-    const std::array<std::tuple<float, float>, AOAOUTPUTS> &output_norms,
     int prtcl_blocks,
     float w,
     float c1,

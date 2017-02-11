@@ -71,36 +71,7 @@ namespace AAGpuWrapper
         }
     }
 
-    void AoAEvalExperiment::randomize_params()
-    {
-        Random ^rng = gcnew Random();
-        for (int i = 0; i < AOAPARS; i++)
-        {
-            float val = (float)(rng->NextDouble() - 0.5);
-            AoA_params->Add(val);
-        }
-    }
 
-    void AoAEvalExperiment::init_normals()
-    {
-        InputLowerBounds = gcnew List<Single>();
-        InputUpperBounds = gcnew List<Single>();
-        OutputLowerBounds = gcnew List<Single>();
-        OutputUpperBounds = gcnew List<Single>();
-
-        InputLowerBounds->Add(0.0f);
-        InputLowerBounds->Add(0.0f);
-        InputLowerBounds->Add(-0.01f);
-        InputLowerBounds->Add(0.0f);
-
-        InputUpperBounds->Add(10.0f);
-        InputUpperBounds->Add(2.0f);
-        InputUpperBounds->Add(0.01f);
-        InputUpperBounds->Add(0.5f);
-
-        OutputLowerBounds->Add(-0.1f);
-        OutputUpperBounds->Add(10.0f);
-    }
 
     void AoAEvalExperiment::execute()
     {
@@ -115,12 +86,6 @@ namespace AAGpuWrapper
         std::array<float, AOAPARS> aoa_params;
         for (int i = 0; i < AOAPARS; i++)
             aoa_params[i] = AoA_params[i];
-        std::array<std::tuple<float, float>, AOAINPUTS> input_norms;
-        for (int i = 0; i < AOAINPUTS; i++)
-            input_norms[i] = std::make_tuple(InputLowerBounds[i], InputUpperBounds[i]);
-        std::array<std::tuple<float, float>, AOAOUTPUTS> output_norms;
-        for (int i = 0; i < AOAOUTPUTS; i++)
-            output_norms[i] = std::make_tuple(OutputLowerBounds[i], OutputUpperBounds[i]);
 
         bool aero_model = aerodynamics == AeroModel::FARAero ? true : false;
 
@@ -153,8 +118,6 @@ namespace AAGpuWrapper
             keepSpeed,
             control,
             aoa_params,
-            input_norms,
-            output_norms,
             out_angvel,
             out_aoa,
             out_acc,
@@ -185,26 +148,6 @@ namespace AAGpuWrapper
 
 
 
-    void AoAPsoOptimization::init_normals()
-    {
-        InputLowerBounds = gcnew List<Single>();
-        InputUpperBounds = gcnew List<Single>();
-        OutputLowerBounds = gcnew List<Single>();
-        OutputUpperBounds = gcnew List<Single>();
-
-        InputLowerBounds->Add(-1.0f);
-        InputLowerBounds->Add(-0.2f);
-        InputLowerBounds->Add(-0.03f);
-        InputLowerBounds->Add(-0.05f);
-
-        InputUpperBounds->Add(10.0f);
-        InputUpperBounds->Add(2.0f);
-        InputUpperBounds->Add(0.03f);
-        InputUpperBounds->Add(0.5f);
-
-        OutputLowerBounds->Add(-0.1f);
-        OutputUpperBounds->Add(10.0f);
-    }
 
     delegate void native_reporter(int epoch, float val, std::array<float, AOAPARS> bp);
 
@@ -253,28 +196,16 @@ namespace AAGpuWrapper
         std::array<float, 4> weights =
         { ExperimentWeights[0], ExperimentWeights[1], ExperimentWeights[2],
           ExperimentWeights[3]};
-        std::array<std::tuple<float, float>, AOAINPUTS> input_norms;
-        for (int i = 0; i < AOAINPUTS; i++)
-            input_norms[i] = std::make_tuple(InputLowerBounds[i], InputUpperBounds[i]);
-        std::array<std::tuple<float, float>, AOAOUTPUTS> output_norms;
-        for (int i = 0; i < AOAOUTPUTS; i++)
-            output_norms[i] = std::make_tuple(OutputLowerBounds[i], OutputUpperBounds[i]);
 
         bool aero_model = aerodynamics == AeroModel::FARAero ? true : false;
-
-        // create corpus
-        auto corpus = generate_corpus(base_model, moi_steps, moi_min, moi_max,
-            t_ratio_steps, ratio_min, ratio_max, cl2_steps, cl2_min, cl2_max);
 
         return start_aoa_pso(
             dt,
             points_count - 1,
-            corpus,
+            base_model,
             aero_model,
             startVel,
             keepSpeed,
-            input_norms,
-            output_norms,
             threadBlocks,
             w,
             c1,

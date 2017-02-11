@@ -2,15 +2,14 @@
 
 #include "aircraftmodel.cuh"
 #include "ang_vel_pitch.cuh"
-#include "ann.cuh"
+//#include "ann.cuh"
 #include "aoa_ctrl_constants.h"
 
 // Pitch AoA controller
 struct aoa_ctrl
 {
     // tunable parameters
-    //matrix<2, 1> params;
-    ann<AOAINPUTS, AOANEURONS, AOAOUTPUTS> net;
+    matrix<AOALINPARAMS, 1> params;
     
     // state
     float output_vel;
@@ -26,7 +25,7 @@ struct aoa_ctrl
     // Initializer
     inline __device__ __host__ void zero_init()
     {
-        //params = matrix<2, 1>();
+        params = matrix<AOALINPARAMS, 1>();
         output_vel = 0.0;
         output_acc = 0.0;
         predicted_aoa = 0.0;

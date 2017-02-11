@@ -160,11 +160,10 @@ namespace AAGpuClient
                 () =>
                 {
                     if (best_aoa_params != null)
+                    {
                         aoaEvalExperiment.AoA_params = new List<float>(best_aoa_params);
-                    aoaEvalExperiment.InputLowerBounds = new List<float>(aoaPSOContext.InputLowerBounds);
-                    aoaEvalExperiment.InputUpperBounds = new List<float>(aoaPSOContext.InputUpperBounds);
-                    aoaEvalExperiment.OutputLowerBounds = new List<float>(aoaPSOContext.OutputLowerBounds);
-                    aoaEvalExperiment.OutputUpperBounds = new List<float>(aoaPSOContext.OutputUpperBounds);
+                        MessageBox.Show("Exporting " + string.Join(", ", aoaEvalExperiment.AoA_params));
+                    }
                 };
             exportAoAParamsCommand._canExecute = () => { return true; };
         }

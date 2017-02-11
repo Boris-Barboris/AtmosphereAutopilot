@@ -136,10 +136,9 @@ namespace AAGpuWrapper
         {
             startAoA = 0.0f;
             AoA_params = gcnew List<Single>();
-            randomize_params();
-            init_normals();
-            //AoA_params->Add(1.0f);
-            //AoA_params->Add(3.0f);
+            AoA_params->Add(1.0f);
+            AoA_params->Add(3.0f);
+            AoA_params->Add(0.0f);
         }
 
         [CategoryAttribute("Global parameters")]
@@ -150,30 +149,10 @@ namespace AAGpuWrapper
         [DisplayNameAttribute("AoA params")]
         property List<Single> ^AoA_params;
 
-        [CategoryAttribute("Controllers")]
-        [DisplayNameAttribute("NN input lower")]
-        property List<Single> ^InputLowerBounds;
-
-        [CategoryAttribute("Controllers")]
-        [DisplayNameAttribute("NN input upper")]
-        property List<Single> ^InputUpperBounds;
-
-        [CategoryAttribute("Controllers")]
-        [DisplayNameAttribute("NN output lower")]
-        property List<Single> ^OutputLowerBounds;
-
-        [CategoryAttribute("Controllers")]
-        [DisplayNameAttribute("NN output upper")]
-        property List<Single> ^OutputUpperBounds;
-
         [Browsable(false)]
         property List<Single> ^outputVelHistory;
 
         virtual void execute() override;
-
-    protected:
-        void randomize_params();
-        void init_normals();
     };
 
 
@@ -225,7 +204,6 @@ namespace AAGpuWrapper
             keepSpeed = true;
             computeHost = ExecutionHost::GPU;
             threadBlocks = 1;
-            init_normals();
             w = 0.7f;
             c1 = 0.6f;
             c2 = 0.6f;
@@ -315,22 +293,6 @@ namespace AAGpuWrapper
         [DisplayNameAttribute("Keep speed")]
         property Boolean keepSpeed;
 
-        [CategoryAttribute("Controllers")]
-        [DisplayNameAttribute("NN input lower")]
-        property List<Single> ^InputLowerBounds;
-
-        [CategoryAttribute("Controllers")]
-        [DisplayNameAttribute("NN input upper")]
-        property List<Single> ^InputUpperBounds;
-
-        [CategoryAttribute("Controllers")]
-        [DisplayNameAttribute("NN output lower")]
-        property List<Single> ^OutputLowerBounds;
-
-        [CategoryAttribute("Controllers")]
-        [DisplayNameAttribute("NN output upper")]
-        property List<Single> ^OutputUpperBounds;
-
         [CategoryAttribute("Optimization")]
         [DisplayNameAttribute("Thread blocks")]
         property int threadBlocks;
@@ -367,7 +329,6 @@ namespace AAGpuWrapper
         virtual void stop();
 
     protected:
-        void init_normals();
         static void init_delegate();
 
     public:

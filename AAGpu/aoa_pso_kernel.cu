@@ -20,12 +20,10 @@ float4 make_float4(const std::array<float, 4> &arr)
 void do_start_aoa_pso(
     float dt,
     int step_count,
-    const std::vector<pitch_model_params> &corpus,
+    const pitch_model_params &corpus,
     bool a_model,
     float start_vel,
     bool keep_speed,
-    std::array<std::tuple<float, float>, AOAINPUTS> input_norms,
-    std::array<std::tuple<float, float>, AOAOUTPUTS> output_norms,
     int prtcl_blocks,
     float w,
     float c1,
@@ -35,34 +33,20 @@ void do_start_aoa_pso(
     std::array<float, 4> exper_weights,
     report_dlg repotrer)
 {
-    // initialize norms
-    matrix<AOAINPUTS, 2> in_norms;
-    for (int i = 0; i < AOAINPUTS; i++)
-    {
-        in_norms(i, 0) = std::get<0>(input_norms[i]);
-        in_norms(i, 1) = std::get<1>(input_norms[i]);
-    }
-    matrix<AOAOUTPUTS, 2> out_norms;
-    for (int i = 0; i < AOAOUTPUTS; i++)
-    {
-        out_norms(i, 0) = std::get<0>(output_norms[i]);
-        out_norms(i, 1) = std::get<1>(output_norms[i]);
-    }
-
     // initialize models
     pitch_model *models;
-    int model_count = corpus.size();
+    int model_count = 1;
     massalloc_cpu(model_count, &models);
     for (int i = 0; i < model_count; i++)
     {
         models[i].zero_init();
         models[i].velocity.x = start_vel;
-        models[i].moi = corpus[i].moi;
-        models[i].rot_m = make_float3(corpus[i].rot_model);
-        models[i].lift_m = make_float3(corpus[i].lift_model);
-        models[i].drag_m = make_float2(corpus[i].drag_model);
-        models[i].sas_torque = corpus[i].sas;
-        models[i].mass = corpus[i].mass;
+        models[i].moi = corpus.moi;
+        models[i].rot_m = make_float3(corpus.rot_model);
+        models[i].lift_m = make_float3(corpus.lift_model);
+        models[i].drag_m = make_float2(corpus.drag_model);
+        models[i].sas_torque = corpus.sas;
+        models[i].mass = corpus.mass;
     }
 
     // initialize particles
@@ -120,34 +104,24 @@ void do_start_aoa_pso(
     float global_best = std::numeric_limits<float>::infinity();
     while (!stop_flag)
     {
-        // group blocks of 16 models in sequential kernel calls
         int m_index = 0;
         while (m_index < model_count)
         {
-            for (int sub = 0; sub < 16; sub++)
-            {
-                if (stop_flag)
-                    goto cleanup_label;
-                if (m_index >= model_count)
-                    break;
-                // lauch kernel
-                aoa_pso_kernel<<<prtcl_blocks, PARTICLEBLOCK>>> (
-                    d_corpus,
-                    d_particles,
-                    in_norms,
-                    out_norms,
-                    d_outputs,
-                    m_index,
-                    dt,
-                    step_count,
-                    aoa_divisions,
-                    make_float4(exper_weights));
-                cuwrap(cudaGetLastError);
-                cuwrap(cudaDeviceSynchronize);
-                m_index++;
-            }
-            // wait for batch execution completed
-            //cuwrap(cudaDeviceSynchronize);
+            if (stop_flag)
+                goto cleanup_label;
+            // lauch kernel
+            aoa_pso_kernel<<<prtcl_blocks, PARTICLEBLOCK>>> (
+                d_corpus,
+                d_particles,
+                d_outputs,
+                m_index,
+                dt,
+                step_count,
+                aoa_divisions,
+                make_float4(exper_weights));
+            cuwrap(cudaGetLastError);
+            cuwrap(cudaDeviceSynchronize);
+            m_index++;
         }
 
         aoa_pso_outer_kernel<<<prtcl_blocks, PARTICLEBLOCK>>>(
@@ -234,12 +208,10 @@ void do_start_aoa_pso(
 bool start_aoa_pso(
     float dt,
     int step_count,
-    const std::vector<pitch_model_params> &corpus,
+    const pitch_model_params &model_params,
     bool a_model,
     float start_vel,
     bool keep_speed,
-    const std::array<std::tuple<float, float>, AOAINPUTS> &input_norms,
-    const std::array<std::tuple<float, float>, AOAOUTPUTS> &output_norms,
     int prtcl_blocks,
     float w,
     float c1,
@@ -254,7 +226,7 @@ bool start_aoa_pso(
     delete aoa_pso_thread;
     stop_flag = false;
     aoa_pso_thread = new std::thread(do_start_aoa_pso,
-        dt, step_count, corpus, a_model, start_vel, keep_speed, input_norms, output_norms,
+        dt, step_count, model_params, a_model, start_vel, keep_speed, 
         prtcl_blocks, w, c1, c2, initial_span, aoa_divisions, exper_weights, repotrer);
     return true;
 }
