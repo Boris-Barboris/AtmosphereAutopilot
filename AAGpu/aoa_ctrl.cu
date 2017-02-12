@@ -119,86 +119,89 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
     float abs_output_shift = f1_abs_err * kp;
     float output_shift = err_sign * abs_output_shift;
 
-    if (output_shift * dt >= abs_err)
-        output_shift = err_sign * abs_err / dt;
-
-    //float des_delta_aoa = aoa_err;
-    if (abs_err <= 1e-3f)
-    {
-        // possibly switch to dynamics inverse here
-
-        // yeah, i'll go with dynamics inversion here
-        output_vel = -0.5f;
-        float output_inverse = aoa_dyn_inverse(mdl, cur_aoa + 0.95f * aoa_err, dt);
-        return output_inverse;
-
-        output_shift = 0.5f * err_sign * abs_err;
-        //predicted_output = des_aoa_equil;
-        //output_acc = (predicted_output - output_shift) / dt;
-    }
-    //else
-    //{
-
-    //// handle discrete time overshoot
-    ////if ((aoa_err - f3 * output_shift * dt) * aoa_err < 0.0f)
-    ////    output_shift = 1.0f / f3 * aoa_err / dt;
-
-    ////float output_shift = get_output(vel_c, cur_aoa, target, dt);    
-    ////float des_aoa_equil = get_equlibr_vel(mdl, target, mdl->csurf_state);
+    if (output_shift * dt >= 0.9f * abs_err)
+        output_shift = 0.9f * err_sign * abs_err / dt;
 
     output_vel = output_shift + des_aoa_equil;
-    //float shift_ang_vel = mdl->ang_vel - cur_aoa_equilibr;
-    float shift_ang_vel = output_vel - cur_aoa_equilibr;
-    predicted_aoa = cur_aoa + shift_ang_vel * dt;
+    //float des_delta_aoa = aoa_err;
+    if (abs_err <= 2e-3f)
+    {
+        output_shift *= abs_err / 2e-3f;
+        output_vel = output_shift + des_aoa_equil;
+    //    // possibly switch to dynamics inverse here
 
-    //for (int i = 0; i < AOAPCITER; i++)
-    //{
-    //    //if (aoa_err * (target_aoa - predicted_aoa) < 0.0f)
-    //    //    predicted_aoa = target_aoa;
-    //    //predicted_output = get_output(vel_c, predicted_aoa, target_aoa, dt);
-    float pred_error = target_aoa - predicted_aoa;
-    float abs_pred_error = fabsf(pred_error);
-    f1_abs_err = powf(abs_pred_error, 2.0f / 3.0f);
-    f3_ctl_err = fabs(des_aoa_ctl - copysignf(1.0f, -pred_error));
-    f4_vel_err = output_vel - des_aoa_equil;
-    if (f4_vel_err * pred_error < 0.0f)
-        f4_vel_err = 0.0f;
+    //    // yeah, i'll go with dynamics inversion here
+    //    output_vel = -0.5f;
+    //    float output_inverse = aoa_dyn_inverse(mdl, cur_aoa + 0.95f * aoa_err, dt);
+    //    return output_inverse;
+
+    //    output_shift = 0.5f * err_sign * abs_err;
+    //    //predicted_output = des_aoa_equil;
+        output_acc = (des_aoa_equil - output_vel) / dt;
+    }
     else
-        f4_vel_err = fabsf(f4_vel_err);
-    float pred_err_sign = copysignf(1.0f, pred_error);
+    {
 
-    kp = fabs(params(0, 0) + params(1, 0) * abs_pred_error +
-        params(2, 0) * f3_ctl_err);// + params(3, 0) * f4_vel_err);
-    float abs_pred_output = f1_abs_err * kp;
-    predicted_output = pred_err_sign * abs_pred_output;
-    if (abs_pred_output * dt > abs_pred_error)
-        predicted_output = pred_err_sign * abs_pred_error / dt;
+        //// handle discrete time overshoot
+        ////if ((aoa_err - f3 * output_shift * dt) * aoa_err < 0.0f)
+        ////    output_shift = 1.0f / f3 * aoa_err / dt;
 
-    /*if (abs_pred_output * dt >= 0.5f * abs_pred_error)
-        predicted_output = 0.5f * pred_error / dt;*/
+        ////float output_shift = get_output(vel_c, cur_aoa, target, dt);    
+        ////float des_aoa_equil = get_equlibr_vel(mdl, target, mdl->csurf_state);
 
-    //    //if ((pred_error - f3 * predicted_output * dt) * pred_error < 0.0f)
-    //    //    predicted_output = 1.0f / f3 * pred_error / dt;
+    
+        //float shift_ang_vel = mdl->ang_vel - cur_aoa_equilibr;
+        float shift_ang_vel = output_vel - cur_aoa_equilibr;
+        predicted_aoa = cur_aoa + (mdl->ang_vel - cur_aoa_equilibr) * dt;
 
-    float pred_deriv = (predicted_output - output_shift) / dt;
-    output_acc = pred_deriv;
+        //for (int i = 0; i < AOAPCITER; i++)
+        //{
+        //    //if (aoa_err * (target_aoa - predicted_aoa) < 0.0f)
+        //    //    predicted_aoa = target_aoa;
+        //    //predicted_output = get_output(vel_c, predicted_aoa, target_aoa, dt);
+        float pred_error = target_aoa - predicted_aoa;
+        float abs_pred_error = fabsf(pred_error);
+        f1_abs_err = powf(abs_pred_error, 2.0f / 3.0f);
+        f3_ctl_err = fabs(des_aoa_ctl - copysignf(1.0f, -pred_error));
+        f4_vel_err = output_vel - des_aoa_equil;
+        if (f4_vel_err * pred_error < 0.0f)
+            f4_vel_err = 0.0f;
+        else
+            f4_vel_err = fabsf(f4_vel_err);
+        float pred_err_sign = copysignf(1.0f, pred_error);
 
-    //}
-    //    // now let's get more accurate predictions of output_acc
-    //    float cout = vel_c->eval(mdl, output_vel, output_acc, dt);
-    //    vel_c->already_preupdated = true;
-    //    predicted_aoa = predict_aoa(mdl, cout, dt);
-    //    float pred_delta_aoa = predicted_aoa - cur_aoa;
-    //    // compare pred_delta_aoa to desired shift and change output_shift accordingly
-    //    if ((pred_delta_aoa * des_delta_aoa > 0.0f) && (fabs(pred_delta_aoa) > fabs(des_delta_aoa)))
-    //    {
-    //        // we're overshooting
-    //        output_shift *= 0.9f * des_delta_aoa / pred_delta_aoa;
-    //        output_vel = output_shift + des_aoa_equil;
-    //    }
-    //    else
-    //        break;
-    //}
+        kp = fabs(params(0, 0) + params(1, 0) * abs_pred_error +
+            params(2, 0) * f3_ctl_err);// + params(3, 0) * f4_vel_err);
+        float abs_pred_output = f1_abs_err * kp;
+        predicted_output = pred_err_sign * abs_pred_output;
+        if (abs_pred_output * dt > 0.5f * abs_pred_error)
+            predicted_output = 0.5f * pred_err_sign * abs_pred_error / dt;
+
+        /*if (abs_pred_output * dt >= 0.5f * abs_pred_error)
+            predicted_output = 0.5f * pred_error / dt;*/
+
+        //    //if ((pred_error - f3 * predicted_output * dt) * pred_error < 0.0f)
+        //    //    predicted_output = 1.0f / f3 * pred_error / dt;
+
+        float pred_deriv = (predicted_output - output_shift) / dt;
+        output_acc = pred_deriv;
+
+        //}
+        //    // now let's get more accurate predictions of output_acc
+        //    float cout = vel_c->eval(mdl, output_vel, output_acc, dt);
+        //    vel_c->already_preupdated = true;
+        //    predicted_aoa = predict_aoa(mdl, cout, dt);
+        //    float pred_delta_aoa = predicted_aoa - cur_aoa;
+        //    // compare pred_delta_aoa to desired shift and change output_shift accordingly
+        //    if ((pred_delta_aoa * des_delta_aoa > 0.0f) && (fabs(pred_delta_aoa) > fabs(des_delta_aoa)))
+        //    {
+        //        // we're overshooting
+        //        output_shift *= 0.9f * des_delta_aoa / pred_delta_aoa;
+        //        output_vel = output_shift + des_aoa_equil;
+        //    }
+        //    else
+        //        break;
+    }
     //
     ////predicted_output = get_output(vel_c, predicted_aoa, target_aoa, dt);
     //pred_error = target_aoa - predicted_aoa;

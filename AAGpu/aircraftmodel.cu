@@ -63,7 +63,7 @@ __device__ __host__ void pitch_model::preupdate(float dt)
     }
     C(0, 0) = -(pitch_gravity_acc + Cl0) / velocity_magn;
     C(1, 0) = K0;
-    C(0, 0) = 0.5f * dt * C(1, 0);      // account for second order
+    C(0, 0) += 0.5f * dt * C(1, 0);      // account for second order
 
     A_undelayed.copyFrom(A);
     //A_undelayed(1, 2) = 0.0f;
