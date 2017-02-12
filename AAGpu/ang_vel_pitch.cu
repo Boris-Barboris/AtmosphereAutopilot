@@ -109,7 +109,7 @@ __device__ __host__ static void vel_update_pars(ang_vel_p &obj, pitch_model *mdl
         kacc = obj.quadr_Kp * (mdl->A(1, 2) * (0.5f / far_timeConstant) + mdl->B(1, 0)); // FAR
     else
         kacc = obj.quadr_Kp * (mdl->A(1, 2) * mdl->C(2, 0) + mdl->B(1, 0)); // stock
-    obj.kacc_quadr = fabsf(kacc);
+    obj.kacc_quadr = 0.9f * fabsf(kacc);
 }
 
 __device__ __host__ static float get_desired_acc(ang_vel_p &obj, pitch_model *mdl, float des_v,
@@ -126,6 +126,7 @@ __device__ __host__ static float get_desired_acc(ang_vel_p &obj, pitch_model *md
     float a_s = k;
     float c_s = k * dt * dt + d * d / 4.0f / k - v_error;
     float D_s = b_s * b_s - 4.0f * a_s * c_s;
+    D_s = fmaxf(D_s, 0.0f);
     float s1 = (-b_s + sqrtf(D_s)) / 2.0f / a_s;
     float s2 = (-b_s - sqrtf(D_s)) / 2.0f / a_s;
     float s = fmaxf(s1, s2);
