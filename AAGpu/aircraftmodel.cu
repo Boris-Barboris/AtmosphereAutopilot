@@ -38,29 +38,39 @@ __device__ __host__ void pitch_model::preupdate(float dt)
 
     A(0, 0) = - Cl1 / velocity_magn;
     A(0, 1) = 1.0f;
-    A(0, 2) = - Cl2 / velocity_magn;
     A(1, 0) = K1;
+    A(0, 0) += 0.5f * dt * A(1, 0);     // account for second order
     if (!aero_model)
     {
         A(1, 2) = K2;
+        A(0, 2) = -Cl2 / velocity_magn;
+        A(0, 2) += 0.5f * dt * A(1, 2);  // account for second order
         B(1, 0) = sas_torque / moi;
+        B(0, 0) = 0.5f * dt * B(1, 0);   // account for second order
         C(2, 0) = stock_csurf_spd;
     }
     else
     {
         // FAR
-        A(1, 2) = K2 * (1.0f - dt / far_timeConstant);
-        B(1, 0) = sas_torque / moi + K2 * dt / far_timeConstant;
         A(2, 2) = -1.0f / far_timeConstant;
         B(2, 0) = 1.0f / far_timeConstant;
+        A(0, 2) = -Cl2 / velocity_magn * (1.0f - dt / far_timeConstant);
+        A(1, 2) = K2 * (1.0f - dt / far_timeConstant);
+        A(0, 2) += 0.5f * dt * A(1, 2);  // account for second order
+        B(1, 0) = sas_torque / moi + K2 * dt / far_timeConstant;
+        B(0, 0) = 0.5f * dt * B(1, 0);  // account for second order        
+        B(0, 0) += -Cl2 / velocity_magn * dt / far_timeConstant;
     }
     C(0, 0) = -(pitch_gravity_acc + Cl0) / velocity_magn;
     C(1, 0) = K0;
+    C(0, 0) = 0.5f * dt * C(1, 0);      // account for second order
 
     A_undelayed.copyFrom(A);
-    A_undelayed(1, 2) = 0.0f;
+    //A_undelayed(1, 2) = 0.0f;
     B_undelayed.copyFrom(B);
     B_undelayed(1, 0) = sas_torque / moi + K2;
+    B_undelayed(0, 0) = 0.5f * dt * B_undelayed(1, 0) -
+        Cl2 / velocity_magn;
 
     // update aoa
     float2 fwd_vector = make_float2(cosf(pitch_angle), sinf(pitch_angle));
@@ -117,6 +127,7 @@ __device__ __host__ void pitch_model::simulation_step(float dt, float input)
 
     csurf_state = csurf_state_new;
 
+    float old_angvel = ang_vel;
     ang_vel += dt * ang_acc;
-    pitch_angle += ang_vel * dt;    
+    pitch_angle += 0.5f * (old_angvel + ang_vel) * dt;
 }

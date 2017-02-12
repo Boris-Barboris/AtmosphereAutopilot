@@ -45,4 +45,5 @@ private:
     __device__ __host__ void update_pars(pitch_model *mdl);
     /*__device__ __host__ float get_output(ang_vel_p *vel_c, float cur_aoa, 
         float des_aoa, float dt);*/
+    __device__ __host__ float aoa_dyn_inverse(pitch_model *mdl, float des_aoa, float dt);
 };

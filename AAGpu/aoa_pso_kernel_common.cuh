@@ -95,8 +95,12 @@ PREFIX void FUNCNAME(
                 float err = (model.aoa - target_aoa);
                 float diff = err * err;
                 if ((model.aoa - target_aoa) * (start_aoa - target_aoa) < 0.0f)
+                {
                     diff *= weights.w;
-                lres += diff * dt * s;
+                    lres += diff * dt * step_count;
+                }
+                else
+                    lres += diff * dt * s;
             }
             exper_count++;
             result += lres;

@@ -19,8 +19,7 @@ namespace AAGpuWrapper
     public enum class ExecutionHost
     {
         CPU,
-        GPU,
-        Mixed
+        GPU
     };
 
     public ref class RawModelExperiment
@@ -40,14 +39,14 @@ namespace AAGpuWrapper
             pitchLiftModel = gcnew List<Single>();
             pitchLiftModel->Add(0.0f);
             pitchLiftModel->Add(60.0f);
-            pitchLiftModel->Add(-0.25f);
+            pitchLiftModel->Add(5.0f);
             dragModel = gcnew List<Single>();
             dragModel->Add(1.0f);
             dragModel->Add(20.0f);
             aerodynamics = AeroModel::StockAero;
             startVel = 200.0f;
-            keepSpeed = false;
-            control = 0.0f;
+            keepSpeed = true;
+            control = 0.1f;
             computeHost = ExecutionHost::CPU;
         }
 
@@ -139,6 +138,9 @@ namespace AAGpuWrapper
             AoA_params->Add(1.0f);
             AoA_params->Add(3.0f);
             AoA_params->Add(0.0f);
+            AoA_params->Add(0.0f);
+            AoA_params->Add(0.0f);
+            AoA_params->Add(0.0f);
         }
 
         [CategoryAttribute("Global parameters")]
@@ -166,7 +168,7 @@ namespace AAGpuWrapper
         AoAPsoOptimization(OptReport ^reporter)
         {
             dt = 0.05f;
-            experiment_length = 5.0f;
+            experiment_length = 3.0f;
 
             MOI = 165.0f;
             mass = 14.0f;
@@ -178,7 +180,7 @@ namespace AAGpuWrapper
             pitchLiftModel = gcnew List<Single>();
             pitchLiftModel->Add(0.0f);
             pitchLiftModel->Add(60.0f);
-            pitchLiftModel->Add(-0.25f);
+            pitchLiftModel->Add(5.0f);
             dragModel = gcnew List<Single>();
             dragModel->Add(1.0f);
             dragModel->Add(20.0f);
@@ -204,10 +206,10 @@ namespace AAGpuWrapper
             keepSpeed = true;
             computeHost = ExecutionHost::GPU;
             threadBlocks = 1;
-            w = 0.7f;
+            w = 0.8f;
             c1 = 0.6f;
             c2 = 0.6f;
-            span = 1.0f;
+            span = 4.0f;
             aoa_divisions = 7;
             report_dlg_stat = reporter;
             init_delegate();
