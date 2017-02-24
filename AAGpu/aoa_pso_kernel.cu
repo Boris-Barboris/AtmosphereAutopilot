@@ -31,7 +31,8 @@ void do_start_aoa_pso(
     float initial_span,
     int aoa_divisions,
     std::array<float, 4> exper_weights,
-    report_dlg repotrer)
+    report_dlg repotrer,
+    int iter_limit)
 {
     // initialize models
     pitch_model *models;
@@ -102,7 +103,7 @@ void do_start_aoa_pso(
     int epoch = 0;
     int cycles_in_vain = 0;
     float global_best = std::numeric_limits<float>::infinity();
-    while (!stop_flag)
+    while (!stop_flag && epoch < iter_limit)
     {
         int m_index = 0;
         while (m_index < model_count)
@@ -219,7 +220,8 @@ bool start_aoa_pso(
     float initial_span,
     int aoa_divisions,
     const std::array<float, 4> &exper_weights,
-    report_dlg repotrer)
+    report_dlg repotrer,
+    int iter_limit)
 {
     if (aoa_pso_thread->joinable())
         return false;
@@ -227,7 +229,8 @@ bool start_aoa_pso(
     stop_flag = false;
     aoa_pso_thread = new std::thread(do_start_aoa_pso,
         dt, step_count, model_params, a_model, start_vel, keep_speed, 
-        prtcl_blocks, w, c1, c2, initial_span, aoa_divisions, exper_weights, repotrer);
+        prtcl_blocks, w, c1, c2, initial_span, aoa_divisions, exper_weights, repotrer,
+        iter_limit);
     return true;
 }
 

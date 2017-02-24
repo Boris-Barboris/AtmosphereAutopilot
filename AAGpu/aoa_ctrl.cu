@@ -114,13 +114,13 @@ __device__ __host__ float aoa_ctrl::eval(pitch_model *mdl, ang_vel_p *vel_c,
     else
         f4_vel_err = fabsf(f4_vel_err);
     //float f3 = 1.0f + fabsf(params(2, 0));
-    float kp = fabs(params(0, 0) + params(1, 0) * abs_err +
-        params(2, 0) * f3_ctl_err);//params(3, 0) * f4_vel_err);
+    float kp = params(0, 0) + params(1, 0) * abs_err +
+        params(2, 0) * f3_ctl_err;//params(3, 0) * f4_vel_err);
     float abs_output_shift = f1_abs_err * kp;
     float output_shift = err_sign * abs_output_shift;
 
-    if (output_shift * dt >= 0.9f * abs_err)
-        output_shift = 0.9f * err_sign * abs_err / dt;
+    if (output_shift * dt >= 0.95f * abs_err)
+        output_shift = 0.95f * err_sign * abs_err / dt;
 
     output_vel = output_shift + des_aoa_equil;
     //float des_delta_aoa = aoa_err;

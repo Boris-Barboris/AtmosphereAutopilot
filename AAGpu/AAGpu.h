@@ -108,6 +108,7 @@ AAGPU_EXPORTS_API bool start_aoa_pso(
     float initial_span,
     int aoa_divisions,
     const std::array<float, 4> &exper_weights,
-    report_dlg repotrer);
+    report_dlg repotrer,
+    int iter_limit = 10000);
 
 AAGPU_EXPORTS_API void stop_aoa_pso();
