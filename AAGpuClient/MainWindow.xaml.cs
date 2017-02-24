@@ -115,7 +115,7 @@ namespace AAGpuClient
 
 
     // Main application class
-    public class AppLogic
+    public partial class AppLogic
     {
         public AppLogic(MainWindow form)
         {
