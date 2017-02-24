@@ -89,6 +89,11 @@
     <Compile Include="Math\AffineScaling.cs" />
     <Compile Include="Math\GradientLP.cs" />
     <Compile Include="Math\LinApprox.cs" />
+    <Compile Include="Math\MultidimGrid4.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>MultidimGrid4.tt</DependentUpon>
+    </Compile>
     <Compile Include="Math\OnlineLinTrainer.cs" />
     <Compile Include="Math\OnlineLinTrainerWindow.cs" />
     <None Include="Math\SimpleAnn.cs" />
@@ -123,6 +128,11 @@
     <Compile Include="SyncModuleControlSurface.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Math\MultidimGrid4.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>MultidimGrid4.cs</LastGenOutput>
+    </Content>
+    <None Include="Math\MultidimGrid.ttinclude" />
     <None Include="GUI\DelayedField\DelayedField.ttinclude" />
     <Content Include="GUI\DelayedField\DelayedFieldFloat.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

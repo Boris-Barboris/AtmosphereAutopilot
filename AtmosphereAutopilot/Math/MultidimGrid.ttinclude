@@ -1,0 +1,96 @@
+﻿/*
+Atmosphere Autopilot, plugin for Kerbal Space Program.
+Copyright (C) 2015-2017, Baranin Alexander aka Boris-Barboris.
+ 
+Atmosphere Autopilot is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+Atmosphere Autopilot is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>. 
+*/
+
+//
+// THIS FILE IS AUTO-GENERATED
+//
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace AtmosphereAutopilot
+{
+    
+    public class MultidimGrid<#= DimCount #><T>
+    {
+        public readonly T[] data;
+        float[][] axis;
+        int[] sizes = new int[<#= DimCount #>];
+
+        public MultidimGrid<#= DimCount #>(float[][] axis, T[] data)
+        {
+            this.axis = axis;
+            this.data = data;
+            sizes[<#= DimCount - 1#>] = 1;
+            for (int i = <#= DimCount - 2 #>; i >= 0; i--)
+                sizes[i] = axis[i + 1].Length * sizes[i + 1];
+        }
+
+        public T get(<# for (int i = 0; i < DimCount - 1; i++) { #>int index<#= i #>, <# } #>int index<#= DimCount - 1 #>)
+        {
+            int lin_index = 0;
+            <# for (int i = 0; i < DimCount - 1; i++) { #>
+lin_index += sizes[<#= i #>] * index<#= i #>;
+            <# } #>lin_index += index<#= DimCount - 1 #>;
+            return data[lin_index];
+        }
+
+        public T getClosest(<# for (int i = 0; i < DimCount - 1; i++) { #>float coord<#= i #>, <# } #>float coord<#= DimCount - 1 #>, int[] lookup_cache)
+        {
+            <# for (int i = 0; i < DimCount; i++) 
+            { #>
+lookup_cache[<#= i #>] = search_axis(axis[<#= i #>], coord<#= i #>, lookup_cache[<#= i #>]);
+            <# } #>return this.get(<# for (int i = 0; i < DimCount - 1; i++) { #>lookup_cache[<#= i #>], <# } #>lookup_cache[<#= DimCount - 1 #>]);
+        }
+
+        int search_axis(float[] axis, float point, int start)
+        {
+            if (start == 0 && point <= axis[start])
+                return start;
+            if (start == (axis.Length - 1) && point >= axis[start])
+                return start;
+            if (point == axis[start])
+                return start;
+            float min_diff = Math.Abs(axis[start] - point);
+            int dir = 0;
+            while (true)
+            {
+                int new_dir = 0;
+                if (point > axis[start])
+                    new_dir = 1;
+                else
+                    new_dir = -1;
+                if (new_dir * dir < 0)
+                    return start;
+                float new_diff = Math.Abs(axis[start + new_dir] - point);
+                if (min_diff > new_diff)
+                {
+                    start += new_dir;
+                    if (start == 0 || start == (axis.Length - 1))
+                        return start;
+                    min_diff = new_diff;
+                    dir = new_dir;
+                }
+                else
+                    return start;
+            }
+        }
+    }
+
+}
+
