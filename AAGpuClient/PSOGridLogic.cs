@@ -44,6 +44,17 @@ namespace AAGpuClient
                 Cm2_min = 0.2f;
                 Cm2_max = 10.0f;
                 Cm2_count = 10;
+
+                // array inits
+                phys_space_points[0] = Cl1_points;
+                phys_space_points[1] = Cl2_points;
+                phys_space_points[2] = Cm1_points;
+                phys_space_points[3] = Cm2_points;
+
+                matrix_space_points[0] = A00_points;
+                matrix_space_points[1] = B0_points;
+                matrix_space_points[2] = A10_points;
+                matrix_space_points[3] = B1_points;
             }
 
             List<float> cur_point_best;
@@ -110,18 +121,30 @@ namespace AAGpuClient
             public List<float> Cm1_points = new List<float>();
             public List<float> Cm2_points = new List<float>();
 
+            public List<float> A00_points = new List<float>();
+            public List<float> B0_points = new List<float>();
+            public List<float> A10_points = new List<float>();
+            public List<float> B1_points = new List<float>();
+
+            List<float>[] phys_space_points = new List<float>[4];
+            List<float>[] matrix_space_points = new List<float>[4];
+
             public void build_points()
             {
-                Cl1_points.Clear();
+                for (int i = 0; i < phys_space_points.Length; i++)
+                {
+                    phys_space_points[i].Clear();
+                    matrix_space_points[i].Clear();
+                }
                 for (int i = 0; i < Cl1_count; i++)
+                {
                     Cl1_points.Add(Cl1_min + i * (Cl1_max - Cl1_min) / (float)(Cl1_count - 1));
-                Cl2_points.Clear();
+
+                }
                 for (int i = 0; i < Cl1_count; i++)
                     Cl2_points.Add(Cl2_min + i * (Cl2_max - Cl2_min) / (float)(Cl2_count - 1));
-                Cm1_points.Clear();
                 for (int i = 0; i < Cm1_count; i++)
                     Cm1_points.Add(Cm1_min + i * (Cm1_max - Cm1_min) / (float)(Cm1_count - 1));
-                Cm2_points.Clear();
                 for (int i = 0; i < Cm2_count; i++)
                     Cm2_points.Add(Cm2_min + i * (Cm2_max - Cm2_min) / (float)(Cm2_count - 1));
             }
