@@ -136,33 +136,25 @@ namespace AtmosphereAutopilot
                     break;
 
                 case CruiseMode.Waypoint:
-                    if (!waypoint_entered)
+                    // set new axis
+                    Vector3d world_target_pos = vessel.mainBody.GetWorldSurfacePosition(desired_latitude, desired_longitude, vessel.altitude);
+                    dist_to_dest = Vector3d.Distance(world_target_pos, vessel.ReferenceTransform.position);
+                    if (dist_to_dest > 10000.0)
                     {
-                        // goto simple level flight
+                        double radius = vessel.mainBody.Radius;
+                        dist_to_dest = Math.Acos(1 - (dist_to_dest * dist_to_dest) / (2 * radius * radius)) * radius;
+                    }
+                    if (dist_to_dest < 200.0)
+                    {
+                        // we're too close to target, let's switch to level flight
+                        LevelFlightMode = true;
+                        picking_waypoint = false;
+                        MessageManager.post_quick_message("Waypoint reached");
                         goto case CruiseMode.LevelFlight;
                     }
-                    else
-                    {
-                        // set new axis
-                        Vector3d world_target_pos = vessel.mainBody.GetWorldSurfacePosition(desired_latitude, desired_longitude, vessel.altitude);
-                        dist_to_dest = Vector3d.Distance(world_target_pos, vessel.ReferenceTransform.position);
-                        if (dist_to_dest > 10000.0)
-                        {
-                            double radius = vessel.mainBody.Radius;
-                            dist_to_dest = Math.Acos(1 - (dist_to_dest * dist_to_dest) / (2 * radius * radius)) * radius;
-                        }
-                        if (dist_to_dest < 200.0)
-                        {
-                            // we're too close to target, let's switch to level flight
-                            LevelFlightMode = true;
-                            picking_waypoint = false;
-                            MessageManager.post_quick_message("Waypoint reached");
-                            goto case CruiseMode.LevelFlight;
-                        }
-                        // set new axis according to waypoint
-                        circle_axis = Vector3d.Cross(world_target_pos - vessel.mainBody.position, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
-                        goto case CruiseMode.LevelFlight;
-                    }
+                    // set new axis according to waypoint
+                    circle_axis = Vector3d.Cross(world_target_pos - vessel.mainBody.position, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
+                    goto case CruiseMode.LevelFlight;
             }
 
             if (use_keys)
@@ -209,7 +201,6 @@ namespace AtmosphereAutopilot
         public HeightMode height_mode = HeightMode.Altitude;
 
         public Waypoint current_waypt = new Waypoint();
-        internal bool waypoint_entered = false;
 
         // axis to rotate around in level flight mode
         public Vector3d circle_axis = Vector3d.zero;
@@ -390,14 +381,15 @@ namespace AtmosphereAutopilot
             {
                 if (value)
                 {
-                    if ((current_mode != CruiseMode.Waypoint) && !waypoint_entered)
+                    if (current_mode != CruiseMode.Waypoint)
                     {
                         if (this.Active)
                         {
                             circle_axis = Vector3d.Cross(vessel.srf_velocity, vessel.GetWorldPos3D() - vessel.mainBody.position).normalized;
-                            start_picking_waypoint();
+							Vector3d world_target_pos = vessel.mainBody.GetWorldSurfacePosition(desired_latitude, desired_longitude, vessel.altitude);
+	                        dist_to_dest = Vector3d.Distance(world_target_pos, vessel.ReferenceTransform.position);
                         }
-                        else
+						else
                             MessageManager.post_quick_message("Can't pick waypoint when the Cruise Flight controller is disabled");
                     }
                     current_mode = CruiseMode.Waypoint;
@@ -552,7 +544,7 @@ namespace AtmosphereAutopilot
             {
                 if (!HighLogic.LoadedSceneIsFlight || !MapView.MapIsEnabled)
                 {
-                    // we leaved map without picking
+                    // we left map without picking
                     MessageManager.post_quick_message("Cancelled");
                     picking_waypoint = false;
                     AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
@@ -572,13 +564,13 @@ namespace AtmosphereAutopilot
                         current_waypt.longitude = vessel.mainBody.GetLongitude(surfacePoint);
                         current_waypt.latitude = vessel.mainBody.GetLatitude(surfacePoint);
                         picking_waypoint = false;
-                        waypoint_entered = true;
 
                         desired_latitude.Value = (float)current_waypt.latitude;
                         desired_longitude.Value = (float)current_waypt.longitude;
 
                         dist_to_dest = Vector3d.Distance(surfacePoint, vessel.ReferenceTransform.position);
                         AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
+	                    WaypointMode = true;
                         MessageManager.post_quick_message("Picked");
                     }
                     else
@@ -763,8 +755,8 @@ namespace AtmosphereAutopilot
             }
 
             desired_course.OnUpdate();
-            desired_latitude.OnUpdate();
-            desired_longitude.OnUpdate();
+	        desired_latitude.OnUpdate();
+	        desired_longitude.OnUpdate();
             desired_altitude.OnUpdate();
             desired_vertspeed.OnUpdate();
         }

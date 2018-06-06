@@ -250,7 +250,7 @@ namespace AtmosphereAutopilot {
 
     public bool waypointIsSet {
       get {
-        return ccAP != null && ccAP.current_mode == CruiseController.CruiseMode.Waypoint && ccAP.waypoint_entered;
+        return ccAP != null && ccAP.current_mode == CruiseController.CruiseMode.Waypoint;
       }
     }
 
