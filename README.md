@@ -8,6 +8,7 @@ Original author: Boris-Barboris.
 Contributors:
 * radistmorse (aka Morse on KSP forums) - Neo-GUI design and implementation.
 * CraigCottingham - Cruise flight and speed control GUI refactoring, coordinate input to waypoint mode.
+* Hotel26 - usability fixes for old-GUI Cruise flight waypoint control.
 
 License: GNU GPL version 3
 
@@ -151,7 +152,7 @@ Hotkeys:
 Middle-level model-reference controller, follows a setpoint of surface velocity and acceleration vectors. Input: velocity vector and acceleration vector. Output: AoA, sideslip and roll angular velocity.
 
 Short GUI description:
-* _strength_ - default value 0.95. Measure of agressiveness of acceleration output of MD. Precise control multiplies output acceleration by the factor of 0.4.
+* _strength_ - default value 0.95. Measure of agressiveness of acceleration output of MD. Precise control multiplies output acceleration by the factor of 0.4. Serialized per vessel design.
 * _roll stop k_ - default value 1.0, used to prevent overshooting, magic number.
 * _angular error_ - error in radians between desired velocity vector and current one.
 * _max angular v_ - estimate on current maneuver maximum angular velocity.
@@ -179,7 +180,7 @@ Short GUI description:
 * _desired sideslip_ - output to "Sideslip controller".
 
 ## Pitch, roll and yaw angular acceleration controllers
-Low level model-reference angular acceleration controllers. Input: desired angular acceleration. Output: pitch\roll\yaw control state.
+Low level dynamics inversion angular acceleration controllers. Input: desired angular acceleration (and yaw output for roll controller). Output: pitch\roll\yaw control state.
 
 Short GUI description:
 * _Csurf output_ - current expected virtual control surface position, wich is usually lagged from control signal.

@@ -231,6 +231,7 @@ namespace AtmosphereAutopilot
             PitchAngularVelocityController pvc;
             YawAngularVelocityController yvc;
             RollAngularVelocityController rvc;
+            DirectorController dc;
 
             public bool mapped = false;
 
@@ -239,6 +240,7 @@ namespace AtmosphereAutopilot
                 pvc = owner.cur_ves_modules[typeof(PitchAngularVelocityController)] as PitchAngularVelocityController;
                 yvc = owner.cur_ves_modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
                 rvc = owner.cur_ves_modules[typeof(RollAngularVelocityController)] as RollAngularVelocityController;
+                dc = owner.cur_ves_modules[typeof(DirectorController)] as DirectorController;
                 mapped = true;
             }
 
@@ -276,6 +278,10 @@ namespace AtmosphereAutopilot
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("yaw rate limit", GUIStyles.labelStyleLeft);
                 float.TryParse(GUILayout.TextField(yvc.max_v_construction.ToString("G4"), GUIStyles.textBoxStyle), out yvc.max_v_construction);
+                GUILayout.EndHorizontal();
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("director strength", GUIStyles.labelStyleLeft);
+                double.TryParse(GUILayout.TextField(dc.strength.ToString("G4"), GUIStyles.textBoxStyle), out dc.strength);
                 GUILayout.EndHorizontal();
 
                 // wing leveler
@@ -359,6 +365,7 @@ namespace AtmosphereAutopilot
                 public bool moderate_aoa, moderate_sideslip, moderate_g, moderate_g_hor, wing_leveler;
                 public float max_aoa, max_sideslip, max_g, max_g_hor;
                 public float ptich_v, roll_v, yaw_v;
+                public double dir_strength = 0.95;
 
                 public void Apply(CraftSettingsWindow wnd)
                 {
@@ -376,6 +383,7 @@ namespace AtmosphereAutopilot
 
                     wnd.rvc.wing_leveler = wing_leveler;
                     wnd.rvc.max_v_construction = roll_v;
+                    wnd.dc.strength = dir_strength;
                 }
 
                 public SettingsProfile(CraftSettingsWindow wnd)
@@ -396,6 +404,7 @@ namespace AtmosphereAutopilot
 
                     wing_leveler = wnd.rvc.wing_leveler;
                     roll_v = wnd.rvc.max_v_construction;
+                    dir_strength = wnd.dc.strength;
                 }
 
                 public SettingsProfile() { }
@@ -415,6 +424,7 @@ namespace AtmosphereAutopilot
                     profileNode.AddValue("ptich_v", ptich_v);
                     profileNode.AddValue("roll_v", roll_v);
                     profileNode.AddValue("yaw_v", yaw_v);
+                    profileNode.AddValue("dir_strength", dir_strength);
                     node.AddNode(profileNode);
                 }
 
@@ -434,6 +444,7 @@ namespace AtmosphereAutopilot
                     float.TryParse(node.GetValue("ptich_v"), out prof.ptich_v);
                     float.TryParse(node.GetValue("roll_v"), out prof.roll_v);
                     float.TryParse(node.GetValue("yaw_v"), out prof.yaw_v);
+                    double.TryParse(node.GetValue("dir_strength"), out prof.dir_strength);
                     return prof;
                 }
             }
