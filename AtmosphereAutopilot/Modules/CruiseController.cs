@@ -215,10 +215,10 @@ namespace AtmosphereAutopilot
         public DelayedFieldFloat desired_course = new DelayedFieldFloat(90.0f, "G4");
 
         [VesselSerializable("desired_latitude_field")]
-        public DelayedFieldFloat desired_latitude = new DelayedFieldFloat(-0.0486178f, "#0.0000");  // latitude of KSC runway, west end (default position for launched vessels)
+        public DelayedFieldFloat desired_latitude = new DelayedFieldFloat(-0.0486178f, "#0.0000", DelayedFieldFloat.CoordFormat.NS);  // latitude of KSC runway, west end (default position for launched vessels)
 
         [VesselSerializable("desired_longitude_field")]
-        public DelayedFieldFloat desired_longitude = new DelayedFieldFloat(-74.72444f, "#0.0000");  // longitude of KSC runway, west end (default position for launched vessels)
+        public DelayedFieldFloat desired_longitude = new DelayedFieldFloat(-74.72444f, "#0.0000", DelayedFieldFloat.CoordFormat.EW);  // longitude of KSC runway, west end (default position for launched vessels)
 
         [VesselSerializable("vertical_control")]
         public bool vertical_control = false;
@@ -421,7 +421,25 @@ namespace AtmosphereAutopilot
             }
         }
 
-        void start_picking_waypoint()
+		void select_target()
+		{
+			var target = vessel.targetObject?.GetVessel();
+			if (target == null || target.mainBody != vessel.mainBody)
+				MessageManager.post_quick_message("No target to select");
+			else {
+				if (!target.Landed) MessageManager.post_quick_message($"target {target.name} is not landed");
+				current_waypt.longitude = target.longitude;
+				current_waypt.latitude = target.latitude;
+				Debug.Log($"[AtmosphereAutopilot] target lat {current_waypt.latitude} lon {current_waypt.longitude}");
+				desired_latitude.Value = (float)current_waypt.latitude;
+				desired_longitude.Value = (float)current_waypt.longitude;
+				AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
+				WaypointMode = true;
+				MessageManager.post_quick_message($"Waypoint now {target.vesselName}");
+			}
+		}
+
+		void start_picking_waypoint()
         {
             MapView.EnterMapView();
             MessageManager.post_quick_message("Pick waypoint");
@@ -468,7 +486,14 @@ namespace AtmosphereAutopilot
                 else
                     MessageManager.post_quick_message("Can't pick waypoint when the Cruise Flight controller is disabled");
             }
-            GUILayout.EndHorizontal();
+			if (GUILayout.Button("Tgt", GUIStyles.toggleButtonStyle))
+			{
+				if (this.Active)
+					select_target();
+				else
+					MessageManager.post_quick_message("Can't select target when the Cruise Flight controller is disabled");
+			}
+			GUILayout.EndHorizontal();
 
             GUILayout.Space(10.0f);
 
@@ -734,7 +759,6 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("hotkey_vertspeed_snap")]
         public static float hotkey_vertspeed_snap = 0.5f;
 
-
         protected override void OnGUICustomAlways()
         {
             if (need_to_show_course)
@@ -755,7 +779,11 @@ namespace AtmosphereAutopilot
             }
 
             desired_course.OnUpdate();
+			// why didn't the desired_latitude constructor initialize this properly?  unknown
+			// possibly the combination of VS2017 and .NET 3.3?
+			desired_latitude.coord_format = DelayedFieldFloat.CoordFormat.NS;
 	        desired_latitude.OnUpdate();
+			desired_longitude.coord_format = DelayedFieldFloat.CoordFormat.EW;
 	        desired_longitude.OnUpdate();
             desired_altitude.OnUpdate();
             desired_vertspeed.OnUpdate();
