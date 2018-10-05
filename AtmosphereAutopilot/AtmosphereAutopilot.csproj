@@ -150,8 +150,8 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy $(SolutionDir)\bin\Release\AtmosphereAutopilot.dll E:\user\kmk\kmk\env\KSP\1.3.1.1891\GameData\AtmosphereAutopilot
-copy $(SolutionDir)\bin\Release\AtmosphereAutopilot.UI.dll E:\user\kmk\kmk\env\KSP\1.3.1.1891\GameData\AtmosphereAutopilot</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>
