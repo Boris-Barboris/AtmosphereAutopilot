@@ -427,7 +427,7 @@ namespace AtmosphereAutopilot
 			if (target == null || target.mainBody != vessel.mainBody)
 				MessageManager.post_quick_message("No target to select");
 			else {
-				if (!target.Landed) MessageManager.post_quick_message($"target {target.name} is not landed");
+				if (!target.Landed) MessageManager.post_quick_message($"target {target.vesselName} is not landed");
 				current_waypt.longitude = target.longitude;
 				current_waypt.latitude = target.latitude;
 				Debug.Log($"[AtmosphereAutopilot] target lat {current_waypt.latitude} lon {current_waypt.longitude}");
