@@ -20,11 +20,23 @@ namespace AtmosphereAutopilot
             List<LoadingSystem> list = LoadingScreen.Instance.loaders;
             if (list != null)
             {
-                GameObject go = new GameObject("GimbalRearranger");
-                Rearranger ra = go.AddComponent<Rearranger>();
-                CSurfaceReplacer re = go.AddComponent<CSurfaceReplacer>();
-                list.Insert(list.Count - 1, ra);
-                list.Insert(list.Count - 1, re);
+                int partLoaderIdx = 0;
+                while (partLoaderIdx < list.Count)
+                {
+                    if (list[partLoaderIdx].GetType() == typeof(PartLoader))
+                    {
+                        Debug.Log("[AtmosphereAutopilot]: PartLoader loader found, injecting mod loaders before it");
+                        GameObject go = new GameObject("GimbalRearranger");
+                        Rearranger ra = go.AddComponent<Rearranger>();
+                        CSurfaceReplacer re = go.AddComponent<CSurfaceReplacer>();
+                        list.Insert(partLoaderIdx, ra);
+                        list.Insert(partLoaderIdx, re);
+                        break;
+                    }
+                    partLoaderIdx++;
+                }
+                if (partLoaderIdx == list.Count)
+                    Debug.LogError("[AtmosphereAutopilot]: PartLoader loader not found, unable to rearrange gimbals");
             }
 
             DontDestroyOnLoad(this);
@@ -50,16 +62,19 @@ namespace AtmosphereAutopilot
                     if ((gimbal_node = part.nodes.GetNode("MODULE", "name", "ModuleGimbal")) != null)
                     {
                         if (move_node_first(gimbal_node, part))
-                            handle_ModuleSurfaceFX(part);
-                        Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains ModuleGimbal, moving it");
-                    }
-                    else
-                        if ((gimbal_node = part.nodes.GetNode("MODULE", "name", "KM_Gimbal_3")) != null)
                         {
-                            if (move_node_first(gimbal_node, part))
-                                handle_ModuleSurfaceFX(part);
+                            handle_ModuleSurfaceFX(part);
+                            Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains ModuleGimbal, moving it");
+                        }
+                    }
+                    else if ((gimbal_node = part.nodes.GetNode("MODULE", "name", "KM_Gimbal_3")) != null)
+                    {
+                        if (move_node_first(gimbal_node, part))
+                        {
+                            handle_ModuleSurfaceFX(part);
                             Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains KM_Gimbal_3, moving it");
                         }
+                    }
                 }
                 ready = true;
             }
@@ -120,7 +135,7 @@ namespace AtmosphereAutopilot
                     if ((csurf_node = part.nodes.GetNode("MODULE", "name", "ModuleControlSurface")) != null)
                     {
                         Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains ModuleControlSurface, replacing it");
-                        csurf_node.SetValue("name", "SyncModuleControlSurface", false);                        
+                        csurf_node.SetValue("name", "SyncModuleControlSurface", false);
                     }
                 }
                 ready = true;

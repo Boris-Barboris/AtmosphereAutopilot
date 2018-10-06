@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.12
+VisualStudioVersion = 15.0.27703.2047
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtmosphereAutopilot", "AtmosphereAutopilot.csproj", "{D8C77EB2-8B40-4ECB-9DA2-29682020C89B}"
 EndProject
@@ -47,7 +47,7 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {F3F0B9E9-EAFE-48EC-AA0F-E0EFBE7B13CC}
+		SolutionGuid = {3A78DC1B-1D13-4690-869D-33E3075530C3}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		Policies = $0
