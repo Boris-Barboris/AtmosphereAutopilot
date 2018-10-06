@@ -74,6 +74,7 @@ namespace AtmosphereAutopilot
             yaw_c.moderate_aoa = sideslip_moderation_saved;
         }
 
+        [VesselSerializable("strength")]
         [AutoGuiAttr("strength", true, "G4")]
         public double strength = 0.95;
 
