@@ -439,7 +439,24 @@ namespace AtmosphereAutopilot
 			}
 		}
 
-		void start_picking_waypoint()
+		void select_waypoint()
+		{
+			NavWaypoint navPoint = NavWaypoint.fetch;
+			if (navPoint == null || !navPoint.IsActive || navPoint.Body != this.vessel.mainBody) {
+				MessageManager.post_quick_message("No waypoint available");
+			} else {
+				current_waypt.longitude = navPoint.Longitude;
+				current_waypt.latitude = navPoint.Latitude;
+				Debug.Log($"[AtmosphereAutopilot] waypoint lat {current_waypt.latitude} lon {current_waypt.longitude}");
+				desired_latitude.Value = (float)current_waypt.latitude;
+				desired_longitude.Value = (float)current_waypt.longitude;
+				AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
+				WaypointMode = true;
+				MessageManager.post_quick_message("Waypoint selected");
+			}
+		}
+
+			void start_picking_waypoint()
         {
             MapView.EnterMapView();
             MessageManager.post_quick_message("Pick waypoint");
@@ -476,9 +493,9 @@ namespace AtmosphereAutopilot
                 waypoint_btn_str = "Waypoint";
             WaypointMode = GUILayout.Toggle(WaypointMode, waypoint_btn_str,
                 GUIStyles.toggleButtonStyle);
-            GUILayout.BeginHorizontal();
-            desired_latitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
-            desired_longitude.DisplayLayout(GUIStyles.textBoxStyle, GUILayout.Width(60.0f));
+
+			GUILayout.BeginHorizontal();
+			GUILayout.Label("map:", GUIStyles.labelStyleRight);
             if (GUILayout.Button("Pick", GUIStyles.toggleButtonStyle) && !picking_waypoint)
             {
                 if (this.Active)
@@ -486,6 +503,7 @@ namespace AtmosphereAutopilot
                 else
                     MessageManager.post_quick_message("Can't pick waypoint when the Cruise Flight controller is disabled");
             }
+			GUILayout.Label("from:", GUIStyles.labelStyleRight);
 			if (GUILayout.Button("Tgt", GUIStyles.toggleButtonStyle))
 			{
 				if (this.Active)
@@ -493,9 +511,21 @@ namespace AtmosphereAutopilot
 				else
 					MessageManager.post_quick_message("Can't select target when the Cruise Flight controller is disabled");
 			}
+			if (GUILayout.Button("Wpt", GUIStyles.toggleButtonStyle))
+			{
+				if (this.Active)
+					select_waypoint();
+				else
+					MessageManager.post_quick_message("Can't select waypoint when the Cruise Flight controller is disabled");
+			}
 			GUILayout.EndHorizontal();
 
-            GUILayout.Space(10.0f);
+	        GUILayout.BeginHorizontal();
+	        desired_latitude.DisplayLayout(GUIStyles.textBoxStyle);//, GUILayout.Width(60.0f));
+	        desired_longitude.DisplayLayout(GUIStyles.textBoxStyle);//, GUILayout.Width(60.0f));
+	        GUILayout.EndHorizontal();
+
+			GUILayout.Space(10.0f);
 
             // speed
 
