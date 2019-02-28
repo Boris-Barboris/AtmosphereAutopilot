@@ -149,6 +149,14 @@
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+  </PropertyGroup>
   <!-- COPY doesn't work on OS X or Linux; needs to be cross-platform
   <PropertyGroup>
     <PostBuildEvent>COPY "$(SolutionDir)..\README.md" "$(TargetDir)README.txt" /Y</PostBuildEvent>

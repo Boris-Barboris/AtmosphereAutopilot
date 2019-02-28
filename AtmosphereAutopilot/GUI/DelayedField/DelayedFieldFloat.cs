@@ -58,18 +58,30 @@ namespace AtmosphereAutopilot
         /// </summary>
         public string format_str;
 
+	    /// <summary>
+	    /// lat/lon may be entered in deg min secHemi format
+	    /// e.g. 74 39 39W
+	    /// Only permits entry via OnUpdate; not via the setter
+	    /// </summary>
+	    public enum CoordFormat { Decimal, NS, EW };
+		public CoordFormat coord_format;
+
         /// <summary>
         /// 
         /// </summary>
         /// <param name="init_value">Initial value</param>
         /// <param name="format"></param>
-        public DelayedFieldFloat(float init_value, string format)
+        public DelayedFieldFloat(
+			float init_value,
+			string format,
+			CoordFormat coord_fmt = CoordFormat.Decimal)
         {
             val = init_value;
             time = 0.0f;
             changed = false;
             input_str = val.ToString(format);
             format_str = format;
+	        coord_format = coord_fmt;
         }
 
         public static implicit operator float(DelayedFieldFloat f)
@@ -103,6 +115,11 @@ namespace AtmosphereAutopilot
             input_str = new_str;
         }
 
+		public CoordFormat check_coord_format()
+		{
+			return coord_format;
+		}
+
 		public void OnUpdate()
         {
             if (changed)
@@ -111,6 +128,49 @@ namespace AtmosphereAutopilot
             {
                 time = 0.0f;
                 changed = false;
+				if (coord_format != CoordFormat.Decimal) {
+					// attempt to decode dms format indicated by NO leading
+					// magnitude sign and by a trailing N, S, E or W
+					var trimmed = input_str.Trim();
+					var len = trimmed.Length;
+					if (len > 0 && trimmed[0] != '+' && trimmed[0] != '-')
+					{
+						var last = trimmed[len - 1];
+						int sign = 0;
+						if (coord_format == CoordFormat.NS)
+						{
+							if (last == 'S' || last == 's') sign = -1;
+							else if (last == 'N' || last == 'n') sign = 1;
+						}
+						else
+						{
+							if (last == 'W' || last == 'w') sign = -1;
+							else if (last == 'E' || last == 'e') sign = 1;
+						}
+						trimmed = trimmed.Substring(0, len - 1);
+						var dms = trimmed.Split(' ');
+						if (sign != 0)
+						{
+							int num;
+							int.TryParse(dms[0], out num);
+							val = sign * num;
+							if (dms.Length > 1)
+							{
+								int.TryParse(dms[1], out num);
+								val += sign * num / 60.0f;
+								if (dms.Length > 2)
+								{
+									int.TryParse(dms[1], out num);
+									val += sign * num / 3600.0f;
+								}
+							}
+							input_str = val.ToString(format_str);	// feedback
+							Debug.Log($"[AtmosphereAutopilot] coords {val:F4}");
+							return;
+						}
+						if (dms.Length > 1) return;	// wait for NS/EW
+					}
+				}
                 float.TryParse(input_str, out val);
 			}
         }
