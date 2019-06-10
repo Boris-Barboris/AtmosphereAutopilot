@@ -164,7 +164,7 @@ namespace AtmosphereAutopilot
         void OnPostAutopilot(FlightCtrlState state)     // update control input
         {
             update_control(state);
-            if (!vessel.LandedOrSplashed)
+            if (!vessel.LandedOrSplashed())
                 sequential_dt = true;
             postupdate_dynamics();
             postupdate_engine_balancing(state);
@@ -191,7 +191,7 @@ namespace AtmosphereAutopilot
 
             if (sequential_dt)
             {
-                if (angular_acc_buf[0].Size > 0 && !vessel.LandedOrSplashed)
+                if (angular_acc_buf[0].Size > 0 && !vessel.LandedOrSplashed())
                 {
                     update_model_acc();
                     update_training_inputs();
