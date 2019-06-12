@@ -57,7 +57,7 @@ namespace AtmosphereAutopilot
 
         public override void ApplyControl(FlightCtrlState cntrl)
         {
-            if (vessel.LandedOrSplashed)
+            if (vessel.LandedOrSplashed())
                 return;
 
             //

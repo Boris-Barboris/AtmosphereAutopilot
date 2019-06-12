@@ -186,7 +186,7 @@ namespace AtmosphereAutopilot
             // apply breaks if needed
             if (use_breaks)
             {
-                if (vessel.LandedOrSplashed)
+                if (vessel.LandedOrSplashed())
                 {
                     // we're on ground
                     if (current_v > desired_v)

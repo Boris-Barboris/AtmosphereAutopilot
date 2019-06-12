@@ -286,7 +286,7 @@ namespace AtmosphereAutopilot
         void update_training_inputs()
         {
             int dt = (int)Math.Max(1, Math.Round(Time.fixedDeltaTime * 100.0f));
-            if (!vessel.LandedOrSplashed && dyn_pressure >= 60.0)
+            if (!vessel.LandedOrSplashed() && dyn_pressure >= 60.0)
             {
                 pitch_trainer.UpdateState(dt);
                 pitch_trainer.min_output_value = (float)(0.5 * MOI[PITCH] / dyn_pressure * 1e2);

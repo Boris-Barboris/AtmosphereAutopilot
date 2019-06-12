@@ -201,7 +201,21 @@ namespace AtmosphereAutopilot
         }
     }
 
+    public static class VesselExtensions
+    {
+	public static bool Landed(this Vessel vessel)
+	{
+	    var situation = ScienceUtil.GetExperimentSituation(vessel);
+	    return situation == ExperimentSituations.SrfLanded;
+	}
 
+	public static bool LandedOrSplashed(this Vessel vessel)
+	{
+	    var situation = ScienceUtil.GetExperimentSituation(vessel);
+	    return situation == ExperimentSituations.SrfLanded || situation == ExperimentSituations.SrfSplashed;
+	}
+    }
+    
     public static class QuaternionExtensions
     {
         public static Quaternion Normalize(this Quaternion q)
