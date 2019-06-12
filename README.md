@@ -6,9 +6,10 @@ Plugin for Kerbal Space Program.
 Original author: Boris-Barboris.
 
 Contributors:
-* radistmorse (aka Morse on KSP forums) - Neo-GUI design and implementation.
+* radistmorse (aka Morse on KSP forum) - Neo-GUI design and implementation.
 * CraigCottingham - Cruise flight and speed control GUI refactoring, coordinate input to waypoint mode.
 * Hotel26 - usability fixes for old-GUI Cruise flight waypoint control.
+* Boop from KSP forum - vessel.LandedOrSplashed bug squasher.
 
 License: GNU GPL version 3
 
