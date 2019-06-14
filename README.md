@@ -13,6 +13,15 @@ Contributors:
 
 License: GNU GPL version 3
 
+# For developers
+
+## How to build:
+You need to build two dlls: AtmosphereAutopilot.UI.dll and AtmosphereAutopilot.dll. Both can be built from MS Visual studio on Windows using AtmosphereAutopilot.sln.   
+On Linux you need to run build.sh from root directory, wich requires the following packages:
+* monodevelop (look for msbuild binary availability)
+* zip
+Results will be in AtmosphereAutopilot/bin/Release folder.
+
 # General description
 Atmosphere autopilot is a modular atmospheric flight control system library. It's meant to be a foundation for multiple high-level programs - "Autopilots", wich will aid KSP player in one way or another, implying atmospheric flight. Autopilots are mutually exclusive - only one or none at all may be active at the active vessel at one given moment. They are provided by the library with means of automatic reflection-based serialization\deserialization and ugly, but lazy and customizable GUI interaction.
 
