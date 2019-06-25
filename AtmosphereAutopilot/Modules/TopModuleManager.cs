@@ -1,7 +1,7 @@
 ﻿/*
 Atmosphere Autopilot, plugin for Kerbal Space Program.
 Copyright (C) 2015-2016, Baranin Alexander aka Boris-Barboris.
- 
+
 Atmosphere Autopilot is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -11,7 +11,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
-along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>. 
+along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System;
@@ -444,7 +444,8 @@ namespace AtmosphereAutopilot
                     float.TryParse(node.GetValue("ptich_v"), out prof.ptich_v);
                     float.TryParse(node.GetValue("roll_v"), out prof.roll_v);
                     float.TryParse(node.GetValue("yaw_v"), out prof.yaw_v);
-                    double.TryParse(node.GetValue("dir_strength"), out prof.dir_strength);
+                    if (!double.TryParse(node.GetValue("dir_strength"), out prof.dir_strength))
+                        prof.dir_strength = 0.95;
                     return prof;
                 }
             }

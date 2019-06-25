@@ -51,6 +51,7 @@ settings_wnd
 			ptich_v = 0.7
 			roll_v = 3
 			yaw_v = 0.5
+			dir_strength = 0.95
 		}
 	}
 }
