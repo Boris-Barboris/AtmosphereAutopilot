@@ -13,6 +13,10 @@ Contributors:
 
 License: GNU GPL version 3
 
+# Dependencies
+
+ModuleManager.
+
 # For developers
 
 ## How to build:
@@ -27,7 +31,7 @@ Atmosphere autopilot is a modular atmospheric flight control system library. It'
 
 Autopilots are modular entities. They can use basic, provided by main library components (like controllers and models), or they can define their own components and share them with other Autopilots. Those components will be called "Autopilot modules", or simply - "Modules". Every sealed child of AutopilotModule wich is not a StateController is treated by the library like a Module. Sealed StateController children are treated as Autopilots.
 
-Stock and FAR aerodynamics are supported. Plugin is dependent on ModuleManager by sarbian, and is shipped with Mini-AVC plugin by cybutek.
+Stock and FAR aerodynamics are supported.
 
 # GUI concept
 AA icon is placed in Application Launcher toolbar during flight. It's contents will visualize a list of all Autopilots and Modules, created for active vessel. For every vessel "Autopilot Module Manager" will be created regardless. Turning on a "MASTER SWITCH" on it's window will create required context of Autopilots and Modules for this vessel. Under the master switch all Autopilots will be listed, for the user to choose one of them as an active one. Hotkey for Master switch is letter P, autoPilot. Can be changed in Global_settings.cfg file, Autopilot_module_manager section.

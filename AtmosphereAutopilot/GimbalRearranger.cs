@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace AtmosphereAutopilot
@@ -128,14 +129,19 @@ namespace AtmosphereAutopilot
             public override void StartLoad()
             {
                 // replace ModuleControlSurface modules with SyncModuleControlSurface
+                string propellerRegex = @"Propeller|Blade";
                 var part_configs = GameDatabase.Instance.GetConfigNodes("PART");
                 foreach (var part in part_configs)
                 {
                     ConfigNode csurf_node;
                     if ((csurf_node = part.nodes.GetNode("MODULE", "name", "ModuleControlSurface")) != null)
                     {
-                        Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains ModuleControlSurface, replacing it");
-                        csurf_node.SetValue("name", "SyncModuleControlSurface", false);
+                        Match m = Regex.Match(part.GetValue("name"), propellerRegex, RegexOptions.IgnoreCase);
+                        if (!m.Success)
+                        {
+                            Debug.Log("[AtmosphereAutopilot]: part '" + part.GetValue("name") + "' config node contains ModuleControlSurface, replacing it");
+                            csurf_node.SetValue("name", "SyncModuleControlSurface", false);
+                        }
                     }
                 }
                 ready = true;

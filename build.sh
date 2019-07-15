@@ -12,4 +12,5 @@ mkdir AtmosphereAutopilot
 cp ../../../UnityAssets/Result/atmosphereautopilotprefabs ./
 cp * AtmosphereAutopilot/ || true
 cp ../../../LICENSE LICENSE_AtmosphereAutopilot
-zip AtmosphereAutopilot.zip LICENSE_AtmosphereAutopilot AtmosphereAutopilot/*
+wget https://ksp.sarbian.com/jenkins/job/ModuleManager/149/artifact/ModuleManager.4.0.2.dll
+zip AtmosphereAutopilot.zip LICENSE_AtmosphereAutopilot ModuleManager.4.0.2.dll AtmosphereAutopilot/*
