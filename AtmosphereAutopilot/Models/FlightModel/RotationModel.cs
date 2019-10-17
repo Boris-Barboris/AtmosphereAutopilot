@@ -1,7 +1,7 @@
 ﻿/*
 Atmosphere Autopilot, plugin for Kerbal Space Program.
 Copyright (C) 2015-2016, Baranin Alexander aka Boris-Barboris.
- 
+
 Atmosphere Autopilot is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -11,7 +11,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
-along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>. 
+along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System;
@@ -164,7 +164,7 @@ namespace AtmosphereAutopilot
                 am += Vector3.Scale(rotated_moi, world_to_cntrl_part * part.rb.angularVelocity);
 
                 MOI += moi;
-                AM -= am;                   // minus because left-handed Unity                
+                AM -= am;                   // minus because left-handed Unity
             }
             angular_vel = Common.divideVector(AM, MOI);
             angular_vel -= world_to_cntrl_part * vessel.mainBody.angularVelocity;     // unity physics reference frame is rotating
@@ -232,7 +232,7 @@ namespace AtmosphereAutopilot
                 Quaternion delta = Quaternion.AngleAxis(ang_delta, cntrl_part_to_world * avg_angvel);
                 virtualRotation = Quaternion.Lerp(vessel.ReferenceTransform.rotation,
                     delta * virtualRotation, aoa_virtual_gain);
-                virtualRotation = virtualRotation.Normalize();
+                virtualRotation.Normalize();
             }
 
             angular_vel_prev = angular_vel;
