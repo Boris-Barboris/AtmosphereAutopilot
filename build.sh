@@ -8,6 +8,7 @@ rm *.pdb
 rm -f *.zip
 rm -rf AtmosphereAutopilot
 rm -f LICENSE*
+rm -f ModuleManager*
 mkdir AtmosphereAutopilot
 cp ../../../UnityAssets/Result/atmosphereautopilotprefabs ./
 cp * AtmosphereAutopilot/ || true
