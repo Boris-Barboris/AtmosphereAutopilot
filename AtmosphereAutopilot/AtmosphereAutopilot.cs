@@ -277,9 +277,9 @@ namespace AtmosphereAutopilot
                 if (_prefabs == null)
                 {
                     var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                    path = path.Replace(System.IO.Path.GetFileName(path), "atmosphereautopilotprefabs");
-                    var www = new WWW("file://" + path);
-                    _prefabs = www.assetBundle;
+                    path = path.Replace (System.IO.Path.GetFileName (path), "atmosphereautopilotprefabs");
+
+                    _prefabs = AssetBundle.LoadFromFile (path);
                 }
                 return _prefabs;
             }
