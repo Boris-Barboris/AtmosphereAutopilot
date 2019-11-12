@@ -1,7 +1,7 @@
 ﻿/*
 Atmosphere Autopilot, plugin for Kerbal Space Program.
 Copyright (C) 2015-2016, Baranin Alexander aka Boris-Barboris.
- 
+
 Atmosphere Autopilot is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -11,7 +11,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
-along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>. 
+along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System;
@@ -24,7 +24,7 @@ namespace AtmosphereAutopilot
 {
 
     /// <summary>
-    /// Synchronised ModuleControlSurface implementation, greatly simplifies control and flight model regression 
+    /// Synchronised ModuleControlSurface implementation, greatly simplifies control and flight model regression
     /// by making all control surfaces move in one phase.
     /// </summary>
     public class SyncModuleControlSurface: ModuleControlSurface
@@ -47,7 +47,7 @@ namespace AtmosphereAutopilot
                 {
                     usesMirrorDeploy = true;
                     mirrorDeploy = false;
-                    if (part.symMethod == SymmetryMethod.Mirror && 
+                    if (part.symMethod == SymmetryMethod.Mirror &&
                         part.symmetryCounterparts != null &&
                         part.symmetryCounterparts.Count > 0)
                     {
@@ -56,7 +56,7 @@ namespace AtmosphereAutopilot
                         {
                             this.mirrorDeploy = true;
                         }
-                        else if (Mathf.Abs(part.transform.localRotation.w) == Mathf.Abs(p.transform.localRotation.w) 
+                        else if (Mathf.Abs(part.transform.localRotation.w) == Mathf.Abs(p.transform.localRotation.w)
                             && part.transform.localRotation.x < p.transform.localRotation.x)
                         {
                             this.mirrorDeploy = true;
@@ -83,7 +83,10 @@ namespace AtmosphereAutopilot
 
             float spd_factor = TimeWarp.fixedDeltaTime * CSURF_SPD;
             float fwd_airstream_factor = Mathf.Sign(Vector3.Dot(vessel.ReferenceTransform.up, vessel.srf_velocity) + 0.1f);
-            float exp_spd_factor = actuatorSpeed / actuatorSpeedNormScale * TimeWarp.fixedDeltaTime;
+            float exp_spd_factor = 0.0f;
+            if (useExponentialSpeed)
+                exp_spd_factor = actuatorSpeed / actuatorSpeedNormScale *
+                    TimeWarp.fixedDeltaTime;
 
             if (deploy)
             {
@@ -91,6 +94,7 @@ namespace AtmosphereAutopilot
                 if (float.IsNaN(normdeflection))
                     normdeflection = 0.0f;
                 float target = deployInvert ? 1.0f : -1.0f;
+                target *= partDeployInvert ? -1.0f : 1.0f;
                 if (usesMirrorDeploy)
                     if (mirrorDeploy)
                         target *= -1.0f;
@@ -101,7 +105,7 @@ namespace AtmosphereAutopilot
                 if (!ignoreYaw)
                     prev_yaw_normdeflection = target;
                 was_deployed = true;
-                action = target;
+                action = deployAngle * target;
                 deflection = deflection + deployAngle * Common.Clampf(target - normdeflection, spd_factor);
                 ctrlSurface.localRotation = Quaternion.AngleAxis(deflection, Vector3.right) * neutral;
             }
@@ -125,7 +129,7 @@ namespace AtmosphereAutopilot
                 if (!ignoreRoll)
                 {
                     float axis_factor = Vector3.Dot(vessel.ReferenceTransform.up, baseTransform.up) * fwd_airstream_factor;
-                    float roll_factor = axis_factor * Math.Sign(Vector3.Dot(vessel.ReferenceTransform.up, 
+                    float roll_factor = axis_factor * Math.Sign(Vector3.Dot(vessel.ReferenceTransform.up,
                         Vector3.Cross(world_com - baseTransform.position, baseTransform.forward)));
                     if (was_deployed)
                         prev_roll_normdeflection = Common.Clampf(prev_roll_normdeflection, Mathf.Abs(roll_factor));
@@ -154,8 +158,7 @@ namespace AtmosphereAutopilot
                     prev_yaw_normdeflection = 0.0f;
 
                 was_deployed = false;
-
-                deflection = action = ctrlSurfaceRange * authorityLimiter * 0.01f * 
+                deflection = action = ctrlSurfaceRange * authorityLimiter * 0.01f *
                     Common.Clampf(prev_pitch_normdeflection + prev_roll_normdeflection + prev_yaw_normdeflection, 1.0f);
                 ctrlSurface.localRotation = Quaternion.AngleAxis(deflection, Vector3.right) * neutral;
             }

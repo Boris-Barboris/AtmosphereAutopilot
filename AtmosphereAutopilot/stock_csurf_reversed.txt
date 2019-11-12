@@ -1,0 +1,1940 @@
+using System;
+using System.Collections.Generic;
+using Expansions.Missions.Adjusters;
+using Expansions.Serenity;
+using KSP.Localization;
+using UnityEngine;
+
+// Token: 0x02000269 RID: 617
+public class ModuleControlSurface : ModuleLiftingSurface, IMultipleDragCube, ITorqueProvider
+{
+	// Token: 0x06001F63 RID: 8035 RVA: 0x00136974 File Offset: 0x00134B74
+	public override void OnAwake()
+	{
+		base.OnAwake();
+		if (this.ctrlSurface != null)
+		{
+			for (;;)
+			{
+				switch (5)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.OnAwake()).MethodHandle;
+			}
+			this.ctrlSurface.localRotation = this.neutral;
+		}
+		this.ctrlSurface = null;
+		if (HighLogic.LoadedSceneIsEditor)
+		{
+			for (;;)
+			{
+				switch (5)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			GameEvents.onEditorPartEvent.Add(new EventData<ConstructionEventType, Part>.OnEvent(this.OnEditorPartEvent));
+		}
+		if (HighLogic.LoadedSceneIsFlight)
+		{
+			for (;;)
+			{
+				switch (3)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			GameEvents.onPartActionUIShown.Add(new EventData<UIPartActionWindow, Part>.OnEvent(this.OnPartActionUIShown));
+			GameEvents.onPartActionUIDismiss.Add(new EventData<Part>.OnEvent(this.OnPartActionUIDismiss));
+		}
+		this.originalActuatorSpeed = this.actuatorSpeed;
+		if (this.displaceVelocity)
+		{
+			for (;;)
+			{
+				switch (4)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.verticalLiftField = base.Fields["verticalLift"];
+			this.forwardLiftField = base.Fields["forwardLift"];
+			this.airSpeedField = base.Fields["airSpeed"];
+			this.aoaField = base.Fields["angleOfAttack"];
+			this.bladePitchField = base.Fields["bladePitch"];
+		}
+	}
+
+	// Token: 0x06001F64 RID: 8036 RVA: 0x00136ACC File Offset: 0x00134CCC
+	public void OnDestroy()
+	{
+		if (HighLogic.LoadedSceneIsEditor)
+		{
+			for (;;)
+			{
+				switch (4)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.OnDestroy()).MethodHandle;
+			}
+			GameEvents.onEditorPartEvent.Remove(new EventData<ConstructionEventType, Part>.OnEvent(this.OnEditorPartEvent));
+		}
+		GameEvents.onPartActionUIShown.Remove(new EventData<UIPartActionWindow, Part>.OnEvent(this.OnPartActionUIShown));
+		GameEvents.onPartActionUIDismiss.Remove(new EventData<Part>.OnEvent(this.OnPartActionUIDismiss));
+	}
+
+	// Token: 0x06001F65 RID: 8037 RVA: 0x00136B38 File Offset: 0x00134D38
+	private void OnEditorPartEvent(ConstructionEventType evt, Part p)
+	{
+		if (p == base.part)
+		{
+			for (;;)
+			{
+				switch (2)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.OnEditorPartEvent(ConstructionEventType, Part)).MethodHandle;
+			}
+			if (evt != ConstructionEventType.PartPicked)
+			{
+				for (;;)
+				{
+					switch (7)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				if (evt != ConstructionEventType.PartDetached)
+				{
+					return;
+				}
+				for (;;)
+				{
+					switch (3)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+			}
+			this.deploy = false;
+			this.ctrlSurface.localRotation = this.neutral;
+		}
+	}
+
+	// Token: 0x06001F66 RID: 8038 RVA: 0x00136BA0 File Offset: 0x00134DA0
+	private void OnPartActionUIShown(UIPartActionWindow paw, Part p)
+	{
+		if (p.persistentId == base.part.persistentId)
+		{
+			for (;;)
+			{
+				switch (1)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.OnPartActionUIShown(UIPartActionWindow, Part)).MethodHandle;
+			}
+			this.partActionWindowOpen = true;
+		}
+	}
+
+	// Token: 0x06001F67 RID: 8039 RVA: 0x00136BDC File Offset: 0x00134DDC
+	private void OnPartActionUIDismiss(Part p)
+	{
+		if (p.persistentId == base.part.persistentId)
+		{
+			for (;;)
+			{
+				switch (5)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.OnPartActionUIDismiss(Part)).MethodHandle;
+			}
+			this.partActionWindowOpen = false;
+		}
+	}
+
+	// Token: 0x06001F68 RID: 8040 RVA: 0x00136C18 File Offset: 0x00134E18
+	protected void ModifyAuthorityLimiter(object field)
+	{
+		this.authorityLimiterUI = this.ctrlSurfaceRange * this.authorityLimiter * 0.01f;
+		if (UIPartActionController.Instance != null)
+		{
+			for (;;)
+			{
+				switch (7)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.ModifyAuthorityLimiter(object)).MethodHandle;
+			}
+			UIPartActionWindow item = UIPartActionController.Instance.GetItem(base.part, true);
+			if (item != null)
+			{
+				for (;;)
+				{
+					switch (3)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				item.displayDirty = true;
+			}
+		}
+	}
+
+	// Token: 0x06001F69 RID: 8041 RVA: 0x00136C98 File Offset: 0x00134E98
+	protected void ModifyAuthorityLimiterUI(object field)
+	{
+		this.authorityLimiter = 100f * this.authorityLimiterUI / this.ctrlSurfaceRange;
+	}
+
+	// Token: 0x06001F6A RID: 8042 RVA: 0x00136CC0 File Offset: 0x00134EC0
+	public override void OnStart(PartModule.StartState state)
+	{
+		base.OnStart(state);
+		if (float.IsNaN(this.deployAngle))
+		{
+			for (;;)
+			{
+				switch (6)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.OnStart(PartModule.StartState)).MethodHandle;
+			}
+			this.deployAngle = this.ctrlSurfaceRange;
+		}
+		if (float.IsNaN(this.deployAngleLimits.x))
+		{
+			for (;;)
+			{
+				switch (5)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.deployAngleLimits.x = -this.ctrlSurfaceRange * 1.5f;
+		}
+		if (float.IsNaN(this.deployAngleLimits.y))
+		{
+			for (;;)
+			{
+				switch (2)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.deployAngleLimits.y = this.ctrlSurfaceRange * 1.5f;
+		}
+		if (HighLogic.LoadedSceneIsGame)
+		{
+			for (;;)
+			{
+				switch (5)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.ctrlSurface = base.part.FindModelTransform(this.transformName);
+			if (this.ctrlSurface != null)
+			{
+				for (;;)
+				{
+					switch (2)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				this.neutral = this.ctrlSurface.localRotation;
+			}
+			base.Fields["authorityLimiter"].OnValueModified += this.ModifyAuthorityLimiter;
+			base.Fields["authorityLimiterUI"].OnValueModified += this.ModifyAuthorityLimiterUI;
+			UI_FloatRange ui_FloatRange;
+			if (base.Fields.TryGetFieldUIControl<UI_FloatRange>("authorityLimiterUI", out ui_FloatRange))
+			{
+				for (;;)
+				{
+					switch (2)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				ui_FloatRange.minValue = -1.5f * this.ctrlSurfaceRange;
+				ui_FloatRange.maxValue = 1.5f * this.ctrlSurfaceRange;
+				ui_FloatRange.stepIncrement = 0.015f * this.ctrlSurfaceRange;
+			}
+			this.ModifyAuthorityLimiter(null);
+			base.Fields["partDeployInvert"].guiActive = false;
+			base.Fields["partDeployInvert"].guiActiveEditor = false;
+			BaseAxisField baseAxisField = base.Fields["deployAngle"] as BaseAxisField;
+			baseAxisField.minValue = this.deployAngleLimits.x;
+			baseAxisField.maxValue = this.deployAngleLimits.y;
+			baseAxisField.incrementalSpeed = this.deployAngleLimits.y * 0.2f;
+			UI_FloatRange ui_FloatRange2;
+			if (base.Fields.TryGetFieldUIControl<UI_FloatRange>("deployAngle", out ui_FloatRange2))
+			{
+				for (;;)
+				{
+					switch (4)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				ui_FloatRange2.minValue = this.deployAngleLimits.x;
+				ui_FloatRange2.maxValue = this.deployAngleLimits.y;
+				ui_FloatRange2.stepIncrement = (this.deployAngleLimits.y - this.deployAngleLimits.x) * 0.01f;
+			}
+		}
+		if (HighLogic.LoadedSceneIsFlight)
+		{
+			for (;;)
+			{
+				switch (5)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (this.displaceVelocity)
+			{
+				for (;;)
+				{
+					switch (1)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				this.parentRotor = base.part.FindParentModuleImplementing<ModuleRoboticServoRotor>();
+				if (this.parentRotor != null)
+				{
+					for (;;)
+					{
+						switch (7)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					this.parentRotorServo = this.parentRotor;
+				}
+			}
+		}
+		if (this.displaceVelocity)
+		{
+			for (;;)
+			{
+				switch (4)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (this.verticalLiftField != null)
+			{
+				for (;;)
+				{
+					switch (7)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				this.verticalLiftField.guiActive = true;
+				this.verticalLiftField.guiUnits = Localizer.Format(this.verticalLiftField.guiUnits);
+			}
+			if (this.forwardLiftField != null)
+			{
+				for (;;)
+				{
+					switch (5)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				this.forwardLiftField.guiActive = true;
+				this.forwardLiftField.guiUnits = Localizer.Format(this.forwardLiftField.guiUnits);
+			}
+			if (this.airSpeedField != null)
+			{
+				for (;;)
+				{
+					switch (3)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				this.airSpeedField.guiActive = true;
+				this.airSpeedField.guiUnits = Localizer.Format(this.airSpeedField.guiUnits);
+			}
+			if (this.aoaField != null)
+			{
+				for (;;)
+				{
+					switch (5)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				this.aoaField.guiActive = true;
+			}
+		}
+	}
+
+	// Token: 0x06001F6B RID: 8043 RVA: 0x001370A8 File Offset: 0x001352A8
+	public new void FixedUpdate()
+	{
+		if (HighLogic.LoadedSceneIsFlight)
+		{
+			for (;;)
+			{
+				switch (7)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.FixedUpdate()).MethodHandle;
+			}
+			this.liftField.guiActive = PhysicsGlobals.AeroDataDisplay;
+			BaseField dragField = this.dragField;
+			bool guiActive;
+			if (PhysicsGlobals.AeroDataDisplay)
+			{
+				for (;;)
+				{
+					switch (5)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				guiActive = this.useInternalDragModel;
+			}
+			else
+			{
+				guiActive = false;
+			}
+			dragField.guiActive = guiActive;
+			if (base.part.Rigidbody != null)
+			{
+				for (;;)
+				{
+					switch (5)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				if (!base.part.ShieldedFromAirstream)
+				{
+					for (;;)
+					{
+						switch (7)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					Rigidbody rigidbody = base.part.Rigidbody;
+					Vector3 worldPoint;
+					if (!this.displaceVelocity)
+					{
+						for (;;)
+						{
+							switch (4)
+							{
+							case 0:
+								continue;
+							}
+							break;
+						}
+						worldPoint = this.baseTransform.position;
+					}
+					else
+					{
+						worldPoint = this.baseTransform.TransformPoint(this.velocityOffset);
+					}
+					this.pointVelocity = rigidbody.GetPointVelocity(worldPoint) + Krakensbane.GetFrameVelocityV3f();
+					double submergedPortion = base.part.submergedPortion;
+					double num = 1.0 - submergedPortion;
+					float mach = (float)base.part.machNumber;
+					double num2 = base.part.dynamicPressurekPa;
+					if (this.displaceVelocity)
+					{
+						for (;;)
+						{
+							switch (1)
+							{
+							case 0:
+								continue;
+							}
+							break;
+						}
+						if (base.vessel != null)
+						{
+							for (;;)
+							{
+								switch (1)
+								{
+								case 0:
+									continue;
+								}
+								break;
+							}
+							if (base.vessel.speedOfSound > 0.0)
+							{
+								for (;;)
+								{
+									switch (5)
+									{
+									case 0:
+										continue;
+									}
+									break;
+								}
+								mach = this.pointVelocity.magnitude / (float)base.vessel.speedOfSound;
+							}
+							else
+							{
+								mach = this.pointVelocity.magnitude;
+							}
+							this.airSpeed = this.pointVelocity.magnitude;
+							num2 = base.part.atmDensity;
+							Vector3 pointVelocity = this.pointVelocity;
+							float sqrMagnitude = pointVelocity.sqrMagnitude;
+							double num3 = 0.0005 * (double)sqrMagnitude;
+							num2 *= num3;
+							this.Qlift = (num2 * num + base.part.submergedDynamicPressurekPa * submergedPortion * base.part.submergedLiftScalar) * 1000.0;
+							this.Qdrag = (num2 * num + base.part.submergedDynamicPressurekPa * submergedPortion * base.part.submergedDragScalar) * 1000.0;
+							goto IL_2D8;
+						}
+					}
+					this.Qlift = (base.part.dynamicPressurekPa * num + base.part.submergedDynamicPressurekPa * submergedPortion * base.part.submergedLiftScalar) * 1000.0;
+					this.Qdrag = (base.part.dynamicPressurekPa * num + base.part.submergedDynamicPressurekPa * submergedPortion * base.part.submergedDragScalar) * 1000.0;
+					IL_2D8:
+					base.SetupCoefficients(this.pointVelocity, out this.nVel, out this.liftVector, out this.liftDot, out this.absDot);
+					this.baseLiftForce = base.GetLiftVector(this.liftVector, this.liftDot, this.absDot, this.Qlift, mach);
+					this.liftForce = this.baseLiftForce * (1f - this.ctrlSurfaceArea);
+					if (this.useInternalDragModel)
+					{
+						for (;;)
+						{
+							switch (4)
+							{
+							case 0:
+								continue;
+							}
+							break;
+						}
+						this.dragForce = base.GetDragVector(this.nVel, this.absDot, this.Qdrag, mach) * (1f - this.ctrlSurfaceArea);
+					}
+					float num4 = this.liftDot;
+					float absDot = this.absDot;
+					if (this.ctrlSurface != null)
+					{
+						for (;;)
+						{
+							switch (4)
+							{
+							case 0:
+								continue;
+							}
+							break;
+						}
+						this.actuatorSpeed = this.originalActuatorSpeed;
+						this.actuatorSpeed = this.ApplyActuatorSpeedAdjustments(this.actuatorSpeed);
+						this.CtrlSurfaceUpdate(this.pointVelocity);
+						if (!this.alwaysRecomputeLift)
+						{
+							for (;;)
+							{
+								switch (4)
+								{
+								case 0:
+									continue;
+								}
+								break;
+							}
+							if (!(this.ctrlSurface.localRotation != this.neutral))
+							{
+								goto IL_480;
+							}
+							for (;;)
+							{
+								switch (3)
+								{
+								case 0:
+									continue;
+								}
+								break;
+							}
+						}
+						this.airflowIncidence = Quaternion.AngleAxis(this.deflection, this.baseTransform.rotation * Vector3.right);
+						this.liftVector = this.airflowIncidence * this.liftVector;
+						num4 = Vector3.Dot(this.nVel, this.liftVector);
+						absDot = Mathf.Abs(num4);
+					}
+					IL_480:
+					bool flag = this.liftScalar > 0f;
+					bool flag2 = this.dragScalar > 0f;
+					this.liftForce += base.GetLiftVector(this.liftVector, num4, absDot, this.Qlift, mach) * this.ctrlSurfaceArea;
+					this.liftForce = base.ApplyLiftForceAdjustments(this.liftForce);
+					base.part.AddForceAtPosition(this.liftForce, base.part.partTransform.TransformPoint(base.part.CoLOffset));
+					if (this.useInternalDragModel)
+					{
+						for (;;)
+						{
+							switch (1)
+							{
+							case 0:
+								continue;
+							}
+							break;
+						}
+						this.dragForce += base.GetDragVector(this.nVel, absDot, this.Qdrag, mach) * this.ctrlSurfaceArea;
+						base.part.AddForceAtPosition(this.dragForce, base.part.partTransform.TransformPoint(base.part.CoPOffset));
+					}
+					if (flag)
+					{
+						for (;;)
+						{
+							switch (6)
+							{
+							case 0:
+								continue;
+							}
+							break;
+						}
+						this.liftScalar = this.liftForce.magnitude;
+					}
+					if (flag2)
+					{
+						for (;;)
+						{
+							switch (6)
+							{
+							case 0:
+								continue;
+							}
+							break;
+						}
+						this.dragScalar = this.dragForce.magnitude;
+					}
+					float num5 = this.deflection / this.ctrlSurfaceRange;
+					base.part.DragCubes.SetCubeWeight("neutral", this.maxAuthority * 0.01f - Mathf.Abs(num5));
+					base.part.DragCubes.SetCubeWeight("fullDeflectionPos", Mathf.Clamp01(num5));
+					base.part.DragCubes.SetCubeWeight("fullDeflectionNeg", Mathf.Clamp01(-num5));
+					base.UpdateAeroDisplay(Color.yellow);
+					goto IL_6B2;
+				}
+			}
+			this.Qlift = (this.Qdrag = 0.0);
+			this.nVel = Vector3.zero;
+			IL_6B2:
+			if (this.displaceVelocity)
+			{
+				for (;;)
+				{
+					switch (2)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				if (this.partActionWindowOpen)
+				{
+					for (;;)
+					{
+						switch (6)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					if (Planetarium.GetUniversalTime() - this.lastBladeInfoUpdate > this.bladeUpdateInterval)
+					{
+						for (;;)
+						{
+							switch (6)
+							{
+							case 0:
+								continue;
+							}
+							break;
+						}
+						this.CalcAngleOfAttack();
+						this.forwardLift = Vector3.Dot(this.liftForce, base.vessel.ReferenceTransform.up);
+						this.verticalLift = Vector3.Dot(this.liftForce, base.vessel.upAxis);
+						this.lastBladeInfoUpdate = Planetarium.GetUniversalTime();
+					}
+				}
+			}
+			if (this.displaceVelocity)
+			{
+				for (;;)
+				{
+					switch (1)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				if (!this.comCalculated)
+				{
+					for (;;)
+					{
+						switch (3)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					if (base.part.rb != null)
+					{
+						for (;;)
+						{
+							switch (4)
+							{
+							case 0:
+								continue;
+							}
+							break;
+						}
+						this.CalculateCoM();
+					}
+				}
+			}
+		}
+	}
+
+	// Token: 0x06001F6C RID: 8044 RVA: 0x00137860 File Offset: 0x00135A60
+	private void CalcAngleOfAttack()
+	{
+		this.angleOfAttack = Mathf.Abs(Vector3.Angle(this.nVel, Vector3.ProjectOnPlane(this.nVel, this.ctrlSurface.up)));
+	}
+
+	// Token: 0x06001F6D RID: 8045 RVA: 0x001378A4 File Offset: 0x00135AA4
+	public unsafe void GetPotentialTorque(out Vector3 pos, out Vector3 neg)
+	{
+		pos = (neg = Vector3.zero);
+		Vector3 b = this.baseLiftForce * this.ctrlSurfaceArea;
+		if (this.Qlift != 0.0)
+		{
+			for (;;)
+			{
+				switch (5)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.GetPotentialTorque(Vector3*, Vector3*)).MethodHandle;
+			}
+			if (this.ignorePitch)
+			{
+				for (;;)
+				{
+					switch (2)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				if (this.ignoreYaw)
+				{
+					for (;;)
+					{
+						switch (2)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					if (this.ignoreRoll)
+					{
+						return;
+					}
+					for (;;)
+					{
+						switch (7)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+				}
+			}
+			Vector3 currentCoM = base.vessel.CurrentCoM;
+			Vector3d v = base.part.Rigidbody.worldCenterOfMass - currentCoM;
+			Vector3 b2 = base.vessel.ReferenceTransform.InverseTransformDirection(v);
+			Vector3 vector = Quaternion.AngleAxis(this.ctrlSurfaceRange * this.authorityLimiter * 0.01f, this.baseTransform.rotation * Vector3.right) * this.baseTransform.forward;
+			float num = Vector3.Dot(this.nVel, vector);
+			float absDot = Mathf.Abs(num);
+			Vector3 vector2 = base.GetLiftVector(vector, num, absDot, this.Qlift, (float)base.part.machNumber) * this.ctrlSurfaceArea;
+			vector2 -= b;
+			pos = Vector3.Scale(base.vessel.ReferenceTransform.InverseTransformDirection(Vector3.Cross(v, vector2)), b2);
+			vector = Quaternion.AngleAxis(-this.ctrlSurfaceRange * this.authorityLimiter * 0.01f, this.baseTransform.rotation * Vector3.right) * this.baseTransform.forward;
+			num = Vector3.Dot(this.nVel, vector);
+			absDot = Mathf.Abs(num);
+			vector2 = base.GetLiftVector(vector, num, absDot, this.Qlift, (float)base.part.machNumber) * this.ctrlSurfaceArea;
+			vector2 -= b;
+			neg = Vector3.Scale(base.vessel.ReferenceTransform.InverseTransformDirection(Vector3.Cross(v, vector2)), b2);
+			if (this.ignorePitch)
+			{
+				for (;;)
+				{
+					switch (4)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				pos.x = (neg.x = 0f);
+			}
+			if (this.ignoreRoll)
+			{
+				for (;;)
+				{
+					switch (7)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				pos.y = (neg.y = 0f);
+			}
+			else
+			{
+				pos.y = -pos.y;
+				neg.y = -neg.y;
+			}
+			if (this.ignoreYaw)
+			{
+				for (;;)
+				{
+					switch (3)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				pos.z = (neg.z = 0f);
+			}
+		}
+	}
+
+	// Token: 0x06001F6E RID: 8046 RVA: 0x00137BDC File Offset: 0x00135DDC
+	public void LateUpdate()
+	{
+		if (HighLogic.LoadedSceneIsEditor)
+		{
+			for (;;)
+			{
+				switch (3)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.LateUpdate()).MethodHandle;
+			}
+			this.CtrlSurfaceEditorUpdate(EditorMarker_CoM.CraftCoM);
+		}
+	}
+
+	// Token: 0x06001F6F RID: 8047 RVA: 0x00137C10 File Offset: 0x00135E10
+	public override string GetInfo()
+	{
+		return Localizer.Format("#autoLOC_213511", new object[]
+		{
+			this.deflectionLiftCoeff
+		}) + Localizer.Format("#autoLOC_213512", new object[]
+		{
+			this.ctrlSurfaceArea * 100f
+		}) + Localizer.Format("#autoLOC_213513", new object[]
+		{
+			this.ctrlSurfaceRange
+		}) + Localizer.Format("#autoLOC_213514", new object[]
+		{
+			this.actuatorSpeed
+		});
+	}
+
+	// Token: 0x06001F70 RID: 8048 RVA: 0x00137CAC File Offset: 0x00135EAC
+	protected virtual void CtrlSurfaceUpdate(Vector3 vel)
+	{
+		Vector3 currentCoM = base.vessel.CurrentCoM;
+		Vector3 vector = this.baseTransform.InverseTransformPoint(currentCoM);
+		if (this.displaceVelocity)
+		{
+			for (;;)
+			{
+				switch (5)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.CtrlSurfaceUpdate(Vector3)).MethodHandle;
+			}
+			vector += this.velocityOffset;
+		}
+		Vector3 rhs = new Vector3(vector.x, 0f, vector.z);
+		Quaternion rotation = base.vessel.ReferenceTransform.rotation;
+		float x;
+		if (!this.ignorePitch)
+		{
+			for (;;)
+			{
+				switch (2)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			x = base.part.vessel.ctrlState.pitch;
+		}
+		else
+		{
+			x = 0f;
+		}
+		float y = 0f;
+		float z;
+		if (!this.ignoreYaw)
+		{
+			for (;;)
+			{
+				switch (3)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			z = base.part.vessel.ctrlState.yaw;
+		}
+		else
+		{
+			z = 0f;
+		}
+		this.inputVector = rotation * new Vector3(x, y, z);
+		this.action = Vector3.Dot(this.inputVector, this.baseTransform.rotation * Vector3.right);
+		if (this.ignoreRoll)
+		{
+			for (;;)
+			{
+				switch (7)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.roll = 0f;
+		}
+		else
+		{
+			this.roll = Vector3.Dot(Vector3.right, rhs) * (1f - (Mathf.Abs(Vector3.Dot(rhs.normalized, Quaternion.Inverse(this.baseTransform.rotation) * base.vessel.ReferenceTransform.up)) * 0.5f + 0.5f)) * Mathf.Sign(Vector3.Dot(this.baseTransform.up, base.vessel.ReferenceTransform.up)) * base.part.vessel.ctrlState.roll * Mathf.Sign(this.ctrlSurfaceRange);
+		}
+		if (vector.y < 0f)
+		{
+			for (;;)
+			{
+				switch (3)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.action = -this.action;
+		}
+		this.action = Mathf.Clamp(this.action - this.roll, -1f, 1f);
+		this.action *= this.ctrlSurfaceRange * this.authorityLimiter * 0.01f;
+		if (this.deploy)
+		{
+			for (;;)
+			{
+				switch (4)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (this.displaceVelocity)
+			{
+				for (;;)
+				{
+					switch (1)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				float num = this.action;
+				float num2;
+				if (!this.deployInvert)
+				{
+					for (;;)
+					{
+						switch (7)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					num2 = 1f;
+				}
+				else
+				{
+					num2 = -1f;
+				}
+				float num3;
+				if (!this.partDeployInvert)
+				{
+					for (;;)
+					{
+						switch (6)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					num3 = 1f;
+				}
+				else
+				{
+					num3 = -1f;
+				}
+				this.action = num + num2 * num3 * Mathf.Sign(this.ctrlSurfaceRange) * this.deployAngle;
+			}
+			else if (!this.usesMirrorDeploy)
+			{
+				for (;;)
+				{
+					switch (6)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				float num4 = this.action;
+				float num5;
+				if (!this.deployInvert)
+				{
+					for (;;)
+					{
+						switch (1)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					num5 = 1f;
+				}
+				else
+				{
+					num5 = -1f;
+				}
+				this.action = num4 - num5 * Mathf.Sign((Quaternion.Inverse(base.vessel.ReferenceTransform.rotation) * (this.baseTransform.position - currentCoM)).x) * this.deployAngle;
+			}
+			else
+			{
+				float num6 = this.action;
+				float num7;
+				if (!this.deployInvert)
+				{
+					for (;;)
+					{
+						switch (5)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					num7 = 1f;
+				}
+				else
+				{
+					num7 = -1f;
+				}
+				float num8;
+				if (!this.partDeployInvert)
+				{
+					for (;;)
+					{
+						switch (3)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					num8 = 1f;
+				}
+				else
+				{
+					num8 = -1f;
+				}
+				float num9 = num7 * num8;
+				float num10;
+				if (!this.mirrorDeploy)
+				{
+					for (;;)
+					{
+						switch (7)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					num10 = 1f;
+				}
+				else
+				{
+					num10 = -1f;
+				}
+				this.action = num6 - num9 * num10 * this.deployAngle;
+			}
+		}
+		this.action = Mathf.Clamp(this.action, -1.5f * this.ctrlSurfaceRange, 1.5f * this.ctrlSurfaceRange);
+		if (this.displaceVelocity)
+		{
+			for (;;)
+			{
+				switch (2)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.deflection = this.action;
+		}
+		else if (!this.useExponentialSpeed)
+		{
+			for (;;)
+			{
+				switch (7)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.deflection = Mathf.MoveTowards(this.deflection, this.action, this.actuatorSpeed * TimeWarp.fixedDeltaTime);
+		}
+		else
+		{
+			this.deflection = Mathf.Lerp(this.deflection, this.action, this.actuatorSpeed * TimeWarp.fixedDeltaTime);
+		}
+		if (this.displaceVelocity)
+		{
+			for (;;)
+			{
+				switch (5)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.ctrlSurface.localRotation = this.neutral * Quaternion.AngleAxis(-this.deflection, Vector3.right);
+			return;
+		}
+		this.ctrlSurface.localRotation = Quaternion.AngleAxis(this.deflection, Vector3.right) * this.neutral;
+	}
+
+	// Token: 0x06001F71 RID: 8049 RVA: 0x001381D0 File Offset: 0x001363D0
+	protected virtual void CtrlSurfaceEditorUpdate(Vector3 CoM)
+	{
+		if (this.baseTransform == null)
+		{
+			for (;;)
+			{
+				switch (3)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.CtrlSurfaceEditorUpdate(Vector3)).MethodHandle;
+			}
+			return;
+		}
+		this.baseTransform.InverseTransformPoint(CoM);
+		this.action = 0f;
+		if (EditorLogic.fetch != null)
+		{
+			for (;;)
+			{
+				switch (2)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (EditorLogic.fetch.editorScreen == EditorScreen.Parts)
+			{
+				for (;;)
+				{
+					switch (1)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				this.usesMirrorDeploy = true;
+				this.mirrorDeploy = false;
+				if (base.part.symMethod == SymmetryMethod.Mirror)
+				{
+					for (;;)
+					{
+						switch (3)
+						{
+						case 0:
+							continue;
+						}
+						break;
+					}
+					if (base.part.symmetryCounterparts != null)
+					{
+						for (;;)
+						{
+							switch (6)
+							{
+							case 0:
+								continue;
+							}
+							break;
+						}
+						if (base.part.symmetryCounterparts.Count > 0)
+						{
+							for (;;)
+							{
+								switch (1)
+								{
+								case 0:
+									continue;
+								}
+								break;
+							}
+							Part part = base.part.symmetryCounterparts[0];
+							if (Mathf.Abs(base.part.transform.localRotation.w) < Mathf.Abs(part.transform.localRotation.w))
+							{
+								for (;;)
+								{
+									switch (6)
+									{
+									case 0:
+										continue;
+									}
+									break;
+								}
+								this.mirrorDeploy = true;
+							}
+							else if (Mathf.Abs(base.part.transform.localRotation.w) == Mathf.Abs(part.transform.localRotation.w))
+							{
+								for (;;)
+								{
+									switch (5)
+									{
+									case 0:
+										continue;
+									}
+									break;
+								}
+								if (base.part.transform.localRotation.x < part.transform.localRotation.x)
+								{
+									for (;;)
+									{
+										switch (1)
+										{
+										case 0:
+											continue;
+										}
+										break;
+									}
+									this.mirrorDeploy = true;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		if (this.deploy)
+		{
+			for (;;)
+			{
+				switch (4)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			float num = this.action;
+			float num2;
+			if (!this.deployInvert)
+			{
+				for (;;)
+				{
+					switch (3)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				num2 = 1f;
+			}
+			else
+			{
+				num2 = -1f;
+			}
+			float num3;
+			if (!this.partDeployInvert)
+			{
+				for (;;)
+				{
+					switch (1)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				num3 = 1f;
+			}
+			else
+			{
+				num3 = -1f;
+			}
+			float num4 = num2 * num3;
+			float num5;
+			if (!this.mirrorDeploy)
+			{
+				for (;;)
+				{
+					switch (1)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				num5 = 1f;
+			}
+			else
+			{
+				num5 = -1f;
+			}
+			this.action = num - num4 * num5 * this.deployAngle;
+		}
+		this.action = Mathf.Clamp(this.action, -1.5f * this.ctrlSurfaceRange, 1.5f * this.ctrlSurfaceRange);
+		if (this.displaceVelocity)
+		{
+			for (;;)
+			{
+				switch (6)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.deflection = this.action;
+		}
+		else if (!this.useExponentialSpeed)
+		{
+			for (;;)
+			{
+				switch (2)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.deflection = Mathf.MoveTowards(this.deflection, this.action, this.actuatorSpeed * TimeWarp.fixedDeltaTime);
+		}
+		else
+		{
+			this.deflection = Mathf.Lerp(this.deflection, this.action, this.actuatorSpeed * TimeWarp.fixedDeltaTime);
+		}
+		this.ctrlSurface.localRotation = Quaternion.AngleAxis(this.deflection, Vector3.right) * this.neutral;
+	}
+
+	// Token: 0x06001F72 RID: 8050 RVA: 0x00138510 File Offset: 0x00136710
+	[KSPAction("#autoLOC_6001337", KSPActionGroup.None)]
+	public void ActionToggle(KSPActionParam act)
+	{
+		this.deploy = !this.deploy;
+	}
+
+	// Token: 0x06001F73 RID: 8051 RVA: 0x0013852C File Offset: 0x0013672C
+	[KSPAction("#autoLOC_6001338", KSPActionGroup.None)]
+	public void ActionExtend(KSPActionParam act)
+	{
+		this.deploy = true;
+	}
+
+	// Token: 0x06001F74 RID: 8052 RVA: 0x00138540 File Offset: 0x00136740
+	[KSPAction("#autoLOC_6001339", KSPActionGroup.None)]
+	public void ActionRetract(KSPActionParam act)
+	{
+		this.deploy = false;
+	}
+
+	// Token: 0x06001F75 RID: 8053 RVA: 0x00138554 File Offset: 0x00136754
+	public string[] GetDragCubeNames()
+	{
+		return new string[]
+		{
+			"neutral",
+			"fullDeflectionPos",
+			"fullDeflectionNeg"
+		};
+	}
+
+	// Token: 0x06001F76 RID: 8054 RVA: 0x00138580 File Offset: 0x00136780
+	public void AssumeDragCubePosition(string name)
+	{
+		if (!(name == "neutral"))
+		{
+			for (;;)
+			{
+				switch (3)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.AssumeDragCubePosition(string)).MethodHandle;
+			}
+			if (name == "fullDeflectionPos")
+			{
+				this.action = this.maxAuthority * 0.01f;
+				goto IL_88;
+			}
+			for (;;)
+			{
+				switch (2)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (name == "fullDeflectionNeg")
+			{
+				this.action = -this.maxAuthority * 0.01f;
+				goto IL_88;
+			}
+			for (;;)
+			{
+				switch (1)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+		}
+		this.action = 0f;
+		IL_88:
+		if (this.ctrlSurface == null)
+		{
+			for (;;)
+			{
+				switch (5)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.baseTransform = base.transform;
+			this.ctrlSurface = base.part.FindModelTransform(this.transformName);
+			if (this.ctrlSurface != null)
+			{
+				for (;;)
+				{
+					switch (5)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				this.neutral = this.ctrlSurface.localRotation;
+			}
+		}
+		if (this.ctrlSurface != null)
+		{
+			for (;;)
+			{
+				switch (2)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			this.ctrlSurface.localRotation = Quaternion.AngleAxis(this.ctrlSurfaceRange * this.action, Vector3.right) * this.neutral;
+			return;
+		}
+		Debug.LogWarning("[ModuleCtrlSurface]: No ctrlSurface transform found! This is most likely wrong!", base.gameObject);
+		Debug.Break();
+	}
+
+	// Token: 0x06001F77 RID: 8055 RVA: 0x001386EC File Offset: 0x001368EC
+	public bool UsesProceduralDragCubes()
+	{
+		return false;
+	}
+
+	// Token: 0x1700030D RID: 781
+	// (get) Token: 0x06001F78 RID: 8056 RVA: 0x001386FC File Offset: 0x001368FC
+	public bool IsMultipleCubesActive
+	{
+		get
+		{
+			return true;
+		}
+	}
+
+	// Token: 0x06001F79 RID: 8057 RVA: 0x0013870C File Offset: 0x0013690C
+	protected override void OnModuleAdjusterAdded(AdjusterPartModuleBase adjuster)
+	{
+		AdjusterControlSurfaceBase adjusterControlSurfaceBase = adjuster as AdjusterControlSurfaceBase;
+		if (adjusterControlSurfaceBase != null)
+		{
+			for (;;)
+			{
+				switch (6)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.OnModuleAdjusterAdded(AdjusterPartModuleBase)).MethodHandle;
+			}
+			this.adjusterCache.Add(adjusterControlSurfaceBase);
+		}
+		base.OnModuleAdjusterAdded(adjuster);
+	}
+
+	// Token: 0x06001F7A RID: 8058 RVA: 0x0013874C File Offset: 0x0013694C
+	public override void OnModuleAdjusterRemoved(AdjusterPartModuleBase adjuster)
+	{
+		AdjusterControlSurfaceBase adjusterControlSurfaceBase = adjuster as AdjusterControlSurfaceBase;
+		this.adjusterCache.Remove(adjusterControlSurfaceBase);
+		base.OnModuleAdjusterRemoved(adjuster);
+	}
+
+	// Token: 0x06001F7B RID: 8059 RVA: 0x00138778 File Offset: 0x00136978
+	protected float ApplyActuatorSpeedAdjustments(float actuatorSpeed)
+	{
+		for (int i = 0; i < this.adjusterCache.Count; i++)
+		{
+			actuatorSpeed = this.adjusterCache[i].ApplyActuatorSpeedAdjustment(actuatorSpeed);
+		}
+		for (;;)
+		{
+			switch (6)
+			{
+			case 0:
+				continue;
+			}
+			break;
+		}
+		if (!true)
+		{
+			RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.ApplyActuatorSpeedAdjustments(float)).MethodHandle;
+		}
+		return actuatorSpeed;
+	}
+
+	// Token: 0x06001F7C RID: 8060 RVA: 0x001387CC File Offset: 0x001369CC
+	public override string GetModuleDisplayName()
+	{
+		return ModuleControlSurface.cacheAutoLOC_6003032;
+	}
+
+	// Token: 0x06001F7D RID: 8061 RVA: 0x001387E0 File Offset: 0x001369E0
+	internal new static void CacheLocalStrings()
+	{
+		ModuleControlSurface.cacheAutoLOC_6003032 = Localizer.Format("#autoLoc_6003032");
+	}
+
+	// Token: 0x06001F7E RID: 8062 RVA: 0x00138800 File Offset: 0x00136A00
+	private void CalculateCoM()
+	{
+		if (base.part.parent != null)
+		{
+			for (;;)
+			{
+				switch (6)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!true)
+			{
+				RuntimeMethodHandle runtimeMethodHandle = methodof(ModuleControlSurface.CalculateCoM()).MethodHandle;
+			}
+			if (base.part.parent.isRoboticRotor())
+			{
+				for (;;)
+				{
+					switch (6)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				float mass = base.part.rb.mass;
+				float mass2 = base.part.parent.servoRb.mass;
+				float num = Vector3.Distance(base.part.parent.transform.position, base.part.transform.position);
+				float x = mass * num / (mass2 + mass) / 2f;
+				base.part.CoMOffset = new Vector3(x, 0f, 0f);
+				base.part.rb.centerOfMass = Vector3.zero + base.part.CoMOffset;
+				this.comCalculated = true;
+				return;
+			}
+		}
+		if (base.part.parent != null)
+		{
+			for (;;)
+			{
+				switch (7)
+				{
+				case 0:
+					continue;
+				}
+				break;
+			}
+			if (!base.part.parent.isRoboticRotor())
+			{
+				for (;;)
+				{
+					switch (1)
+					{
+					case 0:
+						continue;
+					}
+					break;
+				}
+				float mass3 = base.part.rb.mass;
+				float mass4 = base.part.parent.rb.mass;
+				float num2 = Vector3.Distance(base.part.parent.transform.position, base.part.transform.position);
+				float x2 = mass3 * num2 / (mass4 + mass3) * 2f;
+				base.part.CoMOffset = new Vector3(x2, 0f, 0f);
+				base.part.rb.centerOfMass = Vector3.zero + base.part.CoMOffset;
+				this.comCalculated = true;
+			}
+		}
+	}
+
+	// Token: 0x04002054 RID: 8276
+	[KSPField]
+	public new string transformName = "obj_ctrlSrf";
+
+	// Token: 0x04002055 RID: 8277
+	[KSPField]
+	public float ctrlSurfaceRange = 15f;
+
+	// Token: 0x04002056 RID: 8278
+	[KSPField]
+	public float ctrlSurfaceArea = 0.5f;
+
+	// Token: 0x04002057 RID: 8279
+	[KSPField]
+	public float actuatorSpeed = 25f;
+
+	// Token: 0x04002058 RID: 8280
+	private float originalActuatorSpeed;
+
+	// Token: 0x04002059 RID: 8281
+	[KSPField]
+	public bool useExponentialSpeed;
+
+	// Token: 0x0400205A RID: 8282
+	[KSPField]
+	public float actuatorSpeedNormScale = 25f;
+
+	// Token: 0x0400205B RID: 8283
+	[KSPField]
+	public bool alwaysRecomputeLift;
+
+	// Token: 0x0400205C RID: 8284
+	[KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false)]
+	public bool mirrorDeploy;
+
+	// Token: 0x0400205D RID: 8285
+	[KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false)]
+	public bool usesMirrorDeploy;
+
+	// Token: 0x0400205E RID: 8286
+	[KSPField(guiName = "#autoLOC_6001330", guiActiveUnfocused = true, isPersistant = true, guiActive = true, unfocusedRange = 25f)]
+	[UI_Toggle(disabledText = "#autoLOC_6001079", scene = UI_Scene.All, enabledText = "#autoLOC_6001078", affectSymCounterparts = UI_Scene.All)]
+	public bool ignorePitch;
+
+	// Token: 0x0400205F RID: 8287
+	[UI_Toggle(disabledText = "#autoLOC_6001079", scene = UI_Scene.All, enabledText = "#autoLOC_6001078", affectSymCounterparts = UI_Scene.All)]
+	[KSPField(guiName = "#autoLOC_6001331", guiActiveUnfocused = true, isPersistant = true, guiActive = true, unfocusedRange = 25f)]
+	public bool ignoreYaw;
+
+	// Token: 0x04002060 RID: 8288
+	[KSPField(guiName = "#autoLOC_6001332", guiActiveUnfocused = true, isPersistant = true, guiActive = true, unfocusedRange = 25f)]
+	[UI_Toggle(disabledText = "#autoLOC_6001079", scene = UI_Scene.All, enabledText = "#autoLOC_6001078", affectSymCounterparts = UI_Scene.All)]
+	public bool ignoreRoll;
+
+	// Token: 0x04002061 RID: 8289
+	[UI_Toggle(disabledText = "#autoLOC_6001081", scene = UI_Scene.All, enabledText = "#autoLOC_6001080", affectSymCounterparts = UI_Scene.All)]
+	[KSPField(guiName = "#autoLOC_6001333", guiActiveUnfocused = true, isPersistant = true, guiActive = true, unfocusedRange = 25f)]
+	public bool deploy;
+
+	// Token: 0x04002062 RID: 8290
+	[KSPField(guiName = "#autoLOC_6001334", guiActiveUnfocused = true, isPersistant = true, guiActive = true, unfocusedRange = 25f)]
+	[UI_Toggle(disabledText = "#autoLOC_6001075", scene = UI_Scene.All, enabledText = "#autoLOC_6001077", affectSymCounterparts = UI_Scene.All)]
+	public bool deployInvert;
+
+	// Token: 0x04002063 RID: 8291
+	[KSPField(guiName = "#autoLOC_6001335", unfocusedRange = 25f, guiActiveUnfocused = true, isPersistant = true, guiActive = false, guiActiveEditor = false)]
+	[UI_Toggle(disabledText = "#autoLOC_6001075", enabledText = "#autoLOC_6001077", affectSymCounterparts = UI_Scene.None)]
+	public bool partDeployInvert;
+
+	// Token: 0x04002064 RID: 8292
+	[KSPAxisField(guiName = "#autoLOC_6013041", guiUnits = "°", unfocusedRange = 25f, isPersistant = true, guiActiveUnfocused = true, maxValue = 100f, incrementalSpeed = 50f, guiFormat = "0", axisMode = KSPAxisMode.Incremental, minValue = -100f, guiActive = true)]
+	[UI_FloatRange(scene = UI_Scene.All, stepIncrement = 0.1f, maxValue = 100f, minValue = -100f, affectSymCounterparts = UI_Scene.All)]
+	public float deployAngle = float.NaN;
+
+	// Token: 0x04002065 RID: 8293
+	public Vector2 deployAngleLimits = new Vector2(float.NaN, float.NaN);
+
+	// Token: 0x04002066 RID: 8294
+	[KSPAxisField(guiName = "#autoLOC_6001336", minValue = -150f, incrementalSpeed = 60f, guiActiveUnfocused = false, isPersistant = true, axisMode = KSPAxisMode.Incremental, maxValue = 150f, guiActive = false)]
+	public float authorityLimiter = 100f;
+
+	// Token: 0x04002067 RID: 8295
+	[KSPField(guiName = "#autoLOC_6001336", guiUnits = "°", guiActiveUnfocused = true, guiFormat = "0", isPersistant = false, guiActive = true, unfocusedRange = 25f)]
+	[UI_FloatRange(scene = UI_Scene.All, stepIncrement = 0.1f, maxValue = 150f, minValue = -150f, affectSymCounterparts = UI_Scene.All)]
+	public float authorityLimiterUI = 100f;
+
+	// Token: 0x04002068 RID: 8296
+	private float maxAuthority = 150f;
+
+	// Token: 0x04002069 RID: 8297
+	protected Vector3 inputVector;
+
+	// Token: 0x0400206A RID: 8298
+	protected Quaternion airflowIncidence;
+
+	// Token: 0x0400206B RID: 8299
+	protected Vector3 baseLiftForce = Vector3.zero;
+
+	// Token: 0x0400206C RID: 8300
+	protected float action;
+
+	// Token: 0x0400206D RID: 8301
+	protected float deflection;
+
+	// Token: 0x0400206E RID: 8302
+	protected float roll;
+
+	// Token: 0x0400206F RID: 8303
+	protected bool partActionWindowOpen;
+
+	// Token: 0x04002070 RID: 8304
+	[SerializeField]
+	protected Quaternion neutral;
+
+	// Token: 0x04002071 RID: 8305
+	[SerializeField]
+	protected Transform ctrlSurface;
+
+	// Token: 0x04002072 RID: 8306
+	[SerializeField]
+	protected double bladeUpdateInterval = 1.0;
+
+	// Token: 0x04002073 RID: 8307
+	[KSPField(guiName = "#autoLOC_8012000", guiUnits = "°", advancedTweakable = true, guiFormat = "F1", guiActive = false, guiActiveEditor = false)]
+	public float angleOfAttack;
+
+	// Token: 0x04002074 RID: 8308
+	[KSPField(guiName = "#autoLOC_8012001", guiUnits = "#autoLOC_6002488", advancedTweakable = true, guiFormat = "F1", guiActive = false, guiActiveEditor = false)]
+	public float forwardLift;
+
+	// Token: 0x04002075 RID: 8309
+	[KSPField(guiName = "#autoLOC_8012002", guiUnits = "#autoLOC_6002488", advancedTweakable = true, guiFormat = "F1", guiActive = false, guiActiveEditor = false)]
+	public float verticalLift;
+
+	// Token: 0x04002076 RID: 8310
+	[KSPField(guiName = "#autoLOC_8012003", guiUnits = "#autoLOC_6002487", advancedTweakable = true, guiFormat = "F1", guiActive = false, guiActiveEditor = false)]
+	public float airSpeed;
+
+	// Token: 0x04002077 RID: 8311
+	private double lastBladeInfoUpdate;
+
+	// Token: 0x04002078 RID: 8312
+	[SerializeField]
+	private ModuleRoboticServoRotor parentRotor;
+
+	// Token: 0x04002079 RID: 8313
+	private IRoboticServo parentRotorServo;
+
+	// Token: 0x0400207A RID: 8314
+	private float bladePitch;
+
+	// Token: 0x0400207B RID: 8315
+	protected BaseField verticalLiftField;
+
+	// Token: 0x0400207C RID: 8316
+	protected BaseField forwardLiftField;
+
+	// Token: 0x0400207D RID: 8317
+	protected BaseField airSpeedField;
+
+	// Token: 0x0400207E RID: 8318
+	protected BaseField aoaField;
+
+	// Token: 0x0400207F RID: 8319
+	protected BaseField bladePitchField;
+
+	// Token: 0x04002080 RID: 8320
+	private bool comCalculated;
+
+	// Token: 0x04002081 RID: 8321
+	protected List<AdjusterControlSurfaceBase> adjusterCache = new List<AdjusterControlSurfaceBase>();
+
+	// Token: 0x04002082 RID: 8322
+	private static string cacheAutoLOC_6003032;
+}
+
