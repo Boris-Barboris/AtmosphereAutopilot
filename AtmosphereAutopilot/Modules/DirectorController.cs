@@ -77,6 +77,11 @@ namespace AtmosphereAutopilot
         [VesselSerializable("strength")]
         [AutoGuiAttr("strength", true, "G4")]
         public double strength = 0.95;
+        public string strength_as_text
+        {
+            set => this.strength = double.TryParse(value, out double v) ? v : this.strength;
+            get => this.strength.ToString("G4");
+        }
 
         [AutoGuiAttr("roll_stop_k", true, "G5")]
         public float roll_stop_k = 1.0f;

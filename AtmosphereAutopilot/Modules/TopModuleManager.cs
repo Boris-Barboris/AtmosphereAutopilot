@@ -17,7 +17,6 @@ along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>.
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using System.Reflection;
 
@@ -251,37 +250,37 @@ namespace AtmosphereAutopilot
                 // Moderation sections
                 GUILayout.BeginHorizontal();
                 pvc.moderate_aoa = GUILayout.Toggle(pvc.moderate_aoa, "Moderate AoA", GUIStyles.toggleButtonStyle);
-                float.TryParse(GUILayout.TextField(pvc.max_aoa.ToString("G4"), GUIStyles.textBoxStyle), out pvc.max_aoa);
+                pvc.max_aoa_as_text = GUILayout.TextField(pvc.max_aoa_as_text, GUIStyles.textBoxStyle);
                 GUILayout.EndHorizontal();
                 GUILayout.BeginHorizontal();
                 pvc.moderate_g = GUILayout.Toggle(pvc.moderate_g, "Moderate G", GUIStyles.toggleButtonStyle);
-                float.TryParse(GUILayout.TextField(pvc.max_g_force.ToString("G4"), GUIStyles.textBoxStyle), out pvc.max_g_force);
+                pvc.max_g_force_as_text = GUILayout.TextField(pvc.max_g_force_as_text, GUIStyles.textBoxStyle);
                 GUILayout.EndHorizontal();
                 GUILayout.BeginHorizontal();
                 yvc.moderate_aoa = GUILayout.Toggle(yvc.moderate_aoa, "Moderate Sideslip", GUIStyles.toggleButtonStyle);
-                float.TryParse(GUILayout.TextField(yvc.max_aoa.ToString("G4"), GUIStyles.textBoxStyle), out yvc.max_aoa);
+                yvc.max_aoa_as_text = GUILayout.TextField(yvc.max_aoa_as_text, GUIStyles.textBoxStyle);
                 GUILayout.EndHorizontal();
                 GUILayout.BeginHorizontal();
                 yvc.moderate_g = GUILayout.Toggle(yvc.moderate_g, "Moderate side-G", GUIStyles.toggleButtonStyle);
-                float.TryParse(GUILayout.TextField(yvc.max_g_force.ToString("G4"), GUIStyles.textBoxStyle), out yvc.max_g_force);
+                yvc.max_g_force_as_text = GUILayout.TextField(yvc.max_g_force_as_text, GUIStyles.textBoxStyle);
                 GUILayout.EndHorizontal();
 
                 // rotation rate limits
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("pitch rate limit", GUIStyles.labelStyleLeft);
-                float.TryParse(GUILayout.TextField(pvc.max_v_construction.ToString("G4"), GUIStyles.textBoxStyle), out pvc.max_v_construction);
+                pvc.max_v_construction_as_text = GUILayout.TextField(pvc.max_v_construction_as_text, GUIStyles.textBoxStyle);
                 GUILayout.EndHorizontal();
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("roll rate limit", GUIStyles.labelStyleLeft);
-                float.TryParse(GUILayout.TextField(rvc.max_v_construction.ToString("G4"), GUIStyles.textBoxStyle), out rvc.max_v_construction);
+                rvc.max_v_construction_as_text = GUILayout.TextField(rvc.max_v_construction_as_text, GUIStyles.textBoxStyle);
                 GUILayout.EndHorizontal();
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("yaw rate limit", GUIStyles.labelStyleLeft);
-                float.TryParse(GUILayout.TextField(yvc.max_v_construction.ToString("G4"), GUIStyles.textBoxStyle), out yvc.max_v_construction);
+                yvc.max_v_construction_as_text = GUILayout.TextField(yvc.max_v_construction_as_text, GUIStyles.textBoxStyle);
                 GUILayout.EndHorizontal();
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("director strength", GUIStyles.labelStyleLeft);
-                double.TryParse(GUILayout.TextField(dc.strength.ToString("G4"), GUIStyles.textBoxStyle), out dc.strength);
+                dc.strength_as_text = GUILayout.TextField(dc.strength_as_text, GUIStyles.textBoxStyle);
                 GUILayout.EndHorizontal();
 
                 // wing leveler
