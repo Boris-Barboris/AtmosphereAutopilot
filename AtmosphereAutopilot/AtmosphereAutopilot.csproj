@@ -78,7 +78,11 @@
       <HintPath>Dependencies\UnityEngine.PhysicsModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.TextRenderingModule">
+     <Reference Include="UnityEngine.Physics2DModule">
+      <HintPath>Dependencies\UnityEngine.Physics2DModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+   <Reference Include="UnityEngine.TextRenderingModule">
       <HintPath>Dependencies\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
@@ -86,7 +90,11 @@
       <HintPath>Dependencies\UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="UnityEngine.SharedInternalsModule">
+      <HintPath>Dependencies\UnityEngine.SharedInternalsModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+   <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Dependencies\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>

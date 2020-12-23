@@ -14,5 +14,5 @@ cp ../../../UnityAssets/Result/atmosphereautopilotprefabs ./
 cp * AtmosphereAutopilot/ || true
 cp ../../../LICENSE LICENSE_AtmosphereAutopilot
 cp ../../../KSPUpgradeScriptFix.dll ./
-wget -nc https://ksp.sarbian.com/jenkins/job/ModuleManager/154/artifact/ModuleManager.4.1.0.dll
+wget -nc https://ksp.sarbian.com/jenkins/job/ModuleManager/159/artifact/ModuleManager.4.1.4.dll
 zip AtmosphereAutopilot.zip LICENSE_AtmosphereAutopilot ModuleManager.4.1.0.dll AtmosphereAutopilot/* KSPUpgradeScriptFix.dll
