@@ -85,7 +85,12 @@ namespace AtmosphereAutopilot
                 int gimbal_index = -1;
                 for (int i = 0; i < partNode.nodes.Count; i++)
                     if (gimbalNode == partNode.nodes[i])
+                    {
                         gimbal_index = i;
+                        break;
+                    }
+                if (gimbal_index == 0)
+                    return false;
                 partNode.RemoveNode(gimbalNode);
                 List<ConfigNode> backup_nodes = new List<ConfigNode>();
 
@@ -104,13 +109,17 @@ namespace AtmosphereAutopilot
 
             void handle_ModuleSurfaceFX(ConfigNode partNode)
             {
-                ConfigNode fx_node = partNode.nodes.GetNode("MODULE", "name", "ModuleSurfaceFX");
-                if (fx_node != null)
+                ConfigNode[] fx_nodes = partNode.nodes.GetNodes("MODULE", "name", "ModuleSurfaceFX");
+                if (fx_nodes != null && fx_nodes.Length != 0)
                 {
-                    int old_index = -1;
-                    if (int.TryParse(fx_node.GetValue("thrustProviderModuleIndex"), out old_index))
+                    foreach (var fx_node in fx_nodes)
                     {
-                        fx_node.SetValue("thrustProviderModuleIndex", (old_index + 1).ToString());
+                        int old_index = -1;
+                        if (int.TryParse(
+                            fx_node.GetValue("thrustProviderModuleIndex"), out old_index))
+                        {
+                            fx_node.SetValue("thrustProviderModuleIndex", (old_index + 1).ToString());
+                        }
                     }
                 }
             }

@@ -9,10 +9,11 @@ rm -f *.zip
 rm -rf AtmosphereAutopilot
 rm -f LICENSE*
 rm -f ModuleManager*
+rm -f KSPUpgradeScriptFix.dll
 mkdir AtmosphereAutopilot
 cp ../../../UnityAssets/Result/atmosphereautopilotprefabs ./
 cp * AtmosphereAutopilot/ || true
 cp ../../../LICENSE LICENSE_AtmosphereAutopilot
 cp ../../../KSPUpgradeScriptFix.dll ./
 wget -nc https://ksp.sarbian.com/jenkins/job/ModuleManager/159/artifact/ModuleManager.4.1.4.dll
-zip AtmosphereAutopilot.zip LICENSE_AtmosphereAutopilot ModuleManager.4.1.0.dll AtmosphereAutopilot/* KSPUpgradeScriptFix.dll
+zip AtmosphereAutopilot.zip LICENSE_AtmosphereAutopilot ModuleManager.4.1.0.dll KSPUpgradeScriptFix.dll AtmosphereAutopilot/*
