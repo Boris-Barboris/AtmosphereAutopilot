@@ -125,7 +125,7 @@ namespace AtmosphereAutopilot
         {
             BeforeSerialized();
             AutoSerialization.Serialize(this, module_name.Replace(' ', '_'),
-                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/designs/" + vessel.vesselName + ".txt",
+                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/designs/" + KSPUtil.SanitizeFilename(vessel.vesselName) + ".txt",
                 typeof(VesselSerializable), OnSerialize);
             AutoSerialization.Serialize(this, module_name.Replace(' ', '_'),
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.txt",
