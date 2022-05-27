@@ -130,6 +130,8 @@ Cruise_Flight_controller
 }
 Prograde_thrust_controller
 {
+	use_breaks = True
+	use_pid = False
 	hotkey_speed_factor = 0.7
 	use_throttle_hotkeys = True
 	window_x = 335

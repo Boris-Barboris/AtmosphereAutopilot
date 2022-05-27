@@ -1,7 +1,7 @@
 ﻿/*
 Atmosphere Autopilot, plugin for Kerbal Space Program.
 Copyright (C) 2015-2016, Baranin Alexander aka Boris-Barboris.
- 
+
 Atmosphere Autopilot is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -11,7 +11,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
-along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>. 
+along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System;
@@ -151,6 +151,7 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("break spd margin %", true, "G5")]
         public double break_margin = 10.0f;
 
+        [GlobalSerializable("use_breaks")]
         [AutoGuiAttr("Use breaks", true)]
         public bool use_breaks = true;
 
@@ -173,6 +174,8 @@ namespace AtmosphereAutopilot
 
         public Vector3d surfspd_dir;
 
+        private bool was_breaking_previously = true;
+
         /// <summary>
         /// Main control function
         /// </summary>
@@ -190,19 +193,35 @@ namespace AtmosphereAutopilot
                 {
                     // we're on ground
                     if (current_v > desired_v)
+                    {
                         vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, true);
+                        was_breaking_previously = true;
+                    }
                     else
-                        vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, false);
+                    {
+                        if (was_breaking_previously)
+                            vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, false);
+                        was_breaking_previously = false;
+                    }
                 }
                 else
                 {
                     // we're in flight
                     if (current_v > (1.0 + break_margin / 100.0) * desired_v)
+                    {
                         vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, true);
+                        was_breaking_previously = true;
+                    }
                     else
-                        vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, false);
+                    {
+                        if (was_breaking_previously)
+                            vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, false);
+                        was_breaking_previously = false;
+                    }
                 }
             }
+            else
+                was_breaking_previously = true;
 
             if (use_pid)
             {
