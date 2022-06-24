@@ -142,6 +142,13 @@ Sideslip_controller
 	window_x = 1096
 	window_y = 739
 }
+AoA-hold_controller
+{
+	use_keys = True
+	hotkey_desired_aoa_sens = 3
+	window_x = 54
+	window_y = 243
+}
 AoA_controller
 {
 	window_x = 1096
