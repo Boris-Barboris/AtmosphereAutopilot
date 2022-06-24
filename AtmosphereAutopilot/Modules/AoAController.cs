@@ -1,7 +1,7 @@
 ﻿/*
 Atmosphere Autopilot, plugin for Kerbal Space Program.
 Copyright (C) 2015-2016, Baranin Alexander aka Boris-Barboris.
- 
+
 Atmosphere Autopilot is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -11,7 +11,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
-along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>. 
+along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System;
@@ -114,8 +114,9 @@ namespace AtmosphereAutopilot
         /// <param name="target_derivative">Desired AoA derivative</param>
         public float ApplyControl(FlightCtrlState cntrl, float target_value, float target_derivative)
         {
-            if (imodel.dyn_pressure <= (v_controller.moder_cutoff_ias * v_controller.moder_cutoff_ias) 
-                || !v_controller.moderate_aoa)
+            if (user_controlled && (
+                imodel.dyn_pressure <= (v_controller.moder_cutoff_ias * v_controller.moder_cutoff_ias)
+                || !v_controller.moderate_aoa))
             {
                 v_controller.user_controlled = true;
                 v_controller.ApplyControl(cntrl, 0.0f);

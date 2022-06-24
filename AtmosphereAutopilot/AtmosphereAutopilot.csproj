@@ -145,6 +145,7 @@
     <Compile Include="Modules\AngularVelAdaptiveController.cs" />
     <Compile Include="Modules\MouseDirector.cs" />
     <Compile Include="Modules\CruiseController.cs" />
+    <Compile Include="Modules\AoAHoldController.cs" />
     <Compile Include="Modules\ProgradeThrustController.cs" />
     <Compile Include="Modules\AutopilotModule.cs" />
     <Compile Include="Modules\AoAController.cs" />

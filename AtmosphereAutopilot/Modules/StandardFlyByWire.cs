@@ -1,7 +1,7 @@
 ﻿/*
 Atmosphere Autopilot, plugin for Kerbal Space Program.
 Copyright (C) 2015-2016, Baranin Alexander aka Boris-Barboris.
- 
+
 Atmosphere Autopilot is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -11,7 +11,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
-along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>. 
+along with Atmosphere Autopilot.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System;
@@ -45,7 +45,7 @@ namespace AtmosphereAutopilot
             im = modules[typeof(FlightModel)] as FlightModel;
         }
 
-        protected override void OnActivate() 
+        protected override void OnActivate()
         {
             pc.Activate();
             pc.user_controlled = true;
@@ -108,7 +108,7 @@ namespace AtmosphereAutopilot
 
         [GlobalSerializable("moderation_keycode")]
         [AutoHotkeyAttr("FBW moderation")]
-        static KeyCode moderation_keycode = KeyCode.O;
+        public static KeyCode moderation_keycode = KeyCode.O;
 
         [GlobalSerializable("rocket_mode_keycode")]
         [AutoHotkeyAttr("FBW rocket mode")]
