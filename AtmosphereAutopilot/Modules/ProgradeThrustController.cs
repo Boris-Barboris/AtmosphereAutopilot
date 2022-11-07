@@ -40,6 +40,96 @@ namespace AtmosphereAutopilot
         public const float kts2mps = 0.514444f;
         public const float mps2kts = 1.0f / kts2mps;
 
+        public const float machEpsilon = 0.005f;
+
+        public static float rayleighPitotTubeStagPressureSubSonic(float M, float gamma)
+        {
+            float pressure;
+
+            pressure = (M * M) * (gamma - 1) / 2 + 1;
+            pressure = Mathf.Pow(pressure, gamma / (gamma - 1));
+
+            return pressure;
+        }
+
+        public static float rayleighPitotTubeStagPressureSuperSonic(float M, float gamma)
+        {
+            float pressure;
+
+            pressure = (gamma + 1) * M;
+            pressure *= pressure;
+            pressure /= (4 * gamma * M * M - 2 * (gamma - 1));
+            pressure = Mathf.Pow(pressure, gamma / (gamma - 1));
+            pressure *= (1 - gamma + 2 * gamma * M * M) / (gamma + 1);
+
+            return pressure;
+        }
+
+        public static float mps2Ias(float mps, Vessel v)
+        {
+            float M = (float)(mps / v.speedOfSound);
+            float gamma = (float) v.mainBody.atmosphereAdiabaticIndex;
+            float pressureRatio;
+            if (M <= 1)
+            {
+                pressureRatio = rayleighPitotTubeStagPressureSubSonic(M, gamma);
+            }
+            else
+            {
+                pressureRatio = rayleighPitotTubeStagPressureSuperSonic(M, gamma);
+            }
+
+            float velocity = pressureRatio - 1;
+            velocity *= (float)v.staticPressurekPa * 1000 * 2;
+            velocity /= 1.225f;
+            velocity = Mathf.Sqrt(velocity);
+            return velocity;
+        }
+
+        public static float rayleighMachFromPitotTubeStagPressure(float pressure, float gamma)
+        {
+            float M;
+
+            float soundPres = Mathf.Pow((gamma + 1) / 2, gamma / (gamma - 1)); ;
+
+            if (pressure <= soundPres)
+            {
+                M = Mathf.Pow(pressure, (gamma - 1) / gamma);
+                M = (M - 1) * 2 / (gamma - 1);
+                M = Mathf.Sqrt(M);
+            }
+            else
+            {
+                float slope, mnew;
+                float m1 = 1, m2 = 2;
+                float pt1 = rayleighPitotTubeStagPressureSuperSonic(m1, gamma) - pressure;
+                float pt2 = rayleighPitotTubeStagPressureSuperSonic(m2, gamma) - pressure;
+                do
+                {
+                    slope = (m2 - m1) / (pt2 - pt1);
+                    mnew = m2 - slope * pt2;
+                    mnew = Mathf.Max(1, mnew); // don't go subsonic
+                    m1 = m2;
+                    m2 = mnew;
+                    pt1 = pt2;
+                    pt2 = rayleighPitotTubeStagPressureSuperSonic(m2, gamma) - pressure;
+                } while (Mathf.Abs(m2 - m1) > machEpsilon);
+                M = m2;
+            }
+            return M;
+        }
+
+        public static float ias2Mps(float ias, Vessel v)
+        {
+            float gamma = (float)v.mainBody.atmosphereAdiabaticIndex;
+
+            float pressureRatio = ias * ias * 1.225f / (float)v.staticPressurekPa / 1000 / 2 + 1;
+
+            float M = rayleighMachFromPitotTubeStagPressure(pressureRatio, gamma);
+
+            return (float) (M * v.speedOfSound);
+        }
+
         public SpeedSetpoint(SpeedType type, float value, Vessel v)
         {
             this.type = type;
@@ -61,9 +151,9 @@ namespace AtmosphereAutopilot
                 case SpeedType.Knots:
                     return mpersec * mps2kts;
                 case SpeedType.IAS:
-                    return Mathf.Sqrt(mpersec * mpersec * (float)v.atmDensity);
+                    return mps2Ias(mpersec, v);
                 case SpeedType.KIAS:
-                    return Mathf.Sqrt(mpersec * mpersec * mps2kts * mps2kts * (float)v.atmDensity);
+                    return mps2Ias(mpersec, v) * mps2kts;
                 default:
                     return 0.0f;
             }
@@ -80,9 +170,9 @@ namespace AtmosphereAutopilot
                 case SpeedType.Knots:
                     return mps * mps2kts;
                 case SpeedType.IAS:
-                    return Mathf.Sqrt(mps * mps * (float)v.atmDensity);
+                    return mps2Ias(mps, v);
                 case SpeedType.KIAS:
-                    return Mathf.Sqrt(mps * mps * mps2kts * mps2kts * (float)v.atmDensity);
+                    return mps2Ias(mps, v) * mps2kts;
                 default:
                     return 0.0f;
             }
@@ -99,9 +189,9 @@ namespace AtmosphereAutopilot
                 case SpeedType.Knots:
                     return value * kts2mps;
                 case SpeedType.IAS:
-                    return Mathf.Sqrt(value * value / (float)v.atmDensity);
+                    return ias2Mps(value, v);
                 case SpeedType.KIAS:
-                    return Mathf.Sqrt(value * value * kts2mps * kts2mps / (float)v.atmDensity);
+                    return ias2Mps(value * kts2mps, v);
                 default:
                     return 0.0f;
             }
