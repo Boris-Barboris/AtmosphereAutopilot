@@ -38,7 +38,13 @@ namespace AtmosphereAutopilot
     {
         internal CruiseController(Vessel v)
             : base(v, "Cruise Flight controller", 88437226)
-        { }
+        {
+            flc_controller.KP = 0.6;
+            flc_controller.KI = 0.03;
+            flc_controller.KD = 0.2;
+            flc_controller.IntegralClamp = double.PositiveInfinity;
+            flc_controller.AccumulatorClamp = double.PositiveInfinity;
+        }
 
         FlightModel imodel;
         DirectorController dir_c;
@@ -229,14 +235,24 @@ namespace AtmosphereAutopilot
         [VesselSerializable("desired_vertspeed_field")]
         public DelayedFieldFloat desired_vertspeed = new DelayedFieldFloat(0.0f, "G4");
 
-        [GlobalSerializable("preudo_flc")]
-        [VesselSerializable("preudo_flc")]
-        [AutoGuiAttr("pseudo-FLC", true)]
-        public bool pseudo_flc = true;
+        [GlobalSerializable("pseudo_flc")]
+        [VesselSerializable("pseudo_flc")]
+        [AutoGuiAttr("pseudo_flc", true)]
+        public bool pseudo_flc = false;
 
-        [VesselSerializable("flc_margin")]
-        [AutoGuiAttr("flc_margin", true, "G4")]
-        public double flc_margin = 20.0;
+        PIDController flc_controller = new PIDController();
+
+        [VesselSerializable("flc_pid_Kp")]
+        [AutoGuiAttr("flc_pid_Kp", true, "G4")]
+        public double flc_pid_Kp { get { return flc_controller.KP; } set { flc_controller.KP = value; } }
+
+        [VesselSerializable("flc_pid_Ki")]
+        [AutoGuiAttr("flc_pid_Ki", true, "G4")]
+        public double flc_pid_Ki { get { return flc_controller.KI; } set { flc_controller.KI = value; } }
+
+        [VesselSerializable("flc_pid_Kd")]
+        [AutoGuiAttr("flc_pid_Kd", true, "G4")]
+        public double flc_pid_Kd { get { return flc_controller.KD; } set { flc_controller.KD = value; } }
 
         [VesselSerializable("strength_mult")]
         [AutoGuiAttr("strength_mult", true, "G5")]
@@ -278,6 +294,10 @@ namespace AtmosphereAutopilot
 
             Vector3d proportional_acc = Vector3d.zero;
             double cur_vert_speed = Vector3d.Dot(imodel.surface_v, planet2vesNorm);
+            
+            // speed control portion for ascent\descent
+            double effective_max_climb_angle = max_climb_angle;
+
             if (Math.Abs(height_error) < height_relax_frame)
             {
                 relax_transition_k = Common.Clamp(2.0 * (height_relax_frame - Math.Abs(height_error)), 0.0, 1.0);
@@ -286,6 +306,30 @@ namespace AtmosphereAutopilot
                 // exponential descent
                 if (cur_vert_speed * height_error > 0.0)
                     proportional_acc = -planet2vesNorm * height_relax_Kp * cur_vert_speed;
+                flc_controller.clear();
+            }
+            else if (pseudo_flc)
+            {
+                // refactored flc using pid loop
+                double flc_pid_control = flc_controller.Control(imodel.surface_v_magnitude, thrust_c.setpoint.mps(), TimeWarp.fixedDeltaTime);
+                if (height_error >= 0.0)
+                {
+                    effective_max_climb_angle = Common.Clamp(-flc_pid_control, 0.1, max_climb_angle);
+                    if (thrust_c.spd_control_enabled)
+                        thrust_c.ForceThrottle(1.0f);
+                }
+                else
+                {
+                    effective_max_climb_angle = Common.Clamp(-flc_pid_control, -max_climb_angle, -0.1);
+                    if (thrust_c.spd_control_enabled)
+                        thrust_c.ForceThrottle(0.0f);
+                }
+                
+            }
+            else
+            {
+                effective_max_climb_angle *= Math.Max(0.0, Math.Min(1.0, vessel.srfSpeed / thrust_c.setpoint.mps()));
+                flc_controller.clear();
             }
 
             // let's assume parabolic ascent\descend
@@ -302,32 +346,6 @@ namespace AtmosphereAutopilot
                 des_vert_speed = -Math.Sqrt(vert_acc_descent * height_error);
                 if (cur_vert_speed < 0.0)
                     parabolic_acc = -planet2vesNorm * 0.5 * cur_vert_speed * cur_vert_speed / height_error;
-            }
-
-            // speed control portion for ascend
-            double effective_max_climb_angle = max_climb_angle;
-            if (thrust_c.spd_control_enabled && (height_error >= 0.0))
-            {
-                if (pseudo_flc)
-                {
-                    filtered_drag = Common.simple_filter(thrust_c.drag_estimate, filtered_drag, 5.0);
-                    if (thrust_c.estimated_max_thrust > filtered_drag)
-                    {
-                        double sin = Vector3d.Dot(-planet2vesNorm, imodel.gravity_acc + imodel.noninert_acc) / (thrust_c.estimated_max_thrust - filtered_drag);
-                        if (sin < 0.0 || sin >= 1.0)
-                            effective_max_climb_angle = Math.Min(Math.Asin(sin), max_climb_angle);
-                    }
-                    else
-                        effective_max_climb_angle = 1.0;
-
-                    double spd_diff = (imodel.surface_v_magnitude - thrust_c.setpoint.mps());
-                    if (spd_diff < -flc_margin)
-                        effective_max_climb_angle *= 0.0;
-                    else if (spd_diff < 0.0)
-                        effective_max_climb_angle *= (spd_diff + flc_margin) / flc_margin;
-                }
-                else
-                    effective_max_climb_angle *= Math.Max(0.0, Math.Min(1.0, vessel.srfSpeed / thrust_c.setpoint.mps()));
             }
 
             double max_vert_speed = vessel.horizontalSrfSpeed * Math.Tan(effective_max_climb_angle * dgr2rad);
