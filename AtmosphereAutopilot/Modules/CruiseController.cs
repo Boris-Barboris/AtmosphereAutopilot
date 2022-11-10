@@ -106,10 +106,18 @@ namespace AtmosphereAutopilot
                     handle_wide_turn();
                     if (vertical_control)
                     {
-                        if (height_mode == HeightMode.Altitude)
-                            desired_velocity = account_for_height(desired_velocity);
-                        else
-                            desired_velocity = account_for_vertical_vel(desired_velocity);
+                        switch (height_mode)
+                        {
+                            case HeightMode.Altitude:
+                                desired_velocity = account_for_height(desired_velocity);
+                                break;
+                            case HeightMode.VerticalSpeed:
+                                desired_velocity = account_for_vertical_vel(desired_velocity);
+                                break;
+                            case HeightMode.FlightPathAngle:
+                                desired_velocity = account_for_fpa(desired_velocity);
+                                break;
+                        }
                     }
                     break;
 
@@ -128,10 +136,18 @@ namespace AtmosphereAutopilot
                     handle_wide_turn();
                     if (vertical_control)
                     {
-                        if (height_mode == HeightMode.Altitude)
-                            desired_velocity = account_for_height(desired_velocity);
-                        else
-                            desired_velocity = account_for_vertical_vel(desired_velocity);
+                        switch (height_mode)
+                        {
+                            case HeightMode.Altitude:
+                                desired_velocity = account_for_height(desired_velocity);
+                                break;
+                            case HeightMode.VerticalSpeed:
+                                desired_velocity = account_for_vertical_vel(desired_velocity);
+                                break;
+                            case HeightMode.FlightPathAngle:
+                                desired_velocity = account_for_fpa(desired_velocity);
+                                break;
+                        }
                     }
                     break;
 
@@ -195,7 +211,8 @@ namespace AtmosphereAutopilot
         public enum HeightMode
         {
             Altitude,
-            VerticalSpeed
+            VerticalSpeed,
+            FlightPathAngle
         }
 
         public HeightMode height_mode = HeightMode.Altitude;
@@ -261,6 +278,12 @@ namespace AtmosphereAutopilot
         Vector3d account_for_vertical_vel(Vector3d desired_direction)
         {
             Vector3d res = desired_direction.normalized * vessel.horizontalSrfSpeed + planet2vesNorm * desired_vertspeed;
+            return res.normalized;
+        }
+
+        Vector3d account_for_fpa(Vector3d desired_direction)
+        {
+            Vector3d res = desired_direction.normalized * vessel.horizontalSrfSpeed + planet2vesNorm * vessel.horizontalSrfSpeed * Math.Tan(desired_vertspeed * dgr2rad);
             return res.normalized;
         }
 
@@ -397,31 +420,7 @@ namespace AtmosphereAutopilot
             }
         }
 
-        bool AltitudeMode
-        {
-            get { return height_mode == HeightMode.Altitude; }
-            set
-            {
-                if (value)
-                    height_mode = HeightMode.Altitude;
-                else
-                    height_mode = HeightMode.VerticalSpeed;
-            }
-        }
-
-        bool VerticalSpeedMode
-        {
-            get { return height_mode == HeightMode.VerticalSpeed; }
-            set
-            {
-                if (!value)
-                    height_mode = HeightMode.Altitude;
-                else
-                    height_mode = HeightMode.VerticalSpeed;
-            }
-        }
-
-		void select_target()
+        void select_target()
 		{
 			var target = vessel.targetObject?.GetVessel();
 			if (target == null || target.mainBody != vessel.mainBody)
@@ -538,11 +537,31 @@ namespace AtmosphereAutopilot
             vertical_control = GUILayout.Toggle(vertical_control, "Vertical motion", GUIStyles.toggleButtonStyle);
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical();
-            AltitudeMode = GUILayout.Toggle(AltitudeMode, "Altitude", GUIStyles.toggleButtonStyle);     // GUILayout.Width(90.0f)
-            desired_altitude.DisplayLayout(GUIStyles.textBoxStyle);                                     // GUILayout.Width(90.0f)
+            if (GUILayout.Toggle(height_mode == HeightMode.Altitude, "Altitude", GUIStyles.toggleButtonStyle))
+                height_mode = HeightMode.Altitude;
+            desired_altitude.DisplayLayout(GUIStyles.textBoxStyle);
             GUILayout.EndVertical();
             GUILayout.BeginVertical();
-            VerticalSpeedMode = GUILayout.Toggle(VerticalSpeedMode, "Vertical speed", GUIStyles.toggleButtonStyle);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Toggle(height_mode == HeightMode.VerticalSpeed, "V/S", GUIStyles.toggleButtonStyle))
+            {
+                if (height_mode == HeightMode.FlightPathAngle)
+                {
+                    desired_vertspeed.Value = (float) (vessel.horizontalSrfSpeed * Math.Tan(desired_vertspeed * dgr2rad));
+                }
+                height_mode = HeightMode.VerticalSpeed;
+            }
+                
+            if (GUILayout.Toggle(height_mode == HeightMode.FlightPathAngle, "FPA", GUIStyles.toggleButtonStyle))
+            {
+                if (height_mode == HeightMode.VerticalSpeed)
+                {
+                    desired_vertspeed.Value = (float) (Math.Atan(desired_vertspeed / vessel.horizontalSrfSpeed) / dgr2rad);
+                }
+                height_mode = HeightMode.FlightPathAngle;
+            }
+                
+            GUILayout.EndHorizontal();
             desired_vertspeed.DisplayLayout(GUIStyles.textBoxStyle);
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
@@ -650,8 +669,20 @@ namespace AtmosphereAutopilot
 
                 if (Input.GetKeyDown(toggle_vertical_setpoint_type_key))
                 {
-                    AltitudeMode = !AltitudeMode;
-                    MessageManager.post_status_message(AltitudeMode ? "Altitude control" : "Vertical speed control");
+                    height_mode = (HeightMode) (((int)height_mode + 1) % 3);
+                    switch (height_mode)
+                    {
+                        case HeightMode.Altitude:
+                            MessageManager.post_status_message("Altitude control");
+                            break;
+                        case HeightMode.VerticalSpeed:
+                            MessageManager.post_status_message("Vertical speed control");
+                            break;
+                        case HeightMode.FlightPathAngle:
+                            MessageManager.post_status_message("Flight path angle control");
+                            break;
+                    }
+                    
                 }
 
                 // input shenanigans
@@ -674,19 +705,25 @@ namespace AtmosphereAutopilot
 
                     if (pitch_key_pressed)
                     {
-                        if (height_mode == HeightMode.Altitude)
+                        float setpoint;
+                        float magnetic_mult;
+                        float new_setpoint;
+                        switch (height_mode)
                         {
-                            float setpoint = desired_altitude;
-                            float new_setpoint = setpoint + pitch_change_sign * hotkey_altitude_sens * Time.deltaTime * setpoint;
-                            desired_altitude.Value = new_setpoint;
+                            case HeightMode.Altitude:
+                                setpoint = desired_altitude;
+                                new_setpoint = setpoint + pitch_change_sign * hotkey_altitude_sens * Time.deltaTime * setpoint;
+                                desired_altitude.Value = new_setpoint;
+                                break;
+                            case HeightMode.VerticalSpeed:
+                            case HeightMode.FlightPathAngle:
+                                setpoint = desired_vertspeed;
+                                magnetic_mult = Mathf.Abs(desired_vertspeed) < 10.0f ? 0.3f : 1.0f;
+                                new_setpoint = setpoint + pitch_change_sign * hotkey_vertspeed_sens * Time.deltaTime * magnetic_mult;
+                                desired_vertspeed.Value = new_setpoint;
+                                break;
                         }
-                        else
-                        {
-                            float setpoint = desired_vertspeed;
-                            float magnetic_mult = Mathf.Abs(desired_vertspeed) < 10.0f ? 0.3f : 1.0f;
-                            float new_setpoint = setpoint + pitch_change_sign * hotkey_vertspeed_sens * Time.deltaTime * magnetic_mult;
-                            desired_vertspeed.Value = new_setpoint;
-                        }
+
                         need_to_show_altitude = true;
                         altitude_change_counter = 0.0f;
                         AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
@@ -730,7 +767,7 @@ namespace AtmosphereAutopilot
                     if (need_to_show_altitude)
                     {
                         altitude_change_counter += Time.deltaTime;
-                        if (height_mode == HeightMode.VerticalSpeed && altitude_change_counter > 0.2f)
+                        if (height_mode != HeightMode.Altitude && altitude_change_counter > 0.2f)
                             if (Mathf.Abs(desired_vertspeed) < hotkey_vertspeed_snap)
                                 desired_vertspeed.Value = 0.0f;
                     }
@@ -801,10 +838,18 @@ namespace AtmosphereAutopilot
             {
                 Rect rect = new Rect(Screen.width / 2.0f - 80.0f, 160.0f, 160.0f, 20.0f);
                 string str = null;
-                if (height_mode == HeightMode.Altitude)
-                    str = "Altitude = " + desired_altitude.Value.ToString("G5");
-                else
-                    str = "Vert speed = " + desired_vertspeed.Value.ToString("G4");
+                switch (height_mode)
+                {
+                    case HeightMode.Altitude:
+                        str = "Altitude = " + desired_altitude.Value.ToString("G5");
+                        break;
+                    case HeightMode.VerticalSpeed:
+                        str = "Vert speed = " + desired_vertspeed.Value.ToString("G4");
+                        break;
+                    case HeightMode.FlightPathAngle:
+                        str = "FPA = " + desired_vertspeed.Value.ToString("G4");
+                        break;
+                }
                 GUI.Label(rect, str, GUIStyles.hoverLabel);
             }
 
