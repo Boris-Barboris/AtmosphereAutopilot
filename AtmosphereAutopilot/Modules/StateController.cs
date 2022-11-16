@@ -40,6 +40,23 @@ namespace AtmosphereAutopilot
     }
 
     /// <summary>
+    /// Base class of sub state controllers that is called by main state controllers
+    /// </summary>
+    public abstract class SubStateController : AutopilotModule
+    {
+        protected SubStateController(Vessel cur_vessel, string module_name, int wnd_id)
+            : base(cur_vessel, wnd_id, module_name)
+        { }
+
+        /// <summary>
+        /// Main control function of the sub autopilot.
+        /// </summary>
+        /// <param name="cntrl">Control state to change</param>
+        public abstract void ApplyControl(FlightCtrlState cntrl);
+
+    }
+
+    /// <summary>
     /// Flight control state controller with SIMO base class
     /// </summary>
     public abstract class SISOController : AutopilotModule

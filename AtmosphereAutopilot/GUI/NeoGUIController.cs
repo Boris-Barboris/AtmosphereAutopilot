@@ -132,13 +132,13 @@ namespace AtmosphereAutopilot {
       get {
         if (speedAP == null)
           return 0f;
-        return speedAP.setpoint.mps();
+        return speedAP.setpoint.sameSystemMps();
       }
 
       set {
         if (parent.ActiveVessel != null) {
           speedAP.setpoint_field.Value = value;
-          speedAP.chosen_spd_mode = 1;
+          speedAP.type = SpeedType.MetersPerSecond;
           speedAP.setpoint = new SpeedSetpoint(SpeedType.MetersPerSecond, value, parent.ActiveVessel);
         }
       }

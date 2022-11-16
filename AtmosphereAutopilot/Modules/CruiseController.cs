@@ -87,7 +87,7 @@ namespace AtmosphereAutopilot
                 return;
 
             if (thrust_c.spd_control_enabled)
-                thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
+                thrust_c.ApplyControl(cntrl);
 
             desired_velocity = Vector3d.zero;
             planet2ves = vessel.ReferenceTransform.position - vessel.mainBody.position;
@@ -320,14 +320,15 @@ namespace AtmosphereAutopilot
                     else
                         effective_max_climb_angle = 1.0;
 
-                    double spd_diff = (imodel.surface_v_magnitude - thrust_c.setpoint.mps());
+                    double spd_diff_magnitude;
+                    double spd_diff = thrust_c.speedDiff(out spd_diff_magnitude);
                     if (spd_diff < -flc_margin)
                         effective_max_climb_angle *= 0.0;
                     else if (spd_diff < 0.0)
-                        effective_max_climb_angle *= (spd_diff + flc_margin) / flc_margin;
+                        effective_max_climb_angle *= (spd_diff * spd_diff_magnitude + flc_margin) / flc_margin;
                 }
                 else
-                    effective_max_climb_angle *= Math.Max(0.0, Math.Min(1.0, vessel.srfSpeed / thrust_c.setpoint.mps()));
+                    effective_max_climb_angle *= Common.Clamp(thrust_c.currentSpeedOfSameSystem() / thrust_c.setpoint.sameSystemMps(), 0.0, 1.0);
             }
 
             double max_vert_speed = vessel.horizontalSrfSpeed * Math.Tan(effective_max_climb_angle * dgr2rad);

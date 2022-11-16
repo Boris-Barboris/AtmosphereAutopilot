@@ -84,20 +84,15 @@ namespace AtmosphereAutopilot
         /// Current aerodynamics model.
         /// </summary>
         public static AerodinamycsModel AeroModel { get; private set; }
-        Assembly far_assembly;
+        public FARReflections farReflections;
 
         void determine_aerodynamics()
         {
             AeroModel = AerodinamycsModel.Stock;
-            foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
+            farReflections = new FARReflections();
+            if (farReflections.isFarFound)
             {
-                if (a.GetName().Name.Equals("FerramAerospaceResearch"))
-                {
-                    far_assembly = a;
-                    AeroModel = AerodinamycsModel.FAR;
-                    Debug.Log("[AtmosphereAutopilot]: FAR aerodynamics detected");
-                    return;
-                }
+                AeroModel = AerodinamycsModel.FAR;
             }
         }
 
@@ -111,11 +106,7 @@ namespace AtmosphereAutopilot
             if (AeroModel == AerodinamycsModel.Stock)
                 control_surface_module_type = typeof(SyncModuleControlSurface);
             else
-            {
-                control_surface_module_type = far_assembly.GetTypes().First(t => t.Name.Equals("FARControllableSurface"));
-                if (control_surface_module_type == null)
-                    throw new Exception("AtmosphereAutopilot could not bind to FAR FARControllableSurface class");
-            }
+                control_surface_module_type = farReflections.FARControllableSurfaceType;
         }
 
         public static Dictionary<Type, ConstructorInfo> gimbal_module_wrapper_map = new Dictionary<Type, ConstructorInfo>(4);

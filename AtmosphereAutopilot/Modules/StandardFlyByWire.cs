@@ -202,7 +202,7 @@ namespace AtmosphereAutopilot
             }
 
             if (tc.spd_control_enabled)
-                tc.ApplyControl(cntrl, tc.setpoint.mps());
+                tc.ApplyControl(cntrl);
 
 			pc.user_controlled = true;
             if (coord_turn)
