@@ -219,9 +219,6 @@ namespace AtmosphereAutopilot
 
         private HeightMode prev_height_change_mode_by_hotkey = HeightMode.VerticalSpeed;
 
-        // command surface upward/downward if angle command is within this angle to +-90 degree
-        public const float vert_angle_epsilon = 0.1f;
-
         public Waypoint current_waypt = new Waypoint();
 
         // axis to rotate around in level flight mode
@@ -248,8 +245,8 @@ namespace AtmosphereAutopilot
         [VesselSerializable("desired_altitude_field")]
         public DelayedFieldFloat desired_altitude = new DelayedFieldFloat(1000.0f, "G5");
 
-        [VesselSerializable("desired_vertspeed_field")]
-        public DelayedFieldFloat desired_vertspeed = new DelayedFieldFloat(0.0f, "G4");
+        [VesselSerializable("desired_vertsetpoint_field")]
+        public DelayedFieldFloat desired_vertsetpoint = new DelayedFieldFloat(0.0f, "G4");
 
         [GlobalSerializable("preudo_flc")]
         [VesselSerializable("preudo_flc")]
@@ -282,21 +279,18 @@ namespace AtmosphereAutopilot
 
         Vector3d account_for_vertical_vel(Vector3d desired_direction)
         {
-            Vector3d res = desired_direction.normalized * vessel.horizontalSrfSpeed + planet2vesNorm * desired_vertspeed;
+            Vector3d res = desired_direction.normalized * vessel.horizontalSrfSpeed + planet2vesNorm * desired_vertsetpoint;
             return res.normalized;
         }
 
         Vector3d account_for_fpa(Vector3d desired_direction)
         {
             // let's limit the input to [-90, 90]
-            if (Mathf.Abs(desired_vertspeed.Value) > 90.0f)
-                desired_vertspeed.Value = Common.Clampf(desired_vertspeed, 90.0f);
-            
-            Vector3d res;
-            if (90.0f - Mathf.Abs(desired_vertspeed) < vert_angle_epsilon)
-                res = planet2vesNorm * Mathf.Sign(desired_vertspeed);
-            else
-                res = desired_direction.normalized * vessel.horizontalSrfSpeed + planet2vesNorm * vessel.horizontalSrfSpeed * Math.Tan(desired_vertspeed * dgr2rad);
+            desired_vertsetpoint.Value = Common.Clampf(desired_vertsetpoint, 90.0f);
+
+            // Vector3d.RotateTowards has caused "missing method" exception, using Vector3.RotateTowards instead
+            Vector3d res = Vector3.RotateTowards(desired_direction.normalized, planet2vesNorm, desired_vertsetpoint * dgr2rad, 0.0f);
+
             return res.normalized;
         }
 
@@ -560,11 +554,13 @@ namespace AtmosphereAutopilot
             {
                 if (height_mode == HeightMode.FlightPathAngle)
                 {
-                    if (90.0f - Mathf.Abs(desired_vertspeed) < vert_angle_epsilon)
+                    float desired_vertspeed = (float)(vessel.horizontalSrfSpeed * Math.Tan(desired_vertsetpoint * dgr2rad));
+                    
+                    if (float.IsNaN(desired_vertspeed) || Mathf.Abs(desired_vertspeed) > 9999.0f)
                         // don't put a value close to infinity to the field
-                        desired_vertspeed.Value = 9999.0f * Mathf.Sign(desired_vertspeed);
-                    else
-                        desired_vertspeed.Value = (float)(vessel.horizontalSrfSpeed * Math.Tan(desired_vertspeed * dgr2rad));
+                        desired_vertspeed = 9999.0f * Mathf.Sign(desired_vertspeed);
+
+                    desired_vertsetpoint.Value = desired_vertspeed;
                 }
                 height_mode = HeightMode.VerticalSpeed;
             }
@@ -573,16 +569,18 @@ namespace AtmosphereAutopilot
             {
                 if (height_mode == HeightMode.VerticalSpeed)
                 {
-                    if (Math.Abs(vessel.horizontalSrfSpeed) < vert_angle_epsilon)
-                        desired_vertspeed.Value = 90.0f * Mathf.Sign(desired_vertspeed);
-                    else
-                        desired_vertspeed.Value = (float) (Math.Atan(desired_vertspeed / vessel.horizontalSrfSpeed) * rad2dgr);
+                    float desired_fpa = (float)(Math.Atan(desired_vertsetpoint / vessel.horizontalSrfSpeed) * rad2dgr);
+
+                    if (float.IsNaN(desired_fpa))
+                        desired_fpa = 0.0f;
+
+                    desired_vertsetpoint.Value = desired_fpa;
                 }
                 height_mode = HeightMode.FlightPathAngle;
             }
                 
             GUILayout.EndHorizontal();
-            desired_vertspeed.DisplayLayout(GUIStyles.textBoxStyle);
+            desired_vertsetpoint.DisplayLayout(GUIStyles.textBoxStyle);
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
@@ -752,18 +750,18 @@ namespace AtmosphereAutopilot
                                 desired_altitude.Value = new_setpoint;
                                 break;
                             case HeightMode.VerticalSpeed:
-                                setpoint = desired_vertspeed;
-                                magnetic_mult = Mathf.Abs(desired_vertspeed) < 10.0f ? 0.3f : 1.0f;
+                                setpoint = desired_vertsetpoint;
+                                magnetic_mult = Mathf.Abs(desired_vertsetpoint) < 10.0f ? 0.3f : 1.0f;
                                 new_setpoint = setpoint + pitch_change_sign * hotkey_vertspeed_sens * Time.deltaTime * magnetic_mult;
-                                desired_vertspeed.Value = new_setpoint;
+                                desired_vertsetpoint.Value = new_setpoint;
                                 break;
                             case HeightMode.FlightPathAngle:
-                                setpoint = desired_vertspeed;
-                                magnetic_mult = Mathf.Abs(desired_vertspeed) < 10.0f ? 0.3f : 1.0f;
+                                setpoint = desired_vertsetpoint;
+                                magnetic_mult = Mathf.Abs(desired_vertsetpoint) < 10.0f ? 0.3f : 1.0f;
                                 new_setpoint = setpoint + pitch_change_sign * hotkey_vertspeed_sens * Time.deltaTime * magnetic_mult;
                                 // constraint the value to [-90, 90]
                                 new_setpoint = Common.Clampf(new_setpoint, 90.0f);
-                                desired_vertspeed.Value = new_setpoint;
+                                desired_vertsetpoint.Value = new_setpoint;
                                 break;
                         }
 
@@ -811,8 +809,8 @@ namespace AtmosphereAutopilot
                     {
                         altitude_change_counter += Time.deltaTime;
                         if (height_mode != HeightMode.Altitude && altitude_change_counter > 0.2f)
-                            if (Mathf.Abs(desired_vertspeed) < hotkey_vertspeed_snap)
-                                desired_vertspeed.Value = 0.0f;
+                            if (Mathf.Abs(desired_vertsetpoint) < hotkey_vertspeed_snap)
+                                desired_vertsetpoint.Value = 0.0f;
                     }
                     if (altitude_change_counter > 1.0f)
                     {
@@ -887,10 +885,10 @@ namespace AtmosphereAutopilot
                         str = "Altitude = " + desired_altitude.Value.ToString("G5");
                         break;
                     case HeightMode.VerticalSpeed:
-                        str = "Vert speed = " + desired_vertspeed.Value.ToString("G4");
+                        str = "Vert speed = " + desired_vertsetpoint.Value.ToString("G4");
                         break;
                     case HeightMode.FlightPathAngle:
-                        str = "FPA = " + desired_vertspeed.Value.ToString("G4");
+                        str = "FPA = " + desired_vertsetpoint.Value.ToString("G4");
                         break;
                 }
                 GUI.Label(rect, str, GUIStyles.hoverLabel);
@@ -904,7 +902,7 @@ namespace AtmosphereAutopilot
 			desired_longitude.coord_format = DelayedFieldFloat.CoordFormat.EW;
 	        desired_longitude.OnUpdate();
             desired_altitude.OnUpdate();
-            desired_vertspeed.OnUpdate();
+            desired_vertsetpoint.OnUpdate();
         }
     }
 }
