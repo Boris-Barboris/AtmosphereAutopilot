@@ -217,6 +217,8 @@ namespace AtmosphereAutopilot
 
         public HeightMode height_mode = HeightMode.Altitude;
 
+        private HeightMode prev_height_change_mode_by_hotkey = HeightMode.VerticalSpeed;
+
         public Waypoint current_waypt = new Waypoint();
 
         // axis to rotate around in level flight mode
@@ -243,8 +245,8 @@ namespace AtmosphereAutopilot
         [VesselSerializable("desired_altitude_field")]
         public DelayedFieldFloat desired_altitude = new DelayedFieldFloat(1000.0f, "G5");
 
-        [VesselSerializable("desired_vertspeed_field")]
-        public DelayedFieldFloat desired_vertspeed = new DelayedFieldFloat(0.0f, "G4");
+        [VesselSerializable("desired_vertsetpoint_field")]
+        public DelayedFieldFloat desired_vertsetpoint = new DelayedFieldFloat(0.0f, "G4");
 
         [GlobalSerializable("preudo_flc")]
         [VesselSerializable("preudo_flc")]
@@ -277,13 +279,18 @@ namespace AtmosphereAutopilot
 
         Vector3d account_for_vertical_vel(Vector3d desired_direction)
         {
-            Vector3d res = desired_direction.normalized * vessel.horizontalSrfSpeed + planet2vesNorm * desired_vertspeed;
+            Vector3d res = desired_direction.normalized * vessel.horizontalSrfSpeed + planet2vesNorm * desired_vertsetpoint;
             return res.normalized;
         }
 
         Vector3d account_for_fpa(Vector3d desired_direction)
         {
-            Vector3d res = desired_direction.normalized * vessel.horizontalSrfSpeed + planet2vesNorm * vessel.horizontalSrfSpeed * Math.Tan(desired_vertspeed * dgr2rad);
+            // let's limit the input to [-90, 90]
+            desired_vertsetpoint.Value = Common.Clampf(desired_vertsetpoint, 90.0f);
+
+            // Vector3d.RotateTowards has caused "missing method" exception, using Vector3.RotateTowards instead
+            Vector3d res = Vector3.RotateTowards(desired_direction.normalized, planet2vesNorm, desired_vertsetpoint * dgr2rad, 0.0f);
+
             return res.normalized;
         }
 
@@ -547,7 +554,13 @@ namespace AtmosphereAutopilot
             {
                 if (height_mode == HeightMode.FlightPathAngle)
                 {
-                    desired_vertspeed.Value = (float) (vessel.horizontalSrfSpeed * Math.Tan(desired_vertspeed * dgr2rad));
+                    float desired_vertspeed = (float)(vessel.horizontalSrfSpeed * Math.Tan(desired_vertsetpoint * dgr2rad));
+                    
+                    if (float.IsNaN(desired_vertspeed) || Mathf.Abs(desired_vertspeed) > 9999.0f)
+                        // don't put a value close to infinity to the field
+                        desired_vertspeed = 9999.0f * Mathf.Sign(desired_vertspeed);
+
+                    desired_vertsetpoint.Value = desired_vertspeed;
                 }
                 height_mode = HeightMode.VerticalSpeed;
             }
@@ -556,13 +569,18 @@ namespace AtmosphereAutopilot
             {
                 if (height_mode == HeightMode.VerticalSpeed)
                 {
-                    desired_vertspeed.Value = (float) (Math.Atan(desired_vertspeed / vessel.horizontalSrfSpeed) / dgr2rad);
+                    float desired_fpa = (float)(Math.Atan(desired_vertsetpoint / vessel.horizontalSrfSpeed) * rad2dgr);
+
+                    if (float.IsNaN(desired_fpa))
+                        desired_fpa = 0.0f;
+
+                    desired_vertsetpoint.Value = desired_fpa;
                 }
                 height_mode = HeightMode.FlightPathAngle;
             }
                 
             GUILayout.EndHorizontal();
-            desired_vertspeed.DisplayLayout(GUIStyles.textBoxStyle);
+            desired_vertsetpoint.DisplayLayout(GUIStyles.textBoxStyle);
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
@@ -669,7 +687,23 @@ namespace AtmosphereAutopilot
 
                 if (Input.GetKeyDown(toggle_vertical_setpoint_type_key))
                 {
-                    height_mode = (HeightMode) (((int)height_mode + 1) % 3);
+                    // toggle key should only allow switching between the holding mode (altitude) and changing modes (V/S and FPA)
+                    switch (height_mode)
+                    {
+                        case HeightMode.Altitude:
+                            if (prev_height_change_mode_by_hotkey == HeightMode.VerticalSpeed
+                                || prev_height_change_mode_by_hotkey == HeightMode.FlightPathAngle)
+                                height_mode = prev_height_change_mode_by_hotkey;
+                            else
+                                height_mode = HeightMode.VerticalSpeed;
+                            break;
+                        case HeightMode.VerticalSpeed:
+                        case HeightMode.FlightPathAngle:
+                            prev_height_change_mode_by_hotkey = height_mode;
+                            height_mode = HeightMode.Altitude;
+                            break;
+                    }
+
                     switch (height_mode)
                     {
                         case HeightMode.Altitude:
@@ -716,11 +750,18 @@ namespace AtmosphereAutopilot
                                 desired_altitude.Value = new_setpoint;
                                 break;
                             case HeightMode.VerticalSpeed:
-                            case HeightMode.FlightPathAngle:
-                                setpoint = desired_vertspeed;
-                                magnetic_mult = Mathf.Abs(desired_vertspeed) < 10.0f ? 0.3f : 1.0f;
+                                setpoint = desired_vertsetpoint;
+                                magnetic_mult = Mathf.Abs(desired_vertsetpoint) < 10.0f ? 0.3f : 1.0f;
                                 new_setpoint = setpoint + pitch_change_sign * hotkey_vertspeed_sens * Time.deltaTime * magnetic_mult;
-                                desired_vertspeed.Value = new_setpoint;
+                                desired_vertsetpoint.Value = new_setpoint;
+                                break;
+                            case HeightMode.FlightPathAngle:
+                                setpoint = desired_vertsetpoint;
+                                magnetic_mult = Mathf.Abs(desired_vertsetpoint) < 10.0f ? 0.3f : 1.0f;
+                                new_setpoint = setpoint + pitch_change_sign * hotkey_vertspeed_sens * Time.deltaTime * magnetic_mult;
+                                // constraint the value to [-90, 90]
+                                new_setpoint = Common.Clampf(new_setpoint, 90.0f);
+                                desired_vertsetpoint.Value = new_setpoint;
                                 break;
                         }
 
@@ -768,8 +809,8 @@ namespace AtmosphereAutopilot
                     {
                         altitude_change_counter += Time.deltaTime;
                         if (height_mode != HeightMode.Altitude && altitude_change_counter > 0.2f)
-                            if (Mathf.Abs(desired_vertspeed) < hotkey_vertspeed_snap)
-                                desired_vertspeed.Value = 0.0f;
+                            if (Mathf.Abs(desired_vertsetpoint) < hotkey_vertspeed_snap)
+                                desired_vertsetpoint.Value = 0.0f;
                     }
                     if (altitude_change_counter > 1.0f)
                     {
@@ -844,10 +885,10 @@ namespace AtmosphereAutopilot
                         str = "Altitude = " + desired_altitude.Value.ToString("G5");
                         break;
                     case HeightMode.VerticalSpeed:
-                        str = "Vert speed = " + desired_vertspeed.Value.ToString("G4");
+                        str = "Vert speed = " + desired_vertsetpoint.Value.ToString("G4");
                         break;
                     case HeightMode.FlightPathAngle:
-                        str = "FPA = " + desired_vertspeed.Value.ToString("G4");
+                        str = "FPA = " + desired_vertsetpoint.Value.ToString("G4");
                         break;
                 }
                 GUI.Label(rect, str, GUIStyles.hoverLabel);
@@ -861,7 +902,7 @@ namespace AtmosphereAutopilot
 			desired_longitude.coord_format = DelayedFieldFloat.CoordFormat.EW;
 	        desired_longitude.OnUpdate();
             desired_altitude.OnUpdate();
-            desired_vertspeed.OnUpdate();
+            desired_vertsetpoint.OnUpdate();
         }
     }
 }
