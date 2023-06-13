@@ -158,6 +158,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MessageManager.cs" />
     <Compile Include="SyncModuleControlSurface.cs" />
+    <Compile Include="GUI\DelayedField\DelayedFieldGeoCoordinates.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GUI\DelayedField\DelayedField.ttinclude" />
