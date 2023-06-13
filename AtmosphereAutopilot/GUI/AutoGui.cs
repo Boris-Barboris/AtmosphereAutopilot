@@ -187,11 +187,11 @@ namespace AtmosphereAutopilot
     public static class AutoGUI
     {
         // optimization structures
-        static Dictionary<Type, PropertyInfo[]> property_list = new Dictionary<Type, PropertyInfo[]>();
-        static Dictionary<Type, FieldInfo[]> field_list = new Dictionary<Type, FieldInfo[]>();
-        static Dictionary<object, object[]> custom_attrs = new Dictionary<object, object[]>();
-        static Dictionary<Type, MethodInfo> toStringMethods = new Dictionary<Type, MethodInfo>();
-        static Dictionary<Type, MethodInfo> parseMethods = new Dictionary<Type, MethodInfo>();
+        static readonly Dictionary<Type, PropertyInfo[]> property_list = new Dictionary<Type, PropertyInfo[]>();
+        static readonly Dictionary<Type, FieldInfo[]> field_list = new Dictionary<Type, FieldInfo[]>();
+        static readonly Dictionary<object, object[]> custom_attrs = new Dictionary<object, object[]>();
+        static readonly Dictionary<Type, MethodInfo> toStringMethods = new Dictionary<Type, MethodInfo>();
+        static readonly Dictionary<Type, MethodInfo> parseMethods = new Dictionary<Type, MethodInfo>();
         static readonly Type[] formatStrTypes = { typeof(string) };
 
         /// <summary>
@@ -343,7 +343,6 @@ namespace AtmosphereAutopilot
 
             if (element_type == typeof(string))
             {
-                // it's a toggle button
                 GUILayout.Label(att.value_name + ": " + (string)GetValue(element, obj), GUIStyles.labelStyleCenter);
                 return;
             }
@@ -361,14 +360,7 @@ namespace AtmosphereAutopilot
             if (!toStringMethods.ContainsKey(element_type))
                 toStringMethods[element_type] = element_type.GetMethod("ToString", formatStrTypes);
             MethodInfo ToStringFormat = toStringMethods[element_type];
-            if (!att.editable)
-            {
-                if (ToStringFormat != null && att.format != null)
-                    GUILayout.Label((string)ToStringFormat.Invoke(GetValue(element, obj), att.format_arr), GUIStyles.labelStyleRight);
-                else
-                    GUILayout.Label(GetValue(element, obj).ToString(), GUIStyles.labelStyleRight);
-            }
-            else
+            if (att.editable)
             {
                 string val_holder;
                 if (ToStringFormat != null && att.format != null)
@@ -376,15 +368,28 @@ namespace AtmosphereAutopilot
                 else
                     val_holder = GetValue(element, obj).ToString();
                 val_holder = GUILayout.TextField(val_holder, GUIStyles.textBoxStyle);
-                try
                 {
                     if (!parseMethods.ContainsKey(element_type))
-                        parseMethods[element_type] = element_type.GetMethod("Parse", formatStrTypes);
-                    var ParseMethod = parseMethods[element_type];
-                    if (ParseMethod != null)
-                        SetValue(element, obj, ParseMethod.Invoke(null, new[] { val_holder }));
+                    {
+                        Type[] formatParseTypes = new Type[] { typeof(string), element_type.MakeByRefType() };
+                        parseMethods[element_type] = element_type.GetMethod("TryParse", formatParseTypes);
+                    }
+
+                    if (parseMethods[element_type] is MethodInfo ParseMethod && null != ParseMethod)
+                    {
+                        object[] parms = new[] { val_holder, null };
+                        bool? ok = ParseMethod.Invoke(null, parms) as bool?;
+                        if (ok ?? false)
+                            SetValue(element, obj, parms[1]);
+                    }
                 }
-                catch { }
+            }
+            else
+            {
+                if (ToStringFormat != null && att.format != null)
+                    GUILayout.Label((string)ToStringFormat.Invoke(GetValue(element, obj), att.format_arr), GUIStyles.labelStyleRight);
+                else
+                    GUILayout.Label(GetValue(element, obj).ToString(), GUIStyles.labelStyleRight);
             }
             GUILayout.EndHorizontal();
         }
