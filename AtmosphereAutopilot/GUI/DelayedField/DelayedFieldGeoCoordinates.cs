@@ -96,7 +96,7 @@ namespace AtmosphereAutopilot
 								}
 							}
 							input_str = val.ToString(format_str);	// feedback
-							Log.info("[AtmosphereAutopilot] coords {0:F4}", val);
+							Debug.LogFormat("[AtmosphereAutopilot] coords {0:F4}", val);
 							return;
 						}
 						if (dms.Length > 1) return;	// wait for NS/EW
