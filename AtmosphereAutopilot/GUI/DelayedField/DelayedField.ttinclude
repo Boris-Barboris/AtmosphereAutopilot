@@ -63,7 +63,7 @@ namespace AtmosphereAutopilot
         /// </summary>
         /// <param name="init_value">Initial value</param>
         /// <param name="format"></param>
-        public DelayedFieldFloat(<#= typename #> init_value, string format)
+        public DelayedField<#= Postfix #>(<#= typename #> init_value, string format)
         {
             val = init_value;
             time = 0.0f;
@@ -111,7 +111,13 @@ namespace AtmosphereAutopilot
             {
                 time = 0.0f;
                 changed = false;
-                <#= typename #>.TryParse(input_str, out val);
+                {
+                    <#= typename #> v;
+                    if (<#= typename #>.TryParse(input_str, out v))
+                        this.val = v;
+                    else
+                        this.input_str = this.val.ToString(format_str);
+                }
             }
         }
 

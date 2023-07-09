@@ -234,10 +234,10 @@ namespace AtmosphereAutopilot
         public DelayedFieldFloat desired_course = new DelayedFieldFloat(90.0f, "G4");
 
         [VesselSerializable("desired_latitude_field")]
-        public DelayedFieldFloat desired_latitude = new DelayedFieldFloat(-0.0486178f, "#0.0000", DelayedFieldFloat.CoordFormat.NS);  // latitude of KSC runway, west end (default position for launched vessels)
+        public DelayedFieldGeoCoordinates desired_latitude = new DelayedFieldGeoCoordinates(-0.0486178f, "#0.0000", DelayedFieldGeoCoordinates.CoordFormat.NS);  // latitude of KSC runway, west end (default position for launched vessels)
 
         [VesselSerializable("desired_longitude_field")]
-        public DelayedFieldFloat desired_longitude = new DelayedFieldFloat(-74.72444f, "#0.0000", DelayedFieldFloat.CoordFormat.EW);  // longitude of KSC runway, west end (default position for launched vessels)
+        public DelayedFieldGeoCoordinates desired_longitude = new DelayedFieldGeoCoordinates(-74.72444f, "#0.0000", DelayedFieldGeoCoordinates.CoordFormat.EW);  // longitude of KSC runway, west end (default position for launched vessels)
 
         [VesselSerializable("vertical_control")]
         public bool vertical_control = false;
@@ -897,9 +897,9 @@ namespace AtmosphereAutopilot
             desired_course.OnUpdate();
 			// why didn't the desired_latitude constructor initialize this properly?  unknown
 			// possibly the combination of VS2017 and .NET 3.3?
-			desired_latitude.coord_format = DelayedFieldFloat.CoordFormat.NS;
+			desired_latitude.coord_format = DelayedFieldGeoCoordinates.CoordFormat.NS;
 	        desired_latitude.OnUpdate();
-			desired_longitude.coord_format = DelayedFieldFloat.CoordFormat.EW;
+			desired_longitude.coord_format = DelayedFieldGeoCoordinates.CoordFormat.EW;
 	        desired_longitude.OnUpdate();
             desired_altitude.OnUpdate();
             desired_vertsetpoint.OnUpdate();

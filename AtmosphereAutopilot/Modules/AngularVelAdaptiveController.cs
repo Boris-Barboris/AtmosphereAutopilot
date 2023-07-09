@@ -151,6 +151,11 @@ namespace AtmosphereAutopilot
         [VesselSerializable("max_v_construction")]
         [AutoGuiAttr("Max v construction", true, "G6")]
         public float max_v_construction = 0.7f;
+        public string max_v_construction_as_text
+        {
+            set => this.max_v_construction = float.TryParse(value, out float v) ? v : this.max_v_construction;
+            get => this.max_v_construction.ToString("G6");
+        }
 
         protected virtual float process_desired_v(float des_v, bool user_input) { return des_v; }
 
@@ -620,10 +625,20 @@ namespace AtmosphereAutopilot
         [VesselSerializable("max_aoa")]
         [AutoGuiAttr("max AoA", true, "G6")]
         public float max_aoa = 15.0f;
+        public string max_aoa_as_text
+        {
+            set => this.max_aoa = float.TryParse(value, out float v) ? v : this.max_aoa;
+            get => this.max_aoa.ToString("G6");
+        }
 
         [VesselSerializable("max_g_force")]
         [AutoGuiAttr("max G-force", true, "G6")]
         public float max_g_force = 15.0f;
+        public string max_g_force_as_text
+        {
+            set => this.max_g_force = float.TryParse(value, out float v) ? v : this.max_g_force;
+            get => this.max_g_force.ToString("G8");
+        }
     }
 
     public sealed class PitchAngularVelocityController : PitchYawAngularVelocityController
