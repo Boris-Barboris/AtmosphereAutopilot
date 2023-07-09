@@ -78,7 +78,7 @@ Hotkeys:
 Speed control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
 
 ## Mouse Director
-Mouse Director (MD) is declarative autopilot, crafted with idea to let the user to define desired airspeed direction with camera position. Autopilot then tries to comply with this surface-relative velocity setpoint. MD is inherently-linear, so only relatively small angles of attack are allowed. All AoA moderations are forcefully turned on during it's work.
+Mouse Director (MD) is declarative autopilot, crafted with idea to let the user to define desired airspeed direction with camera position. Autopilot then tries to comply with this surface-relative velocity setpoint. MD is inherently-linear, so only relatively small angles of attack are allowed. All AoA moderations are forcefully turned on during it's operation.
 
 MD uses "Director controller", wich uses two AoA controllers: pitch "AoA controller" and yaw "Sideslip controller", and "Roll ang vel controller" for roll. Currently, planar asymmetry of a plane is not taken into account (sideslip noise is still too noticeable in zero-lift convergence problem), sideslip is always at zero setpoint. If your craft requires nonzero sideslip to fly straight, MD is not a very good solution right now, use FbW in the _rocket mode_.
 
@@ -87,7 +87,7 @@ Short GUI description:
 Speed control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
 
 ## Cruise Flight controller
-Cruise Flight (CF) is high-level autopilot, designet for travel automation. Just like MD, CF is inherently-linear, so only relatively small angles of attack are allowed. All AoA moderations are forcefully turned on during it's work.
+Cruise Flight (CF) is high-level autopilot, designet for travel automation. Just like MD, CF is inherently-linear, so only relatively small angles of attack are allowed. All AoA moderations are forcefully turned on during it's operation.
 
 CF uses "Director controller" for controlling velocity vector and "Prograde thrust controller" for throttle automation.
 Functions:
@@ -101,9 +101,10 @@ Short GUI description:
 * _Waypoint_ - primitive waypoint following. Designed for pick-and-fly functionality. When activated, _pick waypoint_ button appears under mode tabs, as well as waypoint latitude-longtitude representation and distance to it in straight line (through planet core). Waypoint control is turned off when destination is closer than 200 meters to be followed by _Level_ mode activation.
 * _desired course_ - azimuth in degrees to follow in _Course_ mode.
 * _Speed control_ - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller
-* _Vertical motion control_ - activate altitude or vertical speed control. Otherwise vertical speed is kept at zero.
+* _Vertical motion control_ - activate altitude or vertical speed or ascent angle (FPA) control. Otherwise vertical speed is kept at zero.
 * _Altitude_ - hold altitude, meters above sea level.
 * _Vertical speed_ - hold vertical speed, meters per second.
+* _FPA_ - flight-path angle, hold ascent/descent angle, degrees.
 
 "Advanced options" description:
 * _pseudo-FLC_ - toggle for pseudo-FLC (Flight Level Change) control law for ascend. Will force CF to respect speed setpoint and craft thrust parameters when choosing ascent angle.
@@ -124,6 +125,22 @@ Hotkeys:
 * "CF keys input mode" - default hotkey is _Right Alt_, toggles whether Pitch and yaw is used to control setpoints.
 * "CF vertical control" - toggles _Vertical motion control_.
 * "CF altitude\vertical speed" - toggles between _Altitude_ and _Vertical speed_ modes.
+
+## AoA-hold
+AoA-hold (AoAH) maintains pitch Angle-of-Attack setpoint. Pitch AoA moderation is forcefully turned on during it's operation.
+
+AoAH is very similar to Standard Fly-By-Wire. It uses "AoA controller" for pitch, roll is handled by "Roll ang vel controller" and yaw is handled by "Sideslip controller".
+
+Short GUI description:
+
+* _use keys_ - use pitch keys to control AoA setpoint.
+* _hotkey sensitivity_ - tweak to manage AoA setpoint change speed.
+* _Pitch moderation_ - if enabled, AoA will be limited by craft settings.
+* Speed control - throttle automation to maintain speed setpoint. Handeled by "Prograde thrust controller".
+
+Hotkeys:
+* "Pitch keys" - alter pitch AoA setpoint.
+* "FBW moderation" - default hotkey for Moderation is letter O, mOderation.
 
 # Default Modules descriptions
 
