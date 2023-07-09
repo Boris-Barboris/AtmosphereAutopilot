@@ -176,6 +176,22 @@ namespace AtmosphereAutopilot
 
         private bool was_breaking_previously = true;
 
+        private bool is_throttle_forced = false;
+        private float forced_throttle = 0.0f;
+
+        /// <summary>
+        /// Allow other module to force throttle output in the next frame
+        /// </summary>
+        /// <param name="throttle">Desired throttle for this frame</param>
+        /// <returns>Achievable throttle regarding the desired throttle</returns>
+        public float ForceThrottle(float throttle)
+        {
+            is_throttle_forced = true;
+            forced_throttle = Common.Clampf(throttle, 0.0f, 1.0f);
+            // Currently throttle output is always the same to the desired input 
+            return throttle;
+        }
+
         /// <summary>
         /// Main control function
         /// </summary>
@@ -183,6 +199,19 @@ namespace AtmosphereAutopilot
         /// <param name="target_value">Prograde surface speed setpoint</param>
         public override float ApplyControl(FlightCtrlState cntrl, float target_value)
         {
+            if (is_throttle_forced)
+            {
+                if (use_breaks && was_breaking_previously)
+                {
+                    vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, false);
+                    was_breaking_previously = false;
+                }
+
+                is_throttle_forced = false;
+                cntrl.mainThrottle = forced_throttle;
+                return cntrl.mainThrottle;
+            }
+
             current_v = imodel.surface_v_magnitude;
             desired_v = target_value;
 
