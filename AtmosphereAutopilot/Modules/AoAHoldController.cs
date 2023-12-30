@@ -115,7 +115,7 @@ namespace AtmosphereAutopilot
                 return;
 
             if (thrust_c.spd_control_enabled)
-                thrust_c.ApplyControl(cntrl, thrust_c.setpoint.mps());
+                thrust_c.ApplyControl(cntrl);
 
             if (use_keys)
                 ControlUtils.neutralize_user_input(cntrl, PITCH);

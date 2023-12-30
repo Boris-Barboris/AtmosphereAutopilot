@@ -31,6 +31,36 @@ namespace AtmosphereAutopilot
         KIAS
     }
 
+    public static class SpeedTypeMethods
+    {
+        // SpeedType classification
+        public static bool isKinematicSystem(this SpeedType t)
+        {
+            switch (t)
+            {
+                case SpeedType.MetersPerSecond:
+                case SpeedType.Knots:
+                case SpeedType.Mach:
+                    return true;
+                case SpeedType.IAS:
+                case SpeedType.KIAS:
+                    return false;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        public static bool isPressureSystem(this SpeedType t)
+        {
+            return !isKinematicSystem(t);
+        }
+
+        public static bool isSameSystem(this SpeedType t1, SpeedType t2)
+        {
+            return isKinematicSystem(t1) == isKinematicSystem(t2);
+        }
+    }
+
     public struct SpeedSetpoint
     {
         public SpeedType type;
@@ -47,77 +77,171 @@ namespace AtmosphereAutopilot
             this.v = v;
         }
 
-        public float convert(SpeedType t)
+        /// <summary>
+        /// Convert to target SpeedType.
+        /// WARNING: protentially time-consuming; accurate result NOT guaranteed
+        /// </summary>
+        /// <param name="t">The target SpeedType</param>
+        /// <returns>Scalar value of the target speed type</returns>
+        public SpeedSetpoint convert(SpeedType t)
         {
             if (t == type)
-                return value;
-            float mpersec = mps();
-            switch (t)
+                return this;
+
+            float mps = sameSystemMps();
+            if (type.isSameSystem(t))
+                return fromSameSystemMps(t, mps, v);
+            else
             {
-                case SpeedType.MetersPerSecond:
-                    return mpersec;
-                case SpeedType.Mach:
-                    return (float)(mpersec / v.speedOfSound);
-                case SpeedType.Knots:
-                    return mpersec * mps2kts;
-                case SpeedType.IAS:
-                    return Mathf.Sqrt(mpersec * mpersec * (float)v.atmDensity);
-                case SpeedType.KIAS:
-                    return Mathf.Sqrt(mpersec * mpersec * mps2kts * mps2kts * (float)v.atmDensity);
-                default:
-                    return 0.0f;
+                // converting between systems
+                if (type.isKinematicSystem())
+                    return fromSameSystemMps(t, mps2EIAS(mps), v);
+                else
+                    return fromSameSystemMps(t, eias2Mps(mps), v);
             }
         }
 
-        public static float convert_from_mps(SpeedType t, float mps, Vessel v)
-        {
-            switch (t)
-            {
-                case SpeedType.MetersPerSecond:
-                    return mps;
-                case SpeedType.Mach:
-                    return (float)(mps / v.speedOfSound);
-                case SpeedType.Knots:
-                    return mps * mps2kts;
-                case SpeedType.IAS:
-                    return Mathf.Sqrt(mps * mps * (float)v.atmDensity);
-                case SpeedType.KIAS:
-                    return Mathf.Sqrt(mps * mps * mps2kts * mps2kts * (float)v.atmDensity);
-                default:
-                    return 0.0f;
-            }
-        }
+        
+        // unit convertions within the same system.
 
-        public float mps()
+        /// <summary>
+        /// Get speed in m/s of the current airspeed reference system.
+        /// If converting between systems, use convert() instead.
+        /// </summary>
+        /// <returns>Speed in m/s</returns>
+        public float sameSystemMps()
         {
-            if (type == SpeedType.MetersPerSecond)
-                return value;
             switch (type)
             {
-                case SpeedType.Mach:
-                    return (float)(value * v.speedOfSound);
-                case SpeedType.Knots:
-                    return value * kts2mps;
+                case SpeedType.MetersPerSecond:
                 case SpeedType.IAS:
-                    return Mathf.Sqrt(value * value / (float)v.atmDensity);
+                    return value;
+                case SpeedType.Knots:
                 case SpeedType.KIAS:
-                    return Mathf.Sqrt(value * value * kts2mps * kts2mps / (float)v.atmDensity);
+                    return value * kts2mps;
+                case SpeedType.Mach:
+                    return value * (float)v.speedOfSound;
                 default:
-                    return 0.0f;
+                    throw new NotImplementedException();
             }
+        }
+
+        private static SpeedSetpoint fromSameSystemMps(SpeedType t, float mps, Vessel v)
+        {
+            switch (t)
+            {
+                case SpeedType.MetersPerSecond:
+                case SpeedType.IAS:
+                    return new SpeedSetpoint(t, mps, v);
+                case SpeedType.Knots:
+                case SpeedType.KIAS:
+                    return new SpeedSetpoint(t, mps * mps2kts, v);
+                case SpeedType.Mach:
+                    float m = mps / (float)v.speedOfSound;
+                    if (float.IsNaN(m) || float.IsInfinity(m))
+                        return new SpeedSetpoint(t, 0.0f, v);
+                    else
+                        return new SpeedSetpoint(t, m, v);
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        // converting between the kinematic system and the pressure system
+        // mps <=> IAS if FAR methods are available 
+        // mps <=> EAS if otherwise
+        private float mps2EIAS(float mps)
+        {
+            var RayleighPitotTubeStagPressureDelegate = AtmosphereAutopilot.Instance.farReflections.RayleighPitotTubeStagPressureDelegate;
+            if (RayleighPitotTubeStagPressureDelegate != null)
+                return mps2IAS(mps, RayleighPitotTubeStagPressureDelegate.Invoke);
+            else
+                return mps2EAS(mps);
+        }
+
+        private float eias2Mps(float eias)
+        {
+            var RayleighPitotTubeStagPressureDelegate = AtmosphereAutopilot.Instance.farReflections.RayleighPitotTubeStagPressureDelegate;
+            if (RayleighPitotTubeStagPressureDelegate != null)
+                return ias2Mps(eias, RayleighPitotTubeStagPressureDelegate.Invoke);
+            else
+                return eas2Mps(eias);
+        }
+
+        // IAS convertions if FAR methods are available
+        private float mps2IAS(float mps, Func<double, double> rayleighPitotTubeStagPressure)
+        {
+            double M = mps / v.speedOfSound;
+
+            if (double.IsNaN(M) || double.IsInfinity(M))
+                return 0.0f;
+
+            double presRatio = rayleighPitotTubeStagPressure(M);
+
+            double velocity = presRatio - 1;
+            velocity *= v.staticPressurekPa * 1000 * 2;
+            velocity /= 1.225;
+            velocity = Math.Sqrt(velocity);
+
+            return (float)velocity;
+        }
+        private float ias2Mps(float ias, Func<double, double> rayleighPitotTubeStagPressure)
+        {
+            double presRatio = ias * ias * 1.225 / v.staticPressurekPa / 1000 / 2 + 1;
+
+            if (double.IsNaN(presRatio) || presRatio <= 0.0 || presRatio >= 1e6)
+                return 0.0f;
+
+            var result = Common.Secant(
+                rayleighPitotTubeStagPressure,
+                presRatio,
+                0.0,
+                2.0,
+                1e-7,
+                50,
+                0.0
+                );
+
+            if (result.Item1 != Common.AlgoStatus.Success)
+            {
+                var debugOutput = new { ias, presRatio, v.speedOfSound, v.mainBody.name, v.mainBody.atmosphereAdiabaticIndex };
+
+                Debug.LogWarning("[AtmosphereAutopilot]: Secant method failed (" + result.Item1.ToString() + ") for ias2Mps; debug info " + debugOutput.ToString());
+            }
+            double M = result.Item2;
+
+            return (float)(M * v.speedOfSound);
+        }
+
+        // Fall-back EAS convertions
+        private float mps2EAS(float mps)
+        {
+            return Mathf.Sqrt(mps * mps * (float)v.atmDensity);
+        }
+        private float eas2Mps(float eas)
+        {
+            float mps = Mathf.Sqrt(eas * eas / (float)v.atmDensity);
+            if (float.IsNaN(mps) || float.IsInfinity(mps))
+                return 0.0f;
+            return mps;
         }
     }
 
     /// <summary>
     /// Naive thrust controller for regular plane flight.
     /// </summary>
-    public sealed class ProgradeThrustController : SISOController
+    public sealed class ProgradeThrustController : SubStateController
     {
         FlightModel imodel;
+
+        FARReflections farReflections;
 
         internal ProgradeThrustController(Vessel v)
             : base(v, "Prograde thrust controller", 88437224)
         {
+            // FAR IAS support
+            farReflections = AtmosphereAutopilot.Instance.farReflections;
+
             pid.IntegralClamp = double.PositiveInfinity;
             pid.AccumulDerivClamp = double.PositiveInfinity;
             pid.KP = 0.4;
@@ -177,14 +301,100 @@ namespace AtmosphereAutopilot
         private bool was_breaking_previously = true;
 
         /// <summary>
+        /// Get current surface speed in m/s
+        /// </summary>
+        /// <returns>Surface speed in m/s</returns>
+        public double currentSurfaceSpeed()
+        {
+            return imodel.surface_v_magnitude;
+        }
+
+        /// <summary>
+        /// Get current IAS speed in m/s
+        /// </summary>
+        /// <returns>IAS in m/s</returns>
+        public double currentIAS()
+        {
+            var activeVesselIASDelegate = farReflections.ActiveVesselIASDelegate;
+            if (activeVesselIASDelegate != null)
+                return activeVesselIASDelegate();
+            else
+                return vessel.indicatedAirSpeed;
+        }
+
+        /// <summary>
+        /// Get current speed in m/s that is the same to the setpoint airspeed reference system
+        /// </summary>
+        /// <returns>Speed in m/s</returns>
+        public double currentSpeedOfSameSystem()
+        {
+            if (setpoint.type.isKinematicSystem())
+                return currentSurfaceSpeed();
+            else
+                return currentIAS();
+        }
+
+        /// <summary>
+        /// Get current speed in m/s that is the same to the setpoint airspeed reference system
+        /// </summary>
+        /// <param name="magnitude">Ratio of kinematic speed to current speed system </param>
+        /// <returns>Speed in m/s</returns>
+        public double currentSpeedOfSameSystem(out double magnitude)
+        {
+            if (setpoint.type.isKinematicSystem())
+            {
+                magnitude = 1.0;
+                return currentSurfaceSpeed();
+            }
+            else
+            {
+                double ss = currentSurfaceSpeed();
+                double ias = currentIAS();
+                magnitude = ss / ias;
+                return ias;
+            }
+        }
+
+        /// <summary>
+        /// Get speed difference in m/s to the setpoint airspeed
+        /// </summary>
+        /// <returns>Speed difference in m/s</returns>
+        public double speedDiff()
+        {
+            return currentSpeedOfSameSystem() - setpoint.sameSystemMps();
+        }
+
+        /// <summary>
+        /// Get speed difference in m/s to the setpoint airspeed
+        /// </summary>
+        /// <param name="magnitude">Ratio of kinematic speed to current speed system </param>
+        /// <returns>Speed difference in m/s</returns>
+        public double speedDiff(out double magnitude)
+        {
+            if (setpoint.type.isKinematicSystem())
+            {
+                magnitude = 1.0;
+                return currentSurfaceSpeed() - setpoint.sameSystemMps();
+            }
+            else
+            {
+                double ss = currentSurfaceSpeed();
+                double ias = currentIAS();
+                magnitude = ss / ias;
+                return ias - setpoint.sameSystemMps();
+            }
+        }
+
+        /// <summary>
         /// Main control function
         /// </summary>
         /// <param name="cntrl">Control state to change</param>
-        /// <param name="target_value">Prograde surface speed setpoint</param>
-        public override float ApplyControl(FlightCtrlState cntrl, float target_value)
+        public override void ApplyControl(FlightCtrlState cntrl)
         {
-            current_v = imodel.surface_v_magnitude;
-            desired_v = target_value;
+            double presAccMagnitude;
+            current_v = currentSpeedOfSameSystem(out presAccMagnitude);
+
+            desired_v = setpoint.sameSystemMps();
 
             // apply breaks if needed
             if (use_breaks)
@@ -243,7 +453,7 @@ namespace AtmosphereAutopilot
                 drag_estimate = current_acc - prograde_thrust / imodel.sum_mass - Vector3d.Dot(imodel.gravity_acc + imodel.noninert_acc, surfspd_dir);
 
                 v_error = desired_v - current_v;
-                desired_acc = Kp_v * v_error;
+                desired_acc = Kp_v * v_error * presAccMagnitude;
                 if (Math.Abs(desired_acc - current_acc) < relaxation_acc_error)
                 {
                     // we're on low error regime, let's smooth out acceleration error using exponential moving average
@@ -262,7 +472,22 @@ namespace AtmosphereAutopilot
             }
 
             prev_input = cntrl.mainThrottle;
-            return cntrl.mainThrottle;
+        }
+
+        /// <summary>
+        /// Supplemental control function allows direct control over the throttle
+        /// </summary>
+        /// <param name="cntrl">Control state to change</param>
+        /// <param name="throttle">Set throttle value (0.0f ~ 1.0f)</param>
+        public void ApplyThrottle(FlightCtrlState cntrl, float throttle)
+        {
+            if (use_breaks && was_breaking_previously)
+            {
+                vessel.ActionGroups.SetGroup(KSPActionGroup.Brakes, false);
+                was_breaking_previously = false;
+            }
+
+            cntrl.mainThrottle = Mathf.Clamp01(throttle);
         }
 
         //double prev_thrust;
@@ -403,13 +628,16 @@ namespace AtmosphereAutopilot
 
         #region GUI
 
-        static readonly string[] spd_str_arr = new string[] { "OFF", "ms", "kts", "M", "ias", "kias" };
+        string[] spd_str_arr = new string[] { "m/s", "kts", "Mach", "IAS", "kIAS" };
+        string SpdStr(SpeedType t)
+        {
+            return spd_str_arr[(int)t];
+        }
 
-        public int chosen_spd_mode = 0;
         public bool spd_control_enabled = false;
 
         [VesselSerializable("spd_type")]
-        SpeedType type = SpeedType.MetersPerSecond;
+        public SpeedType type = SpeedType.MetersPerSecond;
 
         [VesselSerializable("setpoint_field")]
         internal DelayedFieldFloat setpoint_field = new DelayedFieldFloat(100.0f, "G4");
@@ -430,6 +658,10 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("use_throttle_hotkeys")]
         public static bool use_throttle_hotkeys = true;
 
+        [AutoGuiAttr("disable_on_thr_full_cut", true)]
+        [GlobalSerializable("disable_on_thr_full_cut")]
+        public static bool disable_on_thr_full_cut = false;
+
         [GlobalSerializable("spd_control_toggle_key")]
         [AutoHotkeyAttr("Speed control toggle")]
         static KeyCode spd_control_toggle_key = KeyCode.None;
@@ -442,6 +674,18 @@ namespace AtmosphereAutopilot
                 spd_control_enabled = !spd_control_enabled;
                 MessageManager.post_status_message(spd_control_enabled ? "Speed control enabled" : "Speed control disabled");
                 //changed = true;
+            }
+
+            if (disable_on_thr_full_cut && spd_control_enabled &&
+                !FlightDriver.Pause && InputLockManager.IsUnlocked(ControlTypes.THROTTLE))
+            {
+                if (GameSettings.THROTTLE_FULL.GetKey() || 
+                    GameSettings.THROTTLE_CUTOFF.GetKey())
+                {
+                    // turn speed control off if throttle full/cutoff key is pressed
+                    spd_control_enabled = false;
+                    MessageManager.post_status_message("Speed control disabled");
+                }
             }
 
             if (use_throttle_hotkeys && spd_control_enabled &&
@@ -494,25 +738,7 @@ namespace AtmosphereAutopilot
             if (need_to_show_change)
             {
                 Rect rect = new Rect(Screen.width / 2.0f - 80.0f, 120.0f, 160.0f, 20.0f);
-                string str = "SPD = " + setpoint.value.ToString("G4");
-                switch (setpoint.type)
-                {
-                    case SpeedType.IAS:
-                        str = str + " IAS";
-                        break;
-                    case SpeedType.KIAS:
-                        str = str + " kIAS";
-                        break;
-                    case SpeedType.Knots:
-                        str = str + " kts";
-                        break;
-                    case SpeedType.Mach:
-                        str = str + " M";
-                        break;
-                    case SpeedType.MetersPerSecond:
-                        str = str + " m/s";
-                        break;
-                }
+                string str = "SPD = " + setpoint.value.ToString("G4") + " " + SpdStr(setpoint.type);
                 GUI.Label(rect, str, GUIStyles.hoverLabel);
             }
 
@@ -527,25 +753,24 @@ namespace AtmosphereAutopilot
         {
             spd_control_enabled = GUILayout.Toggle(spd_control_enabled, "Speed control", GUIStyles.toggleButtonStyle);
             GUILayout.BeginHorizontal();
-            for (int i = 1; i < 6; i++)
+
+            SpeedType oldType = type;
+            for (int i = 0; i < 5; i++)
             {
-                if (GUILayout.Toggle(chosen_spd_mode == i, spd_str_arr[i], GUIStyles.toggleButtonStyle))
-                    chosen_spd_mode = i;
+                if (GUILayout.Toggle(type == (SpeedType)i, spd_str_arr[i], GUIStyles.toggleButtonStyle))
+                {
+                    type = (SpeedType)i;
+                }
             }
             GUILayout.EndHorizontal();
 
-            SpeedType newtype = type;
-            if (chosen_spd_mode != 0)
-                newtype = (SpeedType)(chosen_spd_mode - 1);
-
             setpoint_field.DisplayLayout(GUIStyles.textBoxStyle);
 
-            if (newtype != type)
+            if (oldType != type)
             {
                 // need to convert old setpoint to new format
-                setpoint_field.Value = setpoint.convert(newtype);
-                setpoint = new SpeedSetpoint(newtype, setpoint_field, vessel);
-                type = newtype;
+                setpoint = setpoint.convert(type);
+                setpoint_field.Value = setpoint.value;
             }
             else
                 setpoint = new SpeedSetpoint(type, setpoint_field, vessel);

@@ -199,6 +199,89 @@ namespace AtmosphereAutopilot
         {
             return '(' + v.x.ToString(format) + ", " + v.y.ToString(format) + ", " + v.z.ToString(format) + ')';
         }
+
+        public enum AlgoStatus
+        { 
+            Success,
+            InvalidArgument,
+            ConvergenceFailure,
+            MaxIterReached,
+            NaN,
+            OutOfBounds,
+        }
+
+        /// <summary>
+        /// Try to find a root for a target result of a function using secant method.
+        /// </summary>
+        /// <param name="function">Function to find root of</param>
+        /// <param name="target">Target result of the function</param>
+        /// <param name="x0">Initial first guess</param>
+        /// <param name="x1">Initial second guess</param>
+        /// <param name="epsilon">Convergence tolerance</param>
+        /// <param name="maxIter">Maximum iterations allowed</param>
+        /// <param name="min">Minimum value of the root</param>
+        /// <param name="max">Maximum value of the root</param>
+        /// <returns>A tuple of algorithm status and a possible root</returns>
+        public static Tuple<AlgoStatus, double> Secant(Func<double, double> function,
+            double target, 
+            double x0,
+            double x1,
+            double epsilon,
+            int maxIter,
+            double min = double.NegativeInfinity,
+            double max = double.PositiveInfinity)
+        {
+            if (x0 == x1)
+                return new Tuple<AlgoStatus, double>(AlgoStatus.InvalidArgument, x0);
+
+            double slope, xnew;
+            int boundFlag = 0;
+            double v0 = function(x0) - target;
+            double v1 = function(x1) - target;
+
+            if (double.IsNaN(v0) || double.IsNaN(v1))
+                return new Tuple<AlgoStatus, double>(AlgoStatus.NaN, x0);
+            
+            for (int i = 0; i < maxIter; i++)
+            {
+                if (Math.Abs(x1 - x0) <= epsilon)
+                    return new Tuple<AlgoStatus, double>(AlgoStatus.Success, x1);
+
+                slope = (x1 - x0) / (v1 - v0);
+                if (double.IsNaN(slope) || double.IsInfinity(slope))
+                    return new Tuple<AlgoStatus, double>(AlgoStatus.ConvergenceFailure, x1);
+                xnew = x1 - slope * v1;
+                if (xnew < min)
+                {
+                    if (boundFlag == -1)
+                        return new Tuple<AlgoStatus, double>(AlgoStatus.OutOfBounds, min);
+                    else
+                    {
+                        xnew = min;
+                        boundFlag = -1;
+                    }
+                }
+                if (xnew > max)
+                {
+                    if (boundFlag == 1)
+                        return new Tuple<AlgoStatus, double>(AlgoStatus.OutOfBounds, max);
+                    else
+                    {
+                        xnew = max;
+                        boundFlag = 1;
+                    }
+                }
+                x0 = x1;
+                x1 = xnew;
+                v0 = v1;
+                v1 = function(x1) - target;
+                if (double.IsNaN(v1))
+                    return new Tuple<AlgoStatus, double>(AlgoStatus.NaN, x1);
+            }
+            if (Math.Abs(x0 - x1) < epsilon)
+                return new Tuple<AlgoStatus, double>(AlgoStatus.Success, x1);
+            return new Tuple<AlgoStatus, double>(AlgoStatus.MaxIterReached, x1);
+        }
     }
 
     public static class VesselExtensions
