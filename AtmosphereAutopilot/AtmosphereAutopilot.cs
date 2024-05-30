@@ -22,6 +22,7 @@ using System.Text;
 using UnityEngine;
 using System.Reflection;
 using KSP.UI.Screens;
+using UnityEngine.Profiling;
 //using ToolbarWrapper;
 
 namespace AtmosphereAutopilot
@@ -41,6 +42,8 @@ namespace AtmosphereAutopilot
 
         // Hotkey manager
         internal AutoHotkey hotkeyManager;
+        
+        public AtmosphereAutopilotSerialized serialized = new AtmosphereAutopilotSerialized();
 
         /// <summary>
         /// Get AtmosphereAutopilot addon class instance
@@ -172,15 +175,21 @@ namespace AtmosphereAutopilot
 
         void serialize_active_modules()
         {
+            AutoSerialization.Serialize(this.serialized, "AtmosphereAutopilotSerialized", KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.txt",
+                typeof(GlobalSerializable));
+
             if (ActiveVessel == null)
                 return;
+            
             foreach (var module in autopilot_module_lists[ActiveVessel].Values)
                 module.Serialize();
+
             hotkeyManager.Serialize();
         }
 
         void OnDestroy()
         {
+            //This seems to not be called reliably on shutdown, it's best to do serialization etc in sceneSwitch as well
             serialize_active_modules();
             AtmosphereAutopilot.Instance.BackgroundThread.Stop();
         }
@@ -191,7 +200,7 @@ namespace AtmosphereAutopilot
             clean_modules();
             if (scenes != GameScenes.FLIGHT)
             {
-                mainMenuClose ();
+                mainMenuClose();
                 ActiveVessel = null;
                 AtmosphereAutopilot.Instance.BackgroundThread.Pause();
             }
@@ -256,9 +265,30 @@ namespace AtmosphereAutopilot
 
 
         #region AppLauncherSection
+        
+        public sealed class AtmosphereAutopilotSerialized {
+            [GlobalSerializable("compact_gui")]
+            public bool compact_gui = false;
+        }
+
+        //These values are not serialized, only deserialized, so they can be read from the file during scene changes without being overwritten.
+        //Use AtmosphereAutopilotSerialized for values that should be serialized during scene changes.
 
         [GlobalSerializable("use_neo_gui")]
         public bool use_neo_gui = false;
+
+        [GlobalSerializable("master_switch_key_toggles_gui")]
+        public bool master_switch_key_toggles_gui = true;
+        
+        [GlobalSerializable("secondary_wing_level_snap_angle")]
+        public float secondary_wing_level_snap_angle = 45.0f;
+
+        [GlobalSerializable("scroll_wheel_number_field_increment_vertical")]
+        public float scroll_wheel_number_field_increment_vertical = 0.5f;
+
+        [GlobalSerializable("scroll_wheel_number_field_increment_horizontal")]
+        public float scroll_wheel_number_field_increment_horizontal = 0.1f;
+
 
         ApplicationLauncherButton launcher_btn;
 
@@ -288,8 +318,11 @@ namespace AtmosphereAutopilot
         // Called when applauncher is ready for population
         void onAppLauncherLoad()
         {
-            // deserialize use_neo_gui flag
+            // deserialize gui options
             AutoSerialization.Deserialize(this, "AtmosphereAutopilot",
+                KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.txt",
+                typeof(GlobalSerializable), null);
+            AutoSerialization.Deserialize(this.serialized, "AtmosphereAutopilotSerialized",
                 KSPUtil.ApplicationRootPath + "GameData/AtmosphereAutopilot/Global_settings.txt",
                 typeof(GlobalSerializable), null);
 
@@ -487,12 +520,14 @@ namespace AtmosphereAutopilot
                 GUIStyles.Init();
                 styles_init = true;
             }
+
             if (ActiveVessel == null)
                 return;
             if (!autopilot_module_lists.ContainsKey(ActiveVessel))
                 return;
             if (!HighLogic.LoadedSceneIsFlight)
                 return;            
+
             GUIStyles.set_colors();
             applauncher.OnGUI();
             foreach (var pair in autopilot_module_lists[ActiveVessel])
@@ -514,19 +549,41 @@ namespace AtmosphereAutopilot
         }
 
         #endregion
+        
+        const string lockName = "AircraftAutopilotCameraLock";
+
+        bool shouldUnlockCamera = true;
 
         void Update()
         {
-            if (!HighLogic.LoadedSceneIsFlight)
+            if (shouldUnlockCamera) InputLockManager.RemoveControlLock(lockName);
+            else shouldUnlockCamera = true;
+
+            if (!HighLogic.LoadedSceneIsFlight || ActiveVessel == null)
                 return;
-            if (ActiveVessel == null)
-                return;
+
             if (autopilot_module_lists.ContainsKey(ActiveVessel))
             {
                 var module_list = autopilot_module_lists[ActiveVessel].Values.ToList();
                 foreach (var module in module_list)
                     if (module.Active || module is TopModuleManager)
                         module.OnUpdate();
+            }
+
+            //if (Input.GetKeyDown(KeyCode.Escape)) GUI.FocusControl(null); //Doesn't work because focused text fields block all input, and there seems to be no way around that with immediate-mode GUI other than using Input.eatKeyPressOnTextFieldFocus, which would probably cause all text-field input to also be sent tothe main game
+        }
+
+        public void LockCameraControlsOnHover() {
+            if (Event.current.type == EventType.Repaint && shouldUnlockCamera && GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition)) {
+                InputLockManager.SetControlLock(ControlTypes.CAMERACONTROLS, lockName);
+                shouldUnlockCamera = false;
+            }
+        }
+
+        public void LockCameraControls() {
+            if (shouldUnlockCamera) {
+                InputLockManager.SetControlLock(ControlTypes.CAMERACONTROLS, lockName);
+                shouldUnlockCamera = false;
             }
         }
     }

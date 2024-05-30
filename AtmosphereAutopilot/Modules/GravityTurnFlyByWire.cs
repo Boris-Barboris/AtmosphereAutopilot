@@ -90,7 +90,6 @@ namespace AtmosphereAutopilot
             GUILayout.Space(5.0f);
             AutoGUI.AutoDrawObject(this);
             GUILayout.EndVertical();
-            GUI.DragWindow();
         }
     }
 }

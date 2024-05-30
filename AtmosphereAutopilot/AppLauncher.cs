@@ -26,11 +26,13 @@ namespace AtmosphereAutopilot
     {
         public AppLauncherWindow() :
             base("", 3920049, new Rect(Screen.width - 280, 38, 230, 30))
-        { }
+        {
+            hasCloseButton = draggable = false;
+        }
 
         public void set_left(int left)
         {
-            window.x = left;
+            windowPosition.x = left;
         }
 
         public bool show_while_hover = false;
@@ -69,7 +71,7 @@ namespace AtmosphereAutopilot
         {
             if (show_while_hover)
             {
-                if (!window.Contains(Mouse.screenPos))
+                if (!windowPosition.Contains(Mouse.screenPos))
                 {
                     UnShowGUI();
                     show_while_hover = false;
@@ -79,13 +81,13 @@ namespace AtmosphereAutopilot
 
         internal void set_x_position(float x)
         {
-            window.x = Math.Min(x, Screen.width - window.width);
+            windowPosition.x = Math.Min(x, Screen.width - windowPosition.width);
         }
 
         internal void set_y_position(float y)
         {
-            window.y = Mathf.Min(Mathf.Max(y - window.height / 2.0f, 0.0f), Screen.height - window.height);
-            window.x = Screen.width - window.width - 42.0f;
+            windowPosition.y = Mathf.Min(Mathf.Max(y - windowPosition.height / 2.0f, 0.0f), Screen.height - windowPosition.height);
+            windowPosition.x = Screen.width - windowPosition.width - 42.0f;
         }
     }
 }

@@ -45,7 +45,6 @@ namespace AtmosphereAutopilot
                 GUILayout.Label(String.Join(",", linmodel.pars.Select(v => v.ToString("G5")).ToArray()), GUIStyles.labelStyleCenter);
             }
             GUILayout.EndVertical();
-            GUI.DragWindow();
         }
     }
 }

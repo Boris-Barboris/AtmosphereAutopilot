@@ -114,6 +114,7 @@ namespace AtmosphereAutopilot
         /// <summary>
         /// Main control function
         /// </summary>
+        /// <param name="state"></param>
         /// <param name="desired_vel">Desired velocity direction in surface reference frame.</param>
         /// <param name="desired_acceleration">Desired acceleration.</param>
         public void ApplyControl(FlightCtrlState state, Vector3d desired_vel, Vector3d desired_acceleration)

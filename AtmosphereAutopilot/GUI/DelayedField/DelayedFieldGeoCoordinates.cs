@@ -38,6 +38,7 @@ namespace AtmosphereAutopilot
         /// </summary>
         /// <param name="init_value">Initial value</param>
         /// <param name="format"></param>
+        /// <param name="coord_fmt"></param>
         public DelayedFieldGeoCoordinates(
             float init_value,
             string format,

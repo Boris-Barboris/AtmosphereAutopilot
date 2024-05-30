@@ -62,6 +62,7 @@ namespace AtmosphereAutopilot
         /// http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
         /// </summary>
         /// <param name="q">Rotation</param>
+        /// <param name="mat"></param>
         /// <returns>Transformation matrix representing rotation</returns>
         public static void rotationMatrix(Quaternion q, Matrix mat)
         {

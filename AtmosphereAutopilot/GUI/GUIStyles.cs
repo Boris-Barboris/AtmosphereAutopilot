@@ -29,8 +29,17 @@ namespace AtmosphereAutopilot
         public static GUIStyle labelStyleLeft { get; private set; }
         public static GUIStyle labelStyleCenter { get; private set; }
         public static GUIStyle labelStyleRight { get; private set; }
+        public static GUIStyle smallLabelStyleLeft { get; private set; }
+        public static GUIStyle smallLabelStyleLeftRed { get; private set; }
+        public static GUIStyle microLabelStyleLeft { get; private set; }
+        public static GUIStyle microLabelStyleLeftRed { get; private set; }
+        public static GUIStyle nanoLabelStyleRight { get; private set; }
+        public static GUIStyle nanoLabelStyleRightGreen { get; private set; }
+        public static GUIStyle nanoLabelStyleRightRed { get; private set; }
         public static GUIStyle textBoxStyle { get; private set; }
+        public static GUIStyle largeTextBoxStyle { get; private set; }
         public static GUIStyle toggleButtonStyle { get; private set; }
+        public static GUIStyle compactToggleButtonStyle { get; private set; }
         public static GUIStyle toggleButtonStyleRight { get; private set; }
         public static GUIStyle hoverLabel { get; private set; }
 
@@ -57,6 +66,39 @@ namespace AtmosphereAutopilot
             labelStyleCenter.fontSize = 11;
             labelStyleCenter.margin = new RectOffset(2, 2, 1, 1);
             labelStyleCenter.padding = new RectOffset(1, 1, 1, 1);
+            
+            smallLabelStyleLeft = new GUIStyle(labelStyleLeft);
+            smallLabelStyleLeft.fontSize = 9;
+            smallLabelStyleLeft.fontStyle = FontStyle.Bold;
+            smallLabelStyleLeft.margin = new RectOffset(1, 1, 1, 1);
+            smallLabelStyleLeft.padding = new RectOffset(1, 1, 1, 1);
+            smallLabelStyleLeft.stretchHeight = true;
+            smallLabelStyleLeft.stretchWidth = false;
+            
+            smallLabelStyleLeftRed = new GUIStyle(smallLabelStyleLeft);
+            smallLabelStyleLeftRed.normal.textColor = Color.red;
+
+            microLabelStyleLeft = new GUIStyle(smallLabelStyleLeft);
+            microLabelStyleLeft.fontSize = 7;
+            microLabelStyleLeft.fontStyle = FontStyle.Normal;
+            
+            microLabelStyleLeftRed = new GUIStyle(microLabelStyleLeft);
+            microLabelStyleLeftRed.normal.textColor = Color.red;
+            
+            nanoLabelStyleRight = new GUIStyle(microLabelStyleLeft);
+            nanoLabelStyleRight.alignment = TextAnchor.MiddleRight;
+            nanoLabelStyleRight.fontSize = 6;
+            nanoLabelStyleRight.normal.textColor = Color.white;
+            nanoLabelStyleRight.margin = new RectOffset(1, 1, 1, 1);
+            nanoLabelStyleRight.padding = new RectOffset(1, 1, 1, 1);
+            nanoLabelStyleRight.stretchHeight = true;
+            nanoLabelStyleRight.stretchWidth = true;
+
+            nanoLabelStyleRightGreen = new GUIStyle(nanoLabelStyleRight);
+            nanoLabelStyleRightGreen.normal.textColor = Color.green;
+
+            nanoLabelStyleRightRed = new GUIStyle(nanoLabelStyleRight);
+            nanoLabelStyleRightRed.normal.textColor = Color.red;
 
             hoverLabel = new GUIStyle(skin.label);
             hoverLabel.alignment = TextAnchor.MiddleCenter;
@@ -72,25 +114,32 @@ namespace AtmosphereAutopilot
             textBoxStyle.alignment = TextAnchor.MiddleCenter;
             textBoxStyle.fontSize = 11;
             textBoxStyle.margin = new RectOffset(2, 2, 1, 1);
+            
+            largeTextBoxStyle = new GUIStyle(textBoxStyle);
+            largeTextBoxStyle.fontSize = 12;
+            largeTextBoxStyle.margin = new RectOffset(2, 2, 1, 1);
+            largeTextBoxStyle.padding = new RectOffset(2, 2, 2, 2);
 
             toggleButtonStyle = new GUIStyle(skin.button);
             toggleButtonStyle.alignment = TextAnchor.MiddleCenter;
             toggleButtonStyle.margin = new RectOffset(4, 4, 1, 1);
             toggleButtonStyle.padding = new RectOffset(4, 4, 2, 2);
-            var button_pressed_style = toggleButtonStyle.onActive;
-            button_pressed_style.textColor = Color.green;
-            toggleButtonStyle.normal.textColor = Color.white;
             toggleButtonStyle.fontSize = 12;
+            var button_pressed_style = toggleButtonStyle.onActive;
+            button_pressed_style.textColor = toggleButtonStyle.onHover.textColor = Color.green;
+            toggleButtonStyle.normal.textColor = Color.white;
             toggleButtonStyle.onNormal = button_pressed_style;
             toggleButtonStyle.stretchWidth = true;
+            
+            compactToggleButtonStyle = new GUIStyle(toggleButtonStyle);
+            //compactToggleButtonStyle.margin = new RectOffset(4, 4, 1, 1);
+            //compactToggleButtonStyle.padding = new RectOffset(4, 4, 2, 2);
+            //compactToggleButtonStyle.fontSize = 12;
+            compactToggleButtonStyle.stretchWidth = false;
+            compactToggleButtonStyle.fixedWidth = 36;
 
-            toggleButtonStyleRight = new GUIStyle(skin.button);
+            toggleButtonStyleRight = new GUIStyle(toggleButtonStyle);
             toggleButtonStyleRight.alignment = TextAnchor.MiddleRight;
-            toggleButtonStyleRight.margin = new RectOffset(4, 4, 1, 1);
-            toggleButtonStyleRight.padding = new RectOffset(4, 4, 2, 2);
-            toggleButtonStyleRight.onNormal = button_pressed_style;
-            toggleButtonStyleRight.fontSize = 12;
-            toggleButtonStyleRight.stretchWidth = true;
         }
 
         static Color old_background, old_color, old_content;

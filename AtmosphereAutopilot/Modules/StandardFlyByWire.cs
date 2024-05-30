@@ -240,7 +240,6 @@ namespace AtmosphereAutopilot
 
         protected override void _drawGUI(int id)
         {
-            close_button();
             GUILayout.BeginVertical();
             foreach (var module in gui_list)
             {
@@ -254,7 +253,6 @@ namespace AtmosphereAutopilot
             AutoGUI.AutoDrawObject(this);
             tc.SpeedCtrlGUIBlock();
             GUILayout.EndVertical();
-            GUI.DragWindow();
         }
     }
 }

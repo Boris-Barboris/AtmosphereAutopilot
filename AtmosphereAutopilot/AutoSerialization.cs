@@ -133,15 +133,13 @@ namespace AtmosphereAutopilot
                 ConfigNode fileNode = ConfigNode.Load(filename);
                 if (fileNode == null)
                     fileNode = new ConfigNode();
-                else
-                    fileNode.RemoveNode(node_name);
                 ConfigNode node = new ConfigNode(node_name);
                 SerializeToNode(node, obj, attribute_type);
                 if (OnSerialize != null)
                     OnSerialize(node, attribute_type);
                 if (node.HasData)
                 {
-                    fileNode.AddNode(node);
+                    fileNode.SetNode(node.name, node, true);
                     fileNode.Save(filename);
                 }
             }

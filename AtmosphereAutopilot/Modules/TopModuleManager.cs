@@ -19,6 +19,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using System.Reflection;
+using KSP.UI.Screens;
+using static GameParameters;
 
 namespace AtmosphereAutopilot
 {
@@ -43,6 +45,17 @@ namespace AtmosphereAutopilot
 
         // settings window
         CraftSettingsWindow settings_wnd;
+
+        private AoAHoldController aoahc = null;
+        private StandardFlyByWire sfbw = null;
+        
+        private PitchAngularVelocityController pvc = null;
+        private RollAngularVelocityController rvc = null;
+        private YawAngularVelocityController yvc = null;
+
+        private float initialLevelerSnapAngle = 3.0f;
+
+        private static readonly float[] aoaHoldPresets = new float[] { -40.0f, -25.0f, -15.0f, -5.0f, -2.5f, -1.0f, 0, 1.0f, 2.5f, 5.0f, 15.0f, 25.0f, 40.0f };
 
         public void create_context()
         {
@@ -74,11 +87,19 @@ namespace AtmosphereAutopilot
 
             if (HighLevelControllers.Count <= 0)
                 throw new InvalidOperationException("No high-level autopilot modules were found");
-            else
-                active_controller = HighLevelControllers[typeof(StandardFlyByWire)];
+            else {
+                pvc = cur_ves_modules[typeof(PitchAngularVelocityController)] as PitchAngularVelocityController;
+                rvc = cur_ves_modules[typeof(RollAngularVelocityController)] as RollAngularVelocityController;
+                yvc = cur_ves_modules[typeof(YawAngularVelocityController)] as YawAngularVelocityController;
+                aoahc = HighLevelControllers[typeof(AoAHoldController)] as AoAHoldController;
+                sfbw = HighLevelControllers[typeof(StandardFlyByWire)] as StandardFlyByWire;
+                active_controller = sfbw;
+            }
 
             // map settings window to modules
             settings_wnd.map_modues();
+
+            initialLevelerSnapAngle = rvc.leveler_snap_angle == AtmosphereAutopilot.Instance.secondary_wing_level_snap_angle ? 3.0f : rvc.leveler_snap_angle; //todo - we could instead store both of these per-vessel-design, currently neither are
         }
 
         protected override void OnActivate()
@@ -114,46 +135,151 @@ namespace AtmosphereAutopilot
 
         protected override void _drawGUI(int id)
         {
-            close_button();
-            GUILayout.BeginVertical();
-            Active = GUILayout.Toggle(Active, "MASTER SWITCH", GUIStyles.toggleButtonStyle);
-            bool show_settings = GUILayout.Toggle(settings_wnd.IsShown(), "Craft settings", GUIStyles.toggleButtonStyle);
-            if (show_settings)
-                settings_wnd.ShowGUI();
-            else
-                settings_wnd.UnShowGUI();
-            GUILayout.Space(10);
-            foreach (var controller in HighLevelControllers.Values)
+            if (GUI.Button(new Rect(1.0f, 1.0f, WINDOW_TITLE_BAR_HEIGHT - 2.0f, WINDOW_TITLE_BAR_HEIGHT - 1.0f),//windowPosition.width - 16.0f - 15.0f - 2.0f, 1.0f, 15.0f, 16.0f),
+                AtmosphereAutopilot.Instance.serialized.compact_gui ? "f" : "c", GUIStyles.toggleButtonStyle))
             {
+                AtmosphereAutopilot.Instance.serialized.compact_gui = !AtmosphereAutopilot.Instance.serialized.compact_gui;
+                windowPosition.height = 0;
+                windowPosition.width = 200;
+            }
+
+            GUILayout.BeginVertical();
+            if (AtmosphereAutopilot.Instance.serialized.compact_gui) {
+                const float TEXT_BOX_WIDTH = 34.0f;
+
+                bool fullyInitialized = sfbw != null;
+
+                GUILayout.Space(3);
+
                 GUILayout.BeginHorizontal();
-                bool pressed = GUILayout.Toggle(active_controller == controller, controller.ModuleName,
-                    GUIStyles.toggleButtonStyle, GUILayout.Width(155.0f), GUILayout.ExpandWidth(false));
-                if (pressed && !controller.Active)
-                {
-                    if (Active)
-                    {
-                        // we activate new module
-                        bool activation = true;
-                        if (active_controller != null)
-                        {
-                            activation = false;
-                            active_controller.Deactivate();
+
+                AutoGUI.HandleToggleButton(Active, "MS", GUIStyles.compactToggleButtonStyle,
+                    (bool toggledOn) => { Active = toggledOn; }, (bool toggledOn) => { settings_wnd.ToggleGUI(); });
+                
+                if (fullyInitialized) {
+                    GUILayout.Space(10);
+
+                    foreach (var controller in HighLevelControllers.Values) {
+                        if (controller.ModuleCompactName.Length > 0) {
+                            bool controllerWasActive = active_controller == controller;
+                            AutoGUI.HandleToggleButton(controllerWasActive, controller.ModuleCompactName, GUIStyles.compactToggleButtonStyle,
+                                (bool toggledOn) => {
+                                    OnModuleButtonActive(controller);
+                                    if (controller.ModuleCompactName == "CF") { //Kinda need the whole thing for cruise-flight mode
+                                        if (controllerWasActive) controller.ToggleGUI();
+                                        else controller.ShowGUI();
+                                    }
+                                }, (bool toggledOn) => { controller.ToggleGUI(); });
                         }
-                        controller.Activate();
-                        if (!activation)
-                            (cur_ves_modules[typeof(FlightModel)] as FlightModel).sequential_dt = true;
                     }
-                    active_controller = controller;
+                    
+                    GUILayout.Space(10);
+
+                    if (sfbw != null) {
+                        AutoGUI.HandleToggleButton(sfbw.Coord_turn, "CT", GUIStyles.compactToggleButtonStyle,
+                            (bool toggledOn) => { sfbw.Coord_turn = toggledOn; },
+                            (bool toggledOn) => {
+                                if (Input.GetKey(KeyCode.LeftAlt)) yvc.moderate_aoa = !yvc.moderate_aoa; //Toggle sideslip moderation
+                                else cur_ves_modules?[typeof(FlightModel)]?.ToggleGUI();
+                            });
+                        if (!yvc.moderate_aoa && Event.current.type == EventType.Repaint) GUI.Label(GUILayoutUtility.GetLastRect(), "SS", GUIStyles.nanoLabelStyleRightRed);
+                    }
+                    if (rvc != null) {
+                        AutoGUI.HandleToggleButton(rvc.wing_leveler, "Lvl", GUIStyles.compactToggleButtonStyle,
+                            (bool toggledOn) => { rvc.wing_leveler = toggledOn; },
+                            (bool toggledOn) => {
+                                if (rvc.leveler_snap_angle == AtmosphereAutopilot.Instance.secondary_wing_level_snap_angle) rvc.leveler_snap_angle = initialLevelerSnapAngle;
+                                else {
+                                    initialLevelerSnapAngle = rvc.leveler_snap_angle;
+                                    rvc.leveler_snap_angle = AtmosphereAutopilot.Instance.secondary_wing_level_snap_angle;
+                                }
+                            });
+                        if (Event.current.type == EventType.Repaint) GUI.Label(GUILayoutUtility.GetLastRect(), rvc.leveler_snap_angle.ToString(), rvc.snapping_to_level ? GUIStyles.nanoLabelStyleRightGreen : GUIStyles.nanoLabelStyleRight);
+                    }
+                    
+                    GUILayout.EndHorizontal();
+                    
+                    GUILayout.Space(4);
+
+                    GUILayout.BeginHorizontal();
+                
+                    if (aoahc != null) {
+                        GUILayout.Label("AoA:", GUIStyles.smallLabelStyleLeft, GUILayout.ExpandWidth(false), GUILayout.ExpandHeight(true));
+                        AutoGUI.CheckForClick(() => {
+                            if (Input.GetKey(KeyCode.LeftAlt)) aoahc.desired_aoa.Value = GetNextPreset(aoaHoldPresets, aoahc.desired_aoa.Value);
+                            else aoahc.desired_aoa.InvertValue();
+                        }, () => {
+                            if (Input.GetKey(KeyCode.LeftAlt)) aoahc.desired_aoa.Value = GetPreviousPreset(aoaHoldPresets, aoahc.desired_aoa.Value);
+                            else aoahc.desired_aoa.Value = 0;
+                        });
+                        var aoaLabelScroll = AutoGUI.GetNumberTextBoxScrollWheelChange();
+                        if (aoaLabelScroll > 0) aoahc.desired_aoa.Value = GetPreviousPreset(aoaHoldPresets, aoahc.desired_aoa.Value);
+                        else if (aoaLabelScroll < 0) aoahc.desired_aoa.Value = GetNextPreset(aoaHoldPresets, aoahc.desired_aoa.Value);
+
+                        aoahc.desired_aoa.DisplayLayout(GUIStyles.largeTextBoxStyle, GUILayout.Width(TEXT_BOX_WIDTH), GUILayout.ExpandWidth(false));
+                        aoahc.desired_aoa -= AutoGUI.GetNumberTextBoxScrollWheelChange();
+                        /*if (AutoGUI.CheckForRightClick()) { //See "//Doesn't work because focused text fields block all input" :(
+                            aoahc.desired_aoa.Value = Input.GetKey(KeyCode.LeftAlt) ? GetPreviousPreset(aoaHoldPresets, aoahc.desired_aoa.Value) : GetNextPreset(aoaHoldPresets, aoahc.desired_aoa.Value);
+                            GUI.FocusControl(null);
+                        }*/
+                        GUILayout.Space(3);
+
+                        bool limitsDisabled = pvc.ignore_max_v || pvc.ignore_max_g ||
+                                              rvc.ignore_max_v || rvc.ignore_max_g ||
+                                              yvc.ignore_max_v || yvc.ignore_max_g ||
+                                              !pvc.moderate_aoa;
+                        GUILayout.Label("Lims:", limitsDisabled ? GUIStyles.smallLabelStyleLeftRed : GUIStyles.smallLabelStyleLeft, GUILayout.ExpandWidth(false), GUILayout.ExpandHeight(true));
+                        if (AutoGUI.CheckForRightClick()) {
+                            pvc.ignore_max_v = pvc.ignore_max_g =
+                                rvc.ignore_max_v = rvc.ignore_max_g =
+                                yvc.ignore_max_v = yvc.ignore_max_g = !limitsDisabled;
+                            pvc.moderate_aoa = limitsDisabled;
+                        }
+                        GUILayout.Space(2);
+                        GUILayout.Label("Pitch\nRate", pvc.ignore_max_v ? GUIStyles.microLabelStyleLeftRed : GUIStyles.microLabelStyleLeft, GUILayout.ExpandWidth(false), GUILayout.ExpandHeight(true));
+                        if (AutoGUI.CheckForRightClick()) pvc.ignore_max_v = pvc.ignore_max_g = !pvc.ignore_max_v;
+                        pvc.max_v_construction_as_text = GUILayout.TextField(pvc.max_v_construction_as_text, GUIStyles.largeTextBoxStyle, GUILayout.Width(TEXT_BOX_WIDTH), GUILayout.ExpandWidth(false));
+                        pvc.max_v_construction -= AutoGUI.GetNumberTextBoxScrollWheelChange() * dgr2rad;
+                        GUILayout.Space(1);
+                        GUILayout.Label("Roll\nRate", rvc.ignore_max_v ? GUIStyles.microLabelStyleLeftRed : GUIStyles.microLabelStyleLeft, GUILayout.ExpandWidth(false), GUILayout.ExpandHeight(true));
+                        if (AutoGUI.CheckForRightClick()) rvc.ignore_max_v = rvc.ignore_max_g = !rvc.ignore_max_v;
+                        rvc.max_v_construction_as_text = GUILayout.TextField(rvc.max_v_construction_as_text, GUIStyles.largeTextBoxStyle, GUILayout.Width(TEXT_BOX_WIDTH), GUILayout.ExpandWidth(false));
+                        rvc.max_v_construction -= AutoGUI.GetNumberTextBoxScrollWheelChange() * dgr2rad;
+                        GUILayout.Space(1);
+                        GUILayout.Label("AoA", pvc.moderate_aoa ? GUIStyles.microLabelStyleLeft : GUIStyles.microLabelStyleLeftRed, GUILayout.ExpandWidth(false), GUILayout.ExpandHeight(true));
+                        if (AutoGUI.CheckForRightClick()) pvc.moderate_aoa = !pvc.moderate_aoa;
+                        pvc.max_aoa_as_text = GUILayout.TextField(pvc.max_aoa_as_text, GUIStyles.largeTextBoxStyle, GUILayout.Width(TEXT_BOX_WIDTH), GUILayout.ExpandWidth(false));
+                        pvc.max_aoa -= AutoGUI.GetNumberTextBoxScrollWheelChange();
+                    }
                 }
-                bool is_shown = GUILayout.Toggle(controller.IsShown(), "GUI", GUIStyles.toggleButtonStyle);
-                if (is_shown)
-                    controller.ShowGUI();
-                else
-                    controller.UnShowGUI();
+
                 GUILayout.EndHorizontal();
+            } else {
+                Active = GUILayout.Toggle(Active, "MASTER SWITCH", GUIStyles.toggleButtonStyle);
+
+                bool show_settings = GUILayout.Toggle(settings_wnd.IsShown(), "Craft settings", GUIStyles.toggleButtonStyle);
+                if (show_settings)
+                    settings_wnd.ShowGUI();
+                else
+                    settings_wnd.UnShowGUI();
+
+                GUILayout.Space(10);
+
+                foreach (var controller in HighLevelControllers.Values)
+                {
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Toggle(active_controller == controller, controller.ModuleName,
+                        GUIStyles.toggleButtonStyle, GUILayout.Width(155.0f), GUILayout.ExpandWidth(false))) OnModuleButtonActive(controller);
+
+                    bool is_shown = GUILayout.Toggle(controller.IsShown(), "GUI", GUIStyles.toggleButtonStyle);
+                    if (is_shown)
+                        controller.ShowGUI();
+                    else
+                        controller.UnShowGUI();
+                    GUILayout.EndHorizontal();
+                }
             }
             GUILayout.EndVertical();
-            GUI.DragWindow();
         }
 
         protected override void OnGUICustom()
@@ -197,6 +323,22 @@ namespace AtmosphereAutopilot
                 return null;
         }
 
+        private void OnModuleButtonActive(StateController controller) {
+            if (!controller.Active) {
+                if (Active) {
+                    // we activate new module
+                    bool activation = true;
+                    if (active_controller != null) {
+                        activation = false;
+                        active_controller.Deactivate();
+                    }
+                    controller.Activate();
+                    if (!activation) (cur_ves_modules[typeof(FlightModel)] as FlightModel).sequential_dt = true;
+                }
+                active_controller = controller;
+            }
+        }
+
         [GlobalSerializable("master_switch_key")]
         [AutoHotkeyAttr("Master switch")]
         static KeyCode master_switch_key = KeyCode.P;
@@ -211,8 +353,39 @@ namespace AtmosphereAutopilot
                 else
                 {
                     Active = !Active;
+                    if (AtmosphereAutopilot.Instance.master_switch_key_toggles_gui) {
+                        if (Active) ShowGUI();
+                        else UnShowGUI();
+                    }
                     AtmosphereAutopilot.Instance.mainMenuGUIUpdate();
                 }
+        }
+        
+        private float GetPreviousPreset(float[] presets, float currentValue) {
+            for (int i = presets.Length - 1; i >= 0; i--) {
+                if (presets[i] < currentValue) return presets[i];
+            }
+            //return presets[presets.Length - 1]; //Loops around
+            return currentValue;
+        }
+
+        private float GetNextPreset(float[] presets, float currentValue) {
+            foreach (float preset in presets) {
+                if (preset > currentValue) return preset;
+            }
+            //return presets[0]; //Loops around
+            return currentValue;
+        }
+
+        public override void Serialize()
+        {
+            base.Serialize();
+            settings_wnd.Serialize();
+        }
+
+        public override bool Deserialize()
+        {
+            return base.Deserialize() && settings_wnd.Deserialize();
         }
 
         #region SettingsWindow
@@ -337,24 +510,23 @@ namespace AtmosphereAutopilot
                     {
                         // let's delete this profile
                         profiles.Remove(s);
-                        window.height = 0.0f;       // compact window
+                        windowPosition.height = 0.0f;       // compact window
                         Serialize();
                     }
                     GUILayout.EndHorizontal();
                 }
 
                 GUILayout.EndVertical();
-                GUI.DragWindow();
             }
 
             [GlobalSerializable("window_x")]
-            protected float WindowLeft { get { return window.xMin; } set { window.xMin = value; } }
+            protected float WindowLeft { get { return windowPosition.xMin; } set { windowPosition.xMin = value; } }
 
             [GlobalSerializable("window_y")]
-            protected float WindowTop { get { return window.yMin; } set { window.yMin = value; } }
+            protected float WindowTop { get { return windowPosition.yMin; } set { windowPosition.yMin = value; } }
 
             [GlobalSerializable("window_width")]
-            protected float WindowWidth { get { return window.width; } set { window.width = value; } }
+            protected float WindowWidth { get { return windowPosition.width; } set { windowPosition.width = value; } }
 
             string profile_name = "";
 
@@ -486,17 +658,6 @@ namespace AtmosphereAutopilot
         }
 
         #endregion SettingsWindow
-
-        public override void Serialize()
-        {
-            base.Serialize();
-            settings_wnd.Serialize();
-        }
-
-        public override bool Deserialize()
-        {
-            return base.Deserialize() && settings_wnd.Deserialize();
-        }
 
     }
 }

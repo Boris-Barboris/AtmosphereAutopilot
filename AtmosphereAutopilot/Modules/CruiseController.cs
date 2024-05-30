@@ -475,7 +475,6 @@ namespace AtmosphereAutopilot
 
         protected override void _drawGUI(int id)
         {
-            close_button();
             GUILayout.BeginVertical();
 
             // cruise flight control modes
@@ -624,10 +623,9 @@ namespace AtmosphereAutopilot
                 AutoGUI.AutoDrawObject(this);
             }
             else if (adv_o)
-                window.height = 100.0f;
+                windowPosition.height = 100.0f;
 
             GUILayout.EndVertical();
-            GUI.DragWindow();
         }
 
         public override void OnUpdate()
@@ -643,7 +641,7 @@ namespace AtmosphereAutopilot
                     return;
                 }
                 // Thanks MechJeb!
-                if (Input.GetMouseButtonDown(0) && !window.Contains(Input.mousePosition))
+                if (Input.GetMouseButtonDown(0) && !windowPosition.Contains(Input.mousePosition))
                 {
                     Ray mouseRay = PlanetariumCamera.Camera.ScreenPointToRay(Input.mousePosition);
                     mouseRay.origin = ScaledSpace.ScaledToLocalSpace(mouseRay.origin);

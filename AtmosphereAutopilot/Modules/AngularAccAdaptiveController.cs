@@ -89,8 +89,8 @@ namespace AtmosphereAutopilot
             if (write_telemetry)
             {
                 desire_acc_writer.Write(target_value.ToString("G8") + ',');
-                acc_writer.Write(acc.ToString("G8") + ',');
-                v_writer.Write(imodel.AngularVel(axis).ToString("G8") + ',');
+                acc_writer.Write((acc * rad2dgr).ToString("G8") + ',');
+                v_writer.Write((imodel.AngularVel(axis) * rad2dgr).ToString("G8") + ',');
                 //prediction_writer.Write(target_value.ToString("G8") + ',');
                 aoa_writer.Write(imodel.AoA(axis).ToString("G8") + ',');
                 airspd_writer.Write((imodel.up_srf_v + imodel.fwd_srf_v).magnitude.ToString("G8") + ',');

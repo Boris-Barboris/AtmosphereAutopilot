@@ -108,12 +108,10 @@ namespace AtmosphereAutopilot
 
         protected override void _drawGUI(int id)
         {
-            close_button();
             GUILayout.BeginVertical();
             AutoGUI.AutoDrawObject(this);
             thrust_c.SpeedCtrlGUIBlock();
             GUILayout.EndVertical();
-            GUI.DragWindow();
         }
 
         public class CenterIndicator : MonoBehaviour

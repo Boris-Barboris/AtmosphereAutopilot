@@ -106,6 +106,9 @@ namespace AtmosphereAutopilot
 
         public bool user_controlled = true;
 
+        public bool IgnoreMaxAoA { get { return v_controller.ignore_max_aoa; } set { v_controller.ignore_max_aoa = value; } }
+        public float MaxAoA { get { return v_controller.max_aoa; } }
+
         /// <summary>
         /// Main control function
         /// </summary>
@@ -135,7 +138,7 @@ namespace AtmosphereAutopilot
                 user_controlled = true;
             }
             else
-                desired_aoa = (float)Common.Clamp(target_value, v_controller.res_min_aoa, v_controller.res_max_aoa);
+                desired_aoa = Common.Clampf(target_value, v_controller.res_min_aoa, v_controller.res_max_aoa);
 
             // Let's find equilibrium angular v on desired_aoa
             LinearSystemModel model = lin_model_gen;

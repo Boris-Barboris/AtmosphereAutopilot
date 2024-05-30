@@ -63,7 +63,6 @@ namespace AtmosphereAutopilot
 
         protected override void _drawGUI(int id)
         {
-            close_button();
             GUILayout.BeginVertical();
 
             int new_editing_index = editing_index;
@@ -83,7 +82,6 @@ namespace AtmosphereAutopilot
             }
 
             GUILayout.EndVertical();
-            GUI.DragWindow();
 
             // now perform input binding
             editing_index = new_editing_index;
@@ -117,24 +115,24 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("window_x")]
         public float WindowLeft
         {
-            get { return window.xMin; }
+            get { return windowPosition.xMin; }
             set
             {
-                float width = window.width;
-                window.xMin = value;
-                window.xMax = window.xMin + width;
+                float width = windowPosition.width;
+                windowPosition.xMin = value;
+                windowPosition.xMax = windowPosition.xMin + width;
             }
         }
 
         [GlobalSerializable("window_y")]
         public float WindowTop
         {
-            get { return window.yMin; }
+            get { return windowPosition.yMin; }
             set
             {
-                float height = window.height;
-                window.yMin = value;
-                window.yMax = window.yMin + height;
+                float height = windowPosition.height;
+                windowPosition.yMin = value;
+                windowPosition.yMax = windowPosition.yMin + height;
             }
         }
 

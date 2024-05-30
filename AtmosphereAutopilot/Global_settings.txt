@@ -1,6 +1,14 @@
 AtmosphereAutopilot
 {
 	use_neo_gui = false
+	master_switch_key_toggles_gui = true
+	secondary_wing_level_snap_angle = 45.0f
+	scroll_wheel_number_field_increment_vertical = 0.5
+	scroll_wheel_number_field_increment_horizontal = 0.1
+}
+AtmosphereAutopilotSerialized
+{
+	compact_gui = false
 }
 Cruise_Flight
 {
@@ -145,7 +153,7 @@ Sideslip_controller
 AoA-hold_controller
 {
 	use_keys = True
-	hotkey_desired_aoa_sens = 3
+	hotkey_desired_aoa_sens = 2.5
 	window_x = 54
 	window_y = 243
 }

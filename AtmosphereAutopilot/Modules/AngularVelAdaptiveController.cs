@@ -32,7 +32,6 @@ namespace AtmosphereAutopilot
 
         protected FlightModel imodel;
         protected AngularAccAdaptiveController acc_controller;
-        public bool user_controlled = false;
 
         /// <summary>
         /// Create controller instance
@@ -41,7 +40,6 @@ namespace AtmosphereAutopilot
         /// <param name="module_name">Name of controller</param>
         /// <param name="wnd_id">unique for types window id</param>
         /// <param name="axis">Pitch = 0, roll = 1, yaw = 2</param>
-        /// <param name="model">Flight model instance for adaptive control</param>
         protected AngularVelAdaptiveController(Vessel vessel, string module_name,
             int wnd_id, int axis)
             : base(vessel, wnd_id, module_name)
@@ -89,6 +87,9 @@ namespace AtmosphereAutopilot
         [GlobalSerializable("precision_mode_factor")]
         //[AutoGuiAttr("precision_mode_factor", true)]
         public float precision_mode_factor = 0.33f;
+        
+        [AutoGuiAttr("user_controlled", false)]
+        public bool user_controlled = false;
 
         [AutoGuiAttr("prev_input", false, "G6")]
         protected float prev_input;
@@ -97,6 +98,8 @@ namespace AtmosphereAutopilot
         /// Main control function
         /// </summary>
         /// <param name="cntrl">Control state to change</param>
+        /// <param name="target_value"></param>
+        /// <param name="target_acc"></param>
         public float ApplyControl(FlightCtrlState cntrl, float target_value, float target_acc = 0.0f)
         {
             vel = imodel.AngularVel(axis);                  // get angular velocity
@@ -114,13 +117,13 @@ namespace AtmosphereAutopilot
                 float delta_input = Common.Clampf(user_input - prev_input, clamp);
                 user_input = prev_input + delta_input;
                 prev_input = user_input;
-                desired_v = user_input * max_v_construction;
+                desired_v = user_input * (ignore_max_v ? 9000000.0f : max_v_construction);
                 user_controlled = true;
             }
             else
             {
                 // control from above
-                desired_v = Common.Clampf(target_value, max_v_construction);
+                desired_v = ignore_max_v ? target_value : Common.Clampf(target_value, max_v_construction);
             }
 
             desired_v = process_desired_v(desired_v, user_controlled);      // moderation stage
@@ -148,13 +151,15 @@ namespace AtmosphereAutopilot
             return output_acc;
         }
 
+        public bool ignore_max_v = false, ignore_max_g = false;
+
         [VesselSerializable("max_v_construction")]
-        [AutoGuiAttr("Max v construction", true, "G6")]
-        public float max_v_construction = 0.7f;
+        [AutoGuiAttr("Max v construction", true, "G4")]
+        public float max_v_construction = 40.0f * dgr2rad; //About 0.7 rad/sec
         public string max_v_construction_as_text
         {
-            set => this.max_v_construction = float.TryParse(value, out float v) ? v : this.max_v_construction;
-            get => this.max_v_construction.ToString("G6");
+            set => this.max_v_construction = float.TryParse(value, out float v) ? Math.Max(v * dgr2rad, 0) : this.max_v_construction;
+            get => (this.max_v_construction * rad2dgr).ToString("G4");
         }
 
         protected virtual float process_desired_v(float des_v, bool user_input) { return des_v; }
@@ -236,6 +241,8 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("moder_cutoff_ias", true, "G4")]
         public float moder_cutoff_ias = 10.0f;
 
+        public bool ignore_max_aoa = false;
+
         protected Matrix state_mat = new Matrix(4, 1);
         protected Matrix input_mat = new Matrix(1, 1);
 
@@ -243,7 +250,7 @@ namespace AtmosphereAutopilot
 
         protected override float process_desired_v(float des_v, bool user_input)
         {
-            float rad_max_aoa = max_aoa * dgr2rad;
+            float rad_max_aoa = (ignore_max_aoa ? 179.9f : max_aoa) * dgr2rad;
             res_max_aoa = 100.0f;
             res_min_aoa = -100.0f;
             res_equilibr_v_upper = 0.0f;
@@ -258,7 +265,7 @@ namespace AtmosphereAutopilot
             {
                 moderated = true;
 
-                if (abs_cur_aoa < rad_max_aoa * 1.5f)
+                if (!ignore_max_v && abs_cur_aoa < rad_max_aoa * 1.5f)
                 {
                     // We're in linear regime so we can update our limitations
 
@@ -365,7 +372,7 @@ namespace AtmosphereAutopilot
             }
 
             // Lift acceleration moderation section
-            if (moderate_g && imodel.dyn_pressure > moder_cutoff_ias * moder_cutoff_ias)
+            if (moderate_g && !ignore_max_g && imodel.dyn_pressure > moder_cutoff_ias * moder_cutoff_ias)
             {
                 moderated = true;
 
@@ -450,7 +457,7 @@ namespace AtmosphereAutopilot
                     if (old_dyn_max_v != 0.0f)
                         transit_max_v = old_dyn_max_v;
                     else
-                        old_dyn_max_v = max_v_construction;
+                        old_dyn_max_v = ignore_max_v ? 9000000.0f : max_v_construction;
                 }
                 else
                 {
@@ -458,15 +465,15 @@ namespace AtmosphereAutopilot
                     // we need to artificially increase it
                     if (new_dyn_max_v < res_equilibr_v_upper * 1.2 || new_dyn_max_v < -res_equilibr_v_lower * 1.2)
                         new_dyn_max_v = 1.2f * Math.Max(Math.Abs(res_equilibr_v_upper), Math.Abs(res_equilibr_v_lower));
-                    new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
+                    if (!ignore_max_v) new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
                     transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
                     old_dyn_max_v = transit_max_v;
                 }
             }
             else
-                transit_max_v = max_v_construction;
+                transit_max_v = ignore_max_v ? 9000000.0f : max_v_construction;
 
-            // if the user is in charge, let's hold surface-relative angular elocity
+            // if the user is in charge, let's hold surface-relative angular velocity
             float v_offset = 0.0f;
             if (user_input && vessel.obt_speed > 1.0)
             {
@@ -627,7 +634,7 @@ namespace AtmosphereAutopilot
         public float max_aoa = 15.0f;
         public string max_aoa_as_text
         {
-            set => this.max_aoa = float.TryParse(value, out float v) ? v : this.max_aoa;
+            set => this.max_aoa = float.TryParse(value, out float v) ? Math.Max(v, 0) : this.max_aoa;
             get => this.max_aoa.ToString("G6");
         }
 
@@ -660,7 +667,7 @@ namespace AtmosphereAutopilot
         internal RollAngularVelocityController(Vessel vessel)
             : base(vessel, "Roll ang vel controller", 1234445, ROLL)
         {
-            max_v_construction = 3.0f;
+            max_v_construction = 180.0f * dgr2rad; //Previously 3.0 rad/sec, about 172 deg/sec
         }
 
         public override void InitializeDependencies(Dictionary<Type, AutopilotModule> modules)
@@ -688,6 +695,7 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("Snap angle", true, "G4")]
         public float leveler_snap_angle = 3.0f;
+        public bool snapping_to_level = false;
 
         [AutoGuiAttr("angle_btw_hor", false, "G5")]
         float angle_btw_hor;
@@ -706,6 +714,8 @@ namespace AtmosphereAutopilot
         {
             float cur_aoa = imodel.AoA(YAW);
 
+            float current_max_v = ignore_max_v ? 9000000.0f : max_v_construction;
+
             // let's find maximum angular v on 0.0 AoA and 0.0 Yaw input from model
             if (Math.Abs(cur_aoa) < 0.3 && imodel.dyn_pressure > 100.0)
             {
@@ -723,8 +733,8 @@ namespace AtmosphereAutopilot
                     // adequacy check
                     if (new_max_input_v < new_min_input_v || new_max_input_v < 0.0 || new_min_input_v > 0.0)
                     {
-                        new_max_input_v = max_v_construction;
-                        new_min_input_v = -max_v_construction;
+                        new_max_input_v = current_max_v;
+                        new_min_input_v = -current_max_v;
                     }
                     new_max_input_v = Mathf.Max(min_abs_angv, new_max_input_v);
                     new_min_input_v = Mathf.Min(-min_abs_angv, new_min_input_v);
@@ -733,14 +743,14 @@ namespace AtmosphereAutopilot
                 }
                 else
                 {
-                    max_input_v = max_v_construction;
-                    min_input_v = -max_v_construction;
+                    max_input_v = current_max_v;
+                    min_input_v = -current_max_v;
                 }
             }
             else
             {
-                max_input_v = max_v_construction;
-                min_input_v = -max_v_construction;
+                max_input_v = current_max_v;
+                min_input_v = -current_max_v;
             }
 
             // wing level snapping
@@ -758,6 +768,8 @@ namespace AtmosphereAutopilot
                     angle_btw_hor_sin = -Vector3.Dot(roll_vector, vessel.ReferenceTransform.up);
                     if (Math.Abs(angle_btw_hor_sin) <= Math.Sin(leveler_snap_angle * dgr2rad))
                     {
+                        snapping_to_level = true;
+
                         angle_btw_hor = Mathf.Asin(angle_btw_hor_sin);
                         float dt = TimeWarp.fixedDeltaTime;
 
@@ -772,34 +784,36 @@ namespace AtmosphereAutopilot
                             (float)Math.Sqrt(transit_max_angle * acc);
                         if (!float.IsNaN(new_dyn_max_v))
                         {
-                            new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
+                            if (!ignore_max_v) new_dyn_max_v = Common.Clampf(new_dyn_max_v, max_v_construction);
                             transit_max_v = (float)Common.simple_filter(new_dyn_max_v, transit_max_v, moder_filter);
                             snapping_vel = snapping_Kp * angle_btw_hor / transit_max_angle * transit_max_v;
                             if (Math.Abs(snapping_vel) > Math.Abs(angle_btw_hor) / dt)
                                 snapping_vel = angle_btw_hor / dt;
                         }
-                    }
+                    } else snapping_to_level = false;
                 }
             }
 
             // desired_v moderation section
-            if (des_v >= 0.0f)
-            {
-                float normalized_des_v = user_input ? des_v / max_v_construction : des_v / Math.Min(max_input_v, max_v_construction);
-                if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
-                    normalized_des_v = 0.0f;
-                normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
-                float scaled_restrained_v = Math.Min(max_input_v, max_v_construction);
-                des_v = normalized_des_v * scaled_restrained_v;
-            }
-            else
-            {
-                float normalized_des_v = user_input ? des_v / -max_v_construction : des_v / Math.Max(min_input_v, -max_v_construction);
-                if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
-                    normalized_des_v = 0.0f;
-                normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
-                float scaled_restrained_v = Math.Max(min_input_v, -max_v_construction);
-                des_v = normalized_des_v * scaled_restrained_v;
+            if (!ignore_max_v) {
+                if (des_v >= 0.0f)
+                {
+                    float normalized_des_v = user_input ? des_v / max_v_construction : des_v / Math.Min(max_input_v, max_v_construction);
+                    if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
+                        normalized_des_v = 0.0f;
+                    normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
+                    float scaled_restrained_v = Math.Min(max_input_v, max_v_construction);
+                    des_v = normalized_des_v * scaled_restrained_v;
+                }
+                else
+                {
+                    float normalized_des_v = user_input ? des_v / -max_v_construction : des_v / Math.Max(min_input_v, -max_v_construction);
+                    if (float.IsInfinity(normalized_des_v) || float.IsNaN(normalized_des_v))
+                        normalized_des_v = 0.0f;
+                    normalized_des_v = Common.Clampf(normalized_des_v, 1.0f);
+                    float scaled_restrained_v = Math.Max(min_input_v, -max_v_construction);
+                    des_v = normalized_des_v * scaled_restrained_v;
+                }
             }
 
             return des_v + snapping_vel;

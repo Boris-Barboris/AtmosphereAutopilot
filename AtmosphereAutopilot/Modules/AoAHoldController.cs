@@ -48,25 +48,17 @@ namespace AtmosphereAutopilot
             thrust_c = modules[typeof(ProgradeThrustController)] as ProgradeThrustController;
         }
 
-        bool aoa_moderation_saved = false;
-
         protected override void OnActivate()
         {
             imodel.Activate();
             aoa_c.Activate();
             yaw_c.Activate();
             roll_c.Activate();
-            // save moderation states
-            aoa_moderation_saved = pitch_c.moderate_aoa;
             thrust_c.Activate();
             MessageManager.post_status_message("AoA-hold enabled");
 
             // initialize desired AoA from the current one
             desired_aoa.Value = imodel.AoA(PITCH) * rad2dgr;
-            // if current AoA is large, assume that the user does not want
-            // moderation
-            if (aoa_moderation_saved && Mathf.Abs(desired_aoa) > pitch_c.max_aoa)
-                moderation_switch = false;
         }
 
         protected override void OnDeactivate()
@@ -75,14 +67,12 @@ namespace AtmosphereAutopilot
             aoa_c.Deactivate();
             yaw_c.Deactivate();
             roll_c.Deactivate();
-            // restore moderation states
-            pitch_c.moderate_aoa = aoa_moderation_saved;
             thrust_c.Deactivate();
             MessageManager.post_status_message("AoA-hold disabled");
         }
 
         // degrees
-        public DelayedFieldFloat desired_aoa = new DelayedFieldFloat(0.0f, "G4");
+        public DelayedFieldFloat desired_aoa = new DelayedFieldFloat(0.0f, "G2");
 
         [GlobalSerializable("use_keys")]
         [AutoGuiAttr("use keys", true)]
@@ -107,7 +97,7 @@ namespace AtmosphereAutopilot
 
         [AutoGuiAttr("hotkey sensitivity", true, "G4")]
         [GlobalSerializable("hotkey_desired_aoa_sens")]
-        public static float hotkey_desired_aoa_sens = 3.0f; // degrees/sec
+        public static float hotkey_desired_aoa_sens = 2.5f; // degrees/sec
 
         public override void ApplyControl(FlightCtrlState cntrl)
         {
@@ -121,12 +111,8 @@ namespace AtmosphereAutopilot
                 ControlUtils.neutralize_user_input(cntrl, PITCH);
 
             aoa_c.user_controlled = false;
-            if (pitch_c.moderate_aoa)
-            {
-                // limit desired AoA with craft's "input" AoA limit.
-                desired_aoa.Value = Common.Clampf(desired_aoa, pitch_c.max_aoa);
-            }
-            aoa_c.ApplyControl(cntrl, desired_aoa * dgr2rad, 0.0f);
+            aoa_c.IgnoreMaxAoA = Mathf.Abs(desired_aoa.Value) > aoa_c.MaxAoA;
+            aoa_c.ApplyControl(cntrl, desired_aoa.Value * dgr2rad, 0.0f);
             side_c.user_controlled = true;
             side_c.ApplyControl(cntrl, 0.0f, 0.0f);
             roll_c.user_controlled = true;
@@ -175,13 +161,11 @@ namespace AtmosphereAutopilot
 
         protected override void _drawGUI(int id)
         {
-            close_button();
             GUILayout.BeginVertical();
             AutoGUI.AutoDrawObject(this);
             desired_aoa.DisplayLayout(GUIStyles.textBoxStyle);
             thrust_c.SpeedCtrlGUIBlock();
             GUILayout.EndVertical();
-            GUI.DragWindow();
         }
     }
 }

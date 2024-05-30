@@ -615,22 +615,22 @@ namespace AtmosphereAutopilot
 
             R = new Matrix(A.rows, B.cols);                  // result
 
-            /// C11
+            // C11
             for (int i = 0; i < Math.Min(h, R.rows); i++)          // rows
                 for (int j = 0; j < Math.Min(h, R.cols); j++)     // cols
                     R[i, j] = mField[0, 1 + 1][i, j] + mField[0, 1 + 4][i, j] - mField[0, 1 + 5][i, j] + mField[0, 1 + 7][i, j];
 
-            /// C12
+            // C12
             for (int i = 0; i < Math.Min(h, R.rows); i++)          // rows
                 for (int j = h; j < Math.Min(2 * h, R.cols); j++)     // cols
                     R[i, j] = mField[0, 1 + 3][i, j - h] + mField[0, 1 + 5][i, j - h];
 
-            /// C21
+            // C21
             for (int i = h; i < Math.Min(2 * h, R.rows); i++)          // rows
                 for (int j = 0; j < Math.Min(h, R.cols); j++)     // cols
                     R[i, j] = mField[0, 1 + 2][i - h, j] + mField[0, 1 + 4][i - h, j];
 
-            /// C22
+            // C22
             for (int i = h; i < Math.Min(2 * h, R.rows); i++)          // rows
                 for (int j = h; j < Math.Min(2 * h, R.cols); j++)     // cols
                     R[i, j] = mField[0, 1 + 1][i - h, j - h] - mField[0, 1 + 2][i - h, j - h] + mField[0, 1 + 3][i - h, j - h] + mField[0, 1 + 6][i - h, j - h];
@@ -670,22 +670,22 @@ namespace AtmosphereAutopilot
             AplusBintoC(B, 0, h, B, h, h, f[l, 1], h);
             StrassenMultiplyRun(f[l, 0], f[l, 1], f[l, 1 + 7], l + 1, f); // (A12 - A22) * (B21 + B22);
 
-            /// C11
+            // C11
             for (int i = 0; i < h; i++)          // rows
                 for (int j = 0; j < h; j++)     // cols
                     C[i, j] = f[l, 1 + 1][i, j] + f[l, 1 + 4][i, j] - f[l, 1 + 5][i, j] + f[l, 1 + 7][i, j];
 
-            /// C12
+            // C12
             for (int i = 0; i < h; i++)          // rows
                 for (int j = h; j < size; j++)     // cols
                     C[i, j] = f[l, 1 + 3][i, j - h] + f[l, 1 + 5][i, j - h];
 
-            /// C21
+            // C21
             for (int i = h; i < size; i++)          // rows
                 for (int j = 0; j < h; j++)     // cols
                     C[i, j] = f[l, 1 + 2][i - h, j] + f[l, 1 + 4][i - h, j];
 
-            /// C22
+            // C22
             for (int i = h; i < size; i++)          // rows
                 for (int j = h; j < size; j++)     // cols
                     C[i, j] = f[l, 1 + 1][i - h, j - h] - f[l, 1 + 2][i - h, j - h] + f[l, 1 + 3][i - h, j - h] + f[l, 1 + 6][i - h, j - h];
