@@ -109,7 +109,10 @@ namespace AtmosphereAutopilot
                         switch (height_mode)
                         {
                             case HeightMode.Altitude:
-                                desired_velocity = account_for_height(desired_velocity);
+                                desired_velocity = account_for_height(desired_velocity, desired_altitude);
+                                break;
+                            case HeightMode.TerrainAltitude:
+                                desired_velocity = account_for_height(desired_velocity, desired_altitude + lookahead_terrain_altitude(desired_velocity));
                                 break;
                             case HeightMode.VerticalSpeed:
                                 desired_velocity = account_for_vertical_vel(desired_velocity);
@@ -139,7 +142,10 @@ namespace AtmosphereAutopilot
                         switch (height_mode)
                         {
                             case HeightMode.Altitude:
-                                desired_velocity = account_for_height(desired_velocity);
+                                desired_velocity = account_for_height(desired_velocity, desired_altitude);
+                                break;
+                            case HeightMode.TerrainAltitude:
+                                desired_velocity = account_for_height(desired_velocity, desired_altitude + lookahead_terrain_altitude(desired_velocity));
                                 break;
                             case HeightMode.VerticalSpeed:
                                 desired_velocity = account_for_vertical_vel(desired_velocity);
@@ -211,13 +217,16 @@ namespace AtmosphereAutopilot
         public enum HeightMode
         {
             Altitude,
+            TerrainAltitude,
             VerticalSpeed,
             FlightPathAngle
         }
 
+        [VesselSerializable("height_mode")]
         public HeightMode height_mode = HeightMode.Altitude;
 
         private HeightMode prev_height_change_mode_by_hotkey = HeightMode.VerticalSpeed;
+        private HeightMode prev_height_hold_mode_by_hotkey = HeightMode.Altitude;
 
         public Waypoint current_waypt = new Waypoint();
 
@@ -273,9 +282,21 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("max_climb_angle", true, "G5")]
         public double max_climb_angle = 30.0;
 
+        [VesselSerializable("terrain_lookahead_time")]
+        [AutoGuiAttr("terrain_lookahead_time", true, "G4")]
+        public double terrain_lookahead_time = 60.0;
+
+        [VesselSerializable("terrain_sample_step")]
+        [AutoGuiAttr("terrain_sample_step", true, "G4")]
+        public double terrain_sample_step = 5.0;
+
         public double dist_to_dest = 0.0;
 
         double filtered_drag = 0.0;
+        double filtered_terrain_altitude = 0.0;
+        bool terrain_altitude_filter_initialized = false;
+        double terrain_current_terrain_asl = 0.0;
+        double terrain_lookahead_terrain_asl = 0.0;
 
         Vector3d account_for_vertical_vel(Vector3d desired_direction)
         {
@@ -294,10 +315,21 @@ namespace AtmosphereAutopilot
             return res.normalized;
         }
 
-        Vector3d account_for_height(Vector3d desired_direction)
+        Vector3d account_for_height(Vector3d desired_direction, double target_altitude)
         {
             double cur_alt = vessel.altitude;
-            double height_error = desired_altitude - cur_alt;
+            if (height_mode != HeightMode.TerrainAltitude)
+            {
+                terrain_current_terrain_asl = terrain_altitude_asl(planet2vesNorm);
+                terrain_lookahead_terrain_asl = terrain_current_terrain_asl;
+                dir_c.terrain_current_asl = terrain_current_terrain_asl;
+                dir_c.terrain_lookahead_asl = terrain_lookahead_terrain_asl;
+                dir_c.terrain_filtered_asl = terrain_current_terrain_asl;
+            }
+            dir_c.terrain_target_asl = target_altitude;
+            dir_c.terrain_vessel_asl = cur_alt;
+            dir_c.terrain_vessel_agl = cur_alt - terrain_current_terrain_asl;
+            double height_error = target_altitude - cur_alt;
             double acc = Vector3.Dot(imodel.gravity_acc + imodel.noninert_acc, -planet2vesNorm);    // free-fall vertical acceleration
             double height_relax_frame = 0.5 * acc * height_relax_time * height_relax_time;
 
@@ -367,6 +399,77 @@ namespace AtmosphereAutopilot
             if (apply_acc)
                 desired_vert_acc = parabolic_acc * (1.0 - relax_transition_k) + proportional_acc * relax_transition_k;
             return res.normalized;
+        }
+
+        double lookahead_terrain_altitude(Vector3d desired_direction)
+        {
+            double lookahead_time = Math.Max(0.0, this.terrain_lookahead_time);
+            double sample_step = Math.Max(0.1, this.terrain_sample_step);
+
+            Vector3d hor_vel = imodel.surface_v - Vector3d.Project(imodel.surface_v, planet2vesNorm);
+            double hor_speed = hor_vel.magnitude;
+            double lookahead_speed = Math.Max(hor_speed, vessel.horizontalSrfSpeed);
+            Vector3d desired_horizontal = desired_direction - Vector3d.Project(desired_direction, planet2vesNorm);
+            Vector3d heading = hor_speed > 1.0 ? hor_vel.normalized : desired_horizontal.normalized;
+
+            double current_terrain = terrain_altitude_asl(planet2vesNorm);
+            double terrain_target = current_terrain;
+            terrain_current_terrain_asl = current_terrain;
+
+            if (heading.sqrMagnitude > 0.0 && lookahead_speed > 1.0 && lookahead_time > 0.0)
+            {
+                double radius = vessel.mainBody.Radius + current_terrain;
+                Vector3d current_rel_surface = planet2vesNorm * radius;
+
+                for (double t = sample_step; t <= lookahead_time; t += sample_step)
+                {
+                    Vector3d rel_sample = (current_rel_surface + heading * lookahead_speed * t).normalized;
+                    double sample_terrain = terrain_altitude_asl(rel_sample);
+                    terrain_target = Math.Max(terrain_target, sample_terrain);
+                }
+            }
+            terrain_lookahead_terrain_asl = terrain_target;
+
+            if (!terrain_altitude_filter_initialized)
+            {
+                filtered_terrain_altitude = terrain_target;
+                terrain_altitude_filter_initialized = true;
+            }
+            else if (terrain_target > filtered_terrain_altitude)
+                filtered_terrain_altitude = terrain_target;
+            else
+                filtered_terrain_altitude = Common.simple_filter(terrain_target, filtered_terrain_altitude, 5.0);
+
+            double filtered = Math.Max(0.0, filtered_terrain_altitude);
+            dir_c.terrain_current_asl = terrain_current_terrain_asl;
+            dir_c.terrain_lookahead_asl = terrain_lookahead_terrain_asl;
+            dir_c.terrain_filtered_asl = filtered;
+            return filtered;
+        }
+
+        double terrain_altitude_asl(Vector3d world_surface_direction)
+        {
+            double terrain_altitude = double.NaN;
+
+            if (vessel.mainBody != null && vessel.mainBody.pqsController != null && world_surface_direction.sqrMagnitude > 0.0)
+            {
+                Vector3d surface_point = vessel.mainBody.position + world_surface_direction.normalized * vessel.mainBody.Radius;
+                double latitude = vessel.mainBody.GetLatitude(surface_point);
+                double longitude = vessel.mainBody.GetLongitude(surface_point);
+                Vector3d body_relative_direction = vessel.mainBody.GetRelSurfaceNVector(latitude, longitude);
+                terrain_altitude = vessel.mainBody.pqsController.GetSurfaceHeight(body_relative_direction) - vessel.mainBody.Radius;
+            }
+
+            if (double.IsNaN(terrain_altitude) || double.IsInfinity(terrain_altitude))
+            {
+                double height_from_terrain = vessel.heightFromTerrain;
+                if (!double.IsNaN(height_from_terrain) && !double.IsInfinity(height_from_terrain) && height_from_terrain >= 0.0)
+                    terrain_altitude = vessel.altitude - height_from_terrain;
+                else
+                    terrain_altitude = 0.0;
+            }
+
+            return Math.Max(0.0, terrain_altitude);
         }
 
         internal bool LevelFlightMode
@@ -544,8 +647,12 @@ namespace AtmosphereAutopilot
             vertical_control = GUILayout.Toggle(vertical_control, "Vertical motion", GUIStyles.toggleButtonStyle);
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical();
-            if (GUILayout.Toggle(height_mode == HeightMode.Altitude, "Altitude", GUIStyles.toggleButtonStyle))
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Toggle(height_mode == HeightMode.Altitude, "Alt (SL)", GUIStyles.toggleButtonStyle))
                 height_mode = HeightMode.Altitude;
+            if (GUILayout.Toggle(height_mode == HeightMode.TerrainAltitude, "Alt (Trn)", GUIStyles.toggleButtonStyle))
+                height_mode = HeightMode.TerrainAltitude;
+            GUILayout.EndHorizontal();
             desired_altitude.DisplayLayout(GUIStyles.textBoxStyle);
             GUILayout.EndVertical();
             GUILayout.BeginVertical();
@@ -555,7 +662,7 @@ namespace AtmosphereAutopilot
                 if (height_mode == HeightMode.FlightPathAngle)
                 {
                     float desired_vertspeed = (float)(vessel.horizontalSrfSpeed * Math.Tan(desired_vertsetpoint * dgr2rad));
-                    
+
                     if (float.IsNaN(desired_vertspeed) || Mathf.Abs(desired_vertspeed) > 9999.0f)
                         // don't put a value close to infinity to the field
                         desired_vertspeed = 9999.0f * Mathf.Sign(desired_vertspeed);
@@ -564,7 +671,7 @@ namespace AtmosphereAutopilot
                 }
                 height_mode = HeightMode.VerticalSpeed;
             }
-                
+
             if (GUILayout.Toggle(height_mode == HeightMode.FlightPathAngle, "FPA", GUIStyles.toggleButtonStyle))
             {
                 if (height_mode == HeightMode.VerticalSpeed)
@@ -578,7 +685,7 @@ namespace AtmosphereAutopilot
                 }
                 height_mode = HeightMode.FlightPathAngle;
             }
-                
+
             GUILayout.EndHorizontal();
             desired_vertsetpoint.DisplayLayout(GUIStyles.textBoxStyle);
             GUILayout.EndVertical();
@@ -691,6 +798,8 @@ namespace AtmosphereAutopilot
                     switch (height_mode)
                     {
                         case HeightMode.Altitude:
+                        case HeightMode.TerrainAltitude:
+                            prev_height_hold_mode_by_hotkey = height_mode;
                             if (prev_height_change_mode_by_hotkey == HeightMode.VerticalSpeed
                                 || prev_height_change_mode_by_hotkey == HeightMode.FlightPathAngle)
                                 height_mode = prev_height_change_mode_by_hotkey;
@@ -700,7 +809,7 @@ namespace AtmosphereAutopilot
                         case HeightMode.VerticalSpeed:
                         case HeightMode.FlightPathAngle:
                             prev_height_change_mode_by_hotkey = height_mode;
-                            height_mode = HeightMode.Altitude;
+                            height_mode = prev_height_hold_mode_by_hotkey;
                             break;
                     }
 
@@ -709,6 +818,9 @@ namespace AtmosphereAutopilot
                         case HeightMode.Altitude:
                             MessageManager.post_status_message("Altitude control");
                             break;
+                        case HeightMode.TerrainAltitude:
+                            MessageManager.post_status_message("Terrain altitude control");
+                            break;
                         case HeightMode.VerticalSpeed:
                             MessageManager.post_status_message("Vertical speed control");
                             break;
@@ -716,7 +828,7 @@ namespace AtmosphereAutopilot
                             MessageManager.post_status_message("Flight path angle control");
                             break;
                     }
-                    
+
                 }
 
                 // input shenanigans
@@ -745,6 +857,7 @@ namespace AtmosphereAutopilot
                         switch (height_mode)
                         {
                             case HeightMode.Altitude:
+                            case HeightMode.TerrainAltitude:
                                 setpoint = desired_altitude;
                                 new_setpoint = setpoint + pitch_change_sign * hotkey_altitude_sens * Time.deltaTime * setpoint;
                                 desired_altitude.Value = new_setpoint;
@@ -808,7 +921,7 @@ namespace AtmosphereAutopilot
                     if (need_to_show_altitude)
                     {
                         altitude_change_counter += Time.deltaTime;
-                        if (height_mode != HeightMode.Altitude && altitude_change_counter > 0.2f)
+                        if (height_mode != HeightMode.Altitude && height_mode != HeightMode.TerrainAltitude && altitude_change_counter > 0.2f)
                             if (Mathf.Abs(desired_vertsetpoint) < hotkey_vertspeed_snap)
                                 desired_vertsetpoint.Value = 0.0f;
                     }
@@ -883,6 +996,9 @@ namespace AtmosphereAutopilot
                 {
                     case HeightMode.Altitude:
                         str = "Altitude = " + desired_altitude.Value.ToString("G5");
+                        break;
+                    case HeightMode.TerrainAltitude:
+                        str = "Terrain altitude = " + desired_altitude.Value.ToString("G5");
                         break;
                     case HeightMode.VerticalSpeed:
                         str = "Vert speed = " + desired_vertsetpoint.Value.ToString("G4");

@@ -276,6 +276,60 @@ namespace AtmosphereAutopilot
         [AutoGuiAttr("desired_pitch_v", false, "G5")]
         public double desired_pitch_v;
 
+        [AutoGuiAttr("trn_target_asl", false, "G5")]
+        public double trn_target_asl;
+
+        [AutoGuiAttr("trn_vessel_asl", false, "G5")]
+        public double trn_vessel_asl;
+
+        [AutoGuiAttr("trn_vessel_agl", false, "G5")]
+        public double trn_vessel_agl;
+
+        [AutoGuiAttr("trn_current_asl", false, "G5")]
+        public double trn_current_asl;
+
+        [AutoGuiAttr("trn_lookahead_asl", false, "G5")]
+        public double trn_lookahead_asl;
+
+        [AutoGuiAttr("trn_filtered_asl", false, "G5")]
+        public double trn_filtered_asl;
+
+        public double terrain_target_asl
+        {
+            get { return trn_target_asl; }
+            set { trn_target_asl = value; }
+        }
+
+        public double terrain_vessel_asl
+        {
+            get { return trn_vessel_asl; }
+            set { trn_vessel_asl = value; }
+        }
+
+        public double terrain_vessel_agl
+        {
+            get { return trn_vessel_agl; }
+            set { trn_vessel_agl = value; }
+        }
+
+        public double terrain_current_asl
+        {
+            get { return trn_current_asl; }
+            set { trn_current_asl = value; }
+        }
+
+        public double terrain_lookahead_asl
+        {
+            get { return trn_lookahead_asl; }
+            set { trn_lookahead_asl = value; }
+        }
+
+        public double terrain_filtered_asl
+        {
+            get { return trn_filtered_asl; }
+            set { trn_filtered_asl = value; }
+        }
+
         /// <summary>
         /// Allow rotating belly-up to prevent too large negative g-forces
         /// </summary>
