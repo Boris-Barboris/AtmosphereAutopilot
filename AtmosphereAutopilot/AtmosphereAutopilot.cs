@@ -492,13 +492,24 @@ namespace AtmosphereAutopilot
             if (!autopilot_module_lists.ContainsKey(ActiveVessel))
                 return;
             if (!HighLogic.LoadedSceneIsFlight)
-                return;            
-            GUIStyles.set_colors();
-            applauncher.OnGUI();
-            foreach (var pair in autopilot_module_lists[ActiveVessel])
-                pair.Value.OnGUI();
-            hotkeyManager.OnGUI();
-            GUIStyles.reset_colors();
+                return;
+
+            float s = GameSettings.UI_SCALE;
+            Matrix4x4 oldMatrix = GUI.matrix;
+            GUI.matrix = Matrix4x4.Scale(new Vector3(s, s, 1f));
+            try
+            {
+                GUIStyles.set_colors();
+                applauncher.OnGUI();
+                foreach (var pair in autopilot_module_lists[ActiveVessel])
+                    pair.Value.OnGUI();
+                hotkeyManager.OnGUI();
+                GUIStyles.reset_colors();
+            }
+            finally
+            {
+                GUI.matrix = oldMatrix;
+            }
         }
 
         public static bool UIHidden = false;

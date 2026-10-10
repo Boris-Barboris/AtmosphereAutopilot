@@ -125,10 +125,11 @@ namespace AtmosphereAutopilot
             OnGUICustomAlways();
             if (!gui_shown || AtmosphereAutopilot.UIHidden)
                 return;
-            
+
             // forbid windows not on screen
-            window.xMin = Common.Clampf(window.xMin, 5.0f - window.width, Screen.width - 5.0f);
-            window.yMin = Common.Clampf(window.yMin, 5.0f - window.height, Screen.height - 5.0f);
+            float s = GameSettings.UI_SCALE;
+            window.xMin = Common.Clampf(window.xMin, 5.0f - window.width, Screen.width / s - 5.0f);
+            window.yMin = Common.Clampf(window.yMin, 5.0f - window.height, Screen.height / s - 5.0f);
 
             window = GUILayout.Window(wnd_id, window, _drawGUI, wndname);
             OnGUICustom();

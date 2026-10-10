@@ -871,13 +871,13 @@ namespace AtmosphereAutopilot
         {
             if (need_to_show_course)
             {
-                Rect rect = new Rect(Screen.width / 2.0f - 80.0f, 140.0f, 160.0f, 20.0f);
+                Rect rect = new Rect(Screen.width / GameSettings.UI_SCALE / 2.0f - 80.0f, 140.0f, 160.0f, 20.0f);
                 string str = "course = " + desired_course.Value.ToString("G4");
                 GUI.Label(rect, str, GUIStyles.hoverLabel);
             }
             if (need_to_show_altitude)
             {
-                Rect rect = new Rect(Screen.width / 2.0f - 80.0f, 160.0f, 160.0f, 20.0f);
+                Rect rect = new Rect(Screen.width / GameSettings.UI_SCALE / 2.0f - 80.0f, 160.0f, 160.0f, 20.0f);
                 string str = null;
                 switch (height_mode)
                 {
