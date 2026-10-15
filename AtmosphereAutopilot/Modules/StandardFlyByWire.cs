@@ -141,17 +141,17 @@ namespace AtmosphereAutopilot
         public override void OnUpdate()
         {
             bool changed = false;
-            if (Input.GetKeyDown(moderation_keycode))
+            if (Common.HotkeyDown(moderation_keycode))
             {
                 moderation_switch = !moderation_switch;
                 changed = true;
             }
-            if (Input.GetKeyDown(rocket_mode_keycode))
+            if (Common.HotkeyDown(rocket_mode_keycode))
             {
                 RocketMode = !rocket_mode;
                 changed = true;
             }
-            if (Input.GetKeyDown(coord_turn_keycode))
+            if (Common.HotkeyDown(coord_turn_keycode))
             {
                 Coord_turn = !coord_turn;
                 changed = true;

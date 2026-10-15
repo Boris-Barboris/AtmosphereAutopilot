@@ -673,19 +673,19 @@ namespace AtmosphereAutopilot
             }
             else
             {
-                if (Input.GetKeyDown(switch_key_mode))
+                if (Common.HotkeyDown(switch_key_mode))
                 {
                     use_keys = !use_keys;
                     MessageManager.post_status_message(use_keys ? "CF key input mode enabled" : "CF key input mode disabled");
                 }
 
-                if (Input.GetKeyDown(vertical_control_key))
+                if (Common.HotkeyDown(vertical_control_key))
                 {
                     vertical_control = !vertical_control;
                     MessageManager.post_status_message(use_keys ? "Vertical motion control enabled" : "Vertical motion control disabled");
                 }
 
-                if (Input.GetKeyDown(toggle_vertical_setpoint_type_key))
+                if (Common.HotkeyDown(toggle_vertical_setpoint_type_key))
                 {
                     // toggle key should only allow switching between the holding mode (altitude) and changing modes (V/S and FPA)
                     switch (height_mode)

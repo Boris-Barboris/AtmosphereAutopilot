@@ -214,7 +214,7 @@ namespace AtmosphereAutopilot
 
         public override void OnUpdate()
         {
-            if (Input.GetKeyDown(balancing_toggle_key))
+            if (Common.HotkeyDown(balancing_toggle_key))
             {
                 balance_engines = !balance_engines;
                 MessageManager.post_status_message(balance_engines ? "Thrust balancing enabled" : "Thrust balancing disabled");

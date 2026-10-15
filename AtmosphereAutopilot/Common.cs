@@ -38,6 +38,33 @@ namespace AtmosphereAutopilot
     public static class Common
     {
         /// <summary>
+        /// True when a text field has keyboard focus: an IMGUI control (including
+        /// windows like the kOS terminal that claim IMGUI focus) or a uGUI/TMP input field.
+        /// </summary>
+        public static bool TextInputFocused
+        {
+            get
+            {
+                if (GUIUtility.keyboardControl != 0)
+                    return true;
+                var es = UnityEngine.EventSystems.EventSystem.current;
+                if (es == null || es.currentSelectedGameObject == null)
+                    return false;
+                var selected = es.currentSelectedGameObject;
+                var input = selected.GetComponent<UnityEngine.UI.InputField>();
+                if (input != null && input.isFocused)
+                    return true;
+                return selected.GetComponent("TMP_InputField") != null;
+            }
+        }
+
+        /// <summary>Input.GetKeyDown for a hotkey, ignored while a text field has focus.</summary>
+        public static bool HotkeyDown(KeyCode key)
+        {
+            return Input.GetKeyDown(key) && !TextInputFocused;
+        }
+
+        /// <summary>
         /// Reallocate array if needed
         /// </summary>
         /// <param name="capacity">Required array capacity</param>

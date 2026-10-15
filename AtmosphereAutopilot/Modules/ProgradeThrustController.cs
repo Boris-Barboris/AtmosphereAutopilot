@@ -437,7 +437,7 @@ namespace AtmosphereAutopilot
         public override void OnUpdate()
         {
             //bool changed = false;
-            if (Input.GetKeyDown(spd_control_toggle_key))
+            if (Common.HotkeyDown(spd_control_toggle_key))
             {
                 spd_control_enabled = !spd_control_enabled;
                 MessageManager.post_status_message(spd_control_enabled ? "Speed control enabled" : "Speed control disabled");
