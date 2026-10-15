@@ -159,7 +159,7 @@ namespace AtmosphereAutopilot
                 }
             }
             bool changed = false;
-            if (Input.GetKeyDown(StandardFlyByWire.moderation_keycode))
+            if (Common.HotkeyDown(StandardFlyByWire.moderation_keycode))
             {
                 moderation_switch = !moderation_switch;
                 changed = true;

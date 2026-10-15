@@ -203,7 +203,7 @@ namespace AtmosphereAutopilot
 
         public override void OnUpdate()
         {
-            if (Input.GetKeyDown(master_switch_key))
+            if (Common.HotkeyDown(master_switch_key))
                 if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
                 {
                     ToggleGUI();
